@@ -1,0 +1,78 @@
+# Xcode
+DerivedData/
+*.xcworkspace
+xcuserdata/
+*.xcuserstate
+
+# Xcode project workspace and scheme user settings
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+
+# Swift Package Manager
+.build/
+/.swiftpm/
+/.buildcheckouts/
+Packages/
+/.package.resolved
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# Swift Playgrounds
+playground.xcworkspace/
+
+# Archives
+*.xcarchive
+
+# macOS
+.DS_Store
+.AppleDouble
+._*
+
+# Editor temp files
+*~
+*.swp
+
+# IDEs
+.idea/
+.vscode/
+
+# Build artifacts
+*.o
+*.linkfilelist
+*.hmap
+*.ipa
+*.dSYM
+
+# SwiftPM package artifacts
+/.build
+
+# Personal settings
+.env
+.env.*
+
+# Ignore secrets
+*.key
+*.p12
+*.mobileprovision
+
+# User-specific files
+*.iml
+
+# Logs
+*.log
+
+# Generated resources
+*.xcconfig
+
+# Optional: if you want to ignore large resources, uncomment and adjust
+# Resources/large-file.dat
