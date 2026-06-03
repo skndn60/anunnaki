@@ -1,0 +1,37 @@
+name: Me
+options:
+  bundleIdPrefix: com.me
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+targets:
+  Me:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+        excludes:
+          - "Resources/**"
+      - path: Sources/Resources/seed_data.json
+        buildPhase: resources
+      - path: Sources/Resources/AppIcon.png
+        buildPhase: resources
+      - path: Sources/Resources/AppIcon.icns
+        buildPhase: resources
+    info:
+      path: Info.plist
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.me.app
+        INFOPLIST_FILE: Info.plist
+        PRODUCT_NAME: Me
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        GENERATE_INFOPLIST_FILE: NO
+    dependencies:
+      - framework: SwiftData.framework
+        embed: false

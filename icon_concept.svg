@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background: rounded square, deep lapis lazuli blue -->
+  <rect width="512" height="512" rx="96" ry="96" fill="#1a1a4e"/>
+  
+  <!-- Subtle radial glow behind the star -->
+  <radialGradient id="glow" cx="50%" cy="50%" r="35%">
+    <stop offset="0%" stop-color="#c8a84b" stop-opacity="0.2"/>
+    <stop offset="100%" stop-color="#c8a84b" stop-opacity="0"/>
+  </radialGradient>
+  <circle cx="256" cy="256" r="180" fill="url(#glow)"/>
+  
+  <!-- Eight-pointed star (Dingir / Star of Anu) -->
+  <!-- Gold/amber color -->
+  <g transform="translate(256,256)">
+    <!-- Four main points (cardinal) -->
+    <polygon points="0,-140 12,-30 0,-20 -12,-30" fill="#d4a843"/>
+    <polygon points="0,140 12,30 0,20 -12,30" fill="#d4a843"/>
+    <polygon points="-140,0 -30,12 -20,0 -30,-12" fill="#d4a843"/>
+    <polygon points="140,0 30,12 20,0 30,-12" fill="#d4a843"/>
+    
+    <!-- Four diagonal points -->
+    <polygon points="-99,-99 -25,-15 -15,-25" fill="#d4a843"/>
+    <polygon points="99,-99 25,-15 15,-25" fill="#d4a843"/>
+    <polygon points="-99,99 -25,15 -15,25" fill="#d4a843"/>
+    <polygon points="99,99 25,15 15,25" fill="#d4a843"/>
+    
+    <!-- Center circle -->
+    <circle cx="0" cy="0" r="22" fill="#d4a843"/>
+    
+    <!-- Inner highlight -->
+    <circle cx="0" cy="0" r="14" fill="#f0d060"/>
+  </g>
+  
+  <!-- Subtle cuneiform texture marks in background -->
+  <g opacity="0.08" fill="#ffffff">
+    <rect x="60" y="380" width="40" height="8" rx="2"/>
+    <rect x="70" y="395" width="25" height="6" rx="2"/>
+    <rect x="390" y="100" width="35" height="7" rx="2"/>
+    <rect x="400" y="115" width="20" height="5" rx="2"/>
+  </g>
+</svg>
