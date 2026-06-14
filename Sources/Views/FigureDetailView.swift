@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Detail panel showing all properties of a selected figure.
 struct FigureDetailView: View {
@@ -7,6 +8,10 @@ struct FigureDetailView: View {
     var onSelectFigure: ((Figure) -> Void)?
     @Environment(\.modelContext) private var modelContext
     @State private var citationCount = -1
+    @State private var droppedFigureName: String?
+    @State private var showDropConfirmation = false
+    @State private var selectedRelationType: Relationship.RelationshipType = .father
+    @State private var isDropTargeted = false
     @Query private var relationships: [Relationship]
 
     var body: some View {
@@ -200,6 +205,73 @@ struct FigureDetailView: View {
             }
             .padding(20)
         }
+        .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers in
+            guard let provider = providers.first else { return false }
+            provider.loadObject(ofClass: NSString.self) { string, _ in
+                if let name = string as? String {
+                    DispatchQueue.main.async {
+                        let allFigures: [Figure] = modelContext.fetchAll()
+                        guard let sourceFigure = allFigures.first(where: { $0.name == name }) else { return }
+                        droppedFigureName = name
+                        selectedRelationType = inferredType(from: sourceFigure, to: figure)
+                        showDropConfirmation = true
+                    }
+                }
+            }
+            return true
+        }
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.accentColor, lineWidth: 3)
+                    .background(Color.accentColor.opacity(0.05))
+                    .overlay(
+                        Text("Drop to create relationship")
+                            .font(.headline)
+                            .foregroundStyle(Color.accentColor)
+                    )
+                    .allowsHitTesting(false)
+                    .padding(4)
+            }
+        }
+        .sheet(isPresented: $showDropConfirmation) {
+            if let sourceName = droppedFigureName {
+                VStack(spacing: 20) {
+                    Text("Create Relationship")
+                        .font(.title3.bold())
+
+                    Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationType.rawValue.lowercased())** of **\(figure.name)**?")
+                        .multilineTextAlignment(.center)
+
+                    Picker("Type", selection: $selectedRelationType) {
+                        ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
+                    }
+
+                    HStack(spacing: 16) {
+                        Button("Cancel") { showDropConfirmation = false }
+                            .buttonStyle(.bordered)
+                        Button("OK") {
+                            let allFigures: [Figure] = modelContext.fetchAll()
+                            if let sourceFigure = allFigures.first(where: { $0.name == sourceName }) {
+                                let rel = Relationship(
+                                    fromFigure: sourceFigure,
+                                    toFigure: figure,
+                                    relationshipType: selectedRelationType
+                                )
+                                modelContext.insert(rel)
+                            }
+                            showDropConfirmation = false
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+                .padding()
+                .frame(width: 420)
+                .presentationCompactAdaptation(.sheet)
+            }
+        }
     }
 
     private var relatedRelationships: [Relationship] {
@@ -217,6 +289,12 @@ struct FigureDetailView: View {
     private var typeColor: Color { figure.figureType.color }
 
     private var typeIcon: String { figure.figureType.icon }
+
+    private func inferredType(from source: Figure, to target: Figure) -> Relationship.RelationshipType {
+        if source.gender == .female { return .mother }
+        if source.gender == .male { return .father }
+        return .father
+    }
 }
 
 /// A single row in the relationship list, described from the perspective of the selected figure.
@@ -224,8 +302,9 @@ struct RelationshipRow: View {
     let relationship: Relationship
     let perspective: Figure
     var onSelectFigure: ((Figure) -> Void)?
+    @Environment(\.modelContext) private var modelContext
 
-    @State private var isHovered = false
+    @State private var showDeleteConfirm = false
 
     private var otherFigure: Figure? {
         let isFrom = relationship.fromFigure?.persistentModelID == perspective.persistentModelID
@@ -248,8 +327,31 @@ struct RelationshipRow: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+
+            Button(action: { showDeleteConfirm = true }) {
+                Image(systemName: "trash")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.red.opacity(0.7))
+            }
+            .buttonStyle(.plain)
+            .help("Delete relationship")
         }
         .padding(.vertical, 3)
+        .contextMenu {
+            Button("Delete Relationship", role: .destructive) {
+                modelContext.delete(relationship)
+                try? modelContext.save()
+            }
+        }
+        .alert("Delete Relationship?", isPresented: $showDeleteConfirm) {
+            Button("Delete", role: .destructive) {
+                modelContext.delete(relationship)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will remove the relationship between \(relationship.fromFigure?.name ?? "?") and \(relationship.toFigure?.name ?? "?").")
+        }
     }
 
     @ViewBuilder
@@ -266,11 +368,10 @@ struct RelationshipRow: View {
                 Text(otherName)
                     .font(.callout)
                     .fontWeight(.medium)
-                    .foregroundStyle(isHovered ? Color.accentColor : .primary)
-                    .underline(isHovered)
+                    .foregroundStyle(Color.accentColor)
+                    .underline()
             }
             .buttonStyle(.plain)
-            .onHover { isHovered = $0 }
         }
     }
 

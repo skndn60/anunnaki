@@ -252,6 +252,9 @@ struct FigureRow: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
+        .onDrag {
+            NSItemProvider(object: figure.name as NSString)
+        }
     }
 }
 
