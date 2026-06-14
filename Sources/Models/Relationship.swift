@@ -19,6 +19,11 @@ final class Relationship {
         case uncle = "Uncle"
         case aunt = "Aunt"
         case creator = "Creator"
+        case commander = "Commander"
+        case servant = "Servant"
+        case ally = "Ally"
+        case enemy = "Enemy"
+        case worshipper = "Worshipper"
     }
 
     init(

@@ -11,6 +11,11 @@ extension Relationship.RelationshipType {
         case .uncle: return .teal
         case .aunt: return .teal
         case .creator: return .purple
+        case .commander: return .yellow
+        case .servant: return .brown
+        case .ally: return .green
+        case .enemy: return .red
+        case .worshipper: return .indigo
         }
     }
 
@@ -24,6 +29,11 @@ extension Relationship.RelationshipType {
         case .uncle: return "person.line.dotted.person"
         case .aunt: return "person.line.dotted.person"
         case .creator: return "wand.and.stars"
+        case .commander: return "shield.lefthalf.filled"
+        case .servant: return "hand.raised"
+        case .ally: return "handshake"
+        case .enemy: return "flame"
+        case .worshipper: return "heart.circle.fill"
         }
     }
 }

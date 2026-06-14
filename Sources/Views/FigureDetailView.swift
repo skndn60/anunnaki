@@ -396,6 +396,16 @@ struct RelationshipRow: View {
             return isFrom ? "Aunt of" : "Nephew/Niece of"
         case .creator:
             return isFrom ? "Creator of" : "Created by"
+        case .commander:
+            return isFrom ? "Commander of" : "Commanded by"
+        case .servant:
+            return isFrom ? "Servant of" : "Served by"
+        case .ally:
+            return "Ally of"
+        case .enemy:
+            return "Enemy of"
+        case .worshipper:
+            return isFrom ? "Worshipper of" : "Worshipped by"
         }
     }
 
