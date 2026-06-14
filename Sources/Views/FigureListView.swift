@@ -10,7 +10,8 @@ struct FigureListView: View {
     @State private var selectedFigureID: PersistentIdentifier?
     @State private var searchText = ""
     @State private var sortOrder: FigureSortOrder = .name
-    @State private var breadcrumbs: [(id: PersistentIdentifier, name: String)] = []
+    @State private var breadcrumbs: [Breadcrumb] = []
+    @State private var showingLineageExplorer = false
 
     enum FigureSortOrder: String, CaseIterable {
         case name = "Name"
@@ -48,7 +49,7 @@ struct FigureListView: View {
         if let figure = figures.first(where: { $0.persistentModelID == id }) {
             // Don't duplicate the last entry
             if breadcrumbs.last?.id != id {
-                breadcrumbs.append((id: id, name: figure.name))
+                breadcrumbs.append(Breadcrumb(id: id, name: figure.name))
                 // Keep trail manageable
                 if breadcrumbs.count > 12 {
                     breadcrumbs.removeFirst()
@@ -134,7 +135,7 @@ struct FigureListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List(filteredFigures, selection: $selectedFigureID) { figure in
-                        FigureRow(figure: figure)
+                        FigureRow(figure: figure, searchText: searchText)
                             .tag(figure.persistentModelID)
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -157,6 +158,9 @@ struct FigureListView: View {
                         }
                         IconActionButton(icon: "trash", color: .red) {
                             deleteFigure(figure)
+                        }
+                        IconActionButton(icon: "tree", color: .green) {
+                            showingLineageExplorer = true
                         }
                         Spacer()
                         Button(action: { selectedFigureID = nil }) {
@@ -185,6 +189,11 @@ struct FigureListView: View {
         .sheet(item: $editingFigure) { figure in
             FigureFormView(figure: figure)
         }
+        .sheet(isPresented: $showingLineageExplorer) {
+            if let figure = selectedFigure {
+                FigureLineageExplorer(initialFigure: figure)
+            }
+        }
     }
 
     private func deleteFigure(_ figure: Figure) {
@@ -198,6 +207,16 @@ struct FigureListView: View {
 /// A single row in the figures list.
 struct FigureRow: View {
     let figure: Figure
+    var searchText: String = ""
+
+    private var matchedAlias: String? {
+        guard !searchText.isEmpty else { return nil }
+        let q = searchText.lowercased()
+        return figure.alternateNames.first(where: {
+            let name = $0.name.lowercased()
+            return name == q || name.contains(q) || q.contains(name)
+        })?.name
+    }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -222,6 +241,12 @@ struct FigureRow: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
+            if let alias = matchedAlias {
+                Text("aka \(alias)")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+                    .fontWeight(.medium)
+            }
             Spacer()
             Text(figure.birthDate.displayLabel)
                 .font(.caption)

@@ -5,6 +5,8 @@ import SwiftData
 struct FigureDetailView: View {
     let figure: Figure
     var onSelectFigure: ((Figure) -> Void)?
+    @Environment(\.modelContext) private var modelContext
+    @State private var citationCount = -1
     @Query private var relationships: [Relationship]
 
     var body: some View {
@@ -162,6 +164,38 @@ struct FigureDetailView: View {
                 Divider()
                 FigureImageGallery(figure: figure)
 
+                // Citations
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Sources & Citations")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    if figureCitations.isEmpty {
+                        Text("No matching citations found.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        ForEach(figureCitations) { citation in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "doc.text")
+                                    .font(.caption)
+                                    .foregroundStyle(.brown)
+                                    .frame(width: 14)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("\(citation.source?.name ?? "Unknown"), \(citation.safeLocation)")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                    Text(citation.safeNote)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer()
             }
             .padding(20)
@@ -173,6 +207,11 @@ struct FigureDetailView: View {
             $0.fromFigure?.persistentModelID == figure.persistentModelID ||
             $0.toFigure?.persistentModelID == figure.persistentModelID
         }
+    }
+
+    private var figureCitations: [Citation] {
+        let all: [Citation] = modelContext.fetchAll()
+        return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
     }
 
     private var typeColor: Color { figure.figureType.color }

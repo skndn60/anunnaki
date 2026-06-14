@@ -4,60 +4,131 @@
       "name": "Creation",
       "orderIndex": 0,
       "eraDescription": "The primordial age when the cosmos was formed from chaos. Tiamat and Apsu existed before all others.",
-      "startDate": { "year": null, "era": "Creation", "isApproximate": true },
-      "endDate": { "year": null, "era": "Creation", "isApproximate": true }
+      "startDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "id": "4e63c232-1c80-529b-9a67-63be7928e0e7"
     },
     {
       "name": "Age of the First Gods",
       "orderIndex": 1,
       "eraDescription": "The great gods emerged — Anu took the heavens, Enlil the earth, Enki the waters.",
-      "startDate": { "year": -450000, "era": "Age of the First Gods", "isApproximate": true },
-      "endDate": { "year": -300000, "era": "Age of the First Gods", "isApproximate": true }
+      "startDate": {
+        "year": -450000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -300000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "id": "548822e6-900a-58b9-af68-10a39f055747"
     },
     {
       "name": "Anunnaki on Earth",
       "orderIndex": 2,
       "eraDescription": "The Anunnaki descended to Earth, established cities, and began mining operations according to Sumerian texts.",
-      "startDate": { "year": -445000, "era": "Anunnaki on Earth", "isApproximate": true },
-      "endDate": { "year": -200000, "era": "Anunnaki on Earth", "isApproximate": true }
+      "startDate": {
+        "year": -445000,
+        "era": "Anunnaki on Earth",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -200000,
+        "era": "Anunnaki on Earth",
+        "isApproximate": true
+      },
+      "id": "89a43347-a5a1-5315-a34c-65c107ee1183"
     },
     {
       "name": "Creation of Mankind",
       "orderIndex": 3,
       "eraDescription": "Humans were created to relieve the gods of labor. Enki and Ninhursag fashioned mankind from clay.",
-      "startDate": { "year": -200000, "era": "Creation of Mankind", "isApproximate": true },
-      "endDate": { "year": -100000, "era": "Creation of Mankind", "isApproximate": true }
+      "startDate": {
+        "year": -200000,
+        "era": "Creation of Mankind",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -100000,
+        "era": "Creation of Mankind",
+        "isApproximate": true
+      },
+      "id": "c77d9538-b163-5758-af88-6e94b375a3d5"
     },
     {
       "name": "Antediluvian Period",
       "orderIndex": 4,
       "eraDescription": "The age of the antediluvian kings with impossibly long reigns, as recorded in the Sumerian King List.",
-      "startDate": { "year": -241200, "era": "Antediluvian Period", "isApproximate": true },
-      "endDate": { "year": -28000, "era": "Antediluvian Period", "isApproximate": true }
+      "startDate": {
+        "year": -241200,
+        "era": "Antediluvian Period",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -28000,
+        "era": "Antediluvian Period",
+        "isApproximate": true
+      },
+      "id": "d3118907-1b61-5ec8-a5be-2fcd1c57efad"
     },
     {
       "name": "The Great Flood",
       "orderIndex": 5,
       "eraDescription": "Enlil sent the deluge to destroy mankind. Ziusudra/Utnapishtim survived by building an ark on Enki's warning.",
-      "startDate": { "year": -28000, "era": "The Great Flood", "isApproximate": true },
-      "endDate": { "year": -27000, "era": "The Great Flood", "isApproximate": true }
+      "startDate": {
+        "year": -28000,
+        "era": "The Great Flood",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -27000,
+        "era": "The Great Flood",
+        "isApproximate": true
+      },
+      "id": "31134d83-2b31-582c-97fa-ffb0a344c7ee"
     },
     {
       "name": "Post-Flood Kingdoms",
       "orderIndex": 6,
       "eraDescription": "Kingship descended from heaven again. The dynasties of Kish, Uruk, and Ur arose.",
-      "startDate": { "year": -27000, "era": "Post-Flood Kingdoms", "isApproximate": true },
-      "endDate": { "year": -2900, "era": "Post-Flood Kingdoms", "isApproximate": true }
+      "startDate": {
+        "year": -27000,
+        "era": "Post-Flood Kingdoms",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -2900,
+        "era": "Post-Flood Kingdoms",
+        "isApproximate": true
+      },
+      "id": "40230d9f-4664-5381-a6b2-0bd5101cf4e4"
     },
     {
       "name": "Early Dynastic Period",
       "orderIndex": 7,
       "eraDescription": "Historical kings emerge alongside legendary ones. Gilgamesh rules Uruk. The gods still intervene directly.",
-      "startDate": { "year": -2900, "era": "Early Dynastic Period", "isApproximate": true },
-      "endDate": { "year": -2350, "era": "Early Dynastic Period", "isApproximate": true }
+      "startDate": {
+        "year": -2900,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "endDate": {
+        "year": -2350,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "id": "2afaa785-1089-5c15-96f0-978652cba052"
     }
   ],
-
   "figures": [
     {
       "name": "Tiamat",
@@ -66,9 +137,18 @@
       "gender": "Female",
       "domain": "Salt Water, Chaos",
       "figureDescription": "The primordial goddess of the salt sea. Her body was split by Marduk to form heaven and earth.",
-      "birthDate": { "year": null, "era": "Creation", "isApproximate": true },
-      "deathDate": { "year": null, "era": "Age of the First Gods", "isApproximate": true },
-      "source": "Enuma Elish"
+      "birthDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish",
+      "id": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a"
     },
     {
       "name": "Apsu",
@@ -77,9 +157,18 @@
       "gender": "Male",
       "domain": "Fresh Water, The Deep",
       "figureDescription": "The primordial god of fresh water beneath the earth. Slain by Enki/Ea who built his temple upon him.",
-      "birthDate": { "year": null, "era": "Creation", "isApproximate": true },
-      "deathDate": { "year": null, "era": "Creation", "isApproximate": true },
-      "source": "Enuma Elish"
+      "birthDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish",
+      "id": "0d1a7f6f-0595-5306-ae92-40f755870203"
     },
     {
       "name": "Anshar",
@@ -88,9 +177,18 @@
       "gender": "Male",
       "domain": "Sky, Heavens",
       "figureDescription": "Primordial god representing the whole sky. Father of Anu.",
-      "birthDate": { "year": null, "era": "Creation", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enuma Elish"
+      "birthDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish",
+      "id": "0c5fa420-316c-564f-9809-0bd8dae2381a"
     },
     {
       "name": "Kishar",
@@ -99,9 +197,18 @@
       "gender": "Female",
       "domain": "Earth",
       "figureDescription": "Primordial goddess representing the whole earth. Mother of Anu.",
-      "birthDate": { "year": null, "era": "Creation", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enuma Elish"
+      "birthDate": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish",
+      "id": "2558fe06-3ca2-5070-92f3-53362d010da1"
     },
     {
       "name": "Anu",
@@ -110,9 +217,18 @@
       "gender": "Male",
       "domain": "Sky, Kingship, Authority",
       "figureDescription": "Supreme god of the Sumerian/Akkadian pantheon. Ruled from the heavens. Father of Enlil, Enki, and many others.",
-      "birthDate": { "year": -450000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enuma Elish, Atra-Hasis"
+      "birthDate": {
+        "year": -450000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish, Atra-Hasis",
+      "id": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982"
     },
     {
       "name": "Antu",
@@ -121,9 +237,18 @@
       "gender": "Female",
       "domain": "Sky, Consort of Anu",
       "figureDescription": "Consort of Anu and mother goddess of the heavens.",
-      "birthDate": { "year": -450000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Sumerian texts"
+      "birthDate": {
+        "year": -450000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Sumerian texts",
+      "id": "fea3625d-2f18-5e16-ad2e-aac35b9a894c"
     },
     {
       "name": "Enlil",
@@ -132,9 +257,18 @@
       "gender": "Male",
       "domain": "Wind, Air, Earth, Authority",
       "figureDescription": "Chief deity of the Sumerian pantheon after Anu. Commander of the Anunnaki on Earth. Decreed the Flood.",
-      "birthDate": { "year": -445000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Atra-Hasis, Enuma Elish"
+      "birthDate": {
+        "year": -445000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Atra-Hasis, Enuma Elish",
+      "id": "a319752f-4a1a-5677-ad91-673b8b3ee177"
     },
     {
       "name": "Ninlil",
@@ -143,9 +277,18 @@
       "gender": "Female",
       "domain": "Wind, Air, Grain",
       "figureDescription": "Consort of Enlil. Mother of Nanna/Sin the moon god.",
-      "birthDate": { "year": -445000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enlil and Ninlil"
+      "birthDate": {
+        "year": -445000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enlil and Ninlil",
+      "id": "d7b3beb6-a9db-5caa-a314-129c4965304b"
     },
     {
       "name": "Enki",
@@ -154,9 +297,18 @@
       "gender": "Male",
       "domain": "Water, Wisdom, Magic, Crafts",
       "figureDescription": "God of wisdom, fresh water, and creation. Warned Ziusudra of the Flood. Co-created humans with Ninhursag.",
-      "birthDate": { "year": -445000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Atra-Hasis, Enki and Ninhursag"
+      "birthDate": {
+        "year": -445000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Atra-Hasis, Enki and Ninhursag",
+      "id": "7d81b568-becf-5fab-a418-67f65640db59"
     },
     {
       "name": "Ninhursag",
@@ -165,9 +317,18 @@
       "gender": "Female",
       "domain": "Earth, Fertility, Creation",
       "figureDescription": "Mother goddess. Worked with Enki to create mankind from clay mixed with divine blood.",
-      "birthDate": { "year": -445000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Atra-Hasis, Enki and Ninhursag"
+      "birthDate": {
+        "year": -445000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Atra-Hasis, Enki and Ninhursag",
+      "id": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
     },
     {
       "name": "Nanna/Sin",
@@ -176,9 +337,18 @@
       "gender": "Male",
       "domain": "Moon, Time, Cycles",
       "figureDescription": "Moon god, son of Enlil and Ninlil. Father of Utu/Shamash and Inanna/Ishtar. Chief deity of Ur.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enlil and Ninlil"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enlil and Ninlil",
+      "id": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
     },
     {
       "name": "Ningal",
@@ -187,9 +357,18 @@
       "gender": "Female",
       "domain": "Reeds, Moon",
       "figureDescription": "Consort of Nanna/Sin. Mother of Utu and Inanna.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Sumerian hymns"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Sumerian hymns",
+      "id": "a092d4df-e0f3-5348-9011-c181ee29760c"
     },
     {
       "name": "Utu/Shamash",
@@ -198,9 +377,18 @@
       "gender": "Male",
       "domain": "Sun, Justice, Truth",
       "figureDescription": "Sun god and divine judge. Aided Gilgamesh in his quest against Humbaba.",
-      "birthDate": { "year": -380000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Epic of Gilgamesh, Shamash Hymn"
+      "birthDate": {
+        "year": -380000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Epic of Gilgamesh, Shamash Hymn",
+      "id": "071116db-a8da-5ed6-8c23-9e3f657a60fb"
     },
     {
       "name": "Inanna/Ishtar",
@@ -209,9 +397,18 @@
       "gender": "Female",
       "domain": "Love, War, Fertility, Venus",
       "figureDescription": "Goddess of love, beauty, sex, war, and political power. Descended to the underworld and returned.",
-      "birthDate": { "year": -380000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Inanna's Descent, Epic of Gilgamesh"
+      "birthDate": {
+        "year": -380000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Inanna's Descent, Epic of Gilgamesh",
+      "id": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
     },
     {
       "name": "Marduk",
@@ -220,9 +417,18 @@
       "gender": "Male",
       "domain": "Storm, Creation, Kingship",
       "figureDescription": "Chief deity of Babylon. Slew Tiamat and created the world from her body. Son of Enki/Ea.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enuma Elish"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish",
+      "id": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5"
     },
     {
       "name": "Nabu",
@@ -231,9 +437,18 @@
       "gender": "Male",
       "domain": "Writing, Wisdom, Scribes",
       "figureDescription": "God of writing and wisdom. Son of Marduk. Patron of scribes and scholars.",
-      "birthDate": { "year": -350000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Babylonian texts"
+      "birthDate": {
+        "year": -350000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Babylonian texts",
+      "id": "436defeb-eb9d-5098-b520-33a9162892e1"
     },
     {
       "name": "Ereshkigal",
@@ -242,9 +457,18 @@
       "gender": "Female",
       "domain": "Underworld, Death",
       "figureDescription": "Ruler of the underworld (Kur/Irkalla). Sister of Inanna. Held power over the dead.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Inanna's Descent"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Inanna's Descent",
+      "id": "1dd59913-8226-5e6b-8719-c348e69609d5"
     },
     {
       "name": "Nergal",
@@ -253,9 +477,18 @@
       "gender": "Male",
       "domain": "War, Plague, Underworld",
       "figureDescription": "God of war and plague who became co-ruler of the underworld with Ereshkigal.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Nergal and Ereshkigal"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Nergal and Ereshkigal",
+      "id": "7463291d-4e62-5eae-b918-070104897810"
     },
     {
       "name": "Ninurta",
@@ -264,9 +497,18 @@
       "gender": "Male",
       "domain": "War, Agriculture, Hunting",
       "figureDescription": "Warrior god and god of agriculture. Son of Enlil. Defeated the Anzu bird.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Lugal-e, Anzu myth"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Lugal-e, Anzu myth",
+      "id": "bbe16dcb-7921-54c4-8c73-25014ef1bb26"
     },
     {
       "name": "Dumuzi/Tammuz",
@@ -275,9 +517,18 @@
       "gender": "Male",
       "domain": "Shepherds, Vegetation, Fertility",
       "figureDescription": "Shepherd god and consort of Inanna. Sent to the underworld as her substitute.",
-      "birthDate": { "year": -350000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "Age of the First Gods", "isApproximate": true },
-      "source": "Inanna's Descent"
+      "birthDate": {
+        "year": -350000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "source": "Inanna's Descent",
+      "id": "846ba80d-6244-5db9-9f78-116574ad1203"
     },
     {
       "name": "Adapa",
@@ -286,9 +537,18 @@
       "gender": "Male",
       "domain": "Wisdom, Priesthood",
       "figureDescription": "First of the Seven Sages (Apkallu). Created by Enki as a model human. Refused the food of immortality.",
-      "birthDate": { "year": -200000, "era": "Creation of Mankind", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Adapa myth"
+      "birthDate": {
+        "year": -200000,
+        "era": "Creation of Mankind",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Adapa myth",
+      "id": "d25541ce-1ccf-5c29-82b6-f5d1eaf3372d"
     },
     {
       "name": "Ziusudra/Utnapishtim",
@@ -297,9 +557,18 @@
       "gender": "Male",
       "domain": "Immortality, Survival",
       "figureDescription": "Survivor of the Great Flood. Warned by Enki, he built an ark. Granted immortality by the gods afterward.",
-      "birthDate": { "year": -30000, "era": "Antediluvian Period", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Epic of Gilgamesh XI, Atra-Hasis"
+      "birthDate": {
+        "year": -30000,
+        "era": "Antediluvian Period",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Epic of Gilgamesh XI, Atra-Hasis",
+      "id": "e414973f-b10a-574c-a971-7016ab72e014"
     },
     {
       "name": "Gilgamesh",
@@ -308,9 +577,18 @@
       "gender": "Male",
       "domain": "Kingship, Heroism, Quest for Immortality",
       "figureDescription": "Two-thirds divine, one-third human. King of Uruk who sought eternal life after the death of Enkidu.",
-      "birthDate": { "year": -2700, "era": "Early Dynastic Period", "isApproximate": true },
-      "deathDate": { "year": -2600, "era": "Early Dynastic Period", "isApproximate": true },
-      "source": "Epic of Gilgamesh"
+      "birthDate": {
+        "year": -2700,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": -2600,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "source": "Epic of Gilgamesh",
+      "id": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
     },
     {
       "name": "Lugalbanda",
@@ -319,9 +597,18 @@
       "gender": "Male",
       "domain": "Kingship, Shepherding",
       "figureDescription": "Legendary king of Uruk. Father of Gilgamesh. Deified after death.",
-      "birthDate": { "year": -2800, "era": "Early Dynastic Period", "isApproximate": true },
-      "deathDate": { "year": -2700, "era": "Early Dynastic Period", "isApproximate": true },
-      "source": "Lugalbanda poems"
+      "birthDate": {
+        "year": -2800,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": -2700,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "source": "Lugalbanda poems",
+      "id": "f5402631-c60a-566e-b129-5be7daf07a86"
     },
     {
       "name": "Ninsun",
@@ -330,9 +617,18 @@
       "gender": "Female",
       "domain": "Wisdom, Dream Interpretation",
       "figureDescription": "Goddess and mother of Gilgamesh. Known for her wisdom and ability to interpret dreams.",
-      "birthDate": { "year": -300000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Epic of Gilgamesh"
+      "birthDate": {
+        "year": -300000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Epic of Gilgamesh",
+      "id": "c0ba0c5a-3fcf-5ca4-829a-d759c0591933"
     },
     {
       "name": "Enkidu",
@@ -341,9 +637,18 @@
       "gender": "Male",
       "domain": "Wilderness, Companionship",
       "figureDescription": "Created by the gods from clay as a companion and equal to Gilgamesh. Raised among animals.",
-      "birthDate": { "year": -2700, "era": "Early Dynastic Period", "isApproximate": true },
-      "deathDate": { "year": -2680, "era": "Early Dynastic Period", "isApproximate": true },
-      "source": "Epic of Gilgamesh"
+      "birthDate": {
+        "year": -2700,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": -2680,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
+      "source": "Epic of Gilgamesh",
+      "id": "05cccd93-f70f-5645-a357-5f3d64664c4b"
     },
     {
       "name": "Etana",
@@ -352,9 +657,18 @@
       "gender": "Male",
       "domain": "Kingship",
       "figureDescription": "First king after the Flood according to the Sumerian King List. Ascended to heaven on an eagle.",
-      "birthDate": { "year": -27000, "era": "Post-Flood Kingdoms", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Etana myth, Sumerian King List"
+      "birthDate": {
+        "year": -27000,
+        "era": "Post-Flood Kingdoms",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Etana myth, Sumerian King List",
+      "id": "85e1904f-3baa-5709-83dc-0670c02d6194"
     },
     {
       "name": "Sarpanit",
@@ -363,49 +677,226 @@
       "gender": "Female",
       "domain": "Pregnancy, Childbirth, Fertility",
       "figureDescription": "Consort of Marduk and chief goddess of Babylon. Mother of Nabu. Central figure in the Akitu New Year festival. Worshipped in the Esagila temple.",
-      "birthDate": { "year": -400000, "era": "Age of the First Gods", "isApproximate": true },
-      "deathDate": { "year": null, "era": "", "isApproximate": true },
-      "source": "Enuma Elish, Babylonian hymns"
+      "birthDate": {
+        "year": -400000,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "year": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": "Enuma Elish, Babylonian hymns",
+      "id": "a014834c-ef84-5e71-a916-73cb1b66fd0f"
     }
   ],
-
   "relationships": [
-    { "fromFigureName": "Apsu", "toFigureName": "Tiamat", "relationshipType": "Spouse", "source": "Enuma Elish" },
-    { "fromFigureName": "Tiamat", "toFigureName": "Anshar", "relationshipType": "Mother", "source": "Enuma Elish" },
-    { "fromFigureName": "Apsu", "toFigureName": "Anshar", "relationshipType": "Father", "source": "Enuma Elish" },
-    { "fromFigureName": "Tiamat", "toFigureName": "Kishar", "relationshipType": "Mother", "source": "Enuma Elish" },
-    { "fromFigureName": "Apsu", "toFigureName": "Kishar", "relationshipType": "Father", "source": "Enuma Elish" },
-    { "fromFigureName": "Anshar", "toFigureName": "Kishar", "relationshipType": "Spouse", "source": "Enuma Elish" },
-    { "fromFigureName": "Anshar", "toFigureName": "Anu", "relationshipType": "Father", "source": "Enuma Elish" },
-    { "fromFigureName": "Kishar", "toFigureName": "Anu", "relationshipType": "Mother", "source": "Enuma Elish" },
-    { "fromFigureName": "Anu", "toFigureName": "Antu", "relationshipType": "Spouse", "source": "Sumerian texts" },
-    { "fromFigureName": "Anu", "toFigureName": "Enlil", "relationshipType": "Father", "source": "Atra-Hasis" },
-    { "fromFigureName": "Anu", "toFigureName": "Enki", "relationshipType": "Father", "source": "Enuma Elish" },
-    { "fromFigureName": "Anu", "toFigureName": "Ninhursag", "relationshipType": "Father", "source": "Sumerian texts" },
-    { "fromFigureName": "Anu", "toFigureName": "Ereshkigal", "relationshipType": "Father", "source": "Sumerian texts" },
-    { "fromFigureName": "Anu", "toFigureName": "Ninsun", "relationshipType": "Father", "source": "Sumerian texts" },
-    { "fromFigureName": "Enlil", "toFigureName": "Ninlil", "relationshipType": "Spouse", "source": "Enlil and Ninlil" },
-    { "fromFigureName": "Enlil", "toFigureName": "Nanna/Sin", "relationshipType": "Father", "source": "Enlil and Ninlil" },
-    { "fromFigureName": "Ninlil", "toFigureName": "Nanna/Sin", "relationshipType": "Mother", "source": "Enlil and Ninlil" },
-    { "fromFigureName": "Enlil", "toFigureName": "Ninurta", "relationshipType": "Father", "source": "Lugal-e" },
-    { "fromFigureName": "Ninhursag", "toFigureName": "Ninurta", "relationshipType": "Mother", "source": "Sumerian texts" },
-    { "fromFigureName": "Enki", "toFigureName": "Marduk", "relationshipType": "Father", "source": "Enuma Elish" },
-    { "fromFigureName": "Nanna/Sin", "toFigureName": "Ningal", "relationshipType": "Spouse", "source": "Sumerian hymns" },
-    { "fromFigureName": "Nanna/Sin", "toFigureName": "Utu/Shamash", "relationshipType": "Father", "source": "Sumerian texts" },
-    { "fromFigureName": "Ningal", "toFigureName": "Utu/Shamash", "relationshipType": "Mother", "source": "Sumerian texts" },
-    { "fromFigureName": "Nanna/Sin", "toFigureName": "Inanna/Ishtar", "relationshipType": "Father", "source": "Sumerian texts" },
-    { "fromFigureName": "Ningal", "toFigureName": "Inanna/Ishtar", "relationshipType": "Mother", "source": "Sumerian texts" },
-    { "fromFigureName": "Marduk", "toFigureName": "Nabu", "relationshipType": "Father", "source": "Babylonian texts" },
-    { "fromFigureName": "Marduk", "toFigureName": "Sarpanit", "relationshipType": "Spouse", "source": "Enuma Elish, Babylonian texts" },
-    { "fromFigureName": "Sarpanit", "toFigureName": "Nabu", "relationshipType": "Mother", "source": "Babylonian texts" },
-    { "fromFigureName": "Nergal", "toFigureName": "Ereshkigal", "relationshipType": "Spouse", "source": "Nergal and Ereshkigal" },
-    { "fromFigureName": "Inanna/Ishtar", "toFigureName": "Dumuzi/Tammuz", "relationshipType": "Spouse", "source": "Inanna's Descent" },
-    { "fromFigureName": "Lugalbanda", "toFigureName": "Gilgamesh", "relationshipType": "Father", "source": "Epic of Gilgamesh" },
-    { "fromFigureName": "Ninsun", "toFigureName": "Gilgamesh", "relationshipType": "Mother", "source": "Epic of Gilgamesh" },
-    { "fromFigureName": "Lugalbanda", "toFigureName": "Ninsun", "relationshipType": "Spouse", "source": "Sumerian texts" },
-    { "fromFigureName": "Enki", "toFigureName": "Adapa", "relationshipType": "Creator", "source": "Adapa myth" }
+    {
+      "relationshipType": "Spouse",
+      "source": "Enuma Elish",
+      "fromFigureId": "0d1a7f6f-0595-5306-ae92-40f755870203",
+      "toFigureId": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Enuma Elish",
+      "fromFigureId": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a",
+      "toFigureId": "0c5fa420-316c-564f-9809-0bd8dae2381a"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enuma Elish",
+      "fromFigureId": "0d1a7f6f-0595-5306-ae92-40f755870203",
+      "toFigureId": "0c5fa420-316c-564f-9809-0bd8dae2381a"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Enuma Elish",
+      "fromFigureId": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a",
+      "toFigureId": "2558fe06-3ca2-5070-92f3-53362d010da1"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enuma Elish",
+      "fromFigureId": "0d1a7f6f-0595-5306-ae92-40f755870203",
+      "toFigureId": "2558fe06-3ca2-5070-92f3-53362d010da1"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Enuma Elish",
+      "fromFigureId": "0c5fa420-316c-564f-9809-0bd8dae2381a",
+      "toFigureId": "2558fe06-3ca2-5070-92f3-53362d010da1"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enuma Elish",
+      "fromFigureId": "0c5fa420-316c-564f-9809-0bd8dae2381a",
+      "toFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Enuma Elish",
+      "fromFigureId": "2558fe06-3ca2-5070-92f3-53362d010da1",
+      "toFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Sumerian texts",
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "fea3625d-2f18-5e16-ad2e-aac35b9a894c"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Atra-Hasis",
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "a319752f-4a1a-5677-ad91-673b8b3ee177"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enuma Elish",
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "7d81b568-becf-5fab-a418-67f65640db59"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian texts",
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian texts",
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "1dd59913-8226-5e6b-8719-c348e69609d5"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian texts",
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "c0ba0c5a-3fcf-5ca4-829a-d759c0591933"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Enlil and Ninlil",
+      "fromFigureId": "a319752f-4a1a-5677-ad91-673b8b3ee177",
+      "toFigureId": "d7b3beb6-a9db-5caa-a314-129c4965304b"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enlil and Ninlil",
+      "fromFigureId": "a319752f-4a1a-5677-ad91-673b8b3ee177",
+      "toFigureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Enlil and Ninlil",
+      "fromFigureId": "d7b3beb6-a9db-5caa-a314-129c4965304b",
+      "toFigureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Lugal-e",
+      "fromFigureId": "a319752f-4a1a-5677-ad91-673b8b3ee177",
+      "toFigureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian texts",
+      "fromFigureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda",
+      "toFigureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enuma Elish",
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Sumerian hymns",
+      "fromFigureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "toFigureId": "a092d4df-e0f3-5348-9011-c181ee29760c"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian texts",
+      "fromFigureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "toFigureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian texts",
+      "fromFigureId": "a092d4df-e0f3-5348-9011-c181ee29760c",
+      "toFigureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian texts",
+      "fromFigureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "toFigureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian texts",
+      "fromFigureId": "a092d4df-e0f3-5348-9011-c181ee29760c",
+      "toFigureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Babylonian texts",
+      "fromFigureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "toFigureId": "436defeb-eb9d-5098-b520-33a9162892e1"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Enuma Elish, Babylonian texts",
+      "fromFigureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "toFigureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Babylonian texts",
+      "fromFigureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f",
+      "toFigureId": "436defeb-eb9d-5098-b520-33a9162892e1"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Nergal and Ereshkigal",
+      "fromFigureId": "7463291d-4e62-5eae-b918-070104897810",
+      "toFigureId": "1dd59913-8226-5e6b-8719-c348e69609d5"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Inanna's Descent",
+      "fromFigureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+      "toFigureId": "846ba80d-6244-5db9-9f78-116574ad1203"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Epic of Gilgamesh",
+      "fromFigureId": "f5402631-c60a-566e-b129-5be7daf07a86",
+      "toFigureId": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Epic of Gilgamesh",
+      "fromFigureId": "c0ba0c5a-3fcf-5ca4-829a-d759c0591933",
+      "toFigureId": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+    },
+    {
+      "relationshipType": "Spouse",
+      "source": "Sumerian texts",
+      "fromFigureId": "f5402631-c60a-566e-b129-5be7daf07a86",
+      "toFigureId": "c0ba0c5a-3fcf-5ca4-829a-d759c0591933"
+    },
+    {
+      "relationshipType": "Creator",
+      "source": "Adapa myth",
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "d25541ce-1ccf-5c29-82b6-f5d1eaf3372d"
+    }
   ],
-
   "places": [
     {
       "name": "Eridu",
@@ -414,7 +905,8 @@
       "placeDescription": "First city ever built according to Sumerian tradition. Sacred city of Enki.",
       "source": "Sumerian King List",
       "latitude": 30.816,
-      "longitude": 45.996
+      "longitude": 45.996,
+      "id": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
     },
     {
       "name": "Uruk",
@@ -423,7 +915,8 @@
       "placeDescription": "Great walled city ruled by Gilgamesh. Center of Inanna worship.",
       "source": "Epic of Gilgamesh",
       "latitude": 31.322,
-      "longitude": 45.637
+      "longitude": 45.637,
+      "id": "81476542-a174-55cf-a47e-4032687cd00e"
     },
     {
       "name": "Ur",
@@ -432,7 +925,8 @@
       "placeDescription": "City of the moon god Nanna/Sin. Site of the great ziggurat.",
       "source": "Sumerian texts",
       "latitude": 30.963,
-      "longitude": 46.103
+      "longitude": 46.103,
+      "id": "3b898611-9e5b-563e-83e4-f2f430c225a4"
     },
     {
       "name": "Nippur",
@@ -441,7 +935,8 @@
       "placeDescription": "Holy city of Enlil. Religious center of Sumer where the gods held council.",
       "source": "Sumerian texts",
       "latitude": 32.126,
-      "longitude": 45.233
+      "longitude": 45.233,
+      "id": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
     },
     {
       "name": "Babylon",
@@ -450,7 +945,8 @@
       "placeDescription": "City of Marduk. Became the supreme city when Marduk rose to kingship of the gods.",
       "source": "Enuma Elish",
       "latitude": 32.536,
-      "longitude": 44.421
+      "longitude": 44.421,
+      "id": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
     },
     {
       "name": "Kish",
@@ -458,8 +954,9 @@
       "modernLocation": "Tell al-Uhaymir, Central Iraq",
       "placeDescription": "First city to receive kingship after the Flood. Etana ruled here.",
       "source": "Sumerian King List",
-      "latitude": 32.550,
-      "longitude": 44.639
+      "latitude": 32.55,
+      "longitude": 44.639,
+      "id": "763c958b-ec00-5b9a-bc39-17e67e50d08d"
     },
     {
       "name": "E-kur",
@@ -468,7 +965,8 @@
       "placeDescription": "Temple of Enlil in Nippur. 'Mountain House' — the most important temple in Sumer.",
       "source": "Sumerian hymns",
       "latitude": 32.126,
-      "longitude": 45.233
+      "longitude": 45.233,
+      "id": "bd4f74e7-d879-5ee5-afbc-9b506428d901"
     },
     {
       "name": "E-abzu",
@@ -477,7 +975,8 @@
       "placeDescription": "Temple of Enki in Eridu. Built over the slain Apsu.",
       "source": "Enuma Elish",
       "latitude": 30.816,
-      "longitude": 45.996
+      "longitude": 45.996,
+      "id": "5d3aa10a-d95e-57b1-ba13-062d94eecc24"
     },
     {
       "name": "Kur",
@@ -486,7 +985,8 @@
       "placeDescription": "The underworld / land of the dead. Ruled by Ereshkigal. Inanna descended here.",
       "source": "Inanna's Descent",
       "latitude": null,
-      "longitude": null
+      "longitude": null,
+      "id": "9261e9ee-c4bd-56b3-9f55-794b3ce61f3d"
     },
     {
       "name": "An",
@@ -495,7 +995,8 @@
       "placeDescription": "The heavens. Realm of Anu. Where the gods held their celestial court.",
       "source": "Sumerian cosmology",
       "latitude": null,
-      "longitude": null
+      "longitude": null,
+      "id": "34154e58-6361-54ec-9e19-c1975f74ed20"
     },
     {
       "name": "Cedar Forest",
@@ -503,8 +1004,9 @@
       "modernLocation": "Lebanon / Syria",
       "placeDescription": "Sacred forest guarded by Humbaba. Gilgamesh and Enkidu journeyed here.",
       "source": "Epic of Gilgamesh",
-      "latitude": 34.200,
-      "longitude": 36.000
+      "latitude": 34.2,
+      "longitude": 36.0,
+      "id": "ff5304c0-2d6f-5d5b-abde-41dce43c9300"
     },
     {
       "name": "Mount Mashu",
@@ -512,114 +1014,192 @@
       "modernLocation": "Unknown, possibly Lebanon",
       "placeDescription": "Twin-peaked mountain where the sun rises and sets. Gilgamesh passed through on his quest.",
       "source": "Epic of Gilgamesh",
-      "latitude": 34.000,
-      "longitude": 36.200
+      "latitude": 34.0,
+      "longitude": 36.2,
+      "id": "83c1e5f4-e6e0-543e-b6bb-81ad24fb62c2"
     }
   ],
-
   "events": [
     {
       "name": "Slaying of Apsu",
       "eventType": "Battle",
       "eventDescription": "Enki/Ea put Apsu into a deep sleep and slew him, then built his temple upon the body.",
-      "date": { "year": null, "era": "Creation", "isApproximate": true },
+      "date": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
       "era": "Creation",
       "source": "Enuma Elish, Tablet I",
-      "involvedFigureNames": ["Enki", "Apsu"],
-      "placeName": "E-abzu"
+      "id": "b5793656-b15a-5c6d-b593-dfab639b6c01",
+      "involvedFigureIds": [
+        "7d81b568-becf-5fab-a418-67f65640db59",
+        "0d1a7f6f-0595-5306-ae92-40f755870203"
+      ],
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24"
     },
     {
       "name": "Slaying of Tiamat",
       "eventType": "Battle",
       "eventDescription": "Marduk defeated Tiamat in single combat, split her body to form heaven and earth.",
-      "date": { "year": null, "era": "Creation", "isApproximate": true },
+      "date": {
+        "year": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
       "era": "Creation",
       "source": "Enuma Elish, Tablet IV",
-      "involvedFigureNames": ["Marduk", "Tiamat"],
-      "placeName": null
+      "id": "b089afd2-0703-5e9d-bd5a-c893a4c7f955",
+      "involvedFigureIds": [
+        "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+        "32219e8f-af76-52f2-8d0e-abcef2c7ee4a"
+      ]
     },
     {
       "name": "Creation of Mankind",
       "eventType": "Creation",
       "eventDescription": "Enki and Ninhursag created humans from clay mixed with the blood of the slain god Kingu.",
-      "date": { "year": -200000, "era": "Creation of Mankind", "isApproximate": true },
+      "date": {
+        "year": -200000,
+        "era": "Creation of Mankind",
+        "isApproximate": true
+      },
       "era": "Creation of Mankind",
       "source": "Atra-Hasis",
-      "involvedFigureNames": ["Enki", "Ninhursag"],
-      "placeName": "E-abzu"
+      "id": "3e8d0ff6-89be-5d77-81a6-702e0734f385",
+      "involvedFigureIds": [
+        "7d81b568-becf-5fab-a418-67f65640db59",
+        "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+      ],
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24"
     },
     {
       "name": "Inanna's Descent to the Underworld",
       "eventType": "Descent",
       "eventDescription": "Inanna descended through the seven gates of the underworld to confront her sister Ereshkigal.",
-      "date": { "year": null, "era": "Age of the First Gods", "isApproximate": true },
+      "date": {
+        "year": null,
+        "era": "Age of the First Gods",
+        "isApproximate": true
+      },
       "era": "Age of the First Gods",
       "source": "Inanna's Descent",
-      "involvedFigureNames": ["Inanna/Ishtar", "Ereshkigal", "Dumuzi/Tammuz"],
-      "placeName": "Kur"
+      "id": "93cf47db-da54-5ac8-984c-9ef534c2d5df",
+      "involvedFigureIds": [
+        "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+        "1dd59913-8226-5e6b-8719-c348e69609d5",
+        "846ba80d-6244-5db9-9f78-116574ad1203"
+      ],
+      "placeId": "9261e9ee-c4bd-56b3-9f55-794b3ce61f3d"
     },
     {
       "name": "The Great Flood",
       "eventType": "Flood",
       "eventDescription": "Enlil decreed the destruction of mankind by flood. Enki warned Ziusudra who built an ark and survived.",
-      "date": { "year": -28000, "era": "The Great Flood", "isApproximate": true },
+      "date": {
+        "year": -28000,
+        "era": "The Great Flood",
+        "isApproximate": true
+      },
       "era": "The Great Flood",
       "source": "Atra-Hasis, Epic of Gilgamesh XI",
-      "involvedFigureNames": ["Enlil", "Enki", "Ziusudra/Utnapishtim"],
-      "placeName": null
+      "id": "ca67f49f-cb98-5aee-b814-46da9592b286",
+      "involvedFigureIds": [
+        "a319752f-4a1a-5677-ad91-673b8b3ee177",
+        "7d81b568-becf-5fab-a418-67f65640db59",
+        "e414973f-b10a-574c-a971-7016ab72e014"
+      ]
     },
     {
       "name": "Gilgamesh and Enkidu Slay Humbaba",
       "eventType": "Quest",
       "eventDescription": "Gilgamesh and Enkidu journeyed to the Cedar Forest and slew its guardian Humbaba.",
-      "date": { "year": -2700, "era": "Early Dynastic Period", "isApproximate": true },
+      "date": {
+        "year": -2700,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
       "era": "Early Dynastic Period",
       "source": "Epic of Gilgamesh, Tablets III-V",
-      "involvedFigureNames": ["Gilgamesh", "Enkidu"],
-      "placeName": "Cedar Forest"
+      "id": "18eefef7-45b3-581b-8039-a5464cdbeb35",
+      "involvedFigureIds": [
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+        "05cccd93-f70f-5645-a357-5f3d64664c4b"
+      ],
+      "placeId": "ff5304c0-2d6f-5d5b-abde-41dce43c9300"
     },
     {
       "name": "Death of Enkidu",
       "eventType": "Death",
       "eventDescription": "The gods decreed Enkidu's death as punishment for slaying Humbaba and the Bull of Heaven.",
-      "date": { "year": -2680, "era": "Early Dynastic Period", "isApproximate": true },
+      "date": {
+        "year": -2680,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
       "era": "Early Dynastic Period",
       "source": "Epic of Gilgamesh, Tablet VII",
-      "involvedFigureNames": ["Enkidu", "Gilgamesh", "Enlil"],
-      "placeName": "Uruk"
+      "id": "8194bddd-f01a-542d-858b-9c160ff3fc74",
+      "involvedFigureIds": [
+        "05cccd93-f70f-5645-a357-5f3d64664c4b",
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+        "a319752f-4a1a-5677-ad91-673b8b3ee177"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
     },
     {
       "name": "Gilgamesh Seeks Immortality",
       "eventType": "Quest",
       "eventDescription": "After Enkidu's death, Gilgamesh journeyed to find Utnapishtim and the secret of eternal life.",
-      "date": { "year": -2670, "era": "Early Dynastic Period", "isApproximate": true },
+      "date": {
+        "year": -2670,
+        "era": "Early Dynastic Period",
+        "isApproximate": true
+      },
       "era": "Early Dynastic Period",
       "source": "Epic of Gilgamesh, Tablets IX-XI",
-      "involvedFigureNames": ["Gilgamesh", "Ziusudra/Utnapishtim"],
-      "placeName": "Mount Mashu"
+      "id": "0495493d-589c-5003-85c7-23660b02131a",
+      "involvedFigureIds": [
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+        "e414973f-b10a-574c-a971-7016ab72e014"
+      ],
+      "placeId": "83c1e5f4-e6e0-543e-b6bb-81ad24fb62c2"
     },
     {
       "name": "Etana's Ascent to Heaven",
       "eventType": "Ascension",
       "eventDescription": "King Etana rode an eagle to heaven seeking the plant of birth to produce an heir.",
-      "date": { "year": -27000, "era": "Post-Flood Kingdoms", "isApproximate": true },
+      "date": {
+        "year": -27000,
+        "era": "Post-Flood Kingdoms",
+        "isApproximate": true
+      },
       "era": "Post-Flood Kingdoms",
       "source": "Etana myth",
-      "involvedFigureNames": ["Etana"],
-      "placeName": "Kish"
+      "id": "34a3a17e-c9aa-54cd-9d91-b540ad97871a",
+      "involvedFigureIds": [
+        "85e1904f-3baa-5709-83dc-0670c02d6194"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d"
     },
     {
       "name": "Founding of Eridu",
       "eventType": "City Founding",
       "eventDescription": "The first city was established by the gods. Kingship first descended from heaven here.",
-      "date": { "year": -445000, "era": "Anunnaki on Earth", "isApproximate": true },
+      "date": {
+        "year": -445000,
+        "era": "Anunnaki on Earth",
+        "isApproximate": true
+      },
       "era": "Anunnaki on Earth",
       "source": "Sumerian King List",
-      "involvedFigureNames": ["Enki"],
-      "placeName": "Eridu"
+      "id": "02c2d29b-3cdf-585c-8d04-a4b71a5b5564",
+      "involvedFigureIds": [
+        "7d81b568-becf-5fab-a418-67f65640db59"
+      ],
+      "placeId": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
     }
   ],
-
   "sources": [
     {
       "name": "Enuma Elish",
@@ -629,7 +1209,8 @@
       "period": "Old Babylonian (~1900-1600 BCE), copies from Neo-Assyrian period",
       "sourceDescription": "The Babylonian creation epic. Seven tablets describing Marduk's rise to supremacy, the slaying of Tiamat, and the creation of the world and mankind.",
       "publicationInfo": "Multiple tablets, primarily from Ashurbanipal's library at Nineveh (British Museum)",
-      "url": ""
+      "url": "",
+      "id": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba"
     },
     {
       "name": "Atra-Hasis",
@@ -639,7 +1220,8 @@
       "period": "Old Babylonian (~1700 BCE)",
       "sourceDescription": "Epic of creation, the burden of the gods, the creation of mankind, and the Great Flood. Key source for understanding why humans were created.",
       "publicationInfo": "British Museum tablets, primary copy BM 78941",
-      "url": ""
+      "url": "",
+      "id": "e2d93d2b-da26-5d23-9548-30a1813bbe6d"
     },
     {
       "name": "Epic of Gilgamesh",
@@ -649,7 +1231,8 @@
       "period": "Old Babylonian origins (~2100 BCE), Standard version (~1200 BCE)",
       "sourceDescription": "The oldest great work of literature. Twelve tablets following King Gilgamesh of Uruk in his quest for immortality after the death of his friend Enkidu.",
       "publicationInfo": "Ashurbanipal's library, Nineveh. Multiple fragments from across Mesopotamia.",
-      "url": ""
+      "url": "",
+      "id": "459bc0e1-2a4e-57ba-b232-590e714ee0ad"
     },
     {
       "name": "Inanna's Descent to the Underworld",
@@ -659,7 +1242,8 @@
       "period": "Old Babylonian (~1900-1600 BCE)",
       "sourceDescription": "Myth of Inanna's journey through the seven gates of the underworld to confront her sister Ereshkigal, her death and resurrection.",
       "publicationInfo": "Multiple Sumerian tablets from Nippur",
-      "url": ""
+      "url": "",
+      "id": "56dac505-cfe5-5876-8815-f2e81b5a5eaf"
     },
     {
       "name": "Enlil and Ninlil",
@@ -669,7 +1253,8 @@
       "period": "Old Babylonian (~1900-1600 BCE)",
       "sourceDescription": "Myth describing the courtship of Enlil and Ninlil and the conception of the moon god Nanna/Sin.",
       "publicationInfo": "Tablets from Nippur",
-      "url": ""
+      "url": "",
+      "id": "9d270a9d-2088-52d4-9214-70f8f7907c3d"
     },
     {
       "name": "Sumerian King List",
@@ -679,7 +1264,8 @@
       "period": "Ur III period (~2100 BCE), copies through Isin-Larsa period",
       "sourceDescription": "Records the succession of kings from the time 'kingship descended from heaven' through the antediluvian period, the Flood, and into historical dynasties.",
       "publicationInfo": "Weld-Blundell Prism (WB 444), Ashmolean Museum, Oxford",
-      "url": ""
+      "url": "",
+      "id": "25bb611a-df83-5345-b7d9-c57595af6c70"
     },
     {
       "name": "Adapa Myth",
@@ -689,7 +1275,8 @@
       "period": "Middle Babylonian (~14th century BCE, Amarna tablets)",
       "sourceDescription": "Story of Adapa, the first sage created by Enki, who was offered but refused the food of immortality when brought before Anu.",
       "publicationInfo": "Amarna tablets (EA 356) and Ashurbanipal's library fragments",
-      "url": ""
+      "url": "",
+      "id": "fa20ccf4-061c-5703-8490-39b3901cf5c2"
     },
     {
       "name": "Nergal and Ereshkigal",
@@ -699,7 +1286,8 @@
       "period": "Middle Babylonian (~14th century BCE), later copies",
       "sourceDescription": "Myth explaining how Nergal descended to the underworld and became co-ruler with Ereshkigal through a combination of force and love.",
       "publicationInfo": "Amarna version (EA 357) and Sultantepe tablets",
-      "url": ""
+      "url": "",
+      "id": "e36addef-bead-5d29-b87c-87835825b2e4"
     },
     {
       "name": "Lugal-e",
@@ -709,7 +1297,8 @@
       "period": "Old Babylonian (~1900-1600 BCE)",
       "sourceDescription": "Epic of Ninurta's victory over the demon Asag and his ordering of the world. Full title: 'O King, the storm whose splendour is lordly.'",
       "publicationInfo": "Multiple tablets from Nippur",
-      "url": ""
+      "url": "",
+      "id": "bbb27d6e-e0ea-5543-b19d-58843a044e07"
     },
     {
       "name": "Etana Myth",
@@ -719,7 +1308,8 @@
       "period": "Old Babylonian (~1800 BCE), copies through Neo-Assyrian period",
       "sourceDescription": "Story of King Etana of Kish who ascended to heaven on the back of an eagle seeking the plant of birth.",
       "publicationInfo": "Multiple fragments, Old Babylonian through Neo-Assyrian",
-      "url": ""
+      "url": "",
+      "id": "8ee625e6-5e7f-5f8d-bf8a-a7903fa9662b"
     },
     {
       "name": "Myths from Mesopotamia",
@@ -729,7 +1319,8 @@
       "period": "Modern (1989, revised 2000)",
       "sourceDescription": "Authoritative English translations of major Mesopotamian myths including Atrahasis, Gilgamesh, Enuma Elish, Etana, Anzu, and Descent of Ishtar.",
       "publicationInfo": "Oxford University Press, Oxford World's Classics",
-      "url": ""
+      "url": "",
+      "id": "582d6b87-cead-5031-ba60-24307bac1201"
     },
     {
       "name": "ETCSL (Electronic Text Corpus of Sumerian Literature)",
@@ -739,124 +1330,690 @@
       "period": "Modern (1998-2006)",
       "sourceDescription": "Comprehensive online corpus of Sumerian literary texts with translations. Major reference for Sumerian myths, hymns, and royal inscriptions.",
       "publicationInfo": "Faculty of Oriental Studies, University of Oxford",
-      "url": "https://etcsl.orinst.ox.ac.uk"
+      "url": "https://etcsl.orinst.ox.ac.uk",
+      "id": "1cefe9d0-0f3a-5004-9c66-215403e328a8"
     }
   ],
-
   "attachments": [
-    { "sourceName": "Sumerian King List", "title": "ETCSL: The Sumerian King List", "url": "https://etcsl.orinst.ox.ac.uk/section2/tr211.htm", "attachmentType": "Online Text", "note": "Full Sumerian text with English translation" },
-    { "sourceName": "Sumerian King List", "title": "Weld-Blundell Prism (Ashmolean Museum)", "url": "https://www.ashmolean.org/collections/weld-blundell-prism", "attachmentType": "Image/Photo", "note": "Photo of the physical artifact — most complete copy" },
-    { "sourceName": "Epic of Gilgamesh", "title": "The Epic of Gilgamesh — Full Text (Academy for Ancient Texts)", "url": "https://www.ancienttexts.org/library/mesopotamian/gilgamesh/", "attachmentType": "Online Text", "note": "Complete English translation of all twelve tablets" },
-    { "sourceName": "Epic of Gilgamesh", "title": "British Museum: Flood Tablet", "url": "https://www.britishmuseum.org/collection/object/W_1882-0918-1878", "attachmentType": "Database Entry", "note": "Tablet XI — the flood narrative, BM K.3375" },
-    { "sourceName": "Enuma Elish", "title": "Enuma Elish — Full Text (Sacred Texts)", "url": "https://www.sacred-texts.com/ane/enuma.htm", "attachmentType": "Online Text", "note": "L.W. King translation of all seven tablets" },
-    { "sourceName": "Atra-Hasis", "title": "Atra-Hasis — Lambert & Millard Translation", "url": "https://www.ancienttexts.org/library/mesopotamian/atrahasis/", "attachmentType": "Online Text", "note": "Standard scholarly translation" },
-    { "sourceName": "Inanna's Descent to the Underworld", "title": "ETCSL: Inanna's Descent to the Nether World", "url": "https://etcsl.orinst.ox.ac.uk/section1/tr141.htm", "attachmentType": "Online Text", "note": "Sumerian version with translation" },
-    { "sourceName": "Enlil and Ninlil", "title": "ETCSL: Enlil and Ninlil", "url": "https://etcsl.orinst.ox.ac.uk/section1/tr121.htm", "attachmentType": "Online Text", "note": "Full Sumerian text with translation" },
-    { "sourceName": "Adapa Myth", "title": "Adapa and the Food of Life", "url": "https://www.ancienttexts.org/library/mesopotamian/adapa/", "attachmentType": "Online Text", "note": "English translation of the Adapa fragments" },
-    { "sourceName": "ETCSL (Electronic Text Corpus of Sumerian Literature)", "title": "ETCSL Home Page", "url": "https://etcsl.orinst.ox.ac.uk", "attachmentType": "Database Entry", "note": "Main portal — searchable corpus of Sumerian literature" },
-    { "sourceName": "Myths from Mesopotamia", "title": "Myths from Mesopotamia (Oxford World's Classics)", "url": "https://global.oup.com/academic/product/myths-from-mesopotamia-9780199538362", "attachmentType": "Article", "note": "Publisher page — authoritative modern translations" }
+    {
+      "title": "ETCSL: The Sumerian King List",
+      "url": "https://etcsl.orinst.ox.ac.uk/section2/tr211.htm",
+      "attachmentType": "Online Text",
+      "note": "Full Sumerian text with English translation",
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70"
+    },
+    {
+      "title": "Weld-Blundell Prism (Ashmolean Museum)",
+      "url": "https://www.ashmolean.org/collections/weld-blundell-prism",
+      "attachmentType": "Image/Photo",
+      "note": "Photo of the physical artifact — most complete copy",
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70"
+    },
+    {
+      "title": "The Epic of Gilgamesh — Full Text (Academy for Ancient Texts)",
+      "url": "https://www.ancienttexts.org/library/mesopotamian/gilgamesh/",
+      "attachmentType": "Online Text",
+      "note": "Complete English translation of all twelve tablets",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad"
+    },
+    {
+      "title": "British Museum: Flood Tablet",
+      "url": "https://www.britishmuseum.org/collection/object/W_1882-0918-1878",
+      "attachmentType": "Database Entry",
+      "note": "Tablet XI — the flood narrative, BM K.3375",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad"
+    },
+    {
+      "title": "Enuma Elish — Full Text (Sacred Texts)",
+      "url": "https://www.sacred-texts.com/ane/enuma.htm",
+      "attachmentType": "Online Text",
+      "note": "L.W. King translation of all seven tablets",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba"
+    },
+    {
+      "title": "Atra-Hasis — Lambert & Millard Translation",
+      "url": "https://www.ancienttexts.org/library/mesopotamian/atrahasis/",
+      "attachmentType": "Online Text",
+      "note": "Standard scholarly translation",
+      "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d"
+    },
+    {
+      "title": "ETCSL: Inanna's Descent to the Nether World",
+      "url": "https://etcsl.orinst.ox.ac.uk/section1/tr141.htm",
+      "attachmentType": "Online Text",
+      "note": "Sumerian version with translation",
+      "sourceId": "56dac505-cfe5-5876-8815-f2e81b5a5eaf"
+    },
+    {
+      "title": "ETCSL: Enlil and Ninlil",
+      "url": "https://etcsl.orinst.ox.ac.uk/section1/tr121.htm",
+      "attachmentType": "Online Text",
+      "note": "Full Sumerian text with translation",
+      "sourceId": "9d270a9d-2088-52d4-9214-70f8f7907c3d"
+    },
+    {
+      "title": "Adapa and the Food of Life",
+      "url": "https://www.ancienttexts.org/library/mesopotamian/adapa/",
+      "attachmentType": "Online Text",
+      "note": "English translation of the Adapa fragments",
+      "sourceId": "fa20ccf4-061c-5703-8490-39b3901cf5c2"
+    },
+    {
+      "title": "ETCSL Home Page",
+      "url": "https://etcsl.orinst.ox.ac.uk",
+      "attachmentType": "Database Entry",
+      "note": "Main portal — searchable corpus of Sumerian literature",
+      "sourceId": "1cefe9d0-0f3a-5004-9c66-215403e328a8"
+    },
+    {
+      "title": "Myths from Mesopotamia (Oxford World's Classics)",
+      "url": "https://global.oup.com/academic/product/myths-from-mesopotamia-9780199538362",
+      "attachmentType": "Article",
+      "note": "Publisher page — authoritative modern translations",
+      "sourceId": "582d6b87-cead-5031-ba60-24307bac1201"
+    }
   ],
-
   "citations": [
-    { "sourceName": "Enuma Elish", "location": "Tablet I, 1-20", "entityType": "Figure", "entityName": "Tiamat", "note": "Tiamat described as primordial salt water" },
-    { "sourceName": "Enuma Elish", "location": "Tablet I, 1-20", "entityType": "Figure", "entityName": "Apsu", "note": "Apsu described as primordial fresh water" },
-    { "sourceName": "Enuma Elish", "location": "Tablet IV, 93-104", "entityType": "Figure", "entityName": "Marduk", "note": "Marduk slays Tiamat with wind and arrow" },
-    { "sourceName": "Enuma Elish", "location": "Tablet I, 90-100", "entityType": "Figure", "entityName": "Anshar", "note": "Anshar as father of Anu" },
-    { "sourceName": "Atra-Hasis", "location": "Tablet I, 1-35", "entityType": "Figure", "entityName": "Enlil", "note": "Enlil as chief of the gods on earth" },
-    { "sourceName": "Atra-Hasis", "location": "Tablet I, 190-230", "entityType": "Figure", "entityName": "Enki", "note": "Enki proposes creation of mankind" },
-    { "sourceName": "Atra-Hasis", "location": "Tablet I, 190-260", "entityType": "Figure", "entityName": "Ninhursag", "note": "Ninhursag shapes humans from clay" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet I, 1-30", "entityType": "Figure", "entityName": "Gilgamesh", "note": "Introduction of Gilgamesh as king of Uruk" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet I, 80-100", "entityType": "Figure", "entityName": "Enkidu", "note": "Creation of Enkidu from clay" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet XI, 1-200", "entityType": "Figure", "entityName": "Ziusudra/Utnapishtim", "note": "Utnapishtim tells the flood story" },
-    { "sourceName": "Enlil and Ninlil", "location": "Lines 1-50", "entityType": "Figure", "entityName": "Ninlil", "note": "Ninlil introduced as young goddess" },
-    { "sourceName": "Enlil and Ninlil", "location": "Lines 50-100", "entityType": "Figure", "entityName": "Nanna/Sin", "note": "Conception of the moon god" },
-    { "sourceName": "Inanna's Descent to the Underworld", "location": "Lines 1-30", "entityType": "Figure", "entityName": "Inanna/Ishtar", "note": "Inanna decides to descend to the underworld" },
-    { "sourceName": "Inanna's Descent to the Underworld", "location": "Lines 90-120", "entityType": "Figure", "entityName": "Ereshkigal", "note": "Ereshkigal as queen of the underworld" },
-    { "sourceName": "Sumerian King List", "location": "Column i, 1-39", "entityType": "Figure", "entityName": "Etana", "note": "Etana listed as king of Kish" },
-    { "sourceName": "Enuma Elish", "location": "Tablet IV, 35-134", "entityType": "Event", "entityName": "Slaying of Tiamat", "note": "Full battle sequence" },
-    { "sourceName": "Enuma Elish", "location": "Tablet I, 60-72", "entityType": "Event", "entityName": "Slaying of Apsu", "note": "Ea/Enki puts Apsu to sleep and slays him" },
-    { "sourceName": "Atra-Hasis", "location": "Tablet I, 190-330", "entityType": "Event", "entityName": "Creation of Mankind", "note": "Full creation sequence" },
-    { "sourceName": "Atra-Hasis", "location": "Tablet III", "entityType": "Event", "entityName": "The Great Flood", "note": "Flood narrative in Atra-Hasis" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet XI, 1-196", "entityType": "Event", "entityName": "The Great Flood", "note": "Utnapishtim's flood account" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablets III-V", "entityType": "Event", "entityName": "Gilgamesh and Enkidu Slay Humbaba", "note": "Cedar Forest expedition" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet VII", "entityType": "Event", "entityName": "Death of Enkidu", "note": "Enkidu's illness and death" },
-    { "sourceName": "Inanna's Descent to the Underworld", "location": "Lines 1-410", "entityType": "Event", "entityName": "Inanna's Descent to the Underworld", "note": "Complete descent narrative" },
-    { "sourceName": "Sumerian King List", "location": "Column i, 1-5", "entityType": "Place", "entityName": "Eridu", "note": "First city where kingship descended from heaven" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet I, 10-20", "entityType": "Place", "entityName": "Uruk", "note": "Description of Uruk's great walls" },
-    { "sourceName": "Epic of Gilgamesh", "location": "Tablet V", "entityType": "Place", "entityName": "Cedar Forest", "note": "Description of the sacred cedar forest" }
+    {
+      "location": "Tablet I, 1-20",
+      "entityType": "Figure",
+      "note": "Tiamat described as primordial salt water",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
+      "entityId": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a"
+    },
+    {
+      "location": "Tablet I, 1-20",
+      "entityType": "Figure",
+      "note": "Apsu described as primordial fresh water",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
+      "entityId": "0d1a7f6f-0595-5306-ae92-40f755870203"
+    },
+    {
+      "location": "Tablet IV, 93-104",
+      "entityType": "Figure",
+      "note": "Marduk slays Tiamat with wind and arrow",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
+      "entityId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5"
+    },
+    {
+      "location": "Tablet I, 90-100",
+      "entityType": "Figure",
+      "note": "Anshar as father of Anu",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
+      "entityId": "0c5fa420-316c-564f-9809-0bd8dae2381a"
+    },
+    {
+      "location": "Tablet I, 1-35",
+      "entityType": "Figure",
+      "note": "Enlil as chief of the gods on earth",
+      "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
+      "entityId": "a319752f-4a1a-5677-ad91-673b8b3ee177"
+    },
+    {
+      "location": "Tablet I, 190-230",
+      "entityType": "Figure",
+      "note": "Enki proposes creation of mankind",
+      "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
+      "entityId": "7d81b568-becf-5fab-a418-67f65640db59"
+    },
+    {
+      "location": "Tablet I, 190-260",
+      "entityType": "Figure",
+      "note": "Ninhursag shapes humans from clay",
+      "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
+      "entityId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+    },
+    {
+      "location": "Tablet I, 1-30",
+      "entityType": "Figure",
+      "note": "Introduction of Gilgamesh as king of Uruk",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+    },
+    {
+      "location": "Tablet I, 80-100",
+      "entityType": "Figure",
+      "note": "Creation of Enkidu from clay",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "05cccd93-f70f-5645-a357-5f3d64664c4b"
+    },
+    {
+      "location": "Tablet XI, 1-200",
+      "entityType": "Figure",
+      "note": "Utnapishtim tells the flood story",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "e414973f-b10a-574c-a971-7016ab72e014"
+    },
+    {
+      "location": "Lines 1-50",
+      "entityType": "Figure",
+      "note": "Ninlil introduced as young goddess",
+      "sourceId": "9d270a9d-2088-52d4-9214-70f8f7907c3d",
+      "entityId": "d7b3beb6-a9db-5caa-a314-129c4965304b"
+    },
+    {
+      "location": "Lines 50-100",
+      "entityType": "Figure",
+      "note": "Conception of the moon god",
+      "sourceId": "9d270a9d-2088-52d4-9214-70f8f7907c3d",
+      "entityId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
+    },
+    {
+      "location": "Lines 1-30",
+      "entityType": "Figure",
+      "note": "Inanna decides to descend to the underworld",
+      "sourceId": "56dac505-cfe5-5876-8815-f2e81b5a5eaf",
+      "entityId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "location": "Lines 90-120",
+      "entityType": "Figure",
+      "note": "Ereshkigal as queen of the underworld",
+      "sourceId": "56dac505-cfe5-5876-8815-f2e81b5a5eaf",
+      "entityId": "1dd59913-8226-5e6b-8719-c348e69609d5"
+    },
+    {
+      "location": "Column i, 1-39",
+      "entityType": "Figure",
+      "note": "Etana listed as king of Kish",
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "entityId": "85e1904f-3baa-5709-83dc-0670c02d6194"
+    },
+    {
+      "location": "Tablet IV, 35-134",
+      "entityType": "Event",
+      "note": "Full battle sequence",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
+      "entityId": "b089afd2-0703-5e9d-bd5a-c893a4c7f955"
+    },
+    {
+      "location": "Tablet I, 60-72",
+      "entityType": "Event",
+      "note": "Ea/Enki puts Apsu to sleep and slays him",
+      "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
+      "entityId": "b5793656-b15a-5c6d-b593-dfab639b6c01"
+    },
+    {
+      "location": "Tablet I, 190-330",
+      "entityType": "Event",
+      "note": "Full creation sequence",
+      "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
+      "entityId": "3e8d0ff6-89be-5d77-81a6-702e0734f385"
+    },
+    {
+      "location": "Tablet III",
+      "entityType": "Event",
+      "note": "Flood narrative in Atra-Hasis",
+      "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
+      "entityId": "ca67f49f-cb98-5aee-b814-46da9592b286"
+    },
+    {
+      "location": "Tablet XI, 1-196",
+      "entityType": "Event",
+      "note": "Utnapishtim's flood account",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "ca67f49f-cb98-5aee-b814-46da9592b286"
+    },
+    {
+      "location": "Tablets III-V",
+      "entityType": "Event",
+      "note": "Cedar Forest expedition",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "18eefef7-45b3-581b-8039-a5464cdbeb35"
+    },
+    {
+      "location": "Tablet VII",
+      "entityType": "Event",
+      "note": "Enkidu's illness and death",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "8194bddd-f01a-542d-858b-9c160ff3fc74"
+    },
+    {
+      "location": "Lines 1-410",
+      "entityType": "Event",
+      "note": "Complete descent narrative",
+      "sourceId": "56dac505-cfe5-5876-8815-f2e81b5a5eaf",
+      "entityId": "93cf47db-da54-5ac8-984c-9ef534c2d5df"
+    },
+    {
+      "location": "Column i, 1-5",
+      "entityType": "Place",
+      "note": "First city where kingship descended from heaven",
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "entityId": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
+    },
+    {
+      "location": "Tablet I, 10-20",
+      "entityType": "Place",
+      "note": "Description of Uruk's great walls",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "location": "Tablet V",
+      "entityType": "Place",
+      "note": "Description of the sacred cedar forest",
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "entityId": "ff5304c0-2d6f-5d5b-abde-41dce43c9300"
+    }
   ],
-
   "alternateNames": [
-    { "figureName": "Enki", "name": "Ea", "tradition": "Akkadian", "nameType": "Translation", "note": "Akkadian name used in Babylonian texts" },
-    { "figureName": "Enki", "name": "Ptah", "tradition": "Egyptian", "nameType": "Syncretism", "note": "Egyptian equivalent — god of craftsmen and creation" },
-    { "figureName": "Enki", "name": "Nudimmud", "tradition": "Sumerian", "nameType": "Epithet", "note": "Epithet meaning 'the maker'" },
-    { "figureName": "Enlil", "name": "Ellil", "tradition": "Akkadian", "nameType": "Alternate Spelling", "note": "Akkadian spelling variant" },
-    { "figureName": "Enlil", "name": "Amun", "tradition": "Egyptian", "nameType": "Syncretism", "note": "Sometimes identified with Egyptian Amun as king of gods" },
-    { "figureName": "Anu", "name": "An", "tradition": "Sumerian", "nameType": "Translation", "note": "Sumerian form — literally 'heaven'" },
-    { "figureName": "Anu", "name": "Anum", "tradition": "Akkadian", "nameType": "Alternate Spelling", "note": "Akkadian form with mimation" },
-    { "figureName": "Inanna/Ishtar", "name": "Ishtar", "tradition": "Akkadian", "nameType": "Translation", "note": "Akkadian equivalent — same goddess" },
-    { "figureName": "Inanna/Ishtar", "name": "Astarte", "tradition": "Canaanite", "nameType": "Syncretism", "note": "Canaanite equivalent" },
-    { "figureName": "Inanna/Ishtar", "name": "Aphrodite", "tradition": "Greek", "nameType": "Syncretism", "note": "Greek identification by Herodotus" },
-    { "figureName": "Inanna/Ishtar", "name": "Venus", "tradition": "Other", "nameType": "Syncretism", "note": "Associated with the planet Venus" },
-    { "figureName": "Nanna/Sin", "name": "Sin", "tradition": "Akkadian", "nameType": "Translation", "note": "Akkadian moon god name" },
-    { "figureName": "Nanna/Sin", "name": "Nannar", "tradition": "Sumerian", "nameType": "Alternate Spelling", "note": "Alternate Sumerian spelling" },
-    { "figureName": "Nanna/Sin", "name": "Su'en", "tradition": "Sumerian", "nameType": "Alternate Spelling", "note": "Older Sumerian form, origin of 'Sin'" },
-    { "figureName": "Utu/Shamash", "name": "Shamash", "tradition": "Akkadian", "nameType": "Translation", "note": "Akkadian sun god name" },
-    { "figureName": "Utu/Shamash", "name": "Babbar", "tradition": "Sumerian", "nameType": "Epithet", "note": "Sumerian epithet meaning 'the shining one'" },
-    { "figureName": "Marduk", "name": "Bel", "tradition": "Babylonian", "nameType": "Epithet", "note": "Title meaning 'Lord' — became his primary name" },
-    { "figureName": "Marduk", "name": "Asarluhi", "tradition": "Sumerian", "nameType": "Syncretism", "note": "Sumerian deity absorbed into Marduk" },
-    { "figureName": "Ninhursag", "name": "Ninmah", "tradition": "Sumerian", "nameType": "Alternate Spelling", "note": "Alternate name meaning 'Great Lady'" },
-    { "figureName": "Ninhursag", "name": "Nintu", "tradition": "Sumerian", "nameType": "Epithet", "note": "Epithet meaning 'Lady of Birth'" },
-    { "figureName": "Ninhursag", "name": "Ki", "tradition": "Sumerian", "nameType": "Alternate Spelling", "note": "Sometimes identified with the earth goddess Ki" },
-    { "figureName": "Ninhursag", "name": "Hathor", "tradition": "Egyptian", "nameType": "Syncretism", "note": "Sometimes equated with Egyptian Hathor" },
-    { "figureName": "Ereshkigal", "name": "Irkalla", "tradition": "Akkadian", "nameType": "Alternate Spelling", "note": "Also the name of the underworld itself" },
-    { "figureName": "Ereshkigal", "name": "Allatu", "tradition": "Akkadian", "nameType": "Alternate Spelling", "note": "Akkadian alternate form" },
-    { "figureName": "Dumuzi/Tammuz", "name": "Tammuz", "tradition": "Akkadian", "nameType": "Translation", "note": "Akkadian form of the name" },
-    { "figureName": "Dumuzi/Tammuz", "name": "Adonis", "tradition": "Greek", "nameType": "Syncretism", "note": "Greek equivalent — dying and rising god" },
-    { "figureName": "Nergal", "name": "Erra", "tradition": "Babylonian", "nameType": "Syncretism", "note": "Babylonian plague god merged with Nergal" },
-    { "figureName": "Nergal", "name": "Meslamtaea", "tradition": "Sumerian", "nameType": "Epithet", "note": "Epithet: 'the one who comes forth from Meslam'" },
-    { "figureName": "Gilgamesh", "name": "Bilgamesh", "tradition": "Sumerian", "nameType": "Alternate Spelling", "note": "Older Sumerian form of the name" },
-    { "figureName": "Ziusudra/Utnapishtim", "name": "Utnapishtim", "tradition": "Akkadian", "nameType": "Translation", "note": "Akkadian name in Epic of Gilgamesh" },
-    { "figureName": "Ziusudra/Utnapishtim", "name": "Atrahasis", "tradition": "Akkadian", "nameType": "Epithet", "note": "Epithet meaning 'exceedingly wise'" },
-    { "figureName": "Ziusudra/Utnapishtim", "name": "Noah", "tradition": "Hebrew", "nameType": "Syncretism", "note": "Hebrew flood survivor — parallel figure" },
-    { "figureName": "Apsu", "name": "Abzu", "tradition": "Sumerian", "nameType": "Alternate Spelling", "note": "Sumerian spelling" },
-    { "figureName": "Tiamat", "name": "Tehom", "tradition": "Hebrew", "nameType": "Syncretism", "note": "Hebrew 'deep' — cognate word in Genesis" },
-    { "figureName": "Nabu", "name": "Nebo", "tradition": "Babylonian", "nameType": "Alternate Spelling", "note": "Alternate spelling found in biblical texts" },
-    { "figureName": "Nabu", "name": "Thoth", "tradition": "Egyptian", "nameType": "Syncretism", "note": "Egyptian god of writing — functional equivalent" },
-    { "figureName": "Sarpanit", "name": "Zarpanit", "tradition": "Babylonian", "nameType": "Alternate Spelling", "note": "Alternate Babylonian spelling" },
-    { "figureName": "Sarpanit", "name": "Erua", "tradition": "Babylonian", "nameType": "Alternate Spelling", "note": "Alternative name meaning 'pregnant one'" },
-    { "figureName": "Sarpanit", "name": "Zarpanitu", "tradition": "Akkadian", "nameType": "Alternate Spelling", "note": "Full Akkadian form — 'she of the shining city'" }
+    {
+      "name": "Ea",
+      "tradition": "Akkadian",
+      "nameType": "Translation",
+      "note": "Akkadian name used in Babylonian texts",
+      "figureId": "7d81b568-becf-5fab-a418-67f65640db59"
+    },
+    {
+      "name": "Ptah",
+      "tradition": "Egyptian",
+      "nameType": "Syncretism",
+      "note": "Egyptian equivalent — god of craftsmen and creation",
+      "figureId": "7d81b568-becf-5fab-a418-67f65640db59"
+    },
+    {
+      "name": "Nudimmud",
+      "tradition": "Sumerian",
+      "nameType": "Epithet",
+      "note": "Epithet meaning 'the maker'",
+      "figureId": "7d81b568-becf-5fab-a418-67f65640db59"
+    },
+    {
+      "name": "Ellil",
+      "tradition": "Akkadian",
+      "nameType": "Alternate Spelling",
+      "note": "Akkadian spelling variant",
+      "figureId": "a319752f-4a1a-5677-ad91-673b8b3ee177"
+    },
+    {
+      "name": "Amun",
+      "tradition": "Egyptian",
+      "nameType": "Syncretism",
+      "note": "Sometimes identified with Egyptian Amun as king of gods",
+      "figureId": "a319752f-4a1a-5677-ad91-673b8b3ee177"
+    },
+    {
+      "name": "An",
+      "tradition": "Sumerian",
+      "nameType": "Translation",
+      "note": "Sumerian form — literally 'heaven'",
+      "figureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982"
+    },
+    {
+      "name": "Anum",
+      "tradition": "Akkadian",
+      "nameType": "Alternate Spelling",
+      "note": "Akkadian form with mimation",
+      "figureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982"
+    },
+    {
+      "name": "Ishtar",
+      "tradition": "Akkadian",
+      "nameType": "Translation",
+      "note": "Akkadian equivalent — same goddess",
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "name": "Astarte",
+      "tradition": "Canaanite",
+      "nameType": "Syncretism",
+      "note": "Canaanite equivalent",
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "name": "Aphrodite",
+      "tradition": "Greek",
+      "nameType": "Syncretism",
+      "note": "Greek identification by Herodotus",
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "name": "Venus",
+      "tradition": "Other",
+      "nameType": "Syncretism",
+      "note": "Associated with the planet Venus",
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
+    },
+    {
+      "name": "Sin",
+      "tradition": "Akkadian",
+      "nameType": "Translation",
+      "note": "Akkadian moon god name",
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
+    },
+    {
+      "name": "Nannar",
+      "tradition": "Sumerian",
+      "nameType": "Alternate Spelling",
+      "note": "Alternate Sumerian spelling",
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
+    },
+    {
+      "name": "Su'en",
+      "tradition": "Sumerian",
+      "nameType": "Alternate Spelling",
+      "note": "Older Sumerian form, origin of 'Sin'",
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c"
+    },
+    {
+      "name": "Shamash",
+      "tradition": "Akkadian",
+      "nameType": "Translation",
+      "note": "Akkadian sun god name",
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb"
+    },
+    {
+      "name": "Babbar",
+      "tradition": "Sumerian",
+      "nameType": "Epithet",
+      "note": "Sumerian epithet meaning 'the shining one'",
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb"
+    },
+    {
+      "name": "Bel",
+      "tradition": "Babylonian",
+      "nameType": "Epithet",
+      "note": "Title meaning 'Lord' — became his primary name",
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5"
+    },
+    {
+      "name": "Asarluhi",
+      "tradition": "Sumerian",
+      "nameType": "Syncretism",
+      "note": "Sumerian deity absorbed into Marduk",
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5"
+    },
+    {
+      "name": "Ninmah",
+      "tradition": "Sumerian",
+      "nameType": "Alternate Spelling",
+      "note": "Alternate name meaning 'Great Lady'",
+      "figureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+    },
+    {
+      "name": "Nintu",
+      "tradition": "Sumerian",
+      "nameType": "Epithet",
+      "note": "Epithet meaning 'Lady of Birth'",
+      "figureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+    },
+    {
+      "name": "Ki",
+      "tradition": "Sumerian",
+      "nameType": "Alternate Spelling",
+      "note": "Sometimes identified with the earth goddess Ki",
+      "figureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+    },
+    {
+      "name": "Hathor",
+      "tradition": "Egyptian",
+      "nameType": "Syncretism",
+      "note": "Sometimes equated with Egyptian Hathor",
+      "figureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda"
+    },
+    {
+      "name": "Irkalla",
+      "tradition": "Akkadian",
+      "nameType": "Alternate Spelling",
+      "note": "Also the name of the underworld itself",
+      "figureId": "1dd59913-8226-5e6b-8719-c348e69609d5"
+    },
+    {
+      "name": "Allatu",
+      "tradition": "Akkadian",
+      "nameType": "Alternate Spelling",
+      "note": "Akkadian alternate form",
+      "figureId": "1dd59913-8226-5e6b-8719-c348e69609d5"
+    },
+    {
+      "name": "Tammuz",
+      "tradition": "Akkadian",
+      "nameType": "Translation",
+      "note": "Akkadian form of the name",
+      "figureId": "846ba80d-6244-5db9-9f78-116574ad1203"
+    },
+    {
+      "name": "Adonis",
+      "tradition": "Greek",
+      "nameType": "Syncretism",
+      "note": "Greek equivalent — dying and rising god",
+      "figureId": "846ba80d-6244-5db9-9f78-116574ad1203"
+    },
+    {
+      "name": "Erra",
+      "tradition": "Babylonian",
+      "nameType": "Syncretism",
+      "note": "Babylonian plague god merged with Nergal",
+      "figureId": "7463291d-4e62-5eae-b918-070104897810"
+    },
+    {
+      "name": "Meslamtaea",
+      "tradition": "Sumerian",
+      "nameType": "Epithet",
+      "note": "Epithet: 'the one who comes forth from Meslam'",
+      "figureId": "7463291d-4e62-5eae-b918-070104897810"
+    },
+    {
+      "name": "Bilgamesh",
+      "tradition": "Sumerian",
+      "nameType": "Alternate Spelling",
+      "note": "Older Sumerian form of the name",
+      "figureId": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+    },
+    {
+      "name": "Utnapishtim",
+      "tradition": "Akkadian",
+      "nameType": "Translation",
+      "note": "Akkadian name in Epic of Gilgamesh",
+      "figureId": "e414973f-b10a-574c-a971-7016ab72e014"
+    },
+    {
+      "name": "Atrahasis",
+      "tradition": "Akkadian",
+      "nameType": "Epithet",
+      "note": "Epithet meaning 'exceedingly wise'",
+      "figureId": "e414973f-b10a-574c-a971-7016ab72e014"
+    },
+    {
+      "name": "Noah",
+      "tradition": "Hebrew",
+      "nameType": "Syncretism",
+      "note": "Hebrew flood survivor — parallel figure",
+      "figureId": "e414973f-b10a-574c-a971-7016ab72e014"
+    },
+    {
+      "name": "Abzu",
+      "tradition": "Sumerian",
+      "nameType": "Alternate Spelling",
+      "note": "Sumerian spelling",
+      "figureId": "0d1a7f6f-0595-5306-ae92-40f755870203"
+    },
+    {
+      "name": "Tehom",
+      "tradition": "Hebrew",
+      "nameType": "Syncretism",
+      "note": "Hebrew 'deep' — cognate word in Genesis",
+      "figureId": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a"
+    },
+    {
+      "name": "Nebo",
+      "tradition": "Babylonian",
+      "nameType": "Alternate Spelling",
+      "note": "Alternate spelling found in biblical texts",
+      "figureId": "436defeb-eb9d-5098-b520-33a9162892e1"
+    },
+    {
+      "name": "Thoth",
+      "tradition": "Egyptian",
+      "nameType": "Syncretism",
+      "note": "Egyptian god of writing — functional equivalent",
+      "figureId": "436defeb-eb9d-5098-b520-33a9162892e1"
+    },
+    {
+      "name": "Zarpanit",
+      "tradition": "Babylonian",
+      "nameType": "Alternate Spelling",
+      "note": "Alternate Babylonian spelling",
+      "figureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f"
+    },
+    {
+      "name": "Erua",
+      "tradition": "Babylonian",
+      "nameType": "Alternate Spelling",
+      "note": "Alternative name meaning 'pregnant one'",
+      "figureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f"
+    },
+    {
+      "name": "Zarpanitu",
+      "tradition": "Akkadian",
+      "nameType": "Alternate Spelling",
+      "note": "Full Akkadian form — 'she of the shining city'",
+      "figureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f"
+    }
   ],
-
   "figurePlaceAssociations": [
-    { "figureName": "Nanna/Sin", "placeName": "Ur", "role": "Patron Deity", "source": "Sumerian texts" },
-    { "figureName": "Enlil", "placeName": "Nippur", "role": "Patron Deity", "source": "Sumerian texts" },
-    { "figureName": "Enlil", "placeName": "E-kur", "role": "Worshipped At", "source": "Sumerian hymns" },
-    { "figureName": "Enki", "placeName": "Eridu", "role": "Patron Deity", "source": "Sumerian texts" },
-    { "figureName": "Enki", "placeName": "E-abzu", "role": "Worshipped At", "source": "Enuma Elish" },
-    { "figureName": "Marduk", "placeName": "Babylon", "role": "Patron Deity", "source": "Enuma Elish" },
-    { "figureName": "Inanna/Ishtar", "placeName": "Uruk", "role": "Patron Deity", "source": "Sumerian texts" },
-    { "figureName": "Gilgamesh", "placeName": "Uruk", "role": "Ruler", "source": "Epic of Gilgamesh" },
-    { "figureName": "Lugalbanda", "placeName": "Uruk", "role": "Ruler", "source": "Lugalbanda poems" },
-    { "figureName": "Etana", "placeName": "Kish", "role": "Ruler", "source": "Sumerian King List" },
-    { "figureName": "Ereshkigal", "placeName": "Kur", "role": "Ruler", "source": "Inanna's Descent" },
-    { "figureName": "Anu", "placeName": "An", "role": "Ruler", "source": "Sumerian cosmology" },
-    { "figureName": "Sarpanit", "placeName": "Babylon", "role": "Worshipped At", "source": "Babylonian texts" }
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "a319752f-4a1a-5677-ad91-673b8b3ee177",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian hymns",
+      "figureId": "a319752f-4a1a-5677-ad91-673b8b3ee177",
+      "placeId": "bd4f74e7-d879-5ee5-afbc-9b506428d901"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "placeId": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Enuma Elish",
+      "figureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Enuma Elish",
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "placeId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "role": "Ruler",
+      "source": "Epic of Gilgamesh",
+      "figureId": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "role": "Ruler",
+      "source": "Lugalbanda poems",
+      "figureId": "f5402631-c60a-566e-b129-5be7daf07a86",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "role": "Ruler",
+      "source": "Sumerian King List",
+      "figureId": "85e1904f-3baa-5709-83dc-0670c02d6194",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d"
+    },
+    {
+      "role": "Ruler",
+      "source": "Inanna's Descent",
+      "figureId": "1dd59913-8226-5e6b-8719-c348e69609d5",
+      "placeId": "9261e9ee-c4bd-56b3-9f55-794b3ce61f3d"
+    },
+    {
+      "role": "Ruler",
+      "source": "Sumerian cosmology",
+      "figureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "placeId": "34154e58-6361-54ec-9e19-c1975f74ed20"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Babylonian texts",
+      "figureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f",
+      "placeId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+    }
   ],
-
   "placePlaceAssociations": [
-    { "fromPlaceName": "E-kur", "toPlaceName": "Nippur", "role": "Located Within", "source": "Sumerian texts" },
-    { "fromPlaceName": "E-abzu", "toPlaceName": "Eridu", "role": "Located Within", "source": "Sumerian texts" },
-    { "fromPlaceName": "Eridu", "toPlaceName": "Ur", "role": "Near To", "source": "Geography" },
-    { "fromPlaceName": "Uruk", "toPlaceName": "Ur", "role": "Near To", "source": "Geography" },
-    { "fromPlaceName": "Kish", "toPlaceName": "Babylon", "role": "Near To", "source": "Geography" }
+    {
+      "role": "Located Within",
+      "source": "Sumerian texts",
+      "fromPlaceId": "bd4f74e7-d879-5ee5-afbc-9b506428d901",
+      "toPlaceId": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
+    },
+    {
+      "role": "Located Within",
+      "source": "Sumerian texts",
+      "fromPlaceId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24",
+      "toPlaceId": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
+    },
+    {
+      "role": "Near To",
+      "source": "Geography",
+      "fromPlaceId": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
+      "toPlaceId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "role": "Near To",
+      "source": "Geography",
+      "fromPlaceId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "toPlaceId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "role": "Near To",
+      "source": "Geography",
+      "fromPlaceId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+    }
   ],
-
   "eventEventAssociations": [
-    { "fromEventName": "Slaying of Apsu", "toEventName": "Slaying of Tiamat", "role": "Motivated", "source": "Enuma Elish" },
-    { "fromEventName": "Creation of Mankind", "toEventName": "The Great Flood", "role": "Precedes", "source": "Atra-Hasis" },
-    { "fromEventName": "The Great Flood", "toEventName": "Founding of Eridu", "role": "Precedes", "source": "Sumerian King List" },
-    { "fromEventName": "Gilgamesh and Enkidu Slay Humbaba", "toEventName": "Death of Enkidu", "role": "Caused", "source": "Epic of Gilgamesh" },
-    { "fromEventName": "Death of Enkidu", "toEventName": "Gilgamesh Seeks Immortality", "role": "Motivated", "source": "Epic of Gilgamesh" }
+    {
+      "role": "Motivated",
+      "source": "Enuma Elish",
+      "fromEventId": "b5793656-b15a-5c6d-b593-dfab639b6c01",
+      "toEventId": "b089afd2-0703-5e9d-bd5a-c893a4c7f955"
+    },
+    {
+      "role": "Precedes",
+      "source": "Atra-Hasis",
+      "fromEventId": "3e8d0ff6-89be-5d77-81a6-702e0734f385",
+      "toEventId": "ca67f49f-cb98-5aee-b814-46da9592b286"
+    },
+    {
+      "role": "Precedes",
+      "source": "Sumerian King List",
+      "fromEventId": "ca67f49f-cb98-5aee-b814-46da9592b286",
+      "toEventId": "02c2d29b-3cdf-585c-8d04-a4b71a5b5564"
+    },
+    {
+      "role": "Caused",
+      "source": "Epic of Gilgamesh",
+      "fromEventId": "18eefef7-45b3-581b-8039-a5464cdbeb35",
+      "toEventId": "8194bddd-f01a-542d-858b-9c160ff3fc74"
+    },
+    {
+      "role": "Motivated",
+      "source": "Epic of Gilgamesh",
+      "fromEventId": "8194bddd-f01a-542d-858b-9c160ff3fc74",
+      "toEventId": "0495493d-589c-5003-85c7-23660b02131a"
+    }
   ]
 }

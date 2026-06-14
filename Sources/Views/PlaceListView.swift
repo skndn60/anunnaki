@@ -9,7 +9,7 @@ struct PlaceListView: View {
     @State private var editingPlace: Place?
     @State private var selectedPlaceID: PersistentIdentifier?
     @State private var sortOrder: PlaceSortOrder = .name
-    @State private var breadcrumbs: [(id: PersistentIdentifier, name: String)] = []
+    @State private var breadcrumbs: [Breadcrumb] = []
 
     enum PlaceSortOrder: String, CaseIterable {
         case name = "Name"
@@ -31,7 +31,7 @@ struct PlaceListView: View {
     private func selectPlace(_ id: PersistentIdentifier) {
         if let place = places.first(where: { $0.persistentModelID == id }) {
             if breadcrumbs.last?.id != id {
-                breadcrumbs.append((id: id, name: place.name))
+                breadcrumbs.append(Breadcrumb(id: id, name: place.name))
                 if breadcrumbs.count > 12 { breadcrumbs.removeFirst() }
             }
         }

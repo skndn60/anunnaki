@@ -4,6 +4,7 @@ import SwiftData
 /// Detail panel showing all properties of a selected place.
 struct PlaceDetailView: View {
     let place: Place
+    @Environment(\.modelContext) private var modelContext
     @Query private var events: [Event]
 
     private var relatedEvents: [Event] {
@@ -152,13 +153,48 @@ struct PlaceDetailView: View {
                     }
                 }
 
+                // Citations
+                if !placeCitations.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Sources & Citations")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        ForEach(placeCitations) { citation in
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "doc.text")
+                                    .font(.caption)
+                                    .foregroundStyle(.brown)
+                                    .frame(width: 14)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text("\(citation.source?.name ?? "Unknown"), \(citation.safeLocation)")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                    Text(citation.safeNote)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(3)
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Spacer()
+                MapPreviewButton(place: place)
             }
             .padding(20)
         }
     }
 
     private var placeIcon: String { place.placeType.icon }
+
+    private var placeCitations: [Citation] {
+        let all: [Citation] = modelContext.fetchAll()
+        return all.filter { $0.safeEntityName == place.name && $0.safeEntityType == .place }
+    }
 
     private func eventIcon(_ type: Event.EventType) -> String { type.icon }
 

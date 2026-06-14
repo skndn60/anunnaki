@@ -9,7 +9,7 @@ struct EventListView: View {
     @State private var editingEvent: Event?
     @State private var selectedEventID: PersistentIdentifier?
     @State private var sortOrder: EventSortOrder = .name
-    @State private var breadcrumbs: [(id: PersistentIdentifier, name: String)] = []
+    @State private var breadcrumbs: [Breadcrumb] = []
 
     enum EventSortOrder: String, CaseIterable {
         case name = "Name"
@@ -33,7 +33,7 @@ struct EventListView: View {
     private func selectEvent(_ id: PersistentIdentifier) {
         if let event = events.first(where: { $0.persistentModelID == id }) {
             if breadcrumbs.last?.id != id {
-                breadcrumbs.append((id: id, name: event.name))
+                breadcrumbs.append(Breadcrumb(id: id, name: event.name))
                 if breadcrumbs.count > 12 { breadcrumbs.removeFirst() }
             }
         }

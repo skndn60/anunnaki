@@ -57,6 +57,16 @@
 		F08711D3854043A2642A335C /* Era.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA0A062253BAF5B0C32844AB /* Era.swift */; };
 		F404668EB897F2D78150CBA6 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1039896E7C02635464D636B1 /* Event.swift */; };
 		F8F523BDE1AC8FA387DAD0C0 /* FigureTypeExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 674A4C04D017BA63B2240384 /* FigureTypeExtensions.swift */; };
+		D6F006ECE1B44CB0AB9D9354DF10275B /* DossierBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1C8F759904485F8DB536DE29134B44 /* DossierBuilder.swift */; };
+		B46756384DA44F36A16B152DD0B3B0A1 /* ImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = C453641DE54944DF95553634F1C7DB5C /* ImportService.swift */; };
+		528B2AD71A8A41E0B1727691E1CCABB9 /* QIDMapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55EBA1C70AD74531897211B7A667E664 /* QIDMapper.swift */; };
+		FA772EF5E0E74A95B1EAC4AAC6A5A5B5 /* ModelContextExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 696B1587D298491993C76447084C3AD4 /* ModelContextExtensions.swift */; };
+		07CCB2F39B684E3FBA3B3CDA34612084 /* EntityReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E94C593235344CCA99189F6B01AB73F /* EntityReportSheet.swift */; };
+		5563651DC6D4498DB4024338E2336F21 /* FigureLineageExplorer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1593402D339495E9CFFC1887E2268F0 /* FigureLineageExplorer.swift */; };
+		5D3A868369074B16B0C633266F1A208A /* WikiClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8168E8068AB4FA9B0085F8F98FB4EC4 /* WikiClient.swift */; };
+		A0516DE3FCF345B8A76F04023B7B1EA1 /* WikidataParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9692A3C0C9149F49E484E8EACD5F959 /* WikidataParser.swift */; };
+		15389C8C266542758323D1B0473A00E9 /* ImportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4728F32CA22346A29B758F9B69B94EE2 /* ImportView.swift */; };
+		D6B9DFA831C848C09BD6218C2179CE04 /* MapPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85987C4D0D69481E997F07468D986624 /* MapPreview.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -111,6 +121,16 @@
 		FACF7EF6A4E9A63F0D5535D5 /* SourceTypeExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SourceTypeExtensions.swift; sourceTree = "<group>"; };
 		FB99A69E70631ECE56242175 /* EventTypeLegend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTypeLegend.swift; sourceTree = "<group>"; };
 		FF8AAAC8CDE77B3A2B7E9895 /* QueryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QueryEngine.swift; sourceTree = "<group>"; };
+		FC1C8F759904485F8DB536DE29134B44 /* DossierBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DossierBuilder.swift; sourceTree = "<group>"; };
+		C453641DE54944DF95553634F1C7DB5C /* ImportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportService.swift; sourceTree = "<group>"; };
+		55EBA1C70AD74531897211B7A667E664 /* QIDMapper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QIDMapper.swift; sourceTree = "<group>"; };
+		696B1587D298491993C76447084C3AD4 /* ModelContextExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelContextExtensions.swift; sourceTree = "<group>"; };
+		3E94C593235344CCA99189F6B01AB73F /* EntityReportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntityReportSheet.swift; sourceTree = "<group>"; };
+		F1593402D339495E9CFFC1887E2268F0 /* FigureLineageExplorer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FigureLineageExplorer.swift; sourceTree = "<group>"; };
+		D8168E8068AB4FA9B0085F8F98FB4EC4 /* WikiClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WikiClient.swift; sourceTree = "<group>"; };
+		E9692A3C0C9149F49E484E8EACD5F959 /* WikidataParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WikidataParser.swift; sourceTree = "<group>"; };
+		4728F32CA22346A29B758F9B69B94EE2 /* ImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportView.swift; sourceTree = "<group>"; };
+		85987C4D0D69481E997F07468D986624 /* MapPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapPreview.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -146,6 +166,11 @@
 			children = (
 				FF8AAAC8CDE77B3A2B7E9895 /* QueryEngine.swift */,
 				7A6495575FCF2B0284A32100 /* SeedData.swift */,
+				FC1C8F759904485F8DB536DE29134B44 /* DossierBuilder.swift */,
+				C453641DE54944DF95553634F1C7DB5C /* ImportService.swift */,
+				55EBA1C70AD74531897211B7A667E664 /* QIDMapper.swift */,
+				D8168E8068AB4FA9B0085F8F98FB4EC4 /* WikiClient.swift */,
+				E9692A3C0C9149F49E484E8EACD5F959 /* WikidataParser.swift */,
 			);
 			path = Store;
 			sourceTree = "<group>";
@@ -207,6 +232,10 @@
 				0A0174C9879B91327341A778 /* RelationshipListView.swift */,
 				4A199C3BAD95D2D1EE07E987 /* SourceListView.swift */,
 				C309721F46C7CD6F2A1F3E9D /* TimelineView.swift */,
+				3E94C593235344CCA99189F6B01AB73F /* EntityReportSheet.swift */,
+				F1593402D339495E9CFFC1887E2268F0 /* FigureLineageExplorer.swift */,
+				4728F32CA22346A29B758F9B69B94EE2 /* ImportView.swift */,
+				85987C4D0D69481E997F07468D986624 /* MapPreview.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -242,6 +271,7 @@
 				C4CC999E183BAE421380DD44 /* PlaceTypeExtensions.swift */,
 				CC8EC621CE66626912F3F1F7 /* RelationshipTypeExtensions.swift */,
 				FACF7EF6A4E9A63F0D5535D5 /* SourceTypeExtensions.swift */,
+				696B1587D298491993C76447084C3AD4 /* ModelContextExtensions.swift */,
 			);
 			path = Extensions;
 			sourceTree = "<group>";
@@ -358,6 +388,16 @@
 				D3B38AAF0E8408171E5C27DD /* SourceListView.swift in Sources */,
 				46836B8CFCFEA2F1FABDC1A8 /* SourceTypeExtensions.swift in Sources */,
 				64F93F45AFBB53FCFA7C44EF /* TimelineView.swift in Sources */,
+				07CCB2F39B684E3FBA3B3CDA34612084 /* EntityReportSheet.swift in Sources */,
+				5563651DC6D4498DB4024338E2336F21 /* FigureLineageExplorer.swift in Sources */,
+				5D3A868369074B16B0C633266F1A208A /* WikiClient.swift in Sources */,
+				A0516DE3FCF345B8A76F04023B7B1EA1 /* WikidataParser.swift in Sources */,
+				15389C8C266542758323D1B0473A00E9 /* ImportView.swift in Sources */,
+				D6F006ECE1B44CB0AB9D9354DF10275B /* DossierBuilder.swift in Sources */,
+				B46756384DA44F36A16B152DD0B3B0A1 /* ImportService.swift in Sources */,
+				528B2AD71A8A41E0B1727691E1CCABB9 /* QIDMapper.swift in Sources */,
+				FA772EF5E0E74A95B1EAC4AAC6A5A5B5 /* ModelContextExtensions.swift in Sources */,
+				D6B9DFA831C848C09BD6218C2179CE04 /* MapPreview.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

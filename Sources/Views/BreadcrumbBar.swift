@@ -1,9 +1,14 @@
 import SwiftUI
 import SwiftData
 
+struct Breadcrumb: Identifiable {
+    let id: PersistentIdentifier
+    let name: String
+}
+
 /// Reusable breadcrumb trail bar.
 struct BreadcrumbBar: View {
-    let breadcrumbs: [(id: PersistentIdentifier, name: String)]
+    let breadcrumbs: [Breadcrumb]
     let onNavigate: (Int) -> Void
     let onClear: () -> Void
 

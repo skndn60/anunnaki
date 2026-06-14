@@ -14,6 +14,7 @@ private struct SeedDate: Codable {
 }
 
 private struct SeedFigure: Codable {
+    let id: String
     let name: String
     let title: String
     let figureType: String
@@ -26,13 +27,14 @@ private struct SeedFigure: Codable {
 }
 
 private struct SeedRelationship: Codable {
-    let fromFigureName: String
-    let toFigureName: String
+    let fromFigureId: String
+    let toFigureId: String
     let relationshipType: String
     let source: String
 }
 
 private struct SeedEra: Codable {
+    let id: String
     let name: String
     let orderIndex: Int
     let eraDescription: String
@@ -41,6 +43,7 @@ private struct SeedEra: Codable {
 }
 
 private struct SeedPlace: Codable {
+    let id: String
     let name: String
     let placeType: String
     let modernLocation: String
@@ -51,17 +54,19 @@ private struct SeedPlace: Codable {
 }
 
 private struct SeedEvent: Codable {
+    let id: String
     let name: String
     let eventType: String
     let eventDescription: String
     let date: SeedDate
     let era: String
     let source: String
-    let involvedFigureNames: [String]
-    let placeName: String?
+    let involvedFigureIds: [String]
+    let placeId: String?
 }
 
 private struct SeedSource: Codable {
+    let id: String
     let name: String
     let sourceType: String
     let author: String
@@ -73,15 +78,15 @@ private struct SeedSource: Codable {
 }
 
 private struct SeedCitation: Codable {
-    let sourceName: String
+    let sourceId: String
     let location: String
     let entityType: String
-    let entityName: String
+    let entityId: String
     let note: String
 }
 
 private struct SeedAlternateName: Codable {
-    let figureName: String
+    let figureId: String
     let name: String
     let tradition: String
     let nameType: String
@@ -89,7 +94,7 @@ private struct SeedAlternateName: Codable {
 }
 
 private struct SeedAttachment: Codable {
-    let sourceName: String
+    let sourceId: String
     let title: String
     let url: String
     let attachmentType: String
@@ -97,22 +102,22 @@ private struct SeedAttachment: Codable {
 }
 
 private struct SeedFigurePlaceAssociation: Codable {
-    let figureName: String
-    let placeName: String
+    let figureId: String
+    let placeId: String
     let role: String
     let source: String
 }
 
 private struct SeedPlacePlaceAssociation: Codable {
-    let fromPlaceName: String
-    let toPlaceName: String
+    let fromPlaceId: String
+    let toPlaceId: String
     let role: String
     let source: String
 }
 
 private struct SeedEventEventAssociation: Codable {
-    let fromEventName: String
-    let toEventName: String
+    let fromEventId: String
+    let toEventId: String
     let role: String
     let source: String
 }
@@ -151,6 +156,7 @@ struct SeedData {
         }
 
         // MARK: - Eras
+        var erasById: [String: Era] = [:]
         for seedEra in seed.eras {
             let era = Era(
                 name: seedEra.name,
@@ -160,10 +166,11 @@ struct SeedData {
                 endDate: seedEra.endDate.toMythologicalDate()
             )
             context.insert(era)
+            erasById[seedEra.id] = era
         }
 
         // MARK: - Figures
-        var figuresByName: [String: Figure] = [:]
+        var figuresById: [String: Figure] = [:]
         for seedFigure in seed.figures {
             let figure = Figure(
                 name: seedFigure.name,
@@ -177,13 +184,13 @@ struct SeedData {
                 source: seedFigure.source
             )
             context.insert(figure)
-            figuresByName[seedFigure.name] = figure
+            figuresById[seedFigure.id] = figure
         }
 
         // MARK: - Relationships
         for seedRel in seed.relationships {
-            guard let from = figuresByName[seedRel.fromFigureName],
-                  let to = figuresByName[seedRel.toFigureName] else { continue }
+            guard let from = figuresById[seedRel.fromFigureId],
+                  let to = figuresById[seedRel.toFigureId] else { continue }
             let rel = Relationship(
                 fromFigure: from,
                 toFigure: to,
@@ -194,7 +201,7 @@ struct SeedData {
         }
 
         // MARK: - Places
-        var placesByName: [String: Place] = [:]
+        var placesById: [String: Place] = [:]
         for seedPlace in seed.places {
             let place = Place(
                 name: seedPlace.name,
@@ -206,14 +213,14 @@ struct SeedData {
                 longitude: seedPlace.longitude
             )
             context.insert(place)
-            placesByName[seedPlace.name] = place
+            placesById[seedPlace.id] = place
         }
 
         // MARK: - Events
-        var eventsByName: [String: Event] = [:]
+        var eventsById: [String: Event] = [:]
         for seedEvent in seed.events {
-            let figures = seedEvent.involvedFigureNames.compactMap { figuresByName[$0] }
-            let place = seedEvent.placeName.flatMap { placesByName[$0] }
+            let figures = seedEvent.involvedFigureIds.compactMap { figuresById[$0] }
+            let place = seedEvent.placeId.flatMap { placesById[$0] }
             let event = Event(
                 name: seedEvent.name,
                 eventType: Event.EventType(rawValue: seedEvent.eventType) ?? .other,
@@ -225,11 +232,11 @@ struct SeedData {
                 place: place
             )
             context.insert(event)
-            eventsByName[seedEvent.name] = event
+            eventsById[seedEvent.id] = event
         }
 
         // MARK: - Sources
-        var sourcesByName: [String: Source] = [:]
+        var sourcesById: [String: Source] = [:]
         for seedSource in seed.sources {
             let source = Source(
                 name: seedSource.name,
@@ -242,12 +249,12 @@ struct SeedData {
                 url: seedSource.url
             )
             context.insert(source)
-            sourcesByName[seedSource.name] = source
+            sourcesById[seedSource.id] = source
         }
 
         // MARK: - Attachments
         for seedAttachment in seed.attachments {
-            guard let source = sourcesByName[seedAttachment.sourceName] else { continue }
+            guard let source = sourcesById[seedAttachment.sourceId] else { continue }
             let attachment = Attachment(
                 source: source,
                 title: seedAttachment.title,
@@ -260,20 +267,20 @@ struct SeedData {
 
         // MARK: - Citations
         for seedCitation in seed.citations {
-            guard let source = sourcesByName[seedCitation.sourceName] else { continue }
+            guard let source = sourcesById[seedCitation.sourceId] else { continue }
             let citation = Citation(
                 source: source,
                 location: seedCitation.location,
                 note: seedCitation.note,
                 entityType: Citation.EntityType(rawValue: seedCitation.entityType) ?? .figure,
-                entityName: seedCitation.entityName
+                linkedEntityName: seedCitation.entityId
             )
             context.insert(citation)
         }
 
         // MARK: - Alternate Names
         for seedAltName in seed.alternateNames {
-            guard let figure = figuresByName[seedAltName.figureName] else { continue }
+            guard let figure = figuresById[seedAltName.figureId] else { continue }
             let altName = AlternateName(
                 figure: figure,
                 name: seedAltName.name,
@@ -287,8 +294,8 @@ struct SeedData {
         // MARK: - Figure-Place Associations
         if let associations = seed.figurePlaceAssociations {
             for seedAssoc in associations {
-                guard let figure = figuresByName[seedAssoc.figureName],
-                      let place = placesByName[seedAssoc.placeName] else { continue }
+                guard let figure = figuresById[seedAssoc.figureId],
+                      let place = placesById[seedAssoc.placeId] else { continue }
                 let assoc = FigurePlaceAssociation(
                     figure: figure,
                     place: place,
@@ -302,8 +309,8 @@ struct SeedData {
         // MARK: - Place-Place Associations
         if let placeAssocs = seed.placePlaceAssociations {
             for seedAssoc in placeAssocs {
-                guard let from = placesByName[seedAssoc.fromPlaceName],
-                      let to = placesByName[seedAssoc.toPlaceName] else { continue }
+                guard let from = placesById[seedAssoc.fromPlaceId],
+                      let to = placesById[seedAssoc.toPlaceId] else { continue }
                 let assoc = PlacePlaceAssociation(
                     fromPlace: from,
                     toPlace: to,
@@ -317,8 +324,8 @@ struct SeedData {
         // MARK: - Event-Event Associations
         if let eventAssocs = seed.eventEventAssociations {
             for seedAssoc in eventAssocs {
-                guard let from = eventsByName[seedAssoc.fromEventName],
-                      let to = eventsByName[seedAssoc.toEventName] else { continue }
+                guard let from = eventsById[seedAssoc.fromEventId],
+                      let to = eventsById[seedAssoc.toEventId] else { continue }
                 let assoc = EventEventAssociation(
                     fromEvent: from,
                     toEvent: to,

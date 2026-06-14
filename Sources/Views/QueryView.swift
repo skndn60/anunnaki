@@ -1,5 +1,54 @@
 import SwiftUI
 import SwiftData
+import AppKit
+
+/// Native NSTextField wrapper that handles focus correctly.
+struct AppKitTextField: NSViewRepresentable {
+    @Binding var text: String
+    var placeholder: String
+    var onCommit: () -> Void
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = NSTextField()
+        field.placeholderString = placeholder
+        field.bezelStyle = .roundedBezel
+        field.stringValue = text
+        field.delegate = context.coordinator
+        return field
+    }
+
+    func updateNSView(_ nsView: NSTextField, context: Context) {
+        nsView.stringValue = text
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(text: $text, onCommit: onCommit)
+    }
+
+    class Coordinator: NSObject, NSTextFieldDelegate {
+        @Binding var text: String
+        let onCommit: () -> Void
+
+        init(text: Binding<String>, onCommit: @escaping () -> Void) {
+            self._text = text
+            self.onCommit = onCommit
+        }
+
+        func controlTextDidChange(_ obj: Notification) {
+            if let field = obj.object as? NSTextField {
+                text = field.stringValue
+            }
+        }
+
+        func control(_ control: NSControl, textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {
+            if commandSelector == #selector(NSResponder.insertNewline(_:)) {
+                onCommit()
+                return true
+            }
+            return false
+        }
+    }
+}
 
 /// Natural language query interface — ask questions about the data.
 struct QueryView: View {
@@ -20,9 +69,7 @@ struct QueryView: View {
             HStack(spacing: 8) {
                 Image(systemName: "questionmark.circle")
                     .foregroundStyle(.secondary)
-                TextField("Ask a question... e.g. \"what do we know about Enki?\"", text: $queryText)
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { runQuery() }
+                AppKitTextField(text: $queryText, placeholder: "Ask a question... e.g. \"what do we know about Enki?\"", onCommit: { runQuery() })
                 Button("Ask") { runQuery() }
                     .buttonStyle(.borderedProminent)
                     .disabled(queryText.isEmpty)
@@ -52,6 +99,11 @@ struct QueryView: View {
                                 .foregroundStyle(.tertiary)
                             queryExample("What do we know about Enki?")
                             queryExample("Children of Anu")
+                            queryExample("Enki's children")
+                            queryExample("Enki's parents")
+                            queryExample("Enki's spouse")
+                            queryExample("Uruk's events")
+                            queryExample("Great Flood's figures")
                             queryExample("What happened at Uruk?")
                             queryExample("Who is also known as Ishtar?")
                             queryExample("Tell me about the Great Flood")
@@ -92,6 +144,10 @@ struct QueryView: View {
             EventDossierView(dossier: dossier)
         case .figureList(let title, let figures):
             FigureListDossierView(title: title, figures: figures)
+        case .eventList(let title, let events):
+            EventListDossierView(title: title, events: events)
+        case .placeList(let title, let places):
+            PlaceListDossierView(title: title, places: places)
         case .noMatch(let query):
             NoMatchView(query: query)
         }
@@ -142,14 +198,38 @@ struct FigureDossierView: View {
                 }
             }
 
+            // Found via alias
+            if let alias = dossier.matchedAliasName {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.branch")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                    Text("Found via alias \"\(alias)\"")
+                        .font(.callout)
+                        .foregroundStyle(.orange)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    RoundedRectangle(cornerRadius: 6)
+                        .fill(Color.orange.opacity(0.08))
+                )
+            }
+
             // Also known as
             if !dossier.figure.alternateNames.isEmpty {
                 HStack(spacing: 4) {
                     Text("Also known as:")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    Text(dossier.figure.alternateNames.map { "\($0.name) (\($0.tradition.rawValue))" }.joined(separator: ", "))
-                        .font(.callout)
+                    ForEach(Array(dossier.figure.alternateNames.enumerated()), id: \.element.id) { i, alt in
+                        EntityLink(name: alt.name, kind: .figure)
+                            .font(.callout)
+                        if i < dossier.figure.alternateNames.count - 1 {
+                            Text(",")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
 
@@ -176,19 +256,39 @@ struct FigureDossierView: View {
             if !dossier.parents.isEmpty || !dossier.children.isEmpty || !dossier.spouses.isEmpty || !dossier.createdBy.isEmpty || !dossier.created.isEmpty {
                 dossierSection("Family") {
                     if !dossier.parents.isEmpty {
-                        dossierLine("Parents", dossier.parents.map(\.name).joined(separator: ", "))
+                        entityLine(label: "Parents") {
+                            ForEach(dossier.parents, id: \.persistentModelID) { parent in
+                                EntityLink(name: parent.name, kind: .figure)
+                            }
+                        }
                     }
                     if !dossier.spouses.isEmpty {
-                        dossierLine("Spouse", dossier.spouses.map(\.name).joined(separator: ", "))
+                        entityLine(label: "Spouse") {
+                            ForEach(dossier.spouses, id: \.persistentModelID) { spouse in
+                                EntityLink(name: spouse.name, kind: .figure)
+                            }
+                        }
                     }
                     if !dossier.children.isEmpty {
-                        dossierLine("Children", dossier.children.map(\.name).joined(separator: ", "))
+                        entityLine(label: "Children") {
+                            ForEach(dossier.children, id: \.persistentModelID) { child in
+                                EntityLink(name: child.name, kind: .figure)
+                            }
+                        }
                     }
                     if !dossier.createdBy.isEmpty {
-                        dossierLine("Created by", dossier.createdBy.map(\.name).joined(separator: ", "))
+                        entityLine(label: "Created by") {
+                            ForEach(dossier.createdBy, id: \.persistentModelID) { fig in
+                                EntityLink(name: fig.name, kind: .figure)
+                            }
+                        }
                     }
                     if !dossier.created.isEmpty {
-                        dossierLine("Creator of", dossier.created.map(\.name).joined(separator: ", "))
+                        entityLine(label: "Creator of") {
+                            ForEach(dossier.created, id: \.persistentModelID) { fig in
+                                EntityLink(name: fig.name, kind: .figure)
+                            }
+                        }
                     }
                 }
             }
@@ -207,9 +307,14 @@ struct FigureDossierView: View {
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
                                 .background(RoundedRectangle(cornerRadius: 3).fill(Color.teal.opacity(0.1)))
-                            Text(assoc.place?.name ?? "?")
-                                .font(.callout)
-                                .fontWeight(.medium)
+                            if let place = assoc.place {
+                                EntityLink(name: place.name, kind: .place)
+                                    .font(.callout)
+                            } else {
+                                Text("?")
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            }
                             Spacer()
                             if !assoc.source.isEmpty {
                                 Text(assoc.source)
@@ -232,9 +337,8 @@ struct FigureDossierView: View {
                                 .foregroundStyle(event.eventType.color)
                                 .frame(width: 14)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(event.name)
+                                EntityLink(name: event.name, kind: .event)
                                     .font(.callout)
-                                    .fontWeight(.medium)
                                 Text(event.eventDescription)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -261,9 +365,8 @@ struct FigureDossierView: View {
                                 .font(.caption)
                                 .foregroundStyle(.teal)
                                 .frame(width: 14)
-                            Text(place.name)
+                            EntityLink(name: place.name, kind: .place)
                                 .font(.callout)
-                                .fontWeight(.medium)
                             Text("(\(place.placeType.rawValue))")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
@@ -311,14 +414,16 @@ struct FigureDossierView: View {
         }
     }
 
-    private func dossierLine(_ label: String, _ value: String) -> some View {
+    private func entityLine<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Text(label + ":")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .frame(width: 80, alignment: .trailing)
-            Text(value)
-                .font(.callout)
+            HStack(spacing: 4) {
+                content()
+            }
+            .font(.callout)
         }
     }
 }
@@ -340,11 +445,7 @@ struct PlaceDossierView: View {
                     Text(dossier.place.placeType.rawValue).font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if !dossier.place.modernLocation.isEmpty {
-                    Text(dossier.place.modernLocation)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                MapPreviewButton(place: dossier.place)
             }
 
             if !dossier.place.placeDescription.isEmpty {
@@ -358,7 +459,7 @@ struct PlaceDossierView: View {
                     ForEach(dossier.events) { event in
                         HStack(spacing: 8) {
                             Image(systemName: event.eventType.icon).font(.caption).foregroundStyle(event.eventType.color)
-                            Text(event.name).font(.callout).fontWeight(.medium)
+                            EntityLink(name: event.name, kind: .event).font(.callout)
                             Text(event.date.displayLabel).font(.caption).foregroundStyle(.tertiary)
                         }
                     }
@@ -369,8 +470,12 @@ struct PlaceDossierView: View {
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Figures Associated").font(.headline)
-                    Text(dossier.figures.map { "\($0.gender.symbol) \($0.name)" }.joined(separator: ", "))
-                        .font(.callout)
+                    ForEach(dossier.figures) { figure in
+                        HStack(spacing: 4) {
+                            Text(figure.gender.symbol).font(.caption).foregroundStyle(.secondary)
+                            EntityLink(name: figure.name, kind: .figure).font(.callout)
+                        }
+                    }
                 }
             }
         }
@@ -413,7 +518,7 @@ struct EventDossierView: View {
                         HStack(spacing: 8) {
                             Circle().fill(figure.figureType.color).frame(width: 8, height: 8)
                             Text(figure.gender.symbol).font(.caption).foregroundStyle(.secondary)
-                            Text(figure.name).font(.callout).fontWeight(.medium)
+                            EntityLink(name: figure.name, kind: .figure).font(.callout)
                             Text(figure.title).font(.caption).foregroundStyle(.tertiary).lineLimit(1)
                         }
                     }
@@ -425,7 +530,7 @@ struct EventDossierView: View {
                 HStack(spacing: 8) {
                     Text("Location:").font(.callout).foregroundStyle(.secondary)
                     Image(systemName: place.placeType.icon).font(.caption).foregroundStyle(.teal)
-                    Text(place.name).font(.callout).fontWeight(.medium)
+                    EntityLink(name: place.name, kind: .place).font(.callout)
                     if !place.modernLocation.isEmpty {
                         Text("(\(place.modernLocation))").font(.caption).foregroundStyle(.tertiary)
                     }
@@ -451,8 +556,60 @@ struct FigureListDossierView: View {
                     HStack(spacing: 8) {
                         Circle().fill(figure.figureType.color).frame(width: 8, height: 8)
                         Text(figure.gender.symbol).font(.caption).foregroundStyle(.secondary)
-                        Text(figure.name).font(.callout).fontWeight(.medium)
+                        EntityLink(name: figure.name, kind: .figure).font(.callout)
                         Text("— \(figure.title)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Event List Result
+
+struct EventListDossierView: View {
+    let title: String
+    let events: [Event]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(.title2.bold())
+            if events.isEmpty {
+                Text("None found").font(.callout).foregroundStyle(.secondary)
+            } else {
+                ForEach(events) { event in
+                    HStack(spacing: 8) {
+                        Image(systemName: event.eventType.icon)
+                            .font(.caption)
+                            .foregroundStyle(event.eventType.color)
+                        EntityLink(name: event.name, kind: .event).font(.callout)
+                        Text(event.date.displayLabel).font(.caption).foregroundStyle(.tertiary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Place List Result
+
+struct PlaceListDossierView: View {
+    let title: String
+    let places: [Place]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).font(.title2.bold())
+            if places.isEmpty {
+                Text("None found").font(.callout).foregroundStyle(.secondary)
+            } else {
+                ForEach(places) { place in
+                    HStack(spacing: 8) {
+                        Image(systemName: place.placeType.icon)
+                            .font(.caption)
+                            .foregroundStyle(.teal)
+                        EntityLink(name: place.name, kind: .place).font(.callout)
+                        Text(place.placeType.rawValue).font(.caption).foregroundStyle(.tertiary)
                     }
                 }
             }

@@ -3,6 +3,10 @@ import SwiftData
 import AppKit
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    func applicationWillFinishLaunching(_ notification: Notification) {
+        NSApplication.shared.setActivationPolicy(.regular)
+    }
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
            let icon = NSImage(contentsOf: iconURL) {
@@ -11,6 +15,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                   let icon = NSImage(contentsOf: iconURL) {
             NSApplication.shared.applicationIconImage = icon
         }
+
+        NSApplication.shared.activate(ignoringOtherApps: true)
     }
 }
 
