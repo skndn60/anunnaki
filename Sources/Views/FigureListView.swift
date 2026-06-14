@@ -220,6 +220,24 @@ struct FigureRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            Image(systemName: "line.horizontal.3")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .onDrag {
+                    NSItemProvider(object: figure.name as NSString)
+                } preview: {
+                    Circle()
+                        .fill(figure.figureType.color)
+                        .frame(width: 32, height: 32)
+                        .overlay(
+                            Image(systemName: figure.figureType.icon)
+                                .font(.system(size: 16))
+                                .foregroundColor(.white)
+                        )
+                        .padding(8)
+                        .background(.ultraThickMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             Circle()
                 .fill(figure.figureType.color)
                 .frame(width: 8, height: 8)
@@ -251,9 +269,6 @@ struct FigureRow: View {
             Text(figure.birthDate.displayLabel)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
-        }
-        .onDrag {
-            NSItemProvider(object: figure.name as NSString)
         }
     }
 }

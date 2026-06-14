@@ -7,12 +7,25 @@ struct FigureDetailView: View {
     let figure: Figure
     var onSelectFigure: ((Figure) -> Void)?
     @Environment(\.modelContext) private var modelContext
-    @State private var citationCount = -1
+    @Query private var matchingRelationships: [Relationship]
     @State private var droppedFigureName: String?
     @State private var showDropConfirmation = false
     @State private var selectedRelationType: Relationship.RelationshipType = .father
     @State private var isDropTargeted = false
-    @Query private var relationships: [Relationship]
+
+    init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil) {
+        self.figure = figure
+        self.onSelectFigure = onSelectFigure
+        let name = figure.name
+        _matchingRelationships = Query(filter: #Predicate<Relationship> { rel in
+            rel.fromFigure?.name == name || rel.toFigure?.name == name
+        })
+    }
+
+    private var figureCitations: [Citation] {
+        let all: [Citation] = modelContext.fetchAll()
+        return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
+    }
 
     var body: some View {
         ScrollView {
@@ -65,7 +78,7 @@ struct FigureDetailView: View {
                 }
 
                 // Mini Lineage Tree
-                MiniLineageView(figure: figure, relationships: relatedRelationships, onSelectFigure: onSelectFigure)
+                MiniLineageView(figure: figure, relationships: matchingRelationships, onSelectFigure: onSelectFigure)
 
                 // Description
                 if !figure.figureDescription.isEmpty {
@@ -119,7 +132,7 @@ struct FigureDetailView: View {
                 Divider()
 
                 // Relationships
-                let figureRels = relatedRelationships
+                let figureRels = matchingRelationships
                 if !figureRels.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Relationships")
@@ -235,55 +248,41 @@ struct FigureDetailView: View {
             }
         }
         .sheet(isPresented: $showDropConfirmation) {
-            if let sourceName = droppedFigureName {
-                VStack(spacing: 20) {
-                    Text("Create Relationship")
-                        .font(.title3.bold())
+            let sourceName = droppedFigureName ?? ""
+            VStack(spacing: 20) {
+                Text("Create Relationship")
+                    .font(.title3.bold())
 
-                    Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationType.rawValue.lowercased())** of **\(figure.name)**?")
-                        .multilineTextAlignment(.center)
+                Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationType.rawValue.lowercased())** of **\(figure.name)**?")
+                    .multilineTextAlignment(.center)
 
-                    Picker("Type", selection: $selectedRelationType) {
-                        ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
-                        }
-                    }
-
-                    HStack(spacing: 16) {
-                        Button("Cancel") { showDropConfirmation = false }
-                            .buttonStyle(.bordered)
-                        Button("OK") {
-                            let allFigures: [Figure] = modelContext.fetchAll()
-                            if let sourceFigure = allFigures.first(where: { $0.name == sourceName }) {
-                                let rel = Relationship(
-                                    fromFigure: sourceFigure,
-                                    toFigure: figure,
-                                    relationshipType: selectedRelationType
-                                )
-                                modelContext.insert(rel)
-                            }
-                            showDropConfirmation = false
-                        }
-                        .buttonStyle(.borderedProminent)
+                Picker("Type", selection: $selectedRelationType) {
+                    ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
+                        Text(type.rawValue).tag(type)
                     }
                 }
-                .padding()
-                .frame(width: 420)
-                .presentationCompactAdaptation(.sheet)
+
+                HStack(spacing: 16) {
+                    Button("Cancel") { showDropConfirmation = false }
+                        .buttonStyle(.bordered)
+                    Button("OK") {
+                        let allFigures: [Figure] = modelContext.fetchAll()
+                        if let sourceFigure = allFigures.first(where: { $0.name == sourceName }) {
+                            let rel = Relationship(
+                                fromFigure: sourceFigure,
+                                toFigure: figure,
+                                relationshipType: selectedRelationType
+                            )
+                            modelContext.insert(rel)
+                        }
+                        showDropConfirmation = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
+            .padding()
+            .frame(width: 400)
         }
-    }
-
-    private var relatedRelationships: [Relationship] {
-        relationships.filter {
-            $0.fromFigure?.persistentModelID == figure.persistentModelID ||
-            $0.toFigure?.persistentModelID == figure.persistentModelID
-        }
-    }
-
-    private var figureCitations: [Citation] {
-        let all: [Citation] = modelContext.fetchAll()
-        return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
     }
 
     private var typeColor: Color { figure.figureType.color }
