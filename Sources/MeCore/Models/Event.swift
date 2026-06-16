@@ -1,0 +1,44 @@
+import Foundation
+import SwiftData
+
+/// Represents a mythological or historical event.
+@Model
+package final class Event {
+    package var name: String
+    package var eventType: EventType?
+    package var eventDescription: String
+    package var date: MythologicalDate
+    package var era: String
+    package var source: String
+    package var isConcept: Bool
+
+    /// Figures involved in this event
+    @Relationship
+    package var involvedFigures: [Figure] = []
+
+    /// Places where the event occurred
+    @Relationship(deleteRule: .cascade, inverse: \EventPlaceAssociation.event)
+    package var placeAssociations: [EventPlaceAssociation] = []
+
+    package init(
+        name: String = "",
+        eventType: EventType? = nil,
+        eventDescription: String = "",
+        date: MythologicalDate = .unknown,
+        era: String = "",
+        source: String = "",
+        isConcept: Bool = false,
+        involvedFigures: [Figure] = [],
+        placeAssociations: [EventPlaceAssociation] = []
+    ) {
+        self.name = name
+        self.eventType = eventType
+        self.eventDescription = eventDescription
+        self.date = date
+        self.era = era
+        self.source = source
+        self.isConcept = isConcept
+        self.involvedFigures = involvedFigures
+        self.placeAssociations = placeAssociations
+    }
+}
