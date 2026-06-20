@@ -4,6 +4,7 @@ import AppKit
 
 struct ImageLibraryView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query(sort: \ImageAsset.caption) private var allImages: [ImageAsset]
     @State private var showingFilePicker = false
     @State private var previewImage: ImageAsset?
@@ -51,8 +52,11 @@ struct ImageLibraryView: View {
                 }
             }
         }
-        .sheet(item: $previewImage) { image in
-            ImageDetailSheet(image: image)
+        .onChange(of: previewImage) { _, newValue in
+            if let image = newValue {
+                openWindow(id: "image-detail", value: image.persistentModelID)
+                previewImage = nil
+            }
         }
         .fileImporter(
             isPresented: $showingFilePicker,

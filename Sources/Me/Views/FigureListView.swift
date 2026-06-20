@@ -210,7 +210,7 @@ struct FigureListView: View {
                             showDeleteConfirm = true
                         }
                         IconActionButton(icon: "tree", color: .green) {
-                            openWindow(value: figure.persistentModelID)
+                            openWindow(id: "lineage", value: figure.persistentModelID)
                         }
                         Spacer()
                         Button(action: { selectedFigureID = nil }) {
@@ -248,8 +248,11 @@ struct FigureListView: View {
         .sheet(isPresented: $showingTypeManager) {
             FigureTypeManagerView()
         }
-        .sheet(item: $imageDetailImage) { image in
-            ImageDetailSheet(image: image)
+        .onChange(of: imageDetailImage) { _, newValue in
+            if let image = newValue {
+                openWindow(id: "image-detail", value: image.persistentModelID)
+                imageDetailImage = nil
+            }
         }
         .alert("Delete Figure?", isPresented: $showDeleteConfirm, presenting: selectedFigure) { figure in
             Button("Delete", role: .destructive) { deleteFigure(figure) }

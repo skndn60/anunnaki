@@ -3,7 +3,7 @@ import SwiftData
 
 struct EraDetailView: View {
     let era: Era
-
+    @Environment(\.openWindow) private var openWindow
     @Query private var allFigures: [Figure]
     @State private var selectedFigure: Figure?
 
@@ -102,16 +102,39 @@ struct EraDetailView: View {
             }
             .padding(20)
         }
-        .sheet(item: $selectedFigure) { figure in
-            FigurePopoverContent(figure: figure)
-                .frame(width: 320, height: 360)
+        .onChange(of: selectedFigure) { _, newValue in
+            if let figure = newValue {
+                openWindow(id: "figure-quickview", value: figure.persistentModelID)
+                selectedFigure = nil
+            }
         }
     }
 }
 
-private struct FigurePopoverContent: View {
+struct FigureQuicklookWindow: View {
+    let figureID: PersistentIdentifier?
+    @Environment(\.modelContext) private var modelContext
+    @State private var figure: Figure?
+
+    var body: some View {
+        Group {
+            if let figure {
+                FigureQuicklookContent(figure: figure)
+            } else {
+                Text("Figure not found")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard let figureID else { return }
+            let fetch = FetchDescriptor<Figure>(predicate: #Predicate { $0.persistentModelID == figureID })
+            figure = try? modelContext.fetch(fetch).first
+        }
+    }
+}
+
+private struct FigureQuicklookContent: View {
     let figure: Figure
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -134,14 +157,6 @@ private struct FigurePopoverContent: View {
                 }
 
                 Spacer()
-
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 18))
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.escape)
             }
 
             if !figure.domain.isEmpty {

@@ -5,6 +5,7 @@ import SwiftData
 struct PlaceListView: View {
     var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query private var places: [Place]
     @State private var showingAddSheet = false
     @State private var editingPlace: Place?
@@ -193,8 +194,11 @@ struct PlaceListView: View {
         .sheet(isPresented: $showingTypeManager) {
             PlaceTypeManagerView()
         }
-        .sheet(item: $imageDetailImage) { image in
-            ImageDetailSheet(image: image)
+        .onChange(of: imageDetailImage) { _, newValue in
+            if let image = newValue {
+                openWindow(id: "image-detail", value: image.persistentModelID)
+                imageDetailImage = nil
+            }
         }
         .alert("Delete Place?", isPresented: $showDeleteConfirm, presenting: selectedPlace) { place in
             Button("Delete", role: .destructive) { deletePlace(place) }

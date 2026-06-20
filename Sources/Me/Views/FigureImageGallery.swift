@@ -237,7 +237,29 @@ struct ImageThumbnail: View {
     }
 }
 
-struct ImageDetailSheet: View {
+struct ImageDetailWindow: View {
+    let imageID: PersistentIdentifier?
+    @Environment(\.modelContext) private var modelContext
+    @State private var image: ImageAsset?
+
+    var body: some View {
+        Group {
+            if let image {
+                ImageDetailContent(image: image)
+            } else {
+                Text("Image not found")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard let imageID else { return }
+            let fetch = FetchDescriptor<ImageAsset>(predicate: #Predicate { $0.persistentModelID == imageID })
+            image = try? modelContext.fetch(fetch).first
+        }
+    }
+}
+
+struct ImageDetailContent: View {
     let image: ImageAsset
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss

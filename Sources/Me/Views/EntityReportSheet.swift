@@ -5,13 +5,15 @@ import SwiftData
 
 struct EntityLink: View {
     let name: String
-    let kind: EntityReportSheet.EntityKind
+    let kind: EntityKind
+    @Environment(\.openWindow) private var openWindow
 
     @State private var isHovered = false
-    @State private var showSheet = false
 
     var body: some View {
-        Button(action: { showSheet = true }) {
+        Button(action: {
+            openWindow(id: "entity-report", value: EntityReportRequest(name: name, kind: kind.rawValue))
+        }) {
             Text(name)
                 .foregroundStyle(isHovered ? Color.accentColor : Color.primary)
                 .underline(isHovered)
@@ -19,24 +21,13 @@ struct EntityLink: View {
         .buttonStyle(.plain)
         .onHover { isHovered = $0 }
         .help("View \(kind.rawValue.lowercased()) \"\(name)\"")
-        .sheet(isPresented: $showSheet) {
-            EntityReportSheet(name: name, kind: kind)
-        }
     }
 }
 
-// MARK: - Report sheet
+// MARK: - Report window
 
-struct EntityReportSheet: View {
-    let name: String
-    let kind: EntityKind
-
-    enum EntityKind: String, CaseIterable {
-        case figure = "Figure"
-        case place = "Place"
-        case event = "Event"
-    }
-
+struct EntityReportWindow: View {
+    let request: EntityReportRequest?
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
 
@@ -45,6 +36,9 @@ struct EntityReportSheet: View {
     @State private var event: Event?
     @State private var loaded = false
     @State private var creatingFigure = false
+
+    private var name: String { request?.name ?? "" }
+    private var kind: String { request?.kind ?? "" }
 
     var body: some View {
         NavigationStack {
@@ -75,13 +69,7 @@ struct EntityReportSheet: View {
             .sheet(isPresented: $creatingFigure) {
                 FigureFormView(figure: nil)
             }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Close") { dismiss() }
-                }
-            }
         }
-        .frame(width: 640, height: 520)
     }
 
     @ViewBuilder
@@ -93,9 +81,9 @@ struct EntityReportSheet: View {
                 .foregroundStyle(.tertiary)
             Text(name)
                 .font(.title.bold())
-            Text("No \(kind.rawValue.lowercased()) found with this name")
+            Text("No \(kind) found with this name")
                 .foregroundStyle(.secondary)
-            if kind == .figure {
+            if kind == EntityKind.figure.rawValue {
                 Button("Create figure \"\(name)\"") {
                     creatingFigure = true
                 }
@@ -108,9 +96,10 @@ struct EntityReportSheet: View {
 
     private var iconName: String {
         switch kind {
-        case .figure: return "person.fill.questionmark"
-        case .place: return "building.columns"
-        case .event: return "bolt"
+        case EntityKind.figure.rawValue: return "person.fill.questionmark"
+        case EntityKind.place.rawValue: return "building.columns"
+        case EntityKind.event.rawValue: return "bolt"
+        default: return "questionmark"
         }
     }
 
@@ -119,15 +108,17 @@ struct EntityReportSheet: View {
     private func resolve() {
         let q = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         switch kind {
-        case .figure:
+        case EntityKind.figure.rawValue:
             let figures: [Figure] = modelContext.fetchAll()
             figure = figures.first(where: { $0.name.lowercased() == q })
-        case .place:
+        case EntityKind.place.rawValue:
             let places: [Place] = modelContext.fetchAll()
             place = places.first(where: { $0.name.lowercased() == q })
-        case .event:
+        case EntityKind.event.rawValue:
             let events: [Event] = modelContext.fetchAll()
             event = events.first(where: { $0.name.lowercased() == q })
+        default:
+            break
         }
         loaded = true
     }
@@ -145,4 +136,10 @@ struct EntityReportSheet: View {
     private func buildEventDossier(_ event: Event) -> EventDossier {
         modelContext.buildEventDossier(event)
     }
+}
+
+enum EntityKind: String, CaseIterable {
+    case figure = "Figure"
+    case place = "Place"
+    case event = "Event"
 }

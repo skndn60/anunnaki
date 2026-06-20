@@ -5,6 +5,7 @@ import SwiftData
 struct EventListView: View {
     var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query private var events: [Event]
     @State private var showingAddSheet = false
     @State private var editingEvent: Event?
@@ -196,8 +197,11 @@ struct EventListView: View {
         .sheet(isPresented: $showingTypeManager) {
             EventTypeManagerView()
         }
-        .sheet(item: $imageDetailImage) { image in
-            ImageDetailSheet(image: image)
+        .onChange(of: imageDetailImage) { _, newValue in
+            if let image = newValue {
+                openWindow(id: "image-detail", value: image.persistentModelID)
+                imageDetailImage = nil
+            }
         }
         .alert("Delete Event?", isPresented: $showDeleteConfirm, presenting: selectedEvent) { event in
             Button("Delete", role: .destructive) { deleteEvent(event) }

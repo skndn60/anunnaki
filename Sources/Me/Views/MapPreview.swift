@@ -1,50 +1,46 @@
 import SwiftUI
+import SwiftData
 import WebKit
 
-// MARK: - Reusable button that opens a map sheet
+// MARK: - Reusable button that opens a map window
 
 struct MapPreviewButton: View {
     let place: Place
-
-    @State private var showMap = false
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         Button("OpenHistoricalMap") {
-            showMap = true
+            openWindow(id: "map-preview", value: place.persistentModelID)
         }
         .buttonStyle(.bordered)
         .controlSize(.small)
-        .sheet(isPresented: $showMap) {
-            MapPreviewSheet(place: place)
-        }
     }
 }
 
-// MARK: - Sheet with WebView
+// MARK: - Window with WebView
 
-struct MapPreviewSheet: View {
-    let place: Place
-
-    @Environment(\.dismiss) private var dismiss
+struct MapPreviewWindow: View {
+    let placeID: PersistentIdentifier?
+    @Environment(\.modelContext) private var modelContext
+    @State private var place: Place?
 
     var body: some View {
-        NavigationStack {
-            MapWebView(url: mapURL)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("Close") { dismiss() }
-                    }
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Open in Browser") {
-                            NSWorkspace.shared.open(mapURL)
-                        }
-                    }
-                }
+        Group {
+            if let place {
+                MapWebView(url: mapURL(for: place))
+            } else {
+                Text("Place not found")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-        .frame(width: 800, height: 600)
+        .task {
+            guard let placeID else { return }
+            let fetch = FetchDescriptor<Place>(predicate: #Predicate { $0.persistentModelID == placeID })
+            place = try? modelContext.fetch(fetch).first
+        }
     }
 
-    private var mapURL: URL {
+    private func mapURL(for place: Place) -> URL {
         if let lat = place.latitude, let lon = place.longitude {
             return URL(string: "https://www.openhistoricalmap.org/#map=11/\(lat)/\(lon)")!
         } else {

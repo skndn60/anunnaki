@@ -3,6 +3,11 @@ import SwiftData
 import AppKit
 import Foundation
 
+struct EntityReportRequest: Codable, Hashable {
+    let name: String
+    let kind: String
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
@@ -75,11 +80,39 @@ struct MeApp: App {
         .modelContainer(container)
         .defaultSize(width: 1200, height: 800)
 
-        WindowGroup("Lineage Explorer", for: PersistentIdentifier.self) { $figureID in
+        WindowGroup("Lineage Explorer", id: "lineage", for: PersistentIdentifier.self) { $figureID in
             LineageExplorerWindow(figureID: figureID)
                 .modelContainer(container)
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 900, height: 650)
+
+        WindowGroup("Map Preview", id: "map-preview", for: PersistentIdentifier.self) { $placeID in
+            MapPreviewWindow(placeID: placeID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 800, height: 600)
+
+        WindowGroup("Image Detail", id: "image-detail", for: PersistentIdentifier.self) { $imageID in
+            ImageDetailWindow(imageID: imageID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 800, height: 600)
+
+        WindowGroup("Figure", id: "figure-quickview", for: PersistentIdentifier.self) { $figureID in
+            FigureQuicklookWindow(figureID: figureID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 380, height: 420)
+
+        WindowGroup("Entity Report", id: "entity-report", for: EntityReportRequest.self) { $request in
+            EntityReportWindow(request: request)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 640, height: 520)
     }
 }
