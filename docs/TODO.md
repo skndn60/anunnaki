@@ -59,6 +59,25 @@ The `detail` body used a 12-case `switch selection { ... }`. Adding a screen req
 
 ---
 
+## 9. Fix image detail popover/sheet positioning ~~— DONE~~
+
+**Files**: `Sources/Me/Views/FigureImageGallery.swift`, `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/PlaceDetailView.swift`, `Sources/Me/Views/EventDetailView.swift`
+
+`.sheet` and `.popover` for image detail (the `ImageDetailSheet` showing a full-size preview) do not render correctly on macOS:
+- `.popover` appears as a detached floating circle/window outside the app window frame
+- `.sheet` hovers oddly or doesn't anchor properly
+- The issue affects three detail views (Figure, Place, Event) and the Image Library
+- Root cause unclear: may be related to `NavigationSplitView` + nested sheet presentation, or macOS SwiftUI bugs with `LazyVGrid` in detail panes
+
+**Temporary workaround**: `.sheet(isPresented:)` with a boolean + `selectedDetailImage` state variable, hoisted from `ImageGallery` to the parent DetailView. The sheet appears but positioning is incorrect.
+
+**Next steps when revisited**:
+- Investigate `.sheet(attachmentAnchor:)` for explicit positioning
+- Test on a newer macOS version (Sequoia 15.x) to see if it's a SwiftUI regression
+- Consider using `NSWindow` (AppKit) directly for the image popup
+
+***
+
 ## 8. Name the breadcrumb tuple type ~~— DONE~~
 **Files**: `Sources/Views/FigureListView.swift`, `PlaceListView.swift`, `EventListView.swift`
 

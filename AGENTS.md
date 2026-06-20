@@ -113,6 +113,48 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - `Tests/MeCoreTests/MeCoreTests.swift` — Unit tests for MeCore
 - `/tmp/parse_skl.py` — Python parser for Sumerian King List wikitext, generates seed JSON with UUIDs
 
+## Session Log
+
+### 2026-06-18 — Section headers, SKL view, delete confirmations, icon transparency
+
+**Changes made:**
+- `Sources/Me/Views/DisplayRow.swift` — Created `DisplayRow<Entity>` shared type with `DisplayItem` enum for section headers in sorted lists
+- `Sources/Me/Views/FigureListView.swift` — Section headers (name→first letter, type→type name, domain→domain, date→era), delete confirmation alert
+- `Sources/Me/Views/PlaceListView.swift` — Section headers + delete confirmation alert
+- `Sources/Me/Views/EventListView.swift` — Section headers + delete confirmation alert
+- `Sources/Me/Views/EraListView.swift` — Delete confirmation alert
+- `Sources/Me/Views/SumerianKingListView.swift` — New file: grouped by dynasty, reign parsing via `SKLReignLength`, colorized `"N kings"` and `"Duration: X years"` labels
+- `Sources/MeCore/Models/SKLReignLength.swift` — New file: `ReignLength` struct + `parse(from:)` using regex pattern `"Reigned\\s+([\\d,]+)\\s+years"`
+- `Sources/Me/Views/AlternateNameListView.swift` — Replaced figure `Picker` with search text field + filtered list; filter bar picker → text field
+- `Sources/Me/Views/AlternateNameFormView.swift` — Search-based figure selector (text field + filtered scroll list) matching EventFormView pattern
+- `Sources/Me/Views/ContentView.swift` — Added `SidebarSection.history`, `NavigationItem.sumerianKingList`, sidebar section between Visualizations and Data
+- `Sources/Me/AnunnakiApp.swift` — Changed `Bundle.main` → `Bundle.module` for app icon resource loading
+- `Sources/Me/Resources/AppIcon.png` — Corner transparency fixed: 22% rounded-rect mask applied (pixels beyond quarter-circle radius set to alpha=0)
+- `Sources/Me/Resources/AppIcon.icns` — Regenerated from fixed PNG (all required sizes via iconset)
+
+**Icon fix (known issue):** The Swift script sets corner pixels with `dist > cornerRadius` to A=0, but creates a hard cutoff. The icon may look jagged at small sizes. Need a proper approach: either use `NSImage` with `cornerRadius` mask or a proper image editor. The fix is a starting point but makes corners transparent instead of opaque as before.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/DisplayRow.swift` — Added
+- `Sources/Me/Views/SumerianKingListView.swift` — Added
+- `Sources/MeCore/Models/SKLReignLength.swift` — Added
+
+### 2026-06-20 — Fix massive top padding in Pre-Flood timeline
+
+**Changes made:**
+- `Sources/Me/Views/TimelinePreView.swift` — Changed `ScrollView([.horizontal, .vertical])` to `ScrollView(.vertical)`. Dual-axis ScrollView in SwiftUI centers content in both axes when content is smaller than the viewport, creating massive top/bottom padding. Single-axis `.vertical` keeps content top-aligned. Pre-flood doesn't need outer horizontal scrolling (mythological swimlanes have their own internal horizontal scroll).
+- `AGENTS.md` — Added Debugging Visual Layout Issues section with layered `.background()` procedure.
+
+## Debugging Visual Layout Issues
+
+When investigating SwiftUI layout bugs (unexpected padding, misalignment, sizing), follow this procedure:
+
+1. **Add a colored `.background()` to the outermost view first**, then run to observe which view claims the full frame.
+2. **Work inward layer by layer**, moving the background color one level deeper each time, until you isolate which view has the unexpected size or position.
+3. Only after identifying the root view should you look at modifier chains or data flow.
+
+This is faster and more reliable than reading code to simulate the layout engine.
+
 ## Interaction Guidelines (from CONTRIBUTING.md)
 
 - One change per request. Split large tasks into small steps.

@@ -13,14 +13,16 @@ package struct MythologicalDate: Codable, Hashable {
     /// Whether the date is approximate (most ancient dates are)
     package var isApproximate: Bool
 
-    /// Human-readable display label (e.g. "~445,000 BCE", "Mythological", "~2700 BCE")
+    /// Human-readable display label (e.g. "~445,000 BCE", "Mythological", "~2,700 BCE")
     package var displayLabel: String {
         if let year {
             let prefix = isApproximate ? "~" : ""
+            let absYear = abs(year)
+            let formatted = NumberFormatter.localizedString(from: NSNumber(value: absYear), number: .decimal)
             if year < 0 {
-                return "\(prefix)\(abs(year).formatted()) BCE"
+                return "\(prefix)\(formatted) BCE"
             } else {
-                return "\(prefix)\(year.formatted()) CE"
+                return "\(prefix)\(formatted) CE"
             }
         }
         return era.isEmpty ? "Unknown" : era

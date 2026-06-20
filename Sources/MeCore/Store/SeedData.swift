@@ -3,7 +3,7 @@ import SwiftData
 
 // MARK: - Codable Seed Structs
 
-private struct SeedDate: Codable {
+package struct SeedDate: Codable {
     package let year: Int?
     package let era: String
     package let isApproximate: Bool
@@ -11,11 +11,60 @@ private struct SeedDate: Codable {
     package func toMythologicalDate() -> MythologicalDate {
         MythologicalDate(year: year, era: era, isApproximate: isApproximate)
     }
+
+    package init(year: Int? = nil, era: String = "", isApproximate: Bool = false) {
+        self.year = year
+        self.era = era
+        self.isApproximate = isApproximate
+    }
 }
 
-private struct SeedFigure: Codable {
+package struct SeedFigureType: Codable {
     package let id: String
     package let name: String
+    package let icon: String
+    package let colorHex: String
+
+    package init(id: String = "", name: String = "", icon: String = "", colorHex: String = "") {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.colorHex = colorHex
+    }
+}
+
+package struct SeedPlaceType: Codable {
+    package let id: String
+    package let name: String
+    package let icon: String
+    package let colorHex: String
+
+    package init(id: String = "", name: String = "", icon: String = "", colorHex: String = "") {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.colorHex = colorHex
+    }
+}
+
+package struct SeedEventType: Codable {
+    package let id: String
+    package let name: String
+    package let icon: String
+    package let colorHex: String
+
+    package init(id: String = "", name: String = "", icon: String = "", colorHex: String = "") {
+        self.id = id
+        self.name = name
+        self.icon = icon
+        self.colorHex = colorHex
+    }
+}
+
+package struct SeedFigure: Codable {
+    package let id: String
+    package let name: String
+    package let disambiguation: String
     package let title: String
     package let figureType: String
     package let gender: String
@@ -24,25 +73,55 @@ private struct SeedFigure: Codable {
     package let birthDate: SeedDate
     package let deathDate: SeedDate
     package let source: String
+
+    package init(id: String = "", name: String = "", disambiguation: String = "", title: String = "", figureType: String = "", gender: String = "", domain: String = "", figureDescription: String = "", birthDate: SeedDate = .init(), deathDate: SeedDate = .init(), source: String = "") {
+        self.id = id
+        self.name = name
+        self.disambiguation = disambiguation
+        self.title = title
+        self.figureType = figureType
+        self.gender = gender
+        self.domain = domain
+        self.figureDescription = figureDescription
+        self.birthDate = birthDate
+        self.deathDate = deathDate
+        self.source = source
+    }
 }
 
-private struct SeedRelationship: Codable {
+package struct SeedRelationship: Codable {
     package let fromFigureId: String
     package let toFigureId: String
     package let relationshipType: String
     package let source: String
+
+    package init(fromFigureId: String = "", toFigureId: String = "", relationshipType: String = "", source: String = "") {
+        self.fromFigureId = fromFigureId
+        self.toFigureId = toFigureId
+        self.relationshipType = relationshipType
+        self.source = source
+    }
 }
 
-private struct SeedEra: Codable {
+package struct SeedEra: Codable {
     package let id: String
     package let name: String
     package let orderIndex: Int
     package let eraDescription: String
     package let startDate: SeedDate
     package let endDate: SeedDate
+
+    package init(id: String = "", name: String = "", orderIndex: Int = 0, eraDescription: String = "", startDate: SeedDate = .init(), endDate: SeedDate = .init()) {
+        self.id = id
+        self.name = name
+        self.orderIndex = orderIndex
+        self.eraDescription = eraDescription
+        self.startDate = startDate
+        self.endDate = endDate
+    }
 }
 
-private struct SeedPlace: Codable {
+package struct SeedPlace: Codable {
     package let id: String
     package let name: String
     package let placeType: String
@@ -51,9 +130,20 @@ private struct SeedPlace: Codable {
     package let source: String
     package let latitude: Double?
     package let longitude: Double?
+
+    package init(id: String = "", name: String = "", placeType: String = "", modernLocation: String = "", placeDescription: String = "", source: String = "", latitude: Double? = nil, longitude: Double? = nil) {
+        self.id = id
+        self.name = name
+        self.placeType = placeType
+        self.modernLocation = modernLocation
+        self.placeDescription = placeDescription
+        self.source = source
+        self.latitude = latitude
+        self.longitude = longitude
+    }
 }
 
-private struct SeedEvent: Codable {
+package struct SeedEvent: Codable {
     package let id: String
     package let name: String
     package let eventType: String
@@ -63,9 +153,21 @@ private struct SeedEvent: Codable {
     package let source: String
     package let involvedFigureIds: [String]
     package let placeId: String?
+
+    package init(id: String = "", name: String = "", eventType: String = "", eventDescription: String = "", date: SeedDate = .init(), era: String = "", source: String = "", involvedFigureIds: [String] = [], placeId: String? = nil) {
+        self.id = id
+        self.name = name
+        self.eventType = eventType
+        self.eventDescription = eventDescription
+        self.date = date
+        self.era = era
+        self.source = source
+        self.involvedFigureIds = involvedFigureIds
+        self.placeId = placeId
+    }
 }
 
-private struct SeedSource: Codable {
+package struct SeedSource: Codable {
     package let id: String
     package let name: String
     package let sourceType: String
@@ -75,74 +177,204 @@ private struct SeedSource: Codable {
     package let sourceDescription: String
     package let publicationInfo: String
     package let url: String
+
+    package init(id: String = "", name: String = "", sourceType: String = "", author: String = "", language: String = "", period: String = "", sourceDescription: String = "", publicationInfo: String = "", url: String = "") {
+        self.id = id
+        self.name = name
+        self.sourceType = sourceType
+        self.author = author
+        self.language = language
+        self.period = period
+        self.sourceDescription = sourceDescription
+        self.publicationInfo = publicationInfo
+        self.url = url
+    }
 }
 
-private struct SeedCitation: Codable {
+package struct SeedCitation: Codable {
     package let sourceId: String
     package let location: String
     package let entityType: String
     package let entityId: String
     package let note: String
+
+    package init(sourceId: String = "", location: String = "", entityType: String = "", entityId: String = "", note: String = "") {
+        self.sourceId = sourceId
+        self.location = location
+        self.entityType = entityType
+        self.entityId = entityId
+        self.note = note
+    }
 }
 
-private struct SeedAlternateName: Codable {
+package struct SeedAlternateName: Codable {
     package let figureId: String
     package let name: String
     package let tradition: String
     package let nameType: String
     package let note: String
+
+    package init(figureId: String = "", name: String = "", tradition: String = "", nameType: String = "", note: String = "") {
+        self.figureId = figureId
+        self.name = name
+        self.tradition = tradition
+        self.nameType = nameType
+        self.note = note
+    }
 }
 
-private struct SeedAttachment: Codable {
+package struct SeedAttachment: Codable {
     package let sourceId: String
     package let title: String
     package let url: String
     package let attachmentType: String
     package let note: String?
+
+    package init(sourceId: String = "", title: String = "", url: String = "", attachmentType: String = "", note: String? = nil) {
+        self.sourceId = sourceId
+        self.title = title
+        self.url = url
+        self.attachmentType = attachmentType
+        self.note = note
+    }
 }
 
-private struct SeedFigurePlaceAssociation: Codable {
+package struct SeedFigurePlaceAssociation: Codable {
     package let figureId: String
     package let placeId: String
     package let role: String
     package let source: String
+
+    package init(figureId: String = "", placeId: String = "", role: String = "", source: String = "") {
+        self.figureId = figureId
+        self.placeId = placeId
+        self.role = role
+        self.source = source
+    }
 }
 
-private struct SeedPlacePlaceAssociation: Codable {
+package struct SeedPlacePlaceAssociation: Codable {
     package let fromPlaceId: String
     package let toPlaceId: String
     package let role: String
     package let source: String
+
+    package init(fromPlaceId: String = "", toPlaceId: String = "", role: String = "", source: String = "") {
+        self.fromPlaceId = fromPlaceId
+        self.toPlaceId = toPlaceId
+        self.role = role
+        self.source = source
+    }
 }
 
-private struct SeedEventEventAssociation: Codable {
+package struct SeedEventEventAssociation: Codable {
     package let fromEventId: String
     package let toEventId: String
     package let role: String
     package let source: String
+
+    package init(fromEventId: String = "", toEventId: String = "", role: String = "", source: String = "") {
+        self.fromEventId = fromEventId
+        self.toEventId = toEventId
+        self.role = role
+        self.source = source
+    }
 }
 
-private struct SeedEventPlaceAssociation: Codable {
+package struct SeedImageAsset: Codable {
+    package let id: String
+    package let filename: String
+    package let caption: String
+    package let source: String
+    package let figureIds: [String]
+    package let placeIds: [String]
+    package let eventIds: [String]
+
+    package init(id: String = "", filename: String = "", caption: String = "", source: String = "", figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = []) {
+        self.id = id
+        self.filename = filename
+        self.caption = caption
+        self.source = source
+        self.figureIds = figureIds
+        self.placeIds = placeIds
+        self.eventIds = eventIds
+    }
+}
+
+package struct SeedTag: Codable {
+    package let id: String
+    package let name: String
+    package let colorHex: String?
+    package let figureIds: [String]
+    package let placeIds: [String]
+    package let eventIds: [String]
+    package let imageIds: [String]
+
+    package init(id: String = "", name: String = "", colorHex: String? = nil, figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = [], imageIds: [String] = []) {
+        self.id = id
+        self.name = name
+        self.colorHex = colorHex
+        self.figureIds = figureIds
+        self.placeIds = placeIds
+        self.eventIds = eventIds
+        self.imageIds = imageIds
+    }
+}
+
+package struct SeedEventPlaceAssociation: Codable {
     package let eventId: String
     package let placeId: String
     package let role: String
     package let source: String
+
+    package init(eventId: String = "", placeId: String = "", role: String = "", source: String = "") {
+        self.eventId = eventId
+        self.placeId = placeId
+        self.role = role
+        self.source = source
+    }
 }
 
-private struct SeedDataRoot: Codable {
-    package let eras: [SeedEra]
-    package let figures: [SeedFigure]
-    package let relationships: [SeedRelationship]
-    package let places: [SeedPlace]
-    package let events: [SeedEvent]
-    package let sources: [SeedSource]
-    package let attachments: [SeedAttachment]
-    package let citations: [SeedCitation]
-    package let alternateNames: [SeedAlternateName]
-    package let figurePlaceAssociations: [SeedFigurePlaceAssociation]?
-    package let placePlaceAssociations: [SeedPlacePlaceAssociation]?
-    package let eventPlaceAssociations: [SeedEventPlaceAssociation]?
-    package let eventEventAssociations: [SeedEventEventAssociation]?
+package struct SeedDataRoot: Codable {
+    package var eras: [SeedEra]
+    package var figures: [SeedFigure]
+    package var relationships: [SeedRelationship]
+    package var places: [SeedPlace]
+    package var events: [SeedEvent]
+    package var sources: [SeedSource]
+    package var attachments: [SeedAttachment]
+    package var citations: [SeedCitation]
+    package var alternateNames: [SeedAlternateName]
+    package var figurePlaceAssociations: [SeedFigurePlaceAssociation]?
+    package var placePlaceAssociations: [SeedPlacePlaceAssociation]?
+    package var eventPlaceAssociations: [SeedEventPlaceAssociation]?
+    package var figureTypes: [SeedFigureType]?
+    package var placeTypes: [SeedPlaceType]?
+    package var eventTypes: [SeedEventType]?
+    package var eventEventAssociations: [SeedEventEventAssociation]?
+    package var imageAssets: [SeedImageAsset]?
+    package var tags: [SeedTag]?
+
+    package init(eras: [SeedEra] = [], figures: [SeedFigure] = [], relationships: [SeedRelationship] = [], places: [SeedPlace] = [], events: [SeedEvent] = [], sources: [SeedSource] = [], attachments: [SeedAttachment] = [], citations: [SeedCitation] = [], alternateNames: [SeedAlternateName] = [], figureTypes: [SeedFigureType]? = nil, placeTypes: [SeedPlaceType]? = nil, eventTypes: [SeedEventType]? = nil, figurePlaceAssociations: [SeedFigurePlaceAssociation]? = nil, placePlaceAssociations: [SeedPlacePlaceAssociation]? = nil, eventPlaceAssociations: [SeedEventPlaceAssociation]? = nil, eventEventAssociations: [SeedEventEventAssociation]? = nil, imageAssets: [SeedImageAsset]? = nil, tags: [SeedTag]? = nil) {
+        self.eras = eras
+        self.figures = figures
+        self.relationships = relationships
+        self.places = places
+        self.events = events
+        self.sources = sources
+        self.attachments = attachments
+        self.citations = citations
+        self.alternateNames = alternateNames
+        self.figurePlaceAssociations = figurePlaceAssociations
+        self.placePlaceAssociations = placePlaceAssociations
+        self.eventPlaceAssociations = eventPlaceAssociations
+        self.figureTypes = figureTypes
+        self.placeTypes = placeTypes
+        self.eventTypes = eventTypes
+        self.eventEventAssociations = eventEventAssociations
+        self.imageAssets = imageAssets
+        self.tags = tags
+    }
 }
 
 // MARK: - Seed Data Loader
@@ -164,17 +396,21 @@ package struct SeedData {
             return
         }
 
-        // Load JSON from bundle
+        // Load primary seed data
         guard let url = Bundle.module.url(forResource: "seed_data", withExtension: "json"),
               let data = try? Data(contentsOf: url),
-              let seed = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+               let seed = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
             assertionFailure("Failed to load seed_data.json from bundle")
             return
         }
 
+        importFrom(root: seed, context: context)
+    }
+
+    package static func importFrom(root: SeedDataRoot, context: ModelContext) {
         // MARK: - Eras
         var erasById: [String: Era] = [:]
-        for seedEra in seed.eras {
+        for seedEra in root.eras {
             let era = Era(
                 name: seedEra.name,
                 orderIndex: seedEra.orderIndex,
@@ -187,11 +423,13 @@ package struct SeedData {
         }
 
         // MARK: - Figure Types
-        ensureTypesExist(context: context)
-        let typeCount = (try? context.fetchCount(FetchDescriptor<FigureType>())) ?? 0
-        guard typeCount > 0 else {
-            assertionFailure("Failed to create figure types")
-            return
+        if let seedTypes = root.figureTypes, !seedTypes.isEmpty {
+            for st in seedTypes {
+                let type = FigureType(name: st.name, icon: st.icon, colorHex: st.colorHex)
+                context.insert(type)
+            }
+        } else {
+            ensureTypesExist(context: context)
         }
         let typesByName: [String: FigureType] = {
             let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
@@ -200,9 +438,19 @@ package struct SeedData {
 
         // MARK: - Figures
         var figuresById: [String: Figure] = [:]
-        for seedFigure in seed.figures {
+        var sklEraIndex: [String: Int] = [:]
+        for seedFigure in root.figures {
+            let orderIndex: Int
+            if seedFigure.source == "Sumerian King List" {
+                let era = seedFigure.birthDate.era.isEmpty ? "Antediluvian" : seedFigure.birthDate.era
+                orderIndex = sklEraIndex[era, default: 0]
+                sklEraIndex[era] = orderIndex + 1
+            } else {
+                orderIndex = 0
+            }
             let figure = Figure(
                 name: seedFigure.name,
+                disambiguation: seedFigure.disambiguation,
                 title: seedFigure.title,
                 figureType: typesByName[seedFigure.figureType],
                 gender: Figure.Gender(rawValue: seedFigure.gender) ?? .unknown,
@@ -210,14 +458,15 @@ package struct SeedData {
                 figureDescription: seedFigure.figureDescription,
                 birthDate: seedFigure.birthDate.toMythologicalDate(),
                 deathDate: seedFigure.deathDate.toMythologicalDate(),
-                source: seedFigure.source
+                source: seedFigure.source,
+                orderIndex: orderIndex
             )
             context.insert(figure)
             figuresById[seedFigure.id] = figure
         }
 
         // MARK: - Relationships
-        for seedRel in seed.relationships {
+        for seedRel in root.relationships {
             guard let from = figuresById[seedRel.fromFigureId],
                   let to = figuresById[seedRel.toFigureId] else { continue }
             let rel = Relationship(
@@ -230,6 +479,12 @@ package struct SeedData {
         }
 
         // MARK: - Place Types
+        if let seedTypes = root.placeTypes, !seedTypes.isEmpty {
+            for st in seedTypes {
+                let type = PlaceType(name: st.name, icon: st.icon, colorHex: st.colorHex)
+                context.insert(type)
+            }
+        }
         let placeTypesByName: [String: PlaceType] = {
             let types = (try? context.fetch(FetchDescriptor<PlaceType>())) ?? []
             return Dictionary(uniqueKeysWithValues: types.map { ($0.name, $0) })
@@ -237,7 +492,7 @@ package struct SeedData {
 
         // MARK: - Places
         var placesById: [String: Place] = [:]
-        for seedPlace in seed.places {
+        for seedPlace in root.places {
             let place = Place(
                 name: seedPlace.name,
                 placeType: placeTypesByName[seedPlace.placeType],
@@ -252,6 +507,12 @@ package struct SeedData {
         }
 
         // MARK: - Event Types
+        if let seedTypes = root.eventTypes, !seedTypes.isEmpty {
+            for st in seedTypes {
+                let type = EventType(name: st.name, icon: st.icon, colorHex: st.colorHex)
+                context.insert(type)
+            }
+        }
         let eventTypesByName: [String: EventType] = {
             let types = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
             return Dictionary(uniqueKeysWithValues: types.map { ($0.name, $0) })
@@ -259,7 +520,7 @@ package struct SeedData {
 
         // MARK: - Events
         var eventsById: [String: Event] = [:]
-        for seedEvent in seed.events {
+        for seedEvent in root.events {
             let figures = seedEvent.involvedFigureIds.compactMap { figuresById[$0] }
             let event = Event(
                 name: seedEvent.name,
@@ -276,7 +537,7 @@ package struct SeedData {
 
         // MARK: - Sources
         var sourcesById: [String: Source] = [:]
-        for seedSource in seed.sources {
+        for seedSource in root.sources {
             let source = Source(
                 name: seedSource.name,
                 sourceType: Source.SourceType(rawValue: seedSource.sourceType) ?? .ancientText,
@@ -292,7 +553,7 @@ package struct SeedData {
         }
 
         // MARK: - Attachments
-        for seedAttachment in seed.attachments {
+        for seedAttachment in root.attachments {
             guard let source = sourcesById[seedAttachment.sourceId] else { continue }
             let attachment = Attachment(
                 source: source,
@@ -305,7 +566,7 @@ package struct SeedData {
         }
 
         // MARK: - Citations
-        for seedCitation in seed.citations {
+        for seedCitation in root.citations {
             guard let source = sourcesById[seedCitation.sourceId] else { continue }
             let citation = Citation(
                 source: source,
@@ -318,7 +579,7 @@ package struct SeedData {
         }
 
         // MARK: - Alternate Names
-        for seedAltName in seed.alternateNames {
+        for seedAltName in root.alternateNames {
             guard let figure = figuresById[seedAltName.figureId] else { continue }
             let altName = AlternateName(
                 figure: figure,
@@ -331,7 +592,7 @@ package struct SeedData {
         }
 
         // MARK: - Figure-Place Associations
-        if let associations = seed.figurePlaceAssociations {
+        if let associations = root.figurePlaceAssociations {
             for seedAssoc in associations {
                 guard let figure = figuresById[seedAssoc.figureId],
                       let place = placesById[seedAssoc.placeId] else { continue }
@@ -346,7 +607,7 @@ package struct SeedData {
         }
 
         // MARK: - Place-Place Associations
-        if let placeAssocs = seed.placePlaceAssociations {
+        if let placeAssocs = root.placePlaceAssociations {
             for seedAssoc in placeAssocs {
                 guard let from = placesById[seedAssoc.fromPlaceId],
                       let to = placesById[seedAssoc.toPlaceId] else { continue }
@@ -361,7 +622,7 @@ package struct SeedData {
         }
 
         // MARK: - Event-Place Associations
-        if let eventPlaceAssocs = seed.eventPlaceAssociations {
+        if let eventPlaceAssocs = root.eventPlaceAssociations {
             for seedAssoc in eventPlaceAssocs {
                 guard let event = eventsById[seedAssoc.eventId],
                       let place = placesById[seedAssoc.placeId] else { continue }
@@ -376,7 +637,7 @@ package struct SeedData {
         }
 
         // MARK: - Event-Event Associations
-        if let eventAssocs = seed.eventEventAssociations {
+        if let eventAssocs = root.eventEventAssociations {
             for seedAssoc in eventAssocs {
                 guard let from = eventsById[seedAssoc.fromEventId],
                       let to = eventsById[seedAssoc.toEventId] else { continue }
@@ -390,8 +651,46 @@ package struct SeedData {
             }
         }
 
+        // MARK: - Image Assets
+        if let images = root.imageAssets {
+            var imagesById: [String: ImageAsset] = [:]
+            for si in images {
+                let image = ImageAsset(
+                    figures: si.figureIds.compactMap { figuresById[$0] },
+                    places: si.placeIds.compactMap { placesById[$0] },
+                    events: si.eventIds.compactMap { eventsById[$0] },
+                    filename: si.filename,
+                    caption: si.caption,
+                    source: si.source
+                )
+                context.insert(image)
+                imagesById[si.id] = image
+            }
+
+            // MARK: - Tags
+            if let tags = root.tags {
+                for st in tags {
+                    let tag = Tag(
+                        name: st.name,
+                        colorHex: st.colorHex
+                    )
+                    tag.figures = st.figureIds.compactMap { figuresById[$0] }
+                    tag.places = st.placeIds.compactMap { placesById[$0] }
+                    tag.events = st.eventIds.compactMap { eventsById[$0] }
+                    tag.images = st.imageIds.compactMap { imagesById[$0] }
+                    context.insert(tag)
+                }
+            }
+        }
+
         // Save
         try? context.save()
+    }
+
+    package static func reseed(context: ModelContext) {
+        clearAll(context: context)
+        try? context.save()
+        seedIfEmpty(context: context)
     }
 
     static func clearAll(context: ModelContext) {
@@ -399,7 +698,7 @@ package struct SeedData {
         for entity in (try? context.fetch(FetchDescriptor<EventPlaceAssociation>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<PlacePlaceAssociation>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? [] { context.delete(entity) }
-        for entity in (try? context.fetch(FetchDescriptor<FigureImage>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<ImageAsset>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<AlternateName>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<Citation>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<Attachment>())) ?? [] { context.delete(entity) }
@@ -410,6 +709,10 @@ package struct SeedData {
         for entity in (try? context.fetch(FetchDescriptor<Era>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<Source>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<FigureType>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<PlaceType>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<EventType>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<Tag>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<DataVersion>())) ?? [] { context.delete(entity) }
     }
 
     static func ensureTypesExist(context: ModelContext) {
@@ -420,6 +723,7 @@ package struct SeedData {
                 ("Semi-Divine", "star.leadinghalf.filled", "FF9500"),
                 ("Human", "person.fill", "34C759"),
                 ("Primordial", "sparkles", "AF52DE"),
+                ("Igigi", "moon.stars", "8B5CF6"),
             ]
             for config in typeConfig {
                 let type = FigureType(name: config.name, icon: config.icon, colorHex: config.colorHex)

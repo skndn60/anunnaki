@@ -4,6 +4,9 @@ import SwiftData
 /// Detail panel showing all properties of a selected event.
 struct EventDetailView: View {
     let event: Event
+    var onSelectFigure: ((Figure) -> Void)?
+    var onSelectPlace: ((Place) -> Void)?
+    var onSelectImage: ((ImageAsset) -> Void)?
     @Environment(\.modelContext) private var modelContext
     @Query private var figures: [Figure]
     @Query private var places: [Place]
@@ -91,9 +94,14 @@ struct EventDetailView: View {
                                     )
 
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(figure.name)
-                                        .font(.callout)
-                                        .fontWeight(.medium)
+                                    Button(action: { onSelectFigure?(figure) }) {
+                                        Text(figure.name)
+                                            .font(.callout)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(Color.accentColor)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
                                     if !figure.title.isEmpty {
                                         Text(figure.title)
                                             .font(.caption)
@@ -157,9 +165,14 @@ struct EventDetailView: View {
                                         .font(.callout)
                                         .foregroundStyle(.teal)
                                     VStack(alignment: .leading, spacing: 1) {
-                                        Text(place.name)
-                                            .font(.callout)
-                                            .fontWeight(.medium)
+                                        Button(action: { onSelectPlace?(place) }) {
+                                            Text(place.name)
+                                                .font(.callout)
+                                                .fontWeight(.medium)
+                                                .foregroundStyle(Color.accentColor)
+                                                .underline()
+                                        }
+                                        .buttonStyle(.plain)
                                         HStack(spacing: 4) {
                                             Text(assoc.role.rawValue)
                                                 .font(.caption2)
@@ -174,6 +187,34 @@ struct EventDetailView: View {
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // Images
+                Divider()
+                ImageGallery(
+                    title: "Images",
+                    images: event.images,
+                    onLinkImage: { asset in
+                        asset.events.append(event)
+                    },
+                    onSelectImage: onSelectImage
+                )
+
+                // Tags
+                if !event.tags.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Tags")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        FlowLayout(spacing: 4) {
+                            ForEach(event.tags) { tag in
+                                TagTokenView(tag: tag)
                             }
                         }
                     }

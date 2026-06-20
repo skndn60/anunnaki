@@ -3,6 +3,7 @@ import SwiftData
 
 /// Input screen for managing events.
 struct EventListView: View {
+    var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
     @Query private var events: [Event]
     @State private var showingAddSheet = false
@@ -10,6 +11,8 @@ struct EventListView: View {
     @State private var selectedEventID: PersistentIdentifier?
     @State private var sortOrder: EventSortOrder = .name
     @State private var showingTypeManager = false
+    @State private var imageDetailImage: ImageAsset?
+    @State private var showDeleteConfirm = false
     @Query(sort: \EventType.name) private var eventTypes: [EventType]
     @State private var breadcrumbs: [Breadcrumb] = []
 
@@ -30,6 +33,27 @@ struct EventListView: View {
         case .type: return events.sorted { $0.eventType?.name ?? "" < $1.eventType?.name ?? "" }
         case .date: return events.sorted { $0.date.sortValue < $1.date.sortValue }
         }
+    }
+
+    private var displayRows: [DisplayRow<Event>] {
+        let sorted = sortedEvents
+        var rows: [DisplayRow<Event>] = []
+        var currentKey: String?
+        for event in sorted {
+            let key: String = {
+                switch sortOrder {
+                case .name: return String(event.name.uppercased().prefix(1))
+                case .type: return event.eventType?.name ?? "?"
+                case .date: return event.date.era.isEmpty ? "Unknown" : event.date.era
+                }
+            }()
+            if key != currentKey {
+                rows.append(DisplayRow(index: rows.count, item: .header(key)))
+                currentKey = key
+            }
+            rows.append(DisplayRow(index: rows.count, item: .entity(event)))
+        }
+        return rows
     }
 
     private func selectEvent(_ id: PersistentIdentifier) {
@@ -74,6 +98,14 @@ struct EventListView: View {
                 .padding()
 
                 // Breadcrumbs
+                let coordinatorHistory = coordinator?.history ?? []
+                if !coordinatorHistory.isEmpty {
+                    BreadcrumbBar(
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name) },
+                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                        onClear: { coordinator?.history.removeAll() }
+                    )
+                }
                 if !breadcrumbs.isEmpty {
                     BreadcrumbBar(breadcrumbs: breadcrumbs, onNavigate: navigateToBreadcrumb, onClear: { breadcrumbs.removeAll() })
                 }
@@ -102,9 +134,20 @@ struct EventListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(sortedEvents, selection: $selectedEventID) { event in
-                        EventRow(event: event)
-                            .tag(event.persistentModelID)
+                    List(selection: $selectedEventID) {
+                        ForEach(displayRows) { row in
+                            switch row.item {
+                            case .header(let label):
+                                Text(label)
+                                    .font(.largeTitle.bold())
+                                    .foregroundStyle(.secondary)
+                                    .listRowSeparator(.hidden)
+                                    .selectionDisabled()
+                            case .entity(let event):
+                                EventRow(event: event)
+                                    .tag(event.persistentModelID)
+                            }
+                        }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                     .onChange(of: selectedEventID) { _, newValue in
@@ -122,7 +165,7 @@ struct EventListView: View {
                             editingEvent = event
                         }
                         IconActionButton(icon: "trash", color: .red) {
-                            deleteEvent(event)
+                            showDeleteConfirm = true
                         }
                         Spacer()
                         Button(action: { selectedEventID = nil }) {
@@ -135,7 +178,11 @@ struct EventListView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(8)
-                    EventDetailView(event: event)
+                    EventDetailView(event: event, onSelectFigure: { figure in
+                        coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
+                    }, onSelectPlace: { place in
+                        coordinator?.navigateToPlace(place.persistentModelID, name: place.name)
+                    }, onSelectImage: { imageDetailImage = $0 })
                 }
                 .frame(width: 320)
             }
@@ -148,6 +195,28 @@ struct EventListView: View {
         }
         .sheet(isPresented: $showingTypeManager) {
             EventTypeManagerView()
+        }
+        .sheet(item: $imageDetailImage) { image in
+            ImageDetailSheet(image: image)
+        }
+        .alert("Delete Event?", isPresented: $showDeleteConfirm, presenting: selectedEvent) { event in
+            Button("Delete", role: .destructive) { deleteEvent(event) }
+            Button("Cancel", role: .cancel) {}
+        } message: { event in
+            Text("Delete \"\(event.name)\"? This cannot be undone.")
+        }
+        .onAppear {
+            consumePendingNavigation()
+        }
+        .onChange(of: coordinator?.pendingEventID) { _, _ in
+            consumePendingNavigation()
+        }
+    }
+
+    private func consumePendingNavigation() {
+        guard let id = coordinator?.consumePendingEventID() else { return }
+        if events.contains(where: { $0.persistentModelID == id }) {
+            selectEvent(id)
         }
     }
 
@@ -221,6 +290,7 @@ struct EventFormView: View {
     @State private var figureSearchText = ""
     @State private var placeSelections: [PlaceSelection] = []
     @State private var placeSearchText = ""
+    @State private var selectedTags: [Tag] = []
 
     private struct PlaceSelection: Identifiable {
         let id = UUID()
@@ -457,6 +527,10 @@ struct EventFormView: View {
                     TextEditor(text: $eventDescription)
                         .frame(minHeight: 60)
                 }
+
+                Section("Tags") {
+                    TagEditorView(tags: $selectedTags)
+                }
             }
             .formStyle(.grouped)
 
@@ -487,6 +561,7 @@ struct EventFormView: View {
             guard let place = assoc.place else { return nil }
             return PlaceSelection(place: place, role: assoc.role)
         }
+        selectedTags = event.tags
     }
 
     private func save() {
@@ -498,6 +573,7 @@ struct EventFormView: View {
             event.date = date
             event.era = era
             event.source = source
+            event.isConcept = false
             event.involvedFigures = selectedFigs
             for assoc in event.placeAssociations { modelContext.delete(assoc) }
             event.placeAssociations = placeSelections.map { sel in
@@ -505,6 +581,7 @@ struct EventFormView: View {
                 modelContext.insert(assoc)
                 return assoc
             }
+            event.tags = selectedTags
         } else {
             let newEvent = Event(
                 name: name, eventType: eventType,
@@ -512,6 +589,7 @@ struct EventFormView: View {
                 date: date, era: era, source: source,
                 involvedFigures: selectedFigs
             )
+            newEvent.tags = selectedTags
             modelContext.insert(newEvent)
             for sel in placeSelections {
                 let assoc = EventPlaceAssociation(event: newEvent, place: sel.place, role: sel.role)

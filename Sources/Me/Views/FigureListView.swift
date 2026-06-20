@@ -3,7 +3,9 @@ import SwiftData
 
 /// Input screen for managing figures (deities, humans, etc.)
 struct FigureListView: View {
+    var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query private var figures: [Figure]
     @Query private var figureTypes: [FigureType]
     @State private var showingAddSheet = false
@@ -12,8 +14,9 @@ struct FigureListView: View {
     @State private var searchText = ""
     @State private var sortOrder: FigureSortOrder = .name
     @State private var breadcrumbs: [Breadcrumb] = []
-    @State private var showingLineageExplorer = false
     @State private var showingTypeManager = false
+    @State private var imageDetailImage: ImageAsset?
+    @State private var showDeleteConfirm = false
 
     enum FigureSortOrder: String, CaseIterable {
         case name = "Name"
@@ -44,6 +47,27 @@ struct FigureListView: View {
         case .domain: result.sort { $0.domain < $1.domain }
         }
         return result
+    }
+
+    private var displayRows: [DisplayRow<Figure>] {
+        let sorted = filteredFigures
+        var rows: [DisplayRow<Figure>] = []
+        var currentKey: String?
+        for figure in sorted {
+            let key: String = {
+                switch sortOrder {
+                case .name: return String(figure.name.uppercased().prefix(1))
+                case .type: return figure.figureType?.name ?? "?"
+                case .domain: return figure.domain.isEmpty ? "?" : figure.domain
+                }
+            }()
+            if key != currentKey {
+                rows.append(DisplayRow(index: rows.count, item: .header(key)))
+                currentKey = key
+            }
+            rows.append(DisplayRow(index: rows.count, item: .entity(figure)))
+        }
+        return rows
     }
 
     private func selectFigure(_ id: PersistentIdentifier) {
@@ -109,6 +133,14 @@ struct FigureListView: View {
                 .padding()
 
                 // Breadcrumbs
+                let coordinatorHistory = coordinator?.history ?? []
+                if !coordinatorHistory.isEmpty {
+                    BreadcrumbBar(
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name) },
+                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                        onClear: { coordinator?.history.removeAll() }
+                    )
+                }
                 if !breadcrumbs.isEmpty {
                     BreadcrumbBar(breadcrumbs: breadcrumbs, onNavigate: navigateToBreadcrumb, onClear: { breadcrumbs.removeAll() })
                 }
@@ -141,9 +173,20 @@ struct FigureListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(filteredFigures, selection: $selectedFigureID) { figure in
-                        FigureRow(figure: figure, searchText: searchText)
-                            .tag(figure.persistentModelID)
+                    List(selection: $selectedFigureID) {
+                        ForEach(displayRows) { row in
+                            switch row.item {
+                            case .header(let label):
+                                Text(label)
+                                    .font(.largeTitle.bold())
+                                    .foregroundStyle(.secondary)
+                                    .listRowSeparator(.hidden)
+                                    .selectionDisabled()
+                            case .entity(let figure):
+                                FigureRow(figure: figure, searchText: searchText)
+                                    .tag(figure.persistentModelID)
+                            }
+                        }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                     .onChange(of: selectedFigureID) { _, newValue in
@@ -164,10 +207,10 @@ struct FigureListView: View {
                             editingFigure = figure
                         }
                         IconActionButton(icon: "trash", color: .red) {
-                            deleteFigure(figure)
+                            showDeleteConfirm = true
                         }
                         IconActionButton(icon: "tree", color: .green) {
-                            showingLineageExplorer = true
+                            openWindow(value: figure.persistentModelID)
                         }
                         Spacer()
                         Button(action: { selectedFigureID = nil }) {
@@ -184,8 +227,13 @@ struct FigureListView: View {
                     }
                     .padding(8)
                     FigureDetailView(figure: figure, onSelectFigure: { selected in
+                        coordinator?.pushHistory(id: selected.persistentModelID, name: selected.name, item: .figures)
                         selectFigure(selected.persistentModelID)
-                    })
+                    }, onSelectPlace: { place in
+                        coordinator?.navigateToPlace(place.persistentModelID, name: place.name)
+                    }, onSelectEvent: { event in
+                        coordinator?.navigateToEvent(event.persistentModelID, name: event.name)
+                    }, onSelectImage: { imageDetailImage = $0 })
                 }
                 .frame(width: 320)
             }
@@ -196,13 +244,31 @@ struct FigureListView: View {
         .sheet(item: $editingFigure) { figure in
             FigureFormView(figure: figure)
         }
-        .sheet(isPresented: $showingLineageExplorer) {
-            if let figure = selectedFigure {
-                FigureLineageExplorer(initialFigure: figure)
-            }
-        }
+
         .sheet(isPresented: $showingTypeManager) {
             FigureTypeManagerView()
+        }
+        .sheet(item: $imageDetailImage) { image in
+            ImageDetailSheet(image: image)
+        }
+        .alert("Delete Figure?", isPresented: $showDeleteConfirm, presenting: selectedFigure) { figure in
+            Button("Delete", role: .destructive) { deleteFigure(figure) }
+            Button("Cancel", role: .cancel) {}
+        } message: { figure in
+            Text("Delete \"\(figure.name)\"? This cannot be undone.")
+        }
+        .onAppear {
+            consumePendingNavigation()
+        }
+        .onChange(of: coordinator?.pendingFigureID) { _, _ in
+            consumePendingNavigation()
+        }
+    }
+
+    private func consumePendingNavigation() {
+        guard let id = coordinator?.consumePendingFigureID() else { return }
+        if figures.contains(where: { $0.persistentModelID == id }) {
+            selectFigure(id)
         }
     }
 
@@ -255,8 +321,15 @@ struct FigureRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(width: 14)
-            Text(figure.name)
-                .fontWeight(.medium)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(figure.name)
+                    .fontWeight(.medium)
+                if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
+                    Text(disambiguation)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
             Text(figure.figureType?.name ?? "Unknown")
                 .font(.caption)
                 .padding(.horizontal, 6)
@@ -301,6 +374,7 @@ struct FigureFormView: View {
     @Query private var figureTypes: [FigureType]
 
     @State private var name = ""
+    @State private var disambiguation = ""
     @State private var title = ""
     @State private var selectedFigureType: FigureType? = nil
     @State private var gender: Figure.Gender = .unknown
@@ -309,6 +383,7 @@ struct FigureFormView: View {
     @State private var birthDate: MythologicalDate = .unknown
     @State private var deathDate: MythologicalDate = .unknown
     @State private var source = ""
+    @State private var selectedTags: [Tag] = []
 
     private var isEditing: Bool { figure != nil }
 
@@ -322,6 +397,7 @@ struct FigureFormView: View {
             Form {
                 Section("Identity") {
                     TextField("Name", text: $name)
+                    TextField("Disambiguation", text: $disambiguation, prompt: Text("e.g. Fourth dynasty of Kish"))
                     TextField("Title", text: $title, prompt: Text("e.g. King of the Gods"))
                     Picker("Type", selection: $selectedFigureType) {
                         Text("None").tag(nil as FigureType?)
@@ -345,6 +421,10 @@ struct FigureFormView: View {
                     TextEditor(text: $figureDescription)
                         .frame(minHeight: 60)
                 }
+
+                Section("Tags") {
+                    TagEditorView(tags: $selectedTags)
+                }
             }
             .formStyle(.grouped)
 
@@ -366,6 +446,7 @@ struct FigureFormView: View {
     private func loadIfEditing() {
         guard let figure else { return }
         name = figure.name
+        disambiguation = figure.disambiguation ?? ""
         title = figure.title
         selectedFigureType = figure.figureType
         gender = figure.gender
@@ -374,11 +455,13 @@ struct FigureFormView: View {
         birthDate = figure.birthDate
         deathDate = figure.deathDate
         source = figure.source
+        selectedTags = figure.tags
     }
 
     private func save() {
         if let figure {
             figure.name = name
+            figure.disambiguation = disambiguation.isEmpty ? nil : disambiguation
             figure.title = title
             figure.figureType = selectedFigureType
             figure.gender = gender
@@ -387,12 +470,15 @@ struct FigureFormView: View {
             figure.birthDate = birthDate
             figure.deathDate = deathDate
             figure.source = source
+            figure.isConcept = false
+            figure.tags = selectedTags
         } else {
             let newFigure = Figure(
-                name: name, title: title, figureType: selectedFigureType,
+                name: name, disambiguation: disambiguation.isEmpty ? nil : disambiguation, title: title, figureType: selectedFigureType,
                 gender: gender, domain: domain, figureDescription: figureDescription,
                 birthDate: birthDate, deathDate: deathDate, source: source
             )
+            newFigure.tags = selectedTags
             modelContext.insert(newFigure)
         }
         dismiss()

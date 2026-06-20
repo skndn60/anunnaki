@@ -6,6 +6,9 @@ import UniformTypeIdentifiers
 struct FigureDetailView: View {
     let figure: Figure
     var onSelectFigure: ((Figure) -> Void)?
+    var onSelectPlace: ((Place) -> Void)?
+    var onSelectEvent: ((Event) -> Void)?
+    var onSelectImage: ((ImageAsset) -> Void)?
     @Environment(\.modelContext) private var modelContext
     @Query private var matchingRelationships: [Relationship]
     @State private var droppedFigureName: String?
@@ -13,9 +16,12 @@ struct FigureDetailView: View {
     @State private var selectedRelationType: Relationship.RelationshipType = .father
     @State private var isDropTargeted = false
 
-    init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil) {
+    init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
+        self.onSelectPlace = onSelectPlace
+        self.onSelectEvent = onSelectEvent
+        self.onSelectImage = onSelectImage
         let name = figure.name
         _matchingRelationships = Query(filter: #Predicate<Relationship> { rel in
             rel.fromFigure?.name == name || rel.toFigure?.name == name
@@ -47,6 +53,11 @@ struct FigureDetailView: View {
                             Text(figure.gender.symbol)
                                 .font(.title3)
                                 .foregroundStyle(.secondary)
+                        }
+                        if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
+                            Text(disambiguation)
+                                .font(.subheadline)
+                                .foregroundStyle(.tertiary)
                         }
                         if !figure.title.isEmpty {
                             Text(figure.title)
@@ -175,9 +186,16 @@ struct FigureDetailView: View {
                                 Text(assoc.role.rawValue)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(assoc.place?.name ?? "?")
-                                    .font(.callout)
-                                    .fontWeight(.medium)
+                                Button(action: {
+                                    if let place = assoc.place { onSelectPlace?(place) }
+                                }) {
+                                    Text(assoc.place?.name ?? "?")
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(Color.accentColor)
+                                        .underline()
+                                }
+                                .buttonStyle(.plain)
                                 Spacer()
                                 if !assoc.source.isEmpty {
                                     Text(assoc.source)
@@ -208,13 +226,18 @@ struct FigureDetailView: View {
                                         .font(.caption)
                                         .foregroundStyle(event.eventType?.color ?? .gray)
                                         .frame(width: 14)
-                                    Text(event.name)
-                                        .font(.callout)
-                                        .fontWeight(.medium)
+                                    Button(action: { onSelectEvent?(event) }) {
+                                        Text(event.name)
+                                            .font(.callout)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(Color.accentColor)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
                                     Text(event.eventType?.name ?? "Other")
                                         .font(.caption2)
                                         .foregroundStyle(event.eventType?.color ?? .gray)
-                                    Spacer()
+                    Spacer()
                                     Text(event.date.displayLabel)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -225,9 +248,15 @@ struct FigureDetailView: View {
                                             .font(.caption2)
                                             .foregroundStyle(.teal)
                                         ForEach(Array(event.placeAssociations.enumerated()), id: \.element.id) { idx, assoc in
-                                            Text(assoc.place?.name ?? "?")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
+                                            Button(action: {
+                                                if let p = assoc.place { onSelectPlace?(p) }
+                                            }) {
+                                                Text(assoc.place?.name ?? "?")
+                                                    .font(.caption)
+                                                    .foregroundStyle(Color.accentColor)
+                                                    .underline()
+                                            }
+                                            .buttonStyle(.plain)
                                             if idx < event.placeAssociations.count - 1 {
                                                 Text("·")
                                                     .foregroundStyle(.tertiary)
@@ -244,7 +273,31 @@ struct FigureDetailView: View {
 
                 // Images
                 Divider()
-                FigureImageGallery(figure: figure)
+                ImageGallery(
+                    title: "Images",
+                    images: figure.images,
+                    onLinkImage: { asset in
+                        asset.figures.append(figure)
+                    },
+                    onSelectImage: onSelectImage
+                )
+
+                // Tags
+                if !figure.tags.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Tags")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        FlowLayout(spacing: 4) {
+                            ForEach(figure.tags) { tag in
+                                TagTokenView(tag: tag)
+                            }
+                        }
+                    }
+                }
 
                 // Citations
                 Divider()

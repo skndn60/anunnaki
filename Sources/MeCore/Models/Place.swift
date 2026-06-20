@@ -21,6 +21,14 @@ package final class Place {
     @Relationship(deleteRule: .cascade, inverse: \EventPlaceAssociation.place)
     package var eventAssociations: [EventPlaceAssociation] = []
 
+    /// Tags attached to this place
+    @Relationship(deleteRule: .nullify, inverse: \Tag.places)
+    package var tags: [Tag] = []
+
+    /// Images attached to this place
+    @Relationship(deleteRule: .nullify, inverse: \ImageAsset.places)
+    package var images: [ImageAsset] = []
+
     package init(
         name: String = "",
         placeType: PlaceType? = nil,

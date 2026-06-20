@@ -95,8 +95,26 @@ struct RelationshipFormView: View {
 
     @State private var fromFigure: Figure?
     @State private var toFigure: Figure?
+    @State private var fromSearchText = ""
+    @State private var toSearchText = ""
     @State private var relationshipType: Relationship.RelationshipType = .father
     @State private var source = ""
+
+    private var filteredFromFigures: [Figure] {
+        guard !fromSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (fromFigure == nil || fig.persistentModelID != fromFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(fromSearchText)
+        }
+    }
+
+    private var filteredToFigures: [Figure] {
+        guard !toSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (toFigure == nil || fig.persistentModelID != toFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(toSearchText)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -105,24 +123,32 @@ struct RelationshipFormView: View {
                 .padding()
 
             Form {
-                Picker("From", selection: $fromFigure) {
-                    Text("Select a figure").tag(nil as Figure?)
-                    ForEach(figures) { figure in
-                        Text("\(figure.gender.symbol) \(figure.name)").tag(figure as Figure?)
+                Section("From") {
+                    FigureSearchSelector(
+                        selection: $fromFigure,
+                        searchText: $fromSearchText,
+                        figures: figures,
+                        filteredFigures: filteredFromFigures,
+                        placeholder: "Search from figure\u{2026}"
+                    )
+                }
+
+                Section("Type") {
+                    Picker("Type", selection: $relationshipType) {
+                        ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
+                            Text(type.rawValue).tag(type)
+                        }
                     }
                 }
 
-                Picker("Type", selection: $relationshipType) {
-                    ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
-                    }
-                }
-
-                Picker("To", selection: $toFigure) {
-                    Text("Select a figure").tag(nil as Figure?)
-                    ForEach(figures) { figure in
-                        Text("\(figure.gender.symbol) \(figure.name)").tag(figure as Figure?)
-                    }
+                Section("To") {
+                    FigureSearchSelector(
+                        selection: $toFigure,
+                        searchText: $toSearchText,
+                        figures: figures,
+                        filteredFigures: filteredToFigures,
+                        placeholder: "Search to figure\u{2026}"
+                    )
                 }
 
                 TextField("Source Text", text: $source, prompt: Text("e.g. Enuma Elish, Tablet I"))
@@ -140,7 +166,8 @@ struct RelationshipFormView: View {
             }
             .padding()
         }
-        .frame(width: 450, height: 320)
+        .frame(width: 450, height: 520)
+        .onChange(of: fromFigure) { _, _ in inferType() }
     }
 
     private var isValid: Bool {
@@ -156,5 +183,82 @@ struct RelationshipFormView: View {
         )
         modelContext.insert(relationship)
         dismiss()
+    }
+
+    private func inferType() {
+        switch fromFigure?.gender {
+        case .female: relationshipType = .mother
+        case .male: relationshipType = .father
+        default: break
+        }
+    }
+}
+
+// MARK: - Figure Search Selector
+
+struct FigureSearchSelector: View {
+    @Binding var selection: Figure?
+    @Binding var searchText: String
+    let figures: [Figure]
+    let filteredFigures: [Figure]
+    let placeholder: String
+
+    var body: some View {
+        if let fig = selection {
+            HStack(spacing: 6) {
+                Text("\(fig.gender.symbol) \(fig.name)")
+                    .fontWeight(.medium)
+                Spacer()
+                Button { selection = nil } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(.quaternary.opacity(0.3))
+            .cornerRadius(6)
+        }
+        HStack(spacing: 4) {
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.secondary)
+                .font(.caption)
+            TextField(placeholder, text: $searchText)
+                .textFieldStyle(.plain)
+        }
+        .padding(8)
+        .background(.quaternary.opacity(0.15))
+        .cornerRadius(6)
+        if !searchText.isEmpty {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 2) {
+                    if filteredFigures.isEmpty {
+                        Text("No figures match \"\(searchText)\"")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 6)
+                    } else {
+                        ForEach(filteredFigures) { fig in
+                            Button {
+                                selection = fig
+                                searchText = ""
+                            } label: {
+                                Text("\(fig.gender.symbol) \(fig.name)")
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .background(Color.primary.opacity(0.05))
+                            .cornerRadius(4)
+                        }
+                    }
+                }
+            }
+            .frame(maxHeight: 140)
+        }
     }
 }

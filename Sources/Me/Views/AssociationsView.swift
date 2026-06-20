@@ -605,8 +605,26 @@ struct EditRelationshipForm: View {
 
     @State private var fromFigure: Figure?
     @State private var toFigure: Figure?
+    @State private var fromSearchText = ""
+    @State private var toSearchText = ""
     @State private var relationshipType: Relationship.RelationshipType = .father
     @State private var source = ""
+
+    private var filteredFromFigures: [Figure] {
+        guard !fromSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (fromFigure == nil || fig.persistentModelID != fromFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(fromSearchText)
+        }
+    }
+
+    private var filteredToFigures: [Figure] {
+        guard !toSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (toFigure == nil || fig.persistentModelID != toFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(toSearchText)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -614,16 +632,28 @@ struct EditRelationshipForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("From", selection: $fromFigure) {
-                    Text("Select").tag(nil as Figure?)
-                    ForEach(figures) { f in Text("\(f.gender.symbol) \(f.name)").tag(f as Figure?) }
+                Section("From") {
+                    FigureSearchSelector(
+                        selection: $fromFigure,
+                        searchText: $fromSearchText,
+                        figures: figures,
+                        filteredFigures: filteredFromFigures,
+                        placeholder: "Search from figure\u{2026}"
+                    )
                 }
-                Picker("Type", selection: $relationshipType) {
-                    ForEach(Relationship.RelationshipType.allCases, id: \.self) { t in Text(t.rawValue).tag(t) }
+                Section("Type") {
+                    Picker("Type", selection: $relationshipType) {
+                        ForEach(Relationship.RelationshipType.allCases, id: \.self) { t in Text(t.rawValue).tag(t) }
+                    }
                 }
-                Picker("To", selection: $toFigure) {
-                    Text("Select").tag(nil as Figure?)
-                    ForEach(figures) { f in Text("\(f.gender.symbol) \(f.name)").tag(f as Figure?) }
+                Section("To") {
+                    FigureSearchSelector(
+                        selection: $toFigure,
+                        searchText: $toSearchText,
+                        figures: figures,
+                        filteredFigures: filteredToFigures,
+                        placeholder: "Search to figure\u{2026}"
+                    )
                 }
                 TextField("Source", text: $source)
             }
@@ -635,13 +665,14 @@ struct EditRelationshipForm: View {
                 Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 520)
         .onAppear {
             fromFigure = relationship.fromFigure
             toFigure = relationship.toFigure
             relationshipType = relationship.relationshipType
             source = relationship.source
         }
+        .onChange(of: fromFigure) { _, _ in inferType() }
     }
 
     private func save() {
@@ -650,6 +681,14 @@ struct EditRelationshipForm: View {
         relationship.relationshipType = relationshipType
         relationship.source = source
         dismiss()
+    }
+
+    private func inferType() {
+        switch fromFigure?.gender {
+        case .female: relationshipType = .mother
+        case .male: relationshipType = .father
+        default: break
+        }
     }
 }
 

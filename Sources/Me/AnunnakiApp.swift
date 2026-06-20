@@ -9,10 +9,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
+        let bundle = Bundle.module
+        if let iconURL = bundle.url(forResource: "AppIcon", withExtension: "icns"),
            let icon = NSImage(contentsOf: iconURL) {
             NSApplication.shared.applicationIconImage = icon
-        } else if let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "png"),
+        } else if let iconURL = bundle.url(forResource: "AppIcon", withExtension: "png"),
                   let icon = NSImage(contentsOf: iconURL) {
             NSApplication.shared.applicationIconImage = icon
         }
@@ -26,7 +27,7 @@ struct MeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     static let sharedContainer: ModelContainer = {
-        let schema = Schema([Figure.self, FigureType.self, Relationship.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, FigureImage.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self])
+        let schema = Schema([Figure.self, FigureType.self, Relationship.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self])
 
         let forceReseed = CommandLine.arguments.contains("--reseed")
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -73,5 +74,12 @@ struct MeApp: App {
         }
         .modelContainer(container)
         .defaultSize(width: 1200, height: 800)
+
+        WindowGroup("Lineage Explorer", for: PersistentIdentifier.self) { $figureID in
+            LineageExplorerWindow(figureID: figureID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 900, height: 650)
     }
 }

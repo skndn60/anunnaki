@@ -4,6 +4,9 @@ import SwiftData
 /// Detail panel showing all properties of a selected place.
 struct PlaceDetailView: View {
     let place: Place
+    var onSelectFigure: ((Figure) -> Void)?
+    var onSelectEvent: ((Event) -> Void)?
+    var onSelectImage: ((ImageAsset) -> Void)?
     @Environment(\.modelContext) private var modelContext
 
     private var relatedEvents: [Event] {
@@ -94,9 +97,16 @@ struct PlaceDetailView: View {
                                 Text(assoc.figure?.gender.symbol ?? "?")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
-                                Text(assoc.figure?.name ?? "?")
-                                    .font(.callout)
-                                    .fontWeight(.medium)
+                                Button(action: {
+                                    if let fig = assoc.figure { onSelectFigure?(fig) }
+                                }) {
+                                    Text(assoc.figure?.name ?? "?")
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(Color.accentColor)
+                                        .underline()
+                                }
+                                .buttonStyle(.plain)
                                 Text("— \(assoc.role.rawValue)")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -122,9 +132,14 @@ struct PlaceDetailView: View {
                                     .foregroundStyle(eventColor(event.eventType))
                                     .frame(width: 14)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(event.name)
-                                        .font(.callout)
-                                        .fontWeight(.medium)
+                                    Button(action: { onSelectEvent?(event) }) {
+                                        Text(event.name)
+                                            .font(.callout)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(Color.accentColor)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
                                     Text(event.date.displayLabel)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -147,18 +162,49 @@ struct PlaceDetailView: View {
 
                         FlowLayout(spacing: 6) {
                             ForEach(relatedFigures) { figure in
-                                HStack(spacing: 3) {
-                                    Text(figure.gender.symbol)
-                                        .font(.system(size: 9))
-                                    Text(figure.name)
-                                        .font(.caption)
+                                Button(action: { onSelectFigure?(figure) }) {
+                                    HStack(spacing: 3) {
+                                        Text(figure.gender.symbol)
+                                            .font(.system(size: 9))
+                                        Text(figure.name)
+                                            .font(.caption)
+                                    }
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .fill(figure.figureType?.color.opacity(0.1) ?? .gray.opacity(0.1))
+                                    )
                                 }
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(figure.figureType?.color.opacity(0.1) ?? .gray.opacity(0.1))
-                                )
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                // Images
+                Divider()
+                ImageGallery(
+                    title: "Images",
+                    images: place.images,
+                    onLinkImage: { asset in
+                        asset.places.append(place)
+                    },
+                    onSelectImage: onSelectImage
+                )
+
+                // Tags
+                if !place.tags.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Tags")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        FlowLayout(spacing: 4) {
+                            ForEach(place.tags) { tag in
+                                TagTokenView(tag: tag)
                             }
                         }
                     }

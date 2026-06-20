@@ -76,7 +76,7 @@ struct LineageTreeView: View {
         VStack(spacing: 0) {
             if showGrandparents {
                 generationRow(grandparents(of: center), label: "Grandparents")
-                connectorDown()
+                connector()
             }
 
             if !parents(of: center).isEmpty {
@@ -84,20 +84,15 @@ struct LineageTreeView: View {
                 if !grandparents(of: center).isEmpty && !showGrandparents {
                     expandButton("Show Grandparents") { showGrandparents = true }
                 }
-                connectorDown()
+                connector()
             } else if !grandparents(of: center).isEmpty && !showGrandparents {
                 expandButton("Show Grandparents") { showGrandparents = true }
             }
 
-            if !siblings(of: center).isEmpty {
-                generationRow(siblings(of: center), label: "Siblings")
-                connectorDown()
-            }
-
-            centerRow(center)
+            centerRow(center, siblings: siblingsExcludingCoParents(of: center), coParents: coParents(of: center))
 
             if !children(of: center).isEmpty {
-                connectorUp()
+                connector()
                 generationRow(children(of: center), label: "Children")
                 if !grandchildren(of: center).isEmpty && !showGrandchildren {
                     expandButton("Show Grandchildren") { showGrandchildren = true }
@@ -107,7 +102,7 @@ struct LineageTreeView: View {
             }
 
             if showGrandchildren {
-                connectorUp()
+                connector()
                 generationRow(grandchildren(of: center), label: "Grandchildren")
             }
 
@@ -199,7 +194,7 @@ struct LineageTreeView: View {
 
     // MARK: - Center Row
 
-    private func centerRow(_ center: Figure) -> some View {
+    private func centerRow(_ center: Figure, siblings: [Figure] = [], coParents: [Figure] = []) -> some View {
         HStack(spacing: 8) {
             let leftSpouses = spousesLeft(of: center)
             let leftConsorts = consortsLeft(of: center)
@@ -220,6 +215,53 @@ struct LineageTreeView: View {
                     Image(systemName: "heart.circle")
                         .font(.system(size: 7))
                         .foregroundStyle(.purple.opacity(0.5))
+                }
+            }
+
+            if !siblings.isEmpty {
+                HStack(spacing: 0) {
+                    VStack(spacing: 2) {
+                        Text("Siblings")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .textCase(.uppercase)
+                        HStack(spacing: 6) {
+                            ForEach(siblings) { sibling in
+                                FigureCardView(figure: sibling)
+                                    .contextMenu {
+                                        Button("Make \(sibling.name) center figure") {
+                                            recenter(on: sibling)
+                                        }
+                                    }
+                                    .onTapGesture { recenter(on: sibling) }
+                            }
+                        }
+                    }
+
+                    Capsule()
+                        .fill(Color.secondary.opacity(0.12))
+                        .frame(width: 1, height: 50)
+                        .padding(.horizontal, 12)
+                }
+            }
+
+            if !coParents.isEmpty {
+                VStack(spacing: 2) {
+                    Text("Parent")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .textCase(.uppercase)
+                    HStack(spacing: 6) {
+                        ForEach(coParents) { parent in
+                            FigureCardView(figure: parent)
+                                .contextMenu {
+                                    Button("Make \(parent.name) center figure") {
+                                        recenter(on: parent)
+                                    }
+                                }
+                                .onTapGesture { recenter(on: parent) }
+                        }
+                    }
                 }
             }
 
@@ -328,25 +370,14 @@ struct LineageTreeView: View {
 
     // MARK: - Connectors
 
-    private func connectorDown() -> some View {
+    private func connector() -> some View {
         VStack(spacing: 0) {
-            Rectangle()
+            Capsule()
                 .fill(Color.secondary.opacity(0.25))
-                .frame(width: 1, height: 14)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 7))
-                .foregroundStyle(.tertiary)
-        }
-    }
-
-    private func connectorUp() -> some View {
-        VStack(spacing: 0) {
-            Image(systemName: "chevron.down")
-                .font(.system(size: 7))
-                .foregroundStyle(.tertiary)
-            Rectangle()
+                .frame(width: 1.5, height: 18)
+            Circle()
                 .fill(Color.secondary.opacity(0.25))
-                .frame(width: 1, height: 14)
+                .frame(width: 5, height: 5)
         }
     }
 
@@ -453,6 +484,27 @@ struct LineageTreeView: View {
                 return true
             }
             .compactMap { $0.toFigure }
+    }
+
+    private func coParents(of figure: Figure) -> [Figure] {
+        let childIDs = Set(children(of: figure).map(\.persistentModelID))
+        guard !childIDs.isEmpty else { return [] }
+        let otherParentIDs = Set(relationships
+            .filter {
+                guard let toID = $0.toFigure?.persistentModelID,
+                      let fromID = $0.fromFigure?.persistentModelID,
+                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      childIDs.contains(toID),
+                      fromID != figure.persistentModelID else { return false }
+                return true
+            }
+            .compactMap { $0.fromFigure?.persistentModelID })
+        return self.figures.filter { otherParentIDs.contains($0.persistentModelID) }
+    }
+
+    private func siblingsExcludingCoParents(of figure: Figure) -> [Figure] {
+        let coParentIDs = Set(coParents(of: figure).map(\.persistentModelID))
+        return siblings(of: figure).filter { !coParentIDs.contains($0.persistentModelID) }
     }
 
     private func commanders(of figure: Figure) -> [Figure] {

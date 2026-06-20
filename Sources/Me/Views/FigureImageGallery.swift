@@ -2,16 +2,26 @@ import SwiftUI
 import SwiftData
 import AppKit
 
-/// Image gallery section for the figure detail panel.
-struct FigureImageGallery: View {
+struct ImageGallery: View {
     @Environment(\.modelContext) private var modelContext
-    let figure: Figure
+    let title: String
+    let images: [ImageAsset]
+    var onLinkImage: ((ImageAsset) -> Void)?
+    var onSelectImage: ((ImageAsset) -> Void)?
+    var maxDisplayCount: Int = 4
     @State private var showingFilePicker = false
+    @State private var showingAll = false
+
+    private var displayImages: [ImageAsset] {
+        Array(images.prefix(maxDisplayCount))
+    }
+
+    private var hasMore: Bool { images.count > maxDisplayCount }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Images")
+                Text(title)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
@@ -23,18 +33,29 @@ struct FigureImageGallery: View {
                 .buttonStyle(.plain)
             }
 
-            if figure.images.isEmpty {
+            if images.isEmpty {
                 Text("No images attached")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
                     .padding(.vertical, 4)
             } else {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
-                    ForEach(figure.images) { image in
-                        FigureImageThumbnail(image: image, onDelete: {
+                    ForEach(displayImages) { image in
+                        ImageThumbnail(image: image, onDelete: {
                             deleteImage(image)
+                        }, onTap: {
+                            onSelectImage?(image)
                         })
                     }
+                }
+
+                if hasMore {
+                    Button(action: { showingAll = true }) {
+                        Text("Show all \(images.count) images")
+                            .font(.caption)
+                            .foregroundStyle(Color.accentColor)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -54,25 +75,24 @@ struct FigureImageGallery: View {
             defer { url.stopAccessingSecurityScopedResource() }
 
             let filename = "\(UUID().uuidString)_\(url.lastPathComponent)"
-            let destination = FigureImage.imagesDirectory.appendingPathComponent(filename)
+            let destination = ImageAsset.imagesDirectory.appendingPathComponent(filename)
 
             do {
                 try FileManager.default.copyItem(at: url, to: destination)
-                let figureImage = FigureImage(
-                    figure: figure,
+                let image = ImageAsset(
                     filename: filename,
                     caption: url.deletingPathExtension().lastPathComponent,
                     source: ""
                 )
-                modelContext.insert(figureImage)
+                modelContext.insert(image)
+                onLinkImage?(image)
             } catch {
                 // silently skip failed imports
             }
         }
     }
 
-    private func deleteImage(_ image: FigureImage) {
-        // Remove file from disk
+    private func deleteImage(_ image: ImageAsset) {
         if let fileURL = image.fileURL {
             try? FileManager.default.removeItem(at: fileURL)
         }
@@ -80,24 +100,103 @@ struct FigureImageGallery: View {
     }
 }
 
-/// A single image thumbnail with caption.
-struct FigureImageThumbnail: View {
-    let image: FigureImage
+private struct AllImagesGallery: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) var dismiss
+    let title: String
+    let images: [ImageAsset]
+    var onLinkImage: ((ImageAsset) -> Void)?
+    var onSelectImage: ((ImageAsset) -> Void)?
+    @State private var showingFilePicker = false
+
+    private let columns = [GridItem(.adaptive(minimum: 120), spacing: 12)]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(images) { image in
+                        ImageThumbnail(image: image, onDelete: {
+                            deleteImage(image)
+                        }, onTap: {
+                            onSelectImage?(image)
+                        })
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle(title)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { showingFilePicker = true }) {
+                        Image(systemName: "plus.circle")
+                    }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+        .frame(width: 600, height: 500)
+        .fileImporter(
+            isPresented: $showingFilePicker,
+            allowedContentTypes: [.image],
+            allowsMultipleSelection: true
+        ) { result in
+            handleImport(result)
+        }
+    }
+
+    private func handleImport(_ result: Result<[URL], Error>) {
+        guard let urls = try? result.get() else { return }
+        for url in urls {
+            guard url.startAccessingSecurityScopedResource() else { continue }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            let filename = "\(UUID().uuidString)_\(url.lastPathComponent)"
+            let destination = ImageAsset.imagesDirectory.appendingPathComponent(filename)
+
+            do {
+                try FileManager.default.copyItem(at: url, to: destination)
+                let image = ImageAsset(
+                    filename: filename,
+                    caption: url.deletingPathExtension().lastPathComponent,
+                    source: ""
+                )
+                modelContext.insert(image)
+                onLinkImage?(image)
+            } catch {
+                // silently skip failed imports
+            }
+        }
+    }
+
+    private func deleteImage(_ image: ImageAsset) {
+        if let fileURL = image.fileURL {
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        modelContext.delete(image)
+    }
+}
+
+struct ImageThumbnail: View {
+    let image: ImageAsset
     let onDelete: () -> Void
+    let onTap: () -> Void
     @State private var isHovered = false
-    @State private var showingDetail = false
+    @State private var thumbnail: NSImage?
 
     var body: some View {
         VStack(spacing: 4) {
             ZStack(alignment: .topTrailing) {
-                if let nsImage = loadImage() {
+                if let nsImage = thumbnail {
                     Image(nsImage: nsImage)
                         .resizable()
                         .aspectRatio(contentMode: .fill)
                         .frame(width: 100, height: 80)
                         .clipped()
                         .cornerRadius(6)
-                        .onTapGesture { showingDetail = true }
+                        .onTapGesture(perform: onTap)
                 } else {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(Color.secondary.opacity(0.1))
@@ -106,6 +205,7 @@ struct FigureImageThumbnail: View {
                             Image(systemName: "photo")
                                 .foregroundStyle(.tertiary)
                         )
+                        .onTapGesture(perform: onTap)
                 }
 
                 if isHovered {
@@ -127,46 +227,288 @@ struct FigureImageThumbnail: View {
                 .lineLimit(1)
                 .frame(width: 100)
         }
-        .sheet(isPresented: $showingDetail) {
-            ImageDetailSheet(image: image)
+        .task(priority: .background) {
+            guard let url = image.fileURL else { return }
+            let result = await Task.detached {
+                decodeImage(url: url, maxPixelSize: 200)
+            }.value
+            thumbnail = result
         }
-    }
-
-    private func loadImage() -> NSImage? {
-        guard let url = image.fileURL else { return nil }
-        return NSImage(contentsOf: url)
     }
 }
 
-/// Full-size image view in a sheet.
 struct ImageDetailSheet: View {
-    let image: FigureImage
+    let image: ImageAsset
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
+    @Query(sort: \Figure.name) private var figures: [Figure]
+    @Query(sort: \Place.name) private var places: [Place]
+    @Query(sort: \Event.name) private var events: [Event]
+    @Query(sort: \Tag.name) private var allTags: [Tag]
+
+    @State private var previewImage: NSImage?
+    @State private var caption: String = ""
+    @State private var source: String = ""
+    @State private var searchText: String = ""
+    @State private var tagInputText: String = ""
 
     var body: some View {
-        VStack(spacing: 12) {
-            if let nsImage = NSImage(contentsOf: image.fileURL ?? URL(fileURLWithPath: "")) {
+        HStack(spacing: 0) {
+            imagePanel
+            Divider()
+            editorPanel
+        }
+        .frame(minWidth: 700, minHeight: 500)
+        .task(priority: .userInitiated) {
+            guard let url = image.fileURL else { return }
+            let result = await Task.detached {
+                decodeImage(url: url, maxPixelSize: 2400)
+            }.value
+            previewImage = result
+        }
+        .onAppear {
+            caption = image.caption
+            source = image.source
+        }
+        .onChange(of: caption) { _, newValue in image.caption = newValue }
+        .onChange(of: source) { _, newValue in image.source = newValue }
+    }
+
+    private var imagePanel: some View {
+        VStack(spacing: 8) {
+            if !caption.isEmpty {
+                Text(caption)
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            if let nsImage = previewImage {
                 Image(nsImage: nsImage)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(maxWidth: 600, maxHeight: 500)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-
-            if !image.caption.isEmpty {
-                Text(image.caption)
-                    .font(.headline)
-            }
-            if !image.source.isEmpty {
-                Text(image.source)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Button("Close") { dismiss() }
-                .keyboardShortcut(.cancelAction)
-                .padding(.top, 8)
         }
-        .padding(20)
-        .frame(minWidth: 400, minHeight: 300)
+        .padding()
+        .frame(minWidth: 300)
     }
+
+    private var editorPanel: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Details")
+                    .font(.headline)
+                    .padding(.top, 4)
+
+                Group {
+                    TextField("Caption", text: $caption)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Source", text: $source)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Divider()
+
+                linkedSection(title: "Associated Figures (\(image.figures.count))", icon: "person.fill") {
+                    if image.figures.isEmpty {
+                        Text("None").foregroundStyle(.tertiary)
+                    }
+                    ForEach(image.figures) { fig in
+                        HStack {
+                            Label(fig.name, systemImage: "person.fill")
+                            Spacer()
+                            Button("Remove") {
+                                image.figures.removeAll { $0.persistentModelID == fig.persistentModelID }
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                linkedSection(title: "Associated Places (\(image.places.count))", icon: "mappin") {
+                    if image.places.isEmpty {
+                        Text("None").foregroundStyle(.tertiary)
+                    }
+                    ForEach(image.places) { place in
+                        HStack {
+                            Label(place.name, systemImage: "mappin")
+                            Spacer()
+                            Button("Remove") {
+                                image.places.removeAll { $0.persistentModelID == place.persistentModelID }
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                linkedSection(title: "Associated Events (\(image.events.count))", icon: "bolt.fill") {
+                    if image.events.isEmpty {
+                        Text("None").foregroundStyle(.tertiary)
+                    }
+                    ForEach(image.events) { evt in
+                        HStack {
+                            Label(evt.name, systemImage: "bolt.fill")
+                            Spacer()
+                            Button("Remove") {
+                                image.events.removeAll { $0.persistentModelID == evt.persistentModelID }
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                linkedSection(title: "Tags (\(image.tags.count))", icon: "tag") {
+                    if image.tags.isEmpty {
+                        Text("None").foregroundStyle(.tertiary)
+                    }
+                    ForEach(image.tags) { tag in
+                        HStack {
+                            tagLabel(tag)
+                            Spacer()
+                            Button("Remove") {
+                                image.tags = image.tags.filter { $0.persistentModelID != tag.persistentModelID }
+                                try? modelContext.save()
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+
+                Divider()
+
+                Text("Add Links")
+                    .font(.subheadline.bold())
+
+                TextField("Search figures, places, or events\u{2026}", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+
+                if !searchText.isEmpty {
+                    let filteredFigures = figures.filter { !image.figures.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
+                    let filteredPlaces = places.filter { !image.places.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
+                    let filteredEvents = events.filter { !image.events.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
+
+                    if filteredFigures.isEmpty && filteredPlaces.isEmpty && filteredEvents.isEmpty {
+                        Text("No matches").foregroundStyle(.tertiary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 2) {
+                            ForEach(filteredFigures) { fig in
+                                Button {
+                                    image.figures.append(fig)
+                                    searchText = ""
+                                } label: {
+                                    Label(fig.name, systemImage: "person.fill")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            ForEach(filteredPlaces) { place in
+                                Button {
+                                    image.places.append(place)
+                                    searchText = ""
+                                } label: {
+                                    Label(place.name, systemImage: "mappin")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            ForEach(filteredEvents) { evt in
+                                Button {
+                                    image.events.append(evt)
+                                    searchText = ""
+                                } label: {
+                                    Label(evt.name, systemImage: "bolt.fill")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                TextField("Add tag\u{2026}", text: $tagInputText)
+                    .textFieldStyle(.roundedBorder)
+
+                if !tagInputText.isEmpty {
+                    let matching = allTags.filter { !image.tags.contains($0) && $0.name.localizedCaseInsensitiveContains(tagInputText) }
+                    if matching.isEmpty {
+                        Button("Create \"\(tagInputText)\"") {
+                            let tag = Tag(name: tagInputText)
+                            modelContext.insert(tag)
+                            image.tags = image.tags + [tag]
+                            try? modelContext.save()
+                            tagInputText = ""
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    ForEach(matching) { tag in
+                        Button {
+                            image.tags = image.tags + [tag]
+                            try? modelContext.save()
+                            tagInputText = ""
+                        } label: {
+                            tagLabel(tag)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+
+                Spacer(minLength: 16)
+
+                HStack {
+                    Button("Delete Image", role: .destructive) {
+                        if let url = image.fileURL {
+                            try? FileManager.default.removeItem(at: url)
+                        }
+                        modelContext.delete(image)
+                        dismiss()
+                    }
+                    Spacer()
+                    Button("Done") {
+                        try? modelContext.save()
+                        dismiss()
+                    }
+                        .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding()
+        }
+        .frame(width: 300)
+    }
+
+    private func tagLabel(_ tag: Tag) -> some View {
+        HStack(spacing: 4) {
+            if let hex = tag.colorHex, !hex.isEmpty, let color = Color(hex: hex) {
+                Circle()
+                    .fill(color)
+                    .frame(width: 8, height: 8)
+            }
+            Text(tag.name)
+                .foregroundStyle(.primary)
+        }
+    }
+
+    private func linkedSection(title: String, icon: String, @ViewBuilder content: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.subheadline.bold())
+            content()
+        }
+    }
+}
+
+private func decodeImage(url: URL?, maxPixelSize: Int) -> NSImage? {
+    guard let url else { return nil }
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+    let options: [CFString: Any] = [
+        kCGImageSourceThumbnailMaxPixelSize: maxPixelSize,
+        kCGImageSourceCreateThumbnailFromImageAlways: true
+    ]
+    guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+    return NSImage(cgImage: cgImage, size: NSSize(width: cgImage.width, height: cgImage.height))
 }

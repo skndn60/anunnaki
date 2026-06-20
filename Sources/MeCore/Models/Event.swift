@@ -20,6 +20,14 @@ package final class Event {
     @Relationship(deleteRule: .cascade, inverse: \EventPlaceAssociation.event)
     package var placeAssociations: [EventPlaceAssociation] = []
 
+    /// Tags attached to this event
+    @Relationship(deleteRule: .nullify, inverse: \Tag.events)
+    package var tags: [Tag] = []
+
+    /// Images attached to this event
+    @Relationship(deleteRule: .nullify, inverse: \ImageAsset.events)
+    package var images: [ImageAsset] = []
+
     package init(
         name: String = "",
         eventType: EventType? = nil,

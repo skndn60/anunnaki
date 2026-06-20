@@ -1,20 +1,57 @@
 import SwiftUI
 import SwiftData
 
-/// Explorer that shows the lineage tree centered on a single figure.
-/// Click any figure to re-center the tree on that figure.
-/// Parents/children are always shown; grandparents/grandchildren are one click away.
-struct FigureLineageExplorer: View {
-    @Environment(\.dismiss) private var dismiss
+/// Content view for the lineage explorer secondary window.
+/// Receives a figure's PersistentIdentifier via openWindow(value:).
+struct LineageExplorerWindow: View {
+    @Environment(\.modelContext) private var modelContext
     @Query private var relationships: [Relationship]
+    let figureID: PersistentIdentifier?
 
+    @State private var figure: Figure?
+
+    var body: some View {
+        Group {
+            if let figure {
+                FigureLineageExplorerContent(
+                    initialFigure: figure,
+                    relationships: relationships
+                )
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "tree")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.secondary)
+                    Text("Figure not found")
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard let figureID else { return }
+            let fetch = FetchDescriptor<Figure>(
+                predicate: #Predicate { $0.persistentModelID == figureID }
+            )
+            figure = try? modelContext.fetch(fetch).first
+        }
+    }
+}
+
+/// Standalone lineage tree content, extracted from FigureLineageExplorer
+/// for use in a secondary window.
+private struct FigureLineageExplorerContent: View {
     let initialFigure: Figure
+    let relationships: [Relationship]
+
     @State private var focusFigure: Figure
     @State private var showGrandparents = false
     @State private var showGrandchildren = false
 
-    init(initialFigure: Figure) {
+    init(initialFigure: Figure, relationships: [Relationship]) {
         self.initialFigure = initialFigure
+        self.relationships = relationships
         self._focusFigure = State(initialValue: initialFigure)
     }
 
@@ -27,10 +64,8 @@ struct FigureLineageExplorer: View {
                     .padding(40)
             }
         }
-        .frame(minWidth: 700, minHeight: 500)
+        .frame(minWidth: 600, minHeight: 400)
     }
-
-    // MARK: - Header
 
     private var header: some View {
         let fig = focusFigure
@@ -53,24 +88,12 @@ struct FigureLineageExplorer: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
-            Button("Close") { dismiss() }
-                .keyboardShortcut(.cancelAction)
-                .buttonStyle(.plain)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(Color.secondary.opacity(0.1))
-                )
         }
         .padding()
     }
 
-    // MARK: - Tree Content
-
     private var treeContent: some View {
         VStack(spacing: 0) {
-            // ── Ancestors ──
             if showGrandparents {
                 generationRow(grandparents, label: "Grandparents")
                 connector()
@@ -86,12 +109,8 @@ struct FigureLineageExplorer: View {
                 expandButton("Show Grandparents") { showGrandparents = true }
             }
 
-            // ── Focus + Spouses + Siblings ──
             focusRow
 
-            // ── Descendants ──
-
-            // ── Descendants ──
             if !children.isEmpty {
                 connector()
                 generationRow(children, label: "Children")
@@ -109,8 +128,6 @@ struct FigureLineageExplorer: View {
         }
     }
 
-    // MARK: - Focus Row
-
     private var focusRow: some View {
         let fig = focusFigure
         let siblings = siblingsExcludingCoParents
@@ -118,7 +135,7 @@ struct FigureLineageExplorer: View {
         return HStack(spacing: 8) {
             if !spousesLeft.isEmpty {
                 ForEach(spousesLeft) { spouse in
-                    lineageChip(spouse)
+                    figureChip(spouse)
                     Image(systemName: "heart.fill")
                         .font(.system(size: 7))
                         .foregroundStyle(.pink.opacity(0.4))
@@ -143,7 +160,6 @@ struct FigureLineageExplorer: View {
                         ForEach(siblings) { sibling in
                             FigureCardView(figure: sibling)
                                 .onTapGesture { recenter(on: sibling) }
-                                .help("View \(sibling.name)")
                         }
                     }
                 }
@@ -159,7 +175,6 @@ struct FigureLineageExplorer: View {
                         ForEach(otherParents) { parent in
                             FigureCardView(figure: parent)
                                 .onTapGesture { recenter(on: parent) }
-                                .help("View \(parent.name)")
                         }
                     }
                 }
@@ -180,7 +195,7 @@ struct FigureLineageExplorer: View {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 7))
                         .foregroundStyle(.pink.opacity(0.4))
-                    lineageChip(spouse)
+                    figureChip(spouse)
                 }
             }
         }
@@ -196,43 +211,55 @@ struct FigureLineageExplorer: View {
         )
     }
 
-    private var computeSiblings: [Figure] {
-        let parentIDs = Set(parents.map(\.persistentModelID))
-        guard !parentIDs.isEmpty else { return [] }
-        return relationships
-            .filter {
-                guard let fromID = $0.fromFigure?.persistentModelID,
-                      let toID = $0.toFigure?.persistentModelID,
-                      ($0.relationshipType == .father || $0.relationshipType == .mother),
-                      parentIDs.contains(fromID),
-                      toID != focusFigure.persistentModelID else { return false }
-                return true
+    private func generationRow(_ list: [Figure], label: String? = nil) -> some View {
+        VStack(spacing: 6) {
+            if let label {
+                Text(label)
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
             }
-            .compactMap { $0.toFigure }
-    }
-
-    private var coParents: [Figure] {
-        guard !children.isEmpty else { return [] }
-        let childIDs = Set(children.map(\.persistentModelID))
-        let otherParentIDs = Set(relationships
-            .filter {
-                guard let toID = $0.toFigure?.persistentModelID,
-                      let fromID = $0.fromFigure?.persistentModelID,
-                      ($0.relationshipType == .father || $0.relationshipType == .mother),
-                      childIDs.contains(toID),
-                      fromID != focusFigure.persistentModelID else { return false }
-                return true
+            HStack(spacing: 10) {
+                ForEach(list) { fig in
+                    FigureCardView(figure: fig, isSelected: false)
+                        .onTapGesture { recenter(on: fig) }
+                }
             }
-            .compactMap { $0.fromFigure?.persistentModelID })
-        return relationships.compactMap(\.fromFigure).filter { otherParentIDs.contains($0.persistentModelID) }
+        }
     }
 
-    private var siblingsExcludingCoParents: [Figure] {
-        let coParentIDs = Set(coParents.map(\.persistentModelID))
-        return computeSiblings.filter { !coParentIDs.contains($0.persistentModelID) }
+    private func connector() -> some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(Color.secondary.opacity(0.25))
+                .frame(width: 1.5, height: 18)
+            Circle()
+                .fill(Color.secondary.opacity(0.25))
+                .frame(width: 5, height: 5)
+        }
     }
 
-    private func lineageChip(_ figure: Figure) -> some View {
+    private func expandButton(_ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: "plus.circle")
+                    .font(.system(size: 9))
+                Text(label)
+                    .font(.caption)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.secondary.opacity(0.06))
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, 4)
+    }
+
+    private func figureChip(_ figure: Figure) -> some View {
         MiniChip(name: figure.name, symbol: figure.gender.symbol, color: figure.figureType?.color ?? .gray, isClickable: true) {
             recenter(on: figure)
         }
@@ -266,65 +293,7 @@ struct FigureLineageExplorer: View {
                 )
         )
         .onTapGesture { recenter(on: figure) }
-        .help("\(figure.name) — consort of \(focusFigure.name)")
     }
-
-    // MARK: - Generation Row
-
-    private func generationRow(_ list: [Figure], label: String? = nil) -> some View {
-        VStack(spacing: 6) {
-            if let label {
-                Text(label)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
-            }
-            HStack(spacing: 10) {
-                ForEach(list) { fig in
-                    FigureCardView(figure: fig, isSelected: false)
-                        .onTapGesture { recenter(on: fig) }
-                        .help("View \(fig.name)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Connectors
-
-    private func connector() -> some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(width: 1.5, height: 18)
-            Circle()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(width: 5, height: 5)
-        }
-    }
-
-    // MARK: - Expand Button
-
-    private func expandButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: "plus.circle")
-                    .font(.system(size: 9))
-                Text(label)
-                    .font(.caption)
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.secondary.opacity(0.06))
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 4)
-    }
-
-    // MARK: - Actions
 
     private func recenter(on figure: Figure) {
         withAnimation(.easeInOut(duration: 0.2)) {
@@ -390,5 +359,41 @@ struct FigureLineageExplorer: View {
                 return ($0.relationshipType == .father || $0.relationshipType == .mother) && childIDs.contains(fromID)
             }
             .compactMap { $0.toFigure }
+    }
+
+    private var computeSiblings: [Figure] {
+        let parentIDs = Set(parents.map(\.persistentModelID))
+        guard !parentIDs.isEmpty else { return [] }
+        return relationships
+            .filter {
+                guard let fromID = $0.fromFigure?.persistentModelID,
+                      let toID = $0.toFigure?.persistentModelID,
+                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      parentIDs.contains(fromID),
+                      toID != focusFigure.persistentModelID else { return false }
+                return true
+            }
+            .compactMap { $0.toFigure }
+    }
+
+    private var coParents: [Figure] {
+        guard !children.isEmpty else { return [] }
+        let childIDs = Set(children.map(\.persistentModelID))
+        let otherParentIDs = Set(relationships
+            .filter {
+                guard let toID = $0.toFigure?.persistentModelID,
+                      let fromID = $0.fromFigure?.persistentModelID,
+                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      childIDs.contains(toID),
+                      fromID != focusFigure.persistentModelID else { return false }
+                return true
+            }
+            .compactMap { $0.fromFigure?.persistentModelID })
+        return relationships.compactMap(\.fromFigure).filter { otherParentIDs.contains($0.persistentModelID) }
+    }
+
+    private var siblingsExcludingCoParents: [Figure] {
+        let coParentIDs = Set(coParents.map(\.persistentModelID))
+        return computeSiblings.filter { !coParentIDs.contains($0.persistentModelID) }
     }
 }

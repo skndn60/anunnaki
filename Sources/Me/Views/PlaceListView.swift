@@ -3,6 +3,7 @@ import SwiftData
 
 /// Input screen for managing places.
 struct PlaceListView: View {
+    var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
     @Query private var places: [Place]
     @State private var showingAddSheet = false
@@ -10,6 +11,8 @@ struct PlaceListView: View {
     @State private var selectedPlaceID: PersistentIdentifier?
     @State private var sortOrder: PlaceSortOrder = .name
     @State private var showingTypeManager = false
+    @State private var imageDetailImage: ImageAsset?
+    @State private var showDeleteConfirm = false
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
     @State private var breadcrumbs: [Breadcrumb] = []
 
@@ -28,6 +31,26 @@ struct PlaceListView: View {
         case .name: return places.sorted { $0.name < $1.name }
         case .type: return places.sorted { $0.placeType?.name ?? "" < $1.placeType?.name ?? "" }
         }
+    }
+
+    private var displayRows: [DisplayRow<Place>] {
+        let sorted = sortedPlaces
+        var rows: [DisplayRow<Place>] = []
+        var currentKey: String?
+        for place in sorted {
+            let key: String = {
+                switch sortOrder {
+                case .name: return String(place.name.uppercased().prefix(1))
+                case .type: return place.placeType?.name ?? "?"
+                }
+            }()
+            if key != currentKey {
+                rows.append(DisplayRow(index: rows.count, item: .header(key)))
+                currentKey = key
+            }
+            rows.append(DisplayRow(index: rows.count, item: .entity(place)))
+        }
+        return rows
     }
 
     private func selectPlace(_ id: PersistentIdentifier) {
@@ -72,6 +95,14 @@ struct PlaceListView: View {
                 .padding()
 
                 // Breadcrumbs
+                let coordinatorHistory = coordinator?.history ?? []
+                if !coordinatorHistory.isEmpty {
+                    BreadcrumbBar(
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name) },
+                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                        onClear: { coordinator?.history.removeAll() }
+                    )
+                }
                 if !breadcrumbs.isEmpty {
                     BreadcrumbBar(breadcrumbs: breadcrumbs, onNavigate: navigateToBreadcrumb, onClear: { breadcrumbs.removeAll() })
                 }
@@ -100,9 +131,20 @@ struct PlaceListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(sortedPlaces, selection: $selectedPlaceID) { place in
-                        PlaceRow(place: place)
-                            .tag(place.persistentModelID)
+                    List(selection: $selectedPlaceID) {
+                        ForEach(displayRows) { row in
+                            switch row.item {
+                            case .header(let label):
+                                Text(label)
+                                    .font(.largeTitle.bold())
+                                    .foregroundStyle(.secondary)
+                                    .listRowSeparator(.hidden)
+                                    .selectionDisabled()
+                            case .entity(let place):
+                                PlaceRow(place: place)
+                                    .tag(place.persistentModelID)
+                            }
+                        }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                     .onChange(of: selectedPlaceID) { _, newValue in
@@ -120,7 +162,7 @@ struct PlaceListView: View {
                             editingPlace = place
                         }
                         IconActionButton(icon: "trash", color: .red) {
-                            deletePlace(place)
+                            showDeleteConfirm = true
                         }
                         Spacer()
                         Button(action: { selectedPlaceID = nil }) {
@@ -133,7 +175,11 @@ struct PlaceListView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(8)
-                    PlaceDetailView(place: place)
+                    PlaceDetailView(place: place, onSelectFigure: { figure in
+                        coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
+                    }, onSelectEvent: { event in
+                        coordinator?.navigateToEvent(event.persistentModelID, name: event.name)
+                    }, onSelectImage: { imageDetailImage = $0 })
                 }
                 .frame(width: 320)
             }
@@ -146,6 +192,28 @@ struct PlaceListView: View {
         }
         .sheet(isPresented: $showingTypeManager) {
             PlaceTypeManagerView()
+        }
+        .sheet(item: $imageDetailImage) { image in
+            ImageDetailSheet(image: image)
+        }
+        .alert("Delete Place?", isPresented: $showDeleteConfirm, presenting: selectedPlace) { place in
+            Button("Delete", role: .destructive) { deletePlace(place) }
+            Button("Cancel", role: .cancel) {}
+        } message: { place in
+            Text("Delete \"\(place.name)\"? This cannot be undone.")
+        }
+        .onAppear {
+            consumePendingNavigation()
+        }
+        .onChange(of: coordinator?.pendingPlaceID) { _, _ in
+            consumePendingNavigation()
+        }
+    }
+
+    private func consumePendingNavigation() {
+        guard let id = coordinator?.consumePendingPlaceID() else { return }
+        if places.contains(where: { $0.persistentModelID == id }) {
+            selectPlace(id)
         }
     }
 
@@ -204,6 +272,7 @@ struct PlaceFormView: View {
     @State private var source = ""
     @State private var latitudeStr = ""
     @State private var longitudeStr = ""
+    @State private var selectedTags: [Tag] = []
 
     private var isEditing: Bool { place != nil }
 
@@ -234,6 +303,10 @@ struct PlaceFormView: View {
                     TextEditor(text: $placeDescription)
                         .frame(minHeight: 80)
                 }
+
+                Section("Tags") {
+                    TagEditorView(tags: $selectedTags)
+                }
             }
             .formStyle(.grouped)
 
@@ -260,6 +333,7 @@ struct PlaceFormView: View {
         source = place.source
         latitudeStr = place.latitude.map { String($0) } ?? ""
         longitudeStr = place.longitude.map { String($0) } ?? ""
+        selectedTags = place.tags
     }
 
     private func save() {
@@ -271,6 +345,8 @@ struct PlaceFormView: View {
             place.source = source
             place.latitude = Double(latitudeStr)
             place.longitude = Double(longitudeStr)
+            place.isConcept = false
+            place.tags = selectedTags
         } else {
             let newPlace = Place(
                 name: name, placeType: placeType,
@@ -279,6 +355,7 @@ struct PlaceFormView: View {
                 latitude: Double(latitudeStr),
                 longitude: Double(longitudeStr)
             )
+            newPlace.tags = selectedTags
             modelContext.insert(newPlace)
         }
         dismiss()

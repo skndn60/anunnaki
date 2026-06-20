@@ -10,15 +10,15 @@ struct AlternateNameListView: View {
     @State private var editingAltName: AlternateName?
     @State private var hoveredID: PersistentIdentifier?
     @State private var filterTradition: AlternateName.Tradition?
-    @State private var filterFigure: Figure?
+    @State private var filterFigureText = ""
 
     private var filteredNames: [AlternateName] {
         var result = alternateNames
         if let tradition = filterTradition {
             result = result.filter { $0.tradition == tradition }
         }
-        if let figure = filterFigure {
-            result = result.filter { $0.figure?.persistentModelID == figure.persistentModelID }
+        if !filterFigureText.isEmpty {
+            result = result.filter { $0.figure?.name.localizedCaseInsensitiveContains(filterFigureText) ?? false }
         }
         return result
     }
@@ -57,13 +57,20 @@ struct AlternateNameListView: View {
                     Text("Figure:")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Picker("", selection: $filterFigure) {
-                        Text("All").tag(nil as Figure?)
-                        ForEach(figures) { fig in
-                            Text(fig.name).tag(fig as Figure?)
+                    TextField("Filter by figure\u{2026}", text: $filterFigureText)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 160)
+                        .overlay(alignment: .trailing) {
+                            if !filterFigureText.isEmpty {
+                                Button(action: { filterFigureText = "" }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .padding(.trailing, 4)
+                            }
                         }
-                    }
-                    .frame(width: 160)
                 }
 
                 Spacer()
@@ -176,6 +183,15 @@ struct AlternateNameFormView: View {
     @State private var tradition: AlternateName.Tradition = .akkadian
     @State private var nameType: AlternateName.NameType = .translation
     @State private var note = ""
+    @State private var figureSearchText = ""
+
+    private var filteredFigures: [Figure] {
+        guard !figureSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (selectedFigure == nil || fig.persistentModelID != selectedFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(figureSearchText)
+        }
+    }
 
     private var isEditing: Bool { alternateName != nil }
 
@@ -187,11 +203,61 @@ struct AlternateNameFormView: View {
 
             Form {
                 Section("Link to Figure") {
-                    Picker("Figure", selection: $selectedFigure) {
-                        Text("Select a figure").tag(nil as Figure?)
-                        ForEach(figures) { fig in
-                            Text("\(fig.gender.symbol) \(fig.name)").tag(fig as Figure?)
+                    if let fig = selectedFigure {
+                        HStack(spacing: 6) {
+                            Text("\(fig.gender.symbol) \(fig.name)")
+                                .fontWeight(.medium)
+                            Spacer()
+                            Button { selectedFigure = nil } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(.quaternary.opacity(0.3))
+                        .cornerRadius(6)
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        TextField("Search figures\u{2026}", text: $figureSearchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(.quaternary.opacity(0.15))
+                    .cornerRadius(6)
+                    if !figureSearchText.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if filteredFigures.isEmpty {
+                                    Text("No figures match \"\(figureSearchText)\"")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                } else {
+                                    ForEach(filteredFigures) { fig in
+                                        Button {
+                                            selectedFigure = fig
+                                            figureSearchText = ""
+                                        } label: {
+                                            Text("\(fig.gender.symbol) \(fig.name)")
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .background(Color.primary.opacity(0.05))
+                                        .cornerRadius(4)
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 140)
                     }
                 }
 
@@ -225,7 +291,7 @@ struct AlternateNameFormView: View {
             }
             .padding()
         }
-        .frame(width: 480, height: 420)
+        .frame(width: 480, height: 520)
         .onAppear { loadIfEditing() }
     }
 

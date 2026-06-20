@@ -1,14 +1,18 @@
 import SwiftUI
 
 enum SidebarSection: String, CaseIterable {
+    case overview = "Overview"
     case tools = "Tools"
     case visualizations = "Visualizations"
+    case history = "History"
     case data = "Data"
 }
 
 enum NavigationItem: String, CaseIterable, Hashable {
+    case dashboard = "Dashboard"
     case importWiki = "Import from Wikipedia"
     case query = "Query"
+    case networkGraph = "Network Graph"
     case lineage = "Lineage Tree"
     case timeline = "Timeline"
     case figures = "Figures"
@@ -18,12 +22,17 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case associations = "Associations"
     case alternateNames = "Alternate Names"
     case eras = "Eras"
+    case images = "Gallery"
     case sources = "Sources"
+    case versions = "Versions"
+    case sumerianKingList = "Sumerian King List"
 
     var icon: String {
         switch self {
+        case .dashboard: return "house"
         case .importWiki: return "globe"
         case .query: return "text.magnifyingglass"
+        case .networkGraph: return "arrow.triangle.branch"
         case .lineage: return "tree"
         case .timeline: return "calendar.day.timeline.left"
         case .figures: return "person.3"
@@ -33,25 +42,32 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .associations: return "point.3.connected.trianglepath.dotted"
         case .alternateNames: return "textformat.abc"
         case .eras: return "clock.arrow.circlepath"
+        case .images: return "photo.on.rectangle.angled"
         case .sources: return "books.vertical"
+        case .versions: return "clock.arrow.circlepath"
+        case .sumerianKingList: return "list.star"
         }
     }
 
     var section: SidebarSection {
         switch self {
-        case .importWiki: return .tools
-        case .query, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .alternateNames, .eras, .sources: return .data
+        case .dashboard: return .overview
+        case .importWiki, .versions: return .tools
+        case .query, .networkGraph, .lineage, .timeline: return .visualizations
+        case .figures, .places, .events, .relationships, .associations, .alternateNames, .eras, .images, .sources: return .data
+        case .sumerianKingList: return .history
         }
     }
 
     @ViewBuilder
     var destination: some View {
         switch self {
+        case .dashboard: DashboardView()
         case .importWiki: ImportView()
         case .query: QueryView()
+        case .networkGraph: NetworkGraphView()
         case .lineage: LineageTreeView()
-        case .timeline: TimelineView()
+        case .timeline: TimelineContainerView()
         case .figures: FigureListView()
         case .places: PlaceListView()
         case .events: EventListView()
@@ -59,14 +75,19 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .associations: AssociationsView()
         case .alternateNames: AlternateNameListView()
         case .eras: EraListView()
+        case .images: ImageLibraryView()
         case .sources: SourceListView()
+        case .versions: VersionListView()
+        case .sumerianKingList: SumerianKingListView()
         }
     }
 }
 
 struct ContentView: View {
-    @State private var selection: NavigationItem? = .query
+    @State private var coordinator = NavigationCoordinator()
     @State private var isSeeding = true
+    @State private var globalSearchText = ""
+    @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
 
     var body: some View {
@@ -90,7 +111,12 @@ struct ContentView: View {
             }
         } else {
             NavigationSplitView {
-                List(selection: $selection) {
+                List(selection: $coordinator.selectedItem) {
+                    Section("Overview") {
+                        ForEach(NavigationItem.allCases.filter { $0.section == .overview }, id: \.self) { item in
+                            Label(item.rawValue, systemImage: item.icon)
+                        }
+                    }
                     Section("Tools") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .tools }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
@@ -98,6 +124,11 @@ struct ContentView: View {
                     }
                     Section("Visualizations") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .visualizations }, id: \.self) { item in
+                            Label(item.rawValue, systemImage: item.icon)
+                        }
+                    }
+                    Section("History") {
+                        ForEach(NavigationItem.allCases.filter { $0.section == .history }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
                         }
                     }
@@ -111,12 +142,62 @@ struct ContentView: View {
                 .listStyle(.sidebar)
                 .focusable(false)
             } detail: {
-                if let selection {
-                    selection.destination
+                if !globalSearchText.isEmpty {
+                    GlobalSearchView(searchText: globalSearchText, onNavigateTo: { item in
+                        globalSearchText = ""
+                        coordinator.selectedItem = item
+                    })
+                } else if coordinator.selectedItem == .dashboard {
+                    DashboardView(onNavigateTo: { coordinator.selectedItem = $0 })
+                } else if coordinator.selectedItem == .networkGraph {
+                    NetworkGraphView(coordinator: coordinator)
+                } else if let selectedItem = coordinator.selectedItem {
+                    if selectedItem == .figures {
+                        FigureListView(coordinator: coordinator)
+                    } else if selectedItem == .places {
+                        PlaceListView(coordinator: coordinator)
+                    } else if selectedItem == .events {
+                        EventListView(coordinator: coordinator)
+                    } else if selectedItem == .sumerianKingList {
+                        SumerianKingListView(coordinator: coordinator)
+                    } else {
+                        selectedItem.destination
+                    }
                 } else {
                     Text("Select a view from the sidebar")
                         .font(.title2)
                         .foregroundStyle(.secondary)
+                }
+            }
+            .onExitCommand { globalSearchText = "" }
+            .background {
+                Button("") { searchFocused = true }
+                    .keyboardShortcut("f", modifiers: .command)
+                    .hidden()
+            }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        TextField("Search all entities\u{2026}", text: $globalSearchText)
+                            .textFieldStyle(.plain)
+                            .focused($searchFocused)
+                            .frame(width: 180)
+                            .onSubmit { searchFocused = true }
+                    }
+                    .padding(.leading, 4)
+                    .padding(.trailing, 8)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color(.textBackgroundColor))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(.separator, lineWidth: 0.5)
+                    )
                 }
             }
         }

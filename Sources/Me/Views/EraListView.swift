@@ -8,6 +8,7 @@ struct EraListView: View {
     @State private var editingEra: Era?
     @State private var selectedEraID: PersistentIdentifier?
     @State private var breadcrumbs: [Breadcrumb] = []
+    @State private var showDeleteConfirm = false
 
     private var selectedEra: Era? {
         guard let id = selectedEraID else { return nil }
@@ -81,7 +82,7 @@ struct EraListView: View {
                             editingEra = era
                         }
                         IconActionButton(icon: "trash", color: .red) {
-                            deleteEra(era)
+                            showDeleteConfirm = true
                         }
                         Spacer()
                         Button(action: { selectedEraID = nil }) {
@@ -104,6 +105,12 @@ struct EraListView: View {
         }
         .sheet(item: $editingEra) { era in
             EraFormView(era: era)
+        }
+        .alert("Delete Era?", isPresented: $showDeleteConfirm, presenting: selectedEra) { era in
+            Button("Delete", role: .destructive) { deleteEra(era) }
+            Button("Cancel", role: .cancel) {}
+        } message: { era in
+            Text("Delete \"\(era.name)\"? This cannot be undone.")
         }
     }
 

@@ -73,6 +73,12 @@ struct QueryView: View {
                 Button("Ask") { runQuery() }
                     .buttonStyle(.borderedProminent)
                     .disabled(queryText.isEmpty)
+                if result != nil {
+                    Button("Clear") { clearQuery() }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.secondary)
+                        .keyboardShortcut(.escape)
+                }
             }
             .padding(.horizontal)
             .padding(.bottom, 12)
@@ -107,13 +113,27 @@ struct QueryView: View {
                             queryExample("What happened at Uruk?")
                             queryExample("Who is also known as Ishtar?")
                             queryExample("Tell me about the Great Flood")
+                            queryExample("list all figures")
+                            queryExample("all deities")
+                            queryExample("female figures")
+                            queryExample("wind gods")
+                            queryExample("Ninurta's uncle")
+                            queryExample("figures of the Early Dynastic Period")
+                            queryExample("duration of the Early Dynastic Period")
+                            queryExample("how long did the Antediluvian Period last")
                         }
                         Spacer()
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
+
         }
+    }
+
+    private func clearQuery() {
+        queryText = ""
+        result = nil
     }
 
     private func runQuery() {
@@ -148,6 +168,8 @@ struct QueryView: View {
             EventListDossierView(title: title, events: events)
         case .placeList(let title, let places):
             PlaceListDossierView(title: title, places: places)
+        case .answer(let text):
+            AnswerView(text: text)
         case .noMatch(let query):
             NoMatchView(query: query)
         }
@@ -178,6 +200,11 @@ struct FigureDossierView: View {
                         Text(dossier.figure.gender.symbol)
                             .font(.title2)
                             .foregroundStyle(.secondary)
+                    }
+                    if let disambiguation = dossier.figure.disambiguation, !disambiguation.isEmpty {
+                        Text(disambiguation)
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
                     }
                     if !dossier.figure.title.isEmpty {
                         Text(dossier.figure.title)
@@ -622,6 +649,31 @@ struct PlaceListDossierView: View {
 }
 
 // MARK: - No Match
+
+// MARK: - Answer
+
+struct AnswerView: View {
+    let text: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "text.alignleft")
+                .font(.title3)
+                .foregroundColor(.accentColor)
+                .frame(width: 24)
+            Text(text)
+                .font(.body)
+                .foregroundColor(.primary)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.accentColor.opacity(0.06))
+        )
+        .padding(.top, 20)
+    }
+}
 
 struct NoMatchView: View {
     let query: String

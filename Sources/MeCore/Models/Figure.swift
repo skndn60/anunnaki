@@ -5,6 +5,7 @@ import SwiftData
 @Model
 package final class Figure {
     package var name: String
+    package var disambiguation: String?
     package var title: String
     package var figureType: FigureType?
     package var gender: Gender
@@ -14,6 +15,7 @@ package final class Figure {
     package var deathDate: MythologicalDate
     package var source: String
     package var isConcept: Bool
+    package var orderIndex: Int
 
     /// Relationships where this figure is the parent/source
     @Relationship(deleteRule: .cascade, inverse: \Relationship.fromFigure)
@@ -28,8 +30,12 @@ package final class Figure {
     package var alternateNames: [AlternateName] = []
 
     /// Images attached to this figure
-    @Relationship(deleteRule: .cascade, inverse: \FigureImage.figure)
-    package var images: [FigureImage] = []
+    @Relationship(deleteRule: .nullify, inverse: \ImageAsset.figures)
+    package var images: [ImageAsset] = []
+
+    /// Tags attached to this figure
+    @Relationship(deleteRule: .nullify, inverse: \Tag.figures)
+    package var tags: [Tag] = []
 
     /// Places associated with this figure (patron deity of, ruler of, etc.)
     @Relationship(deleteRule: .cascade, inverse: \FigurePlaceAssociation.figure)
@@ -53,6 +59,7 @@ package final class Figure {
 
     package init(
         name: String = "",
+        disambiguation: String? = nil,
         title: String = "",
         figureType: FigureType? = nil,
         gender: Gender = .unknown,
@@ -61,9 +68,11 @@ package final class Figure {
         birthDate: MythologicalDate = .unknown,
         deathDate: MythologicalDate = .unknown,
         source: String = "",
-        isConcept: Bool = false
+        isConcept: Bool = false,
+        orderIndex: Int = 0
     ) {
         self.name = name
+        self.disambiguation = disambiguation
         self.title = title
         self.figureType = figureType
         self.gender = gender
@@ -73,5 +82,6 @@ package final class Figure {
         self.deathDate = deathDate
         self.source = source
         self.isConcept = isConcept
+        self.orderIndex = orderIndex
     }
 }
