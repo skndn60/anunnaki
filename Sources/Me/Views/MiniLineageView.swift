@@ -1,142 +1,199 @@
 import SwiftUI
 import SwiftData
 
-/// A compact lineage clip showing parents → figure → children.
-/// Chips are clickable to navigate to other figures.
+/// A compact lineage clip showing paternal grandparents → father/mother → figure,
+/// with red "unknown" chips for missing parents.
 struct MiniLineageView: View {
     let figure: Figure
     let relationships: [Relationship]
     var onSelectFigure: ((Figure) -> Void)?
+    var showGrandparents: Bool = true
 
-    private var parents: [Figure] {
-        relationships
-            .filter {
-                ($0.relationshipType == .father || $0.relationshipType == .mother) &&
-                $0.toFigure?.persistentModelID == figure.persistentModelID
-            }
-            .compactMap { $0.fromFigure }
+    @Query private var allRelationships: [Relationship]
+
+    private func parents(typeName: String, of figure: Figure, from pool: [Relationship]) -> (preferred: Figure?, alternatives: [Figure]) {
+        let matching = pool.filter {
+            $0.relationshipType?.name == typeName &&
+            $0.toFigure?.persistentModelID == figure.persistentModelID
+        }
+        guard !matching.isEmpty else { return (nil, []) }
+        let preferredRel = matching.first(where: { $0.isPreferred == true }) ?? matching.first!
+        let alts = matching.filter { $0.isPreferred != true && $0.fromFigure?.persistentModelID != preferredRel.fromFigure?.persistentModelID }
+        return (preferredRel.fromFigure, alts.compactMap { $0.fromFigure })
     }
 
-    private var children: [Figure] {
-        relationships
-            .filter {
-                ($0.relationshipType == .father || $0.relationshipType == .mother) &&
-                $0.fromFigure?.persistentModelID == figure.persistentModelID
-            }
-            .compactMap { $0.toFigure }
+    private var father: Figure? {
+        parents(typeName: "Father", of: figure, from: relationships).preferred
     }
 
-    private var spouses: [Figure] {
-        relationships
-            .filter {
-                $0.relationshipType == .spouse &&
-                ($0.fromFigure?.persistentModelID == figure.persistentModelID ||
-                 $0.toFigure?.persistentModelID == figure.persistentModelID)
-            }
-            .compactMap {
-                $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure
-            }
+    private var fatherAlternatives: [Figure] {
+        parents(typeName: "Father", of: figure, from: relationships).alternatives
     }
 
-    private var consorts: [Figure] {
-        relationships
-            .filter {
-                $0.relationshipType == .consort &&
-                ($0.fromFigure?.persistentModelID == figure.persistentModelID ||
-                 $0.toFigure?.persistentModelID == figure.persistentModelID)
-            }
-            .compactMap {
-                $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure
-            }
+    private var mother: Figure? {
+        parents(typeName: "Mother", of: figure, from: relationships).preferred
+    }
+
+    private var motherAlternatives: [Figure] {
+        parents(typeName: "Mother", of: figure, from: relationships).alternatives
+    }
+
+    private var paternalGrandfather: Figure? {
+        guard let father else { return nil }
+        return parents(typeName: "Father", of: father, from: allRelationships).preferred
+    }
+
+    private var paternalGrandmother: Figure? {
+        guard let father else { return nil }
+        return parents(typeName: "Mother", of: father, from: allRelationships).preferred
+    }
+
+    private var hasGrandparents: Bool {
+        paternalGrandfather != nil || paternalGrandmother != nil
     }
 
     var body: some View {
-        if parents.isEmpty && children.isEmpty && spouses.isEmpty && consorts.isEmpty {
-            EmptyView()
-        } else {
-            VStack(spacing: 0) {
-                Divider()
-                    .padding(.bottom, 12)
+        VStack(spacing: 0) {
+            Divider()
+                .padding(.bottom, 12)
 
-                VStack(spacing: 12) {
-                    // Parents row
-                    if !parents.isEmpty {
-                        HStack(spacing: 12) {
-                            ForEach(parents) { parent in
-                                MiniChip(name: parent.name, symbol: parent.gender.symbol, color: chipColor(parent), isClickable: true) {
-                                    onSelectFigure?(parent)
+            VStack(spacing: 10) {
+                // Two-column layout: paternal lineage (left) | mother (right)
+                HStack(alignment: .top, spacing: 16) {
+                    // Left column: paternal grandparents → father
+                    VStack(spacing: 6) {
+                        if showGrandparents, hasGrandparents {
+                            HStack(spacing: 6) {
+                                if let pgf = paternalGrandfather {
+                                    MiniChip(name: pgf.name, symbol: pgf.gender.symbol, color: chipColor(pgf), isClickable: true) {
+                                        onSelectFigure?(pgf)
+                                    }
                                 }
-                            }
-                        }
-
-                        // Connector down
-                        VStack(spacing: 0) {
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.3))
-                                .frame(width: 1, height: 12)
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 8))
-                                .foregroundStyle(.secondary.opacity(0.5))
-                        }
-                    }
-
-                    // Center: figure + spouses + consorts
-                    HStack(spacing: 8) {
-                        MiniChip(name: figure.name, symbol: figure.gender.symbol, color: chipColor(figure), isHighlighted: true)
-
-                        if !spouses.isEmpty {
-                            ForEach(spouses) { spouse in
-                                HStack(spacing: 4) {
-                                    Image(systemName: "heart.fill")
-                                        .font(.system(size: 7))
-                                        .foregroundStyle(.pink.opacity(0.6))
-                                    MiniChip(name: spouse.name, symbol: spouse.gender.symbol, color: chipColor(spouse), isClickable: true) {
-                                        onSelectFigure?(spouse)
+                                if let pgm = paternalGrandmother {
+                                    MiniChip(name: pgm.name, symbol: pgm.gender.symbol, color: chipColor(pgm), isClickable: true) {
+                                        onSelectFigure?(pgm)
                                     }
                                 }
                             }
+                            connectorPiece
                         }
-                        if !consorts.isEmpty {
-                            ForEach(consorts) { consort in
-                                HStack(spacing: 4) {
-                                    Image(systemName: "heart.circle")
-                                        .font(.system(size: 7))
-                                        .foregroundStyle(.purple.opacity(0.6))
-                                    MiniChip(name: consort.name, symbol: consort.gender.symbol, color: chipColor(consort), isClickable: true) {
-                                        onSelectFigure?(consort)
-                                    }
-                                }
+                        if let father {
+                            parentChip(name: father.name, symbol: father.gender.symbol, color: chipColor(father), alternatives: fatherAlternatives) {
+                                onSelectFigure?(father)
                             }
+                        } else {
+                            unknownChip(label: "unknown father")
                         }
                     }
 
-                    // Connector down to children
-                    if !children.isEmpty {
-                        VStack(spacing: 0) {
-                            Image(systemName: "chevron.down")
-                                .font(.system(size: 8))
-                                .foregroundStyle(.secondary.opacity(0.5))
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.3))
-                                .frame(width: 1, height: 12)
+                    // Right column: mother
+                    VStack(spacing: 6) {
+                        if showGrandparents, hasGrandparents {
+                            Color.clear.frame(height: chipRowHeight + connectorHeight)
                         }
-
-                        // Children row
-                        HStack(spacing: 8) {
-                            ForEach(children) { child in
-                                MiniChip(name: child.name, symbol: child.gender.symbol, color: chipColor(child), isClickable: true) {
-                                    onSelectFigure?(child)
-                                }
+                        if let mother {
+                            parentChip(name: mother.name, symbol: mother.gender.symbol, color: chipColor(mother), alternatives: motherAlternatives) {
+                                onSelectFigure?(mother)
                             }
+                        } else {
+                            unknownChip(label: "unknown mother")
                         }
                     }
                 }
-                .padding(.vertical, 8)
+
+                connectorPiece
+
+                // Figure
+                MiniChip(name: figure.name, symbol: figure.gender.symbol, color: chipColor(figure), isHighlighted: true)
             }
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func parentChip(name: String, symbol: String, color: Color, alternatives: [Figure], onSelect: @escaping () -> Void) -> some View {
+        ParentChipView(name: name, symbol: symbol, color: color, alternatives: alternatives, figureTypeColor: figure.figureType?.color ?? .gray, onSelect: onSelect, onSelectAlt: onSelectFigure)
+    }
+
+    private var chipRowHeight: CGFloat { 24 }
+    private var connectorHeight: CGFloat { 18 }
+
+    private var connectorPiece: some View {
+        VStack(spacing: 0) {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 1, height: 12)
+            Image(systemName: "chevron.down")
+                .font(.system(size: 8))
+                .foregroundStyle(.secondary.opacity(0.5))
         }
     }
 
     private func chipColor(_ fig: Figure) -> Color { fig.figureType?.color ?? .gray }
+
+    private func unknownChip(label: String) -> some View {
+        MiniChip(name: label, symbol: "?", color: .red, isClickable: false)
+    }
+}
+
+// MARK: - Parent Chip (with alternative popover)
+
+private struct ParentChipView: View {
+    let name: String
+    let symbol: String
+    let color: Color
+    let alternatives: [Figure]
+    let figureTypeColor: Color
+    let onSelect: () -> Void
+    let onSelectAlt: ((Figure) -> Void)?
+
+    @State private var showingPopover = false
+
+    var body: some View {
+        HStack(spacing: 2) {
+            MiniChip(name: name, symbol: symbol, color: color, isClickable: true, onTap: onSelect)
+            if !alternatives.isEmpty {
+                Button(action: { showingPopover = true }) {
+                    Text("+\(alternatives.count)")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentColor))
+                }
+                .buttonStyle(.plain)
+                .help("\(alternatives.count) alternative\(alternatives.count == 1 ? "" : "s")")
+                .popover(isPresented: $showingPopover) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Alternatives")
+                            .font(.caption.bold())
+                            .padding(.bottom, 2)
+                        ForEach(alternatives) { fig in
+                            Button(action: {
+                                showingPopover = false
+                                onSelectAlt?(fig)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Text(fig.gender.symbol)
+                                        .font(.caption)
+                                    Text(fig.name)
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .background(figureTypeColor.opacity(0.08))
+                            .cornerRadius(4)
+                        }
+                    }
+                    .padding(10)
+                    .frame(minWidth: 120, minHeight: 40)
+                }
+            }
+        }
+    }
 }
 
 /// A tiny chip for the mini lineage view.

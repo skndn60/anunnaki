@@ -1,6 +1,81 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import UniformTypeIdentifiers
+
+// MARK: - AppKit drag-drop target for reliable macOS file drops
+
+private struct ImageDropTarget: NSViewRepresentable {
+    @Binding var isTargeted: Bool
+    let onDrop: (URL) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = _DropView()
+        view.wantsLayer = true
+        view.onDrop = onDrop
+        view.onTargetedChange = { isTargeted = $0 }
+        view.registerForDraggedTypes([.fileURL, NSPasteboard.PasteboardType("NSFilenamesPboardType")])
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) { }
+}
+
+private class _DropView: NSView {
+    var onDrop: ((URL) -> Void)?
+    var onTargetedChange: ((Bool) -> Void)?
+
+    override func draggingEntered(_ sender: NSDraggingInfo) -> NSDragOperation {
+        onTargetedChange?(true)
+        return .copy
+    }
+
+    override func draggingExited(_ sender: NSDraggingInfo?) {
+        onTargetedChange?(false)
+    }
+
+    override func performDragOperation(_ sender: NSDraggingInfo) -> Bool {
+        onTargetedChange?(false)
+        guard let urls = sender.draggingPasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return false }
+        for url in urls {
+            guard let typeID = try? url.resourceValues(forKeys: [.typeIdentifierKey]).typeIdentifier,
+                  UTType(typeID)?.conforms(to: .image) == true else { continue }
+            onDrop?(url)
+        }
+        return true
+    }
+
+}
+
+// MARK: - SwiftUI DropDelegate fallback for file drops
+
+private struct FileDropDelegate: DropDelegate {
+    @Binding var isTargeted: Bool
+    let onDrop: (URL) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        info.hasItemsConforming(to: [.fileURL])
+    }
+
+    func dropEntered(info: DropInfo) {
+        isTargeted = true
+    }
+
+    func dropExited(info: DropInfo) {
+        isTargeted = false
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        isTargeted = false
+        guard let urls = NSPasteboard.general.readObjects(forClasses: [NSURL.self], options: nil) as? [URL] else { return false }
+        for url in urls {
+            guard let typeID = try? url.resourceValues(forKeys: [.typeIdentifierKey]).typeIdentifier,
+                  UTType(typeID)?.conforms(to: .image) == true else { continue }
+            onDrop(url)
+        }
+        return true
+    }
+}
 
 struct ImageGallery: View {
     @Environment(\.modelContext) private var modelContext
@@ -11,6 +86,7 @@ struct ImageGallery: View {
     var maxDisplayCount: Int = 4
     @State private var showingFilePicker = false
     @State private var showingAll = false
+    @State private var isDropTargeted = false
 
     private var displayImages: [ImageAsset] {
         Array(images.prefix(maxDisplayCount))
@@ -19,46 +95,66 @@ struct ImageGallery: View {
     private var hasMore: Bool { images.count > maxDisplayCount }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-                Button(action: { showingFilePicker = true }) {
-                    Image(systemName: "plus.circle")
+        ZStack {
+            ImageDropTarget(isTargeted: $isDropTargeted, onDrop: { importFile(from: $0) })
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text(title)
                         .font(.caption)
-                }
-                .buttonStyle(.plain)
-            }
-
-            if images.isEmpty {
-                Text("No images attached")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 4)
-            } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
-                    ForEach(displayImages) { image in
-                        ImageThumbnail(image: image, onDelete: {
-                            deleteImage(image)
-                        }, onTap: {
-                            onSelectImage?(image)
-                        })
-                    }
-                }
-
-                if hasMore {
-                    Button(action: { showingAll = true }) {
-                        Text("Show all \(images.count) images")
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Button(action: { showingFilePicker = true }) {
+                        Image(systemName: "plus.circle")
                             .font(.caption)
-                            .foregroundStyle(Color.accentColor)
                     }
                     .buttonStyle(.plain)
                 }
+
+                if images.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "arrow.down.doc")
+                            .font(.title2)
+                            .foregroundStyle(.tertiary)
+                        Text("Drop images here")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 20)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(isDropTargeted ? Color.accentColor : Color(.separatorColor), lineWidth: isDropTargeted ? 2 : 1)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(isDropTargeted ? Color.accentColor.opacity(0.05) : Color.clear)
+                            )
+                    )
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
+                        ForEach(displayImages) { image in
+                            ImageThumbnail(image: image, onDelete: {
+                                deleteImage(image)
+                            }, onTap: {
+                                onSelectImage?(image)
+                            })
+                        }
+                    }
+
+                    if hasMore {
+                        Button(action: { showingAll = true }) {
+                            Text("Show all \(images.count) images")
+                                .font(.caption)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
             }
         }
+        .onDrop(of: [.fileURL], delegate: FileDropDelegate(isTargeted: $isDropTargeted, onDrop: { importFile(from: $0) }))
         .fileImporter(
             isPresented: $showingFilePicker,
             allowedContentTypes: [.image],
@@ -66,6 +162,21 @@ struct ImageGallery: View {
         ) { result in
             handleImport(result)
         }
+    }
+
+    private func importFile(from url: URL) {
+        let filename = "\(UUID().uuidString)_\(url.lastPathComponent)"
+        let destination = ImageAsset.imagesDirectory.appendingPathComponent(filename)
+        do {
+            try FileManager.default.copyItem(at: url, to: destination)
+            let image = ImageAsset(
+                filename: filename,
+                caption: url.deletingPathExtension().lastPathComponent,
+                source: ""
+            )
+            modelContext.insert(image)
+            onLinkImage?(image)
+        } catch { }
     }
 
     private func handleImport(_ result: Result<[URL], Error>) {

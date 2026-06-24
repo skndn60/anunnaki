@@ -1,12 +1,13 @@
 import SwiftUI
 
-/// A reusable form section for editing a MythologicalDate.
+/// A reusable form section for editing a MythologicalDate with range support.
 struct MythologicalDateEditor: View {
     let label: String
     @Binding var date: MythologicalDate
 
     @State private var hasYear: Bool = false
-    @State private var yearString: String = ""
+    @State private var startYearString: String = ""
+    @State private var endYearString: String = ""
     @State private var isBCE: Bool = true
 
     var body: some View {
@@ -14,23 +15,37 @@ struct MythologicalDateEditor: View {
             Toggle("Has numeric year", isOn: $hasYear)
                 .onChange(of: hasYear) { _, newValue in
                     if !newValue {
-                        date.year = nil
+                        date.startYear = nil
+                        date.endYear = nil
                     } else {
-                        applyYear()
+                        applyYears()
                     }
                 }
 
             if hasYear {
                 HStack {
-                    TextField("Year", text: $yearString, prompt: Text("e.g. 445000"))
-                        .onChange(of: yearString) { _, _ in applyYear() }
+                    TextField("Start year", text: $startYearString, prompt: Text("e.g. 1240"))
+                        .onChange(of: startYearString) { _, _ in applyYears() }
 
                     Picker("", selection: $isBCE) {
                         Text("BCE").tag(true)
                         Text("CE").tag(false)
                     }
                     .frame(width: 80)
-                    .onChange(of: isBCE) { _, _ in applyYear() }
+                    .onChange(of: isBCE) { _, _ in applyYears() }
+                }
+                .help("Earliest possible date")
+
+                HStack {
+                    TextField("End year", text: $endYearString, prompt: Text("Optional — leave blank if unknown"))
+                        .onChange(of: endYearString) { _, _ in applyYears() }
+                }
+                .help("Latest possible date (leave blank for a single year)")
+
+                if rangeInvalid {
+                    Label("Start year must be earlier than end year (start: \(startYearString), end: \(endYearString))", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.red)
                 }
 
                 Toggle("Approximate", isOn: $date.isApproximate)
@@ -38,7 +53,6 @@ struct MythologicalDateEditor: View {
 
             TextField("Era", text: $date.era, prompt: Text("e.g. Before the Flood"))
 
-            // Preview
             HStack {
                 Text("Displays as:")
                     .foregroundStyle(.secondary)
@@ -51,24 +65,37 @@ struct MythologicalDateEditor: View {
     }
 
     private func loadFromDate() {
-        if let year = date.year {
+        if date.startYear != nil || date.endYear != nil {
             hasYear = true
-            isBCE = year < 0
-            yearString = "\(abs(year))"
+            let ref = date.startYear ?? date.endYear ?? 0
+            isBCE = ref < 0
+            startYearString = date.startYear.map { "\(abs($0))" } ?? ""
+            endYearString = date.endYear.map { "\(abs($0))" } ?? ""
         } else {
             hasYear = false
-            yearString = ""
+            startYearString = ""
+            endYearString = ""
             isBCE = true
         }
     }
 
-    private func applyYear() {
-        guard hasYear, let value = Int(yearString), value > 0 else {
-            if hasYear && yearString.isEmpty {
-                date.year = nil
-            }
+    private func applyYears() {
+        guard hasYear else {
+            date.startYear = nil
+            date.endYear = nil
             return
         }
-        date.year = isBCE ? -value : value
+        date.startYear = parseYear(startYearString)
+        date.endYear = parseYear(endYearString)
+    }
+
+    private var rangeInvalid: Bool {
+        guard let s = parseYear(startYearString), let e = parseYear(endYearString) else { return false }
+        return s > e
+    }
+
+    private func parseYear(_ str: String) -> Int? {
+        guard let value = Int(str), value > 0 else { return nil }
+        return isBCE ? -value : value
     }
 }

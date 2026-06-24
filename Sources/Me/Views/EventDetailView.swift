@@ -7,6 +7,8 @@ struct EventDetailView: View {
     var onSelectFigure: ((Figure) -> Void)?
     var onSelectPlace: ((Place) -> Void)?
     var onSelectImage: ((ImageAsset) -> Void)?
+    var backLabel: String?
+    var onBack: (() -> Void)?
     @Environment(\.modelContext) private var modelContext
     @Query private var figures: [Figure]
     @Query private var places: [Place]
@@ -16,6 +18,20 @@ struct EventDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if let backLabel, let onBack {
+                    Button(action: onBack) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.caption2.weight(.semibold))
+                            Text("Back to \(backLabel)")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .pointingHand()
+                }
+
                 // Header
                 HStack(spacing: 12) {
                     Circle()
@@ -47,6 +63,12 @@ struct EventDetailView: View {
                                     .fill(.orange.opacity(0.12))
                             )
                     }
+                }
+
+                // Stickies
+                StickyNoteSection(stickies: event.stickies) { text in
+                    let note = StickyNote(text: text, event: event)
+                    modelContext.insert(note)
                 }
 
                 Divider()
@@ -102,6 +124,7 @@ struct EventDetailView: View {
                                             .underline()
                                     }
                                     .buttonStyle(.plain)
+                                    .pointingHand()
                                     if !figure.title.isEmpty {
                                         Text(figure.title)
                                             .font(.caption)
@@ -173,8 +196,9 @@ struct EventDetailView: View {
                                                 .underline()
                                         }
                                         .buttonStyle(.plain)
+                                        .pointingHand()
                                         HStack(spacing: 4) {
-                                            Text(assoc.role.rawValue)
+                                            Text(assoc.roleType?.name ?? "—")
                                                 .font(.caption2)
                                                 .padding(.horizontal, 4)
                                                 .padding(.vertical, 1)

@@ -7,7 +7,11 @@ struct PlaceDetailView: View {
     var onSelectFigure: ((Figure) -> Void)?
     var onSelectEvent: ((Event) -> Void)?
     var onSelectImage: ((ImageAsset) -> Void)?
+    var backLabel: String?
+    var onBack: (() -> Void)?
     @Environment(\.modelContext) private var modelContext
+    @State private var altToDelete: AlternateName?
+    @State private var showDeleteAltConfirm = false
 
     private var relatedEvents: [Event] {
         place.eventAssociations.compactMap { $0.event }
@@ -15,14 +19,32 @@ struct PlaceDetailView: View {
 
     private var relatedFigures: [Figure] {
         let figureSet = relatedEvents.flatMap { $0.involvedFigures }
-        // Deduplicate
         var seen = Set<PersistentIdentifier>()
         return figureSet.filter { seen.insert($0.persistentModelID).inserted }
+    }
+
+    private var placeAssociations: [PlacePlaceAssociation] {
+        let all: [PlacePlaceAssociation] = modelContext.fetchAll()
+        return all.filter { $0.fromPlace == place || $0.toPlace == place }
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if let backLabel, let onBack {
+                    Button(action: onBack) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.caption2.weight(.semibold))
+                            Text("Back to \(backLabel)")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .pointingHand()
+                }
+
                 // Header
                 HStack(spacing: 12) {
                     Circle()
@@ -56,6 +78,12 @@ struct PlaceDetailView: View {
                     }
                 }
 
+                // Stickies
+                StickyNoteSection(stickies: place.stickies) { text in
+                    let note = StickyNote(text: text, place: place)
+                    modelContext.insert(note)
+                }
+
                 Divider()
 
                 // Properties
@@ -77,6 +105,53 @@ struct PlaceDetailView: View {
                             .textCase(.uppercase)
                         Text(place.placeDescription)
                             .font(.body)
+                    }
+                }
+
+                // Alternate Names
+                if !place.alternateNames.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Also Known As")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        ForEach(place.alternateNames) { altName in
+                            HStack(spacing: 8) {
+                                Text(altName.name)
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                Text(altName.tradition.rawValue)
+                                    .font(.caption2)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 3)
+                                            .fill(Color.secondary.opacity(0.1))
+                                    )
+                                Text(altName.nameType.rawValue)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                Spacer()
+                                Button(action: {
+                                    altToDelete = altName
+                                    showDeleteAltConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete alternate name")
+                            }
+                            if !altName.note.isEmpty {
+                                Text(altName.note)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .padding(.leading, 4)
+                            }
+                        }
                     }
                 }
 
@@ -107,10 +182,59 @@ struct PlaceDetailView: View {
                                         .underline()
                                 }
                                 .buttonStyle(.plain)
-                                Text("— \(assoc.role.rawValue)")
+                                .pointingHand()
+                                Text("— \(assoc.roleType?.name ?? "—")")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Spacer()
+                            }
+                        }
+                    }
+                }
+
+                // Place associations (containment, proximity, etc.)
+                if !placeAssociations.isEmpty {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Related Places")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        ForEach(placeAssociations) { assoc in
+                            HStack(spacing: 8) {
+                                if assoc.fromPlace == place {
+                                    Text(assoc.toPlace?.name ?? "?")
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                    Text(assoc.roleType?.name ?? "—")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text("←")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                    Text(place.name)
+                                        .font(.callout)
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(place.name)
+                                        .font(.callout)
+                                        .foregroundStyle(.secondary)
+                                    Text("→")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                    Text(assoc.roleType?.name ?? "—")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(assoc.fromPlace?.name ?? "?")
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                }
+                                Spacer()
+                                Text(assoc.source)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
                             }
                         }
                     }
@@ -140,6 +264,7 @@ struct PlaceDetailView: View {
                                             .underline()
                                     }
                                     .buttonStyle(.plain)
+                                    .pointingHand()
                                     Text(event.date.displayLabel)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -177,6 +302,7 @@ struct PlaceDetailView: View {
                                     )
                                 }
                                 .buttonStyle(.plain)
+                                .pointingHand()
                             }
                         }
                     }
@@ -243,6 +369,15 @@ struct PlaceDetailView: View {
                 MapPreviewButton(place: place)
             }
             .padding(20)
+        }
+        .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(altName)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { altName in
+            Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(altName.place?.name ?? "?")?")
         }
     }
 

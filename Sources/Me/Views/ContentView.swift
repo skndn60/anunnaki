@@ -12,7 +12,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case dashboard = "Dashboard"
     case importWiki = "Import from Wikipedia"
     case query = "Query"
-    case networkGraph = "Network Graph"
+    case networkGraph = "Object Graph"
     case lineage = "Lineage Tree"
     case timeline = "Timeline"
     case figures = "Figures"
@@ -20,12 +20,17 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case events = "Events"
     case relationships = "Relationships"
     case associations = "Associations"
+    case typeSettings = "Type Settings"
     case alternateNames = "Alternate Names"
     case eras = "Eras"
+    case stickies = "Stickies"
     case images = "Gallery"
     case sources = "Sources"
     case versions = "Versions"
+    case enoch = "Book of Enoch"
     case sumerianKingList = "Sumerian King List"
+    case flood = "The Flood"
+    case theMes = "The Me’s"
 
     var icon: String {
         switch self {
@@ -40,12 +45,17 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .events: return "bolt.fill"
         case .relationships: return "link"
         case .associations: return "point.3.connected.trianglepath.dotted"
+        case .typeSettings: return "gearshape.2"
         case .alternateNames: return "textformat.abc"
         case .eras: return "clock.arrow.circlepath"
+        case .stickies: return "square.and.pencil"
         case .images: return "photo.on.rectangle.angled"
         case .sources: return "books.vertical"
         case .versions: return "clock.arrow.circlepath"
+        case .enoch: return "book.fill"
         case .sumerianKingList: return "list.star"
+        case .flood: return "drop"
+        case .theMes: return "rectangle.3.group"
         }
     }
 
@@ -54,8 +64,8 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .dashboard: return .overview
         case .importWiki, .versions: return .tools
         case .query, .networkGraph, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .alternateNames, .eras, .images, .sources: return .data
-        case .sumerianKingList: return .history
+        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources: return .data
+        case .enoch, .sumerianKingList, .flood, .theMes: return .history
         }
     }
 
@@ -73,12 +83,17 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .events: EventListView()
         case .relationships: RelationshipListView()
         case .associations: AssociationsView()
+        case .typeSettings: TypeSettingsView()
         case .alternateNames: AlternateNameListView()
         case .eras: EraListView()
+        case .stickies: StickyNoteListView()
         case .images: ImageLibraryView()
         case .sources: SourceListView()
         case .versions: VersionListView()
+        case .enoch: EnochView()
         case .sumerianKingList: SumerianKingListView()
+        case .flood: ComingSoonView(title: "The Flood")
+        case .theMes: ComingSoonView(title: "The Me’s")
         }
     }
 }
@@ -103,6 +118,7 @@ struct ContentView: View {
             .task {
                 print("[Me] ContentView seeding task started")
                 await MainActor.run {
+                    Migration.ensureRelationTypesExist(context: modelContext)
                     SeedData.seedIfEmpty(context: modelContext)
                     try? modelContext.save()
                     print("[Me] Seeding complete")
@@ -158,6 +174,8 @@ struct ContentView: View {
                         PlaceListView(coordinator: coordinator)
                     } else if selectedItem == .events {
                         EventListView(coordinator: coordinator)
+                    } else if selectedItem == .enoch {
+                        EnochView(coordinator: coordinator)
                     } else if selectedItem == .sumerianKingList {
                         SumerianKingListView(coordinator: coordinator)
                     } else {
@@ -201,5 +219,28 @@ struct ContentView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Placeholder
+
+struct ComingSoonView: View {
+    let title: String
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "hammer.fill")
+                .font(.system(size: 48))
+                .foregroundStyle(.secondary)
+            Text(title)
+                .font(.title2.bold())
+                .foregroundStyle(.secondary)
+            Text("Coming soon\u{2026}")
+                .font(.body)
+                .foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

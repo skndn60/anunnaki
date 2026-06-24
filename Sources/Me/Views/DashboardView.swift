@@ -14,14 +14,13 @@ struct DashboardView: View {
     @Query private var relationships: [Relationship]
     @Query private var figureTypes: [FigureType]
     @Query private var citations: [Citation]
+    private var recentEdits: [RecentEdit] { RecentEditStore.items }
 
     @State private var showingAddFigure = false
     @State private var showingAddPlace = false
     @State private var showingAddEvent = false
     @State private var showingReseedAlert = false
     @State private var isReseeding = false
-    @State private var showingTypeManager = false
-
     private var mostConnectedFigure: (name: String, count: Int)? {
         let counts = figures.map { figure -> (String, Int) in
             let count = relationships.filter {
@@ -51,6 +50,7 @@ struct DashboardView: View {
                 quickActions
                 insights
                 typeDistributionSection
+                recentEditsSection
             }
             .padding(24)
         }
@@ -88,11 +88,9 @@ struct DashboardView: View {
                 QuickActionButton(title: "Reseed Database", icon: "arrow.counterclockwise.circle", color: .red) { showingReseedAlert = true }
                     .disabled(isReseeding)
                 QuickActionButton(title: "Versions", icon: "clock.arrow.circlepath", color: .teal) { onNavigateTo?(.versions) }
-                QuickActionButton(title: "Manage Figure Types", icon: "gearshape", color: .purple) { showingTypeManager = true }
             }
         }
         .sheet(isPresented: $showingAddFigure) { FigureFormView(figure: nil) }
-        .sheet(isPresented: $showingTypeManager) { FigureTypeManagerView() }
         .sheet(isPresented: $showingAddPlace) { PlaceFormView(place: nil) }
         .sheet(isPresented: $showingAddEvent) { EventFormView(event: nil) }
         .alert("Reseed Database?", isPresented: $showingReseedAlert) {
@@ -180,6 +178,58 @@ struct DashboardView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .fill(Color(.textBackgroundColor))
             )
+        }
+    }
+
+    private var recentEditsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Recent Edits")
+            if recentEdits.isEmpty {
+                Text("No recent edits")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+            } else {
+                VStack(spacing: 0) {
+                    let edits = recentEdits.sorted { $0.timestamp > $1.timestamp }.prefix(10)
+                    ForEach(Array(edits.enumerated()), id: \.element.id) { index, edit in
+                        Button {
+                            switch edit.entityType {
+                            case "Figure": onNavigateTo?(.figures)
+                            case "Place": onNavigateTo?(.places)
+                            case "Event": onNavigateTo?(.events)
+                            default: break
+                            }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: edit.entityType == "Figure" ? "person.fill" : edit.entityType == "Place" ? "building.columns" : "bolt.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(edit.entityType == "Figure" ? .blue : edit.entityType == "Place" ? .green : .orange)
+                                    .frame(width: 16)
+                                Text(edit.entityName)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Text(edit.timestamp, style: .relative)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        if index < edits.count - 1 {
+                            Divider().padding(.leading, 36)
+                        }
+                    }
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(Color(.textBackgroundColor))
+                )
+            }
         }
     }
 

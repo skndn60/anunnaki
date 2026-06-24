@@ -139,6 +139,41 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - `Sources/Me/Views/SumerianKingListView.swift` — Added
 - `Sources/MeCore/Models/SKLReignLength.swift` — Added
 
+### 2026-06-22 — Resizable detail panel dividers across all 6 list views
+
+**Changes made:**
+- `Sources/Me/Views/ResizableDivider.swift` — New reusable component: draggable vertical divider with cursor change (`NSCursor.resizeLeftRight`) and `DragGesture` for resizing detail panel width.
+- `Sources/Me/Views/FigureListView.swift` — Replaced `Divider()` and `.frame(width: 320)` with `ResizableDivider` and `@AppStorage("figureDetailWidth")`.
+- `Sources/Me/Views/PlaceListView.swift` — Same change with `@AppStorage("placeDetailWidth")`.
+- `Sources/Me/Views/EventListView.swift` — Same change with `@AppStorage("eventDetailWidth")`.
+- `Sources/Me/Views/SourceListView.swift` — Same change with `@AppStorage("sourceDetailWidth")`.
+- `Sources/Me/Views/EraListView.swift` — Same change with `@AppStorage("eraDetailWidth")`.
+- `Sources/Me/Views/SumerianKingListView.swift` — Same change with `@AppStorage("sklDetailWidth")`.
+
+**Design decisions:**
+- `@AppStorage` (Double) persists widths per view across launches.
+- Drag range clamped to 200–800pt to prevent collapsing or over-expanding.
+- Each view stores its own key so Figure, Place, Event, Source, Era, and SKL panels have independent widths.
+- `ResizableDivider` uses `NSCursor.resizeLeftRight` on hover for native macOS feel.
+- Minimum drag distance of 5pt prevents accidental activation.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/ResizableDivider.swift` — Added
+
+### 2026-06-22 — Design note: `Relationship.source` as lineage discriminator
+
+**The idea:** Different source texts (Enuma Elish, Atra-Hasis, SKL, Epic of Gilgamesh, etc.) each provide their own genealogical accounts, often contradictory. The `Relationship.source` string (already present, free-text) can serve as a discriminator to show separate lineage trees per source tradition, rather than merging all relationships into one monolithic tree.
+
+**Open questions (need more thought):**
+- Should lineage views get a source picker (e.g., "All Sources" / "Enuma Elish" / "Sumerian King List") that filters relationships by `source`?
+- Or should `source` be promoted from a free-text string to a `@Relationship` to the `Source` model for referential integrity?
+- How to display contradictions explicitly (e.g., "Enuma Elish says X is father of Y, but Atra-Hasis says Z is father of Y")?
+- Should `QueryEngine`/natural language queries also respect source discrimination?
+- Does `MiniLineageView` need the filter, or only the full-tree views?
+- The `Citation` model already provides polymorphic entity→Source linking — should `Relationship` use it instead of/in addition to the string field?
+
+**Current state (baseline):** All three lineage views (`LineageTreeView`, `FigureLineageExplorer`, `MiniLineageView`) query all relationships with no source predicate. The `source` string is displayed in `RelationshipListView` and `FigureDetailView` but unused for filtering.
+
 ### 2026-06-20 — Fix massive top padding in Pre-Flood timeline
 
 **Changes made:**
@@ -154,6 +189,40 @@ When investigating SwiftUI layout bugs (unexpected padding, misalignment, sizing
 3. Only after identifying the root view should you look at modifier chains or data flow.
 
 This is faster and more reliable than reading code to simulate the layout engine.
+
+### 2026-06-23 — Enoch Archangels backfill
+
+**Problem:** Archangels section missing in EnochView for existing databases. `ensureTypesExist` gates FigureType creation on `figureTypeCount == 0`, so types added later (Archangel, Igigi, Commander) are never backfilled. `ensureEnochDataExists` early-returns if Mount Hermon exists, preventing any archangel creation.
+
+**Fix:** Added `Migration.ensureArchangelsExist(context:)` — creates the Archangel FigureType if missing (same pattern as `ensureCommanderFigureTypeExists`), then creates the 7 archangel figures (Michael, Gabriel, Uriel, Raphael, Raguel, Saraqael, Remiel) by name if absent. Called at the top of `ensureEnochDataExists` before the Mount Hermon guard, so it runs on every launch.
+
+**Lesson:** Any entity or type added to `seed_data.json` after the first public build needs a `Migration.swift` backfill for existing databases. Never rely solely on the fresh-seed path.
+
+### 2026-06-24 — Lineage ambiguity: collapse to 1 per type + alternative badges
+
+**Problem:** When multiple relationships of the same parent type exist (e.g., two "Mother" entries for the same figure), all four lineage views rendered them side-by-side — confusing for contradictory traditions. The `isPreferred` flag existed but wasn't used for collapsing.
+
+**Changes made:**
+- `FigureLineageExplorer.swift` — Replaced `preferred()` + `altCounts()` with unified `resolveGeneration()` returning `(figures, alts)`. Added `resolvedParents`/`parentAlts`, `resolvedChildren`/`childAlts`, `resolvedGrandparents`/`grandparentAlts`, `resolvedGrandchildren`/`grandchildAlts`. Updated `generationRow` to accept `alts` + `onSelectAlt`. All callers pass alts dict.
+- `LineageTreeView.swift` — Same pattern with parameterized methods (`parentsAndAlts(of:)`, `childrenAndAlts(of:)`, `grandparentsAndAlts(of:)`, `grandchildrenAndAlts(of:)`). Updated `generationRow` and all callers.
+- `LineageExplorerWindow.swift` — Same instance-property pattern as FigureLineageExplorer. Added `resolveGeneration()`, resolved properties, updated `generationRow` and callers.
+- `MiniLineageView.swift` — Fixed build error (stale `preferredParent()` calls → `parents(typeName:of:from:).preferred`). Then extracted `ParentChipView` struct so father/mother each own their `@State` for the popover (previously shared state caused empty popover). Moved `.popover` from `HStack` to the `+N` button itself. Removed intermediate `popoverFigures` copy — reads `alternatives` directly.
+
+**Key design decisions:**
+- All lineage views consistently use `resolveGeneration()` to collapse to ≤1 figure per type.
+- Alternatives shown as `+N` badge → popover listing alternatives → click navigates/recenters.
+- `resolveGeneration()` returns both the filtered figures AND an alternatives dictionary, avoiding redundant computations.
+- `FigureCardView` already supported `alternatives` + `onSelectAlt` — lineage views just needed to pass them through.
+
+**Relevant files:**
+- `Sources/Me/Views/FigureLineageExplorer.swift` — Updated
+- `Sources/Me/Views/LineageTreeView.swift` — Updated (includes `FigureCardView`)
+- `Sources/Me/Views/LineageExplorerWindow.swift` — Updated
+- `Sources/Me/Views/MiniLineageView.swift` — Updated + `ParentChipView` extracted
+
+## Hard Constraints
+
+- **NO reseeding.** Never run `--reseed`, never call `clearAll`, never destroy user data. All migrations must be additive only (check-by-name before creating). The user's existing database is sacred.
 
 ## Interaction Guidelines (from CONTRIBUTING.md)
 

@@ -32,7 +32,7 @@ struct MeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     static let sharedContainer: ModelContainer = {
-        let schema = Schema([Figure.self, FigureType.self, Relationship.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self])
+        let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self, StickyNote.self])
 
         let forceReseed = CommandLine.arguments.contains("--reseed")
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -60,13 +60,17 @@ struct MeApp: App {
             return container
         } catch {
             print("[Me] Failed to create ModelContainer: \(error)")
-            try? FileManager.default.removeItem(at: storeURL)
+            print("[Me] Store file: \(storeURL.path)")
+            print("[Me] Attempting backup before recovery...")
+            let backupURL = storeDirectory.appendingPathComponent("Me.store.crashed-\(Int(Date().timeIntervalSince1970))")
+            try? FileManager.default.moveItem(at: storeURL, to: backupURL)
+            print("[Me] Backed up old store to: \(backupURL.path)")
             do {
                 let container = try ModelContainer(for: schema, configurations: [config])
-                print("[Me] ModelContainer created after deleting store")
+                print("[Me] ModelContainer created after recovering from crash")
                 return container
             } catch {
-                fatalError("Failed to create ModelContainer after deleting store: \(error)")
+                fatalError("Failed to create ModelContainer after crash recovery: \(error)")
             }
         }
     }()

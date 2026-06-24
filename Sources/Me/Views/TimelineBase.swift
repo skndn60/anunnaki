@@ -143,7 +143,7 @@ struct EraSwimlaneRow: View {
 
     private var eraStartX: CGFloat {
         guard case .historical(let minYear, let ppy) = mode,
-              let sy = era.startDate.year else { return 0 }
+              let sy = era.startDate.startYear else { return 0 }
         return CGFloat(sy - minYear) * ppy
     }
 
@@ -174,7 +174,7 @@ struct EraSwimlaneRow: View {
     private func historicalSwimlane(containerWidth: CGFloat) -> some View {
         let minYear = mode.minYear
         let ppy = mode.pointsPerYear
-        guard let startYear = era.startDate.year, let endYear = era.endDate.year, startYear < endYear else {
+        guard let startYear = era.startDate.startYear, let endYear = era.endDate.endYear, startYear < endYear else {
             return AnyView(emptySwimlane(containerWidth: containerWidth))
         }
         let startX = CGFloat(startYear - minYear) * ppy
@@ -183,7 +183,7 @@ struct EraSwimlaneRow: View {
         let chipWidth = FigureSwimlaneChip.chipWidth
         let minSpacing: CGFloat = 8
         var chipLayouts: [(figure: Figure, x: CGFloat, level: Int)] = figures.compactMap { figure in
-            guard let year = figure.birthDate.year else { return nil }
+            guard let year = figure.birthDate.startYear else { return nil }
             let x = CGFloat(year - minYear) * ppy + chipWidth / 2
             return (figure, x, 0)
         }.sorted { $0.x < $1.x }
@@ -207,7 +207,7 @@ struct EraSwimlaneRow: View {
 
         return AnyView(ZStack(alignment: .leading) {
             ForEach(figures) { figure in
-                if let birthYear = figure.birthDate.year, let deathYear = figure.deathDate.year {
+                if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
                     let birthX = CGFloat(birthYear - minYear) * ppy
                     let deathX = CGFloat(deathYear - minYear) * ppy
                     let barWidth = max(4, deathX - birthX)

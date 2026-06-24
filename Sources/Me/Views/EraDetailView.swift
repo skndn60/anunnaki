@@ -45,7 +45,7 @@ struct EraDetailView: View {
                     PropertyRow(label: "End Date", value: era.endDate.displayLabel)
                 }
 
-                if era.startDate.year != nil && era.endDate.year != nil {
+                if era.startDate.startYear != nil && era.endDate.endYear != nil {
                     let years = era.startDate.sortValue - era.endDate.sortValue
                     if years > 0 {
                         VStack(alignment: .leading, spacing: 6) {
@@ -88,7 +88,7 @@ struct EraDetailView: View {
                                     .fontWeight(.medium)
                                     .onTapGesture { selectedFigure = figure }
                                 Spacer()
-                                if figure.birthDate.year != nil {
+                                if figure.birthDate.startYear != nil || figure.birthDate.endYear != nil {
                                     Text(figure.birthDate.displayLabel)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
@@ -163,11 +163,11 @@ private struct FigureQuicklookContent: View {
                 PropertyRow(label: "Domain", value: figure.domain)
             }
 
-            if figure.birthDate.year != nil {
+            if figure.birthDate.startYear != nil || figure.birthDate.endYear != nil {
                 PropertyRow(label: "Birth", value: figure.birthDate.displayLabel)
             }
 
-            if figure.deathDate.year != nil {
+            if figure.deathDate.startYear != nil || figure.deathDate.endYear != nil {
                 PropertyRow(label: "Death", value: figure.deathDate.displayLabel)
             }
 

@@ -38,23 +38,23 @@ extension ModelContext {
         let citations: [Citation] = fetchAll()
 
         let parents = relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
 
         let children = relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
 
         let spouses = relationships
-            .filter { ($0.relationshipType == .spouse || $0.relationshipType == .consort) && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.category == "partner" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
 
         let createdBy = relationships
-            .filter { $0.relationshipType == .creator && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "creator" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
 
         let created = relationships
-            .filter { $0.relationshipType == .creator && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "creator" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
 
         let figureEvents = events.filter { $0.involvedFigures.contains(where: { $0.persistentModelID == figure.persistentModelID }) }

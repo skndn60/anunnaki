@@ -5,6 +5,7 @@ import SwiftData
 struct SourceListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var sources: [Source]
+    @AppStorage("sourceDetailWidth") private var detailWidth: Double = 320
     @State private var showingAddSheet = false
     @State private var editingSource: Source?
     @State private var selectedSourceID: PersistentIdentifier?
@@ -58,7 +59,7 @@ struct SourceListView: View {
             .frame(minWidth: 450, maxWidth: .infinity)
 
             if let source = selectedSource {
-                Divider()
+                ResizableDivider(width: $detailWidth, range: 200...800)
                 VStack(spacing: 0) {
                     HStack(spacing: 8) {
                         IconActionButton(icon: "pencil", color: .accentColor) {
@@ -81,7 +82,7 @@ struct SourceListView: View {
                     .padding(8)
                     SourceDetailView(source: source)
                 }
-                .frame(width: 320)
+                .frame(width: detailWidth)
             }
         }
         .sheet(isPresented: $showingAddSheet) {

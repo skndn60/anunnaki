@@ -8,6 +8,7 @@ struct VersionListView: View {
     @State private var showingCommitSheet = false
     @State private var showingBranchSheet = false
     @State private var selectedVersion: DataVersion?
+    @State private var versionToDelete: DataVersion?
     @State private var showCheckoutAlert = false
     @State private var showDeleteAlert = false
     @State private var isCheckingOut = false
@@ -48,7 +49,7 @@ struct VersionListView: View {
                 .frame(maxWidth: .infinity)
             } else {
                 List(versions, id: \.id, selection: $selectedVersion) { version in
-                    VersionRow(version: version)
+                    VersionRow(version: version, onRestore: { restoreVersion(version) }, onDelete: { confirmDelete(version) })
                         .tag(version)
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -78,17 +79,17 @@ struct VersionListView: View {
         .sheet(isPresented: $showingBranchSheet) {
             branchSheet
         }
-        .alert("Checkout \(selectedVersion?.name ?? "")?", isPresented: $showCheckoutAlert) {
+        .alert("Restore \(selectedVersion?.name ?? "")?", isPresented: $showCheckoutAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Checkout", role: .destructive) { checkoutVersion() }
+            Button("Restore", role: .destructive) { restoreSelectedVersion() }
         } message: {
-            Text("This will replace all current data with the snapshot from this version. Current data will be lost.")
+            Text("This replaces all current data with the snapshot. Your current state will be auto-saved as a new version first.")
         }
-        .alert("Delete Version?", isPresented: $showDeleteAlert, presenting: selectedVersion) { version in
+        .alert("Delete \(versionToDelete?.name ?? "")?", isPresented: $showDeleteAlert) {
             Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) { deleteVersion(version) }
-        } message: { version in
-            Text("Delete \"\(version.name)\" and its snapshot file? This cannot be undone.")
+            Button("Delete", role: .destructive) { deleteVersion(versionToDelete) }
+        } message: {
+            Text("Delete this version and its snapshot file? This cannot be undone.")
         }
         .overlay {
             if isCheckingOut {
@@ -171,8 +172,12 @@ struct VersionListView: View {
         loadVersions()
     }
 
-    private func checkoutVersion() {
+    private func restoreSelectedVersion() {
         guard let version = selectedVersion else { return }
+        restoreVersion(version)
+    }
+
+    private func restoreVersion(_ version: DataVersion) {
         isCheckingOut = true
         Task {
             await MainActor.run {
@@ -185,6 +190,11 @@ struct VersionListView: View {
         }
     }
 
+    private func confirmDelete(_ version: DataVersion) {
+        versionToDelete = version
+        showDeleteAlert = true
+    }
+
     private func branchVersion() {
         guard let version = selectedVersion else { return }
         _ = VersionManager.branch(name: branchName, fromVersion: version, context: modelContext)
@@ -193,8 +203,10 @@ struct VersionListView: View {
         loadVersions()
     }
 
-    private func deleteVersion(_ version: DataVersion) {
+    private func deleteVersion(_ version: DataVersion?) {
+        guard let version else { return }
         if selectedVersion?.id == version.id { selectedVersion = nil }
+        versionToDelete = nil
         VersionManager.delete(version: version, context: modelContext)
         loadVersions()
     }
@@ -202,6 +214,8 @@ struct VersionListView: View {
 
 struct VersionRow: View {
     let version: DataVersion
+    let onRestore: () -> Void
+    let onDelete: () -> Void
 
     var body: some View {
         HStack(spacing: 10) {
@@ -227,6 +241,18 @@ struct VersionRow: View {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(Color.accentColor.opacity(0.12))
                     )
+            }
+            Button("Restore", role: .destructive, action: onRestore)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+        }
+        .contextMenu {
+            Button(action: onRestore) {
+                Label("Restore This Version", systemImage: "arrow.counterclockwise")
+            }
+            Divider()
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
             }
         }
     }

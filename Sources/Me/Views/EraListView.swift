@@ -7,7 +7,7 @@ struct EraListView: View {
     @State private var showingAddSheet = false
     @State private var editingEra: Era?
     @State private var selectedEraID: PersistentIdentifier?
-    @State private var breadcrumbs: [Breadcrumb] = []
+    @AppStorage("eraDetailWidth") private var detailWidth: Double = 320
     @State private var showDeleteConfirm = false
 
     private var selectedEra: Era? {
@@ -16,19 +16,7 @@ struct EraListView: View {
     }
 
     private func selectEra(_ id: PersistentIdentifier) {
-        if let era = eras.first(where: { $0.persistentModelID == id }) {
-            if breadcrumbs.last?.id != id {
-                breadcrumbs.append(Breadcrumb(id: id, name: era.name))
-                if breadcrumbs.count > 12 { breadcrumbs.removeFirst() }
-            }
-        }
         selectedEraID = id
-    }
-
-    private func navigateToBreadcrumb(at index: Int) {
-        let crumb = breadcrumbs[index]
-        breadcrumbs = Array(breadcrumbs.prefix(index + 1))
-        selectedEraID = crumb.id
     }
 
     var body: some View {
@@ -75,7 +63,7 @@ struct EraListView: View {
             .frame(minWidth: 450, maxWidth: .infinity)
 
             if let era = selectedEra {
-                Divider()
+                ResizableDivider(width: $detailWidth, range: 200...800)
                 VStack(spacing: 0) {
                     HStack(spacing: 8) {
                         IconActionButton(icon: "pencil", color: .accentColor) {
@@ -97,7 +85,7 @@ struct EraListView: View {
                     .padding(8)
                     EraDetailView(era: era)
                 }
-                .frame(width: 320)
+                .frame(width: detailWidth)
             }
         }
         .sheet(isPresented: $showingAddSheet) {

@@ -8,9 +8,11 @@ struct SumerianKingListView: View {
     @Query private var figures: [Figure]
     @Query(sort: \Era.orderIndex) private var eras: [Era]
 
+    @AppStorage("sklDetailWidth") private var detailWidth: Double = 320
     @State private var selectedFigureID: PersistentIdentifier?
     @State private var imageDetailImage: ImageAsset?
     @State private var showDeleteConfirm = false
+    @State private var editingFigure: Figure?
 
     private var eraOrder: [String: Int] {
         Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0.orderIndex) })
@@ -43,9 +45,9 @@ struct SumerianKingListView: View {
             .frame(minWidth: 500, maxWidth: .infinity)
 
             if let figure = selectedFigure {
-                Divider()
+                ResizableDivider(width: $detailWidth, range: 200...800)
                 detailPanel(figure: figure)
-                    .frame(width: 320)
+                    .frame(width: detailWidth)
             }
         }
         .onChange(of: selectedFigureID) { _, newValue in
@@ -56,6 +58,9 @@ struct SumerianKingListView: View {
             Button("Cancel", role: .cancel) {}
         } message: { figure in
             Text("Delete \"\(figure.name)\"? This cannot be undone.")
+        }
+        .sheet(item: $editingFigure) { figure in
+            FigureFormView(figure: figure)
         }
     }
 
@@ -135,7 +140,7 @@ struct SumerianKingListView: View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
                 IconActionButton(icon: "pencil", color: .accentColor) {
-                    // No SKL-specific editing for now
+                    editingFigure = figure
                 }
                 IconActionButton(icon: "trash", color: .red) {
                     showDeleteConfirm = true

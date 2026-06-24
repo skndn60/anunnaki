@@ -24,5 +24,6 @@ struct IconActionButton: View {
         .opacity(isVisible ? 1 : 0.3)
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.15), value: isHovered)
+        .pointingHand()
     }
 }

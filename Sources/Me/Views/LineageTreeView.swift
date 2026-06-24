@@ -75,12 +75,12 @@ struct LineageTreeView: View {
     private func lineageContent(for center: Figure) -> some View {
         VStack(spacing: 0) {
             if showGrandparents {
-                generationRow(grandparents(of: center), label: "Grandparents")
+                generationRow(grandparents(of: center), label: "Grandparents", alts: grandparentAlts(of: center), onSelectAlt: { recenter(on: $0) })
                 connector()
             }
 
             if !parents(of: center).isEmpty {
-                generationRow(parents(of: center), label: "Parents")
+                generationRow(parents(of: center), label: "Parents", alts: parentAlts(of: center), onSelectAlt: { recenter(on: $0) })
                 if !grandparents(of: center).isEmpty && !showGrandparents {
                     expandButton("Show Grandparents") { showGrandparents = true }
                 }
@@ -93,7 +93,7 @@ struct LineageTreeView: View {
 
             if !children(of: center).isEmpty {
                 connector()
-                generationRow(children(of: center), label: "Children")
+                generationRow(children(of: center), label: "Children", alts: childAlts(of: center), onSelectAlt: { recenter(on: $0) })
                 if !grandchildren(of: center).isEmpty && !showGrandchildren {
                     expandButton("Show Grandchildren") { showGrandchildren = true }
                 }
@@ -103,7 +103,7 @@ struct LineageTreeView: View {
 
             if showGrandchildren {
                 connector()
-                generationRow(grandchildren(of: center), label: "Grandchildren")
+                generationRow(grandchildren(of: center), label: "Grandchildren", alts: grandchildAlts(of: center), onSelectAlt: { recenter(on: $0) })
             }
 
             // Non-family relationships
@@ -345,7 +345,7 @@ struct LineageTreeView: View {
 
     // MARK: - Generation Row
 
-    private func generationRow(_ list: [Figure], label: String? = nil) -> some View {
+    private func generationRow(_ list: [Figure], label: String? = nil, alts: [PersistentIdentifier: [Figure]] = [:], onSelectAlt: ((Figure) -> Void)? = nil) -> some View {
         VStack(spacing: 6) {
             if let label {
                 Text(label)
@@ -355,7 +355,7 @@ struct LineageTreeView: View {
             }
             HStack(spacing: 10) {
                 ForEach(list) { fig in
-                    FigureCardView(figure: fig)
+                    FigureCardView(figure: fig, alternatives: alts[fig.persistentModelID] ?? [], onSelectAlt: onSelectAlt)
                         .contextMenu {
                             Button("Make \(fig.name) center figure") {
                                 recenter(on: fig)
@@ -415,61 +415,85 @@ struct LineageTreeView: View {
 
     // MARK: - Relationship Queries
 
-    private func parents(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.toFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.fromFigure }
+    /// Returns at most one figure per relationship type, plus a dictionary of alternatives.
+    private func resolveGeneration(_ rels: [Relationship]) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
+        let grouped = Dictionary(grouping: rels) { $0.relationshipType?.name ?? "" }
+        var figures: [Figure] = []
+        var alts: [PersistentIdentifier: [Figure]] = [:]
+        for (_, group) in grouped {
+            guard let chosen = group.first(where: { $0.isPreferred == true }) ?? group.first,
+                  let chosenFig = chosen.fromFigure else { continue }
+            figures.append(chosenFig)
+            if group.count > 1 {
+                alts[chosenFig.persistentModelID] = group.compactMap { $0.fromFigure }.filter { $0.persistentModelID != chosenFig.persistentModelID }
+            }
+        }
+        return (figures, alts)
     }
 
-    private func children(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.toFigure }
+    private func parentsAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
+        resolveGeneration(relationships.filter {
+            $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID
+        })
     }
+
+    private func parents(of figure: Figure) -> [Figure] { parentsAndAlts(of: figure).figures }
+    private func parentAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { parentsAndAlts(of: figure).alts }
+
+    private func childrenAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
+        resolveGeneration(relationships.filter {
+            $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID
+        })
+    }
+
+    private func children(of figure: Figure) -> [Figure] { childrenAndAlts(of: figure).figures }
+    private func childAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { childrenAndAlts(of: figure).alts }
 
     private func spousesLeft(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .spouse && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Spouse" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func spousesRight(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .spouse && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Spouse" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func consortsLeft(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .consort && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Consort" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func consortsRight(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .consort && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Consort" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
-    private func grandparents(of figure: Figure) -> [Figure] {
+    private func grandparentsAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let parentIDs = Set(parents(of: figure).map(\.persistentModelID))
-        return relationships
-            .filter {
-                guard let toID = $0.toFigure?.persistentModelID else { return false }
-                return ($0.relationshipType == .father || $0.relationshipType == .mother) && parentIDs.contains(toID)
-            }
-            .compactMap { $0.fromFigure }
+        return resolveGeneration(relationships.filter {
+            guard let toID = $0.toFigure?.persistentModelID else { return false }
+            return $0.relationshipType?.category == "parent" && parentIDs.contains(toID)
+        })
     }
 
-    private func grandchildren(of figure: Figure) -> [Figure] {
+    private func grandparents(of figure: Figure) -> [Figure] { grandparentsAndAlts(of: figure).figures }
+    private func grandparentAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { grandparentsAndAlts(of: figure).alts }
+
+    private func grandchildrenAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let childIDs = Set(children(of: figure).map(\.persistentModelID))
-        return relationships
-            .filter {
-                guard let fromID = $0.fromFigure?.persistentModelID else { return false }
-                return ($0.relationshipType == .father || $0.relationshipType == .mother) && childIDs.contains(fromID)
-            }
-            .compactMap { $0.toFigure }
+        return resolveGeneration(relationships.filter {
+            guard let fromID = $0.fromFigure?.persistentModelID else { return false }
+            return $0.relationshipType?.category == "parent" && childIDs.contains(fromID)
+        })
     }
+
+    private func grandchildren(of figure: Figure) -> [Figure] { grandchildrenAndAlts(of: figure).figures }
+    private func grandchildAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { grandchildrenAndAlts(of: figure).alts }
 
     private func siblings(of figure: Figure) -> [Figure] {
         let parentIDs = Set(parents(of: figure).map(\.persistentModelID))
@@ -478,7 +502,7 @@ struct LineageTreeView: View {
             .filter {
                 guard let fromID = $0.fromFigure?.persistentModelID,
                       let toID = $0.toFigure?.persistentModelID,
-                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      $0.relationshipType?.category == "parent",
                       parentIDs.contains(fromID),
                       toID != figure.persistentModelID else { return false }
                 return true
@@ -493,7 +517,7 @@ struct LineageTreeView: View {
             .filter {
                 guard let toID = $0.toFigure?.persistentModelID,
                       let fromID = $0.fromFigure?.persistentModelID,
-                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      $0.relationshipType?.category == "parent",
                       childIDs.contains(toID),
                       fromID != figure.persistentModelID else { return false }
                 return true
@@ -509,49 +533,49 @@ struct LineageTreeView: View {
 
     private func commanders(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .commander && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Commander" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func commandedBy(_ figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .commander && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Commander" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func servants(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .servant && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Servant" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func masters(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .servant && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Servant" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func worshippers(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .worshipper && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Worshipper" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func worshippedBy(_ figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .worshipper && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Worshipper" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func allies(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .ally && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.name == "Ally" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func enemies(of figure: Figure) -> [Figure] {
         relationships
-            .filter { $0.relationshipType == .enemy && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.name == "Enemy" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 }
@@ -561,6 +585,10 @@ struct LineageTreeView: View {
 struct FigureCardView: View {
     let figure: Figure
     var isSelected: Bool = false
+    var alternatives: [Figure] = []
+    var onSelectAlt: ((Figure) -> Void)?
+
+    @State private var showingAlts = false
 
     var body: some View {
         VStack(spacing: 4) {
@@ -586,5 +614,46 @@ struct FigureCardView: View {
                         .stroke(isSelected ? Color.accentColor : figure.figureType?.color.opacity(0.4) ?? .gray.opacity(0.4), lineWidth: isSelected ? 2 : 1)
                 )
         )
+        .overlay(alignment: .topTrailing) {
+            if !alternatives.isEmpty {
+                Button(action: { showingAlts = true }) {
+                    Text("+\(alternatives.count)")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.accentColor))
+                }
+                .buttonStyle(.plain)
+                .offset(x: 4, y: -4)
+                .popover(isPresented: $showingAlts) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Alternatives")
+                            .font(.caption.bold())
+                        ForEach(alternatives) { alt in
+                            Button(action: {
+                                showingAlts = false
+                                onSelectAlt?(alt)
+                            }) {
+                                HStack(spacing: 6) {
+                                    Circle().fill(alt.figureType?.color ?? .gray).frame(width: 6, height: 6)
+                                    Text(alt.name)
+                                        .font(.caption)
+                                }
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 4)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .background(alt.figureType?.color.opacity(0.08) ?? .gray.opacity(0.08))
+                            .cornerRadius(4)
+                        }
+                    }
+                    .padding(8)
+                    .frame(width: 180)
+                }
+            }
+        }
     }
 }

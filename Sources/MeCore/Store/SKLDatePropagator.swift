@@ -66,8 +66,8 @@ package struct SKLDatePropagator {
     }
 
     private static func extractExplicitDates(for figure: Figure) -> (startBCE: Int?, endBCE: Int?) {
-        if let birthYear = figure.birthDate.year {
-            let deathYear = figure.deathDate.year ?? birthYear
+        if let birthYear = figure.birthDate.startYear {
+            let deathYear = figure.deathDate.endYear ?? figure.deathDate.startYear ?? birthYear
             return (birthYear, deathYear)
         }
 

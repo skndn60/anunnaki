@@ -13,10 +13,10 @@ struct FigureListView: View {
     @State private var selectedFigureID: PersistentIdentifier?
     @State private var searchText = ""
     @State private var sortOrder: FigureSortOrder = .name
-    @State private var breadcrumbs: [Breadcrumb] = []
-    @State private var showingTypeManager = false
     @State private var imageDetailImage: ImageAsset?
     @State private var showDeleteConfirm = false
+    @State private var selectedTypeFilters: Set<String> = []
+    @AppStorage("figureDetailWidth") private var detailWidth: Double = 320
 
     enum FigureSortOrder: String, CaseIterable {
         case name = "Name"
@@ -31,6 +31,9 @@ struct FigureListView: View {
 
     private var filteredFigures: [Figure] {
         var result = figures
+        if !selectedTypeFilters.isEmpty {
+            result = result.filter { selectedTypeFilters.contains($0.figureType?.name ?? "") }
+        }
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             result = result.filter {
@@ -49,9 +52,9 @@ struct FigureListView: View {
         return result
     }
 
-    private var displayRows: [DisplayRow<Figure>] {
+    private var groupedFigures: [(key: String, figures: [Figure])] {
         let sorted = filteredFigures
-        var rows: [DisplayRow<Figure>] = []
+        var groups: [(key: String, figures: [Figure])] = []
         var currentKey: String?
         for figure in sorted {
             let key: String = {
@@ -62,34 +65,16 @@ struct FigureListView: View {
                 }
             }()
             if key != currentKey {
-                rows.append(DisplayRow(index: rows.count, item: .header(key)))
+                groups.append((key: key, figures: []))
                 currentKey = key
             }
-            rows.append(DisplayRow(index: rows.count, item: .entity(figure)))
+            groups[groups.count - 1].figures.append(figure)
         }
-        return rows
+        return groups
     }
 
     private func selectFigure(_ id: PersistentIdentifier) {
-        // Add to breadcrumbs if it's a new selection (not navigating back)
-        if let figure = figures.first(where: { $0.persistentModelID == id }) {
-            // Don't duplicate the last entry
-            if breadcrumbs.last?.id != id {
-                breadcrumbs.append(Breadcrumb(id: id, name: figure.name))
-                // Keep trail manageable
-                if breadcrumbs.count > 12 {
-                    breadcrumbs.removeFirst()
-                }
-            }
-        }
         selectedFigureID = id
-    }
-
-    private func navigateToBreadcrumb(at index: Int) {
-        let crumb = breadcrumbs[index]
-        // Trim breadcrumbs to this point
-        breadcrumbs = Array(breadcrumbs.prefix(index + 1))
-        selectedFigureID = crumb.id
     }
 
     var body: some View {
@@ -124,11 +109,6 @@ struct FigureListView: View {
                         Label("Add Figure", systemImage: "plus")
                     }
                     .buttonStyle(.borderedProminent)
-                    Button(action: { showingTypeManager = true }) {
-                        Image(systemName: "gearshape")
-                    }
-                    .buttonStyle(.plain)
-                    .help("Manage figure types")
                 }
                 .padding()
 
@@ -136,18 +116,54 @@ struct FigureListView: View {
                 let coordinatorHistory = coordinator?.history ?? []
                 if !coordinatorHistory.isEmpty {
                     BreadcrumbBar(
-                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name) },
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
                         onNavigate: { index in coordinator?.navigateToHistory(at: index) },
                         onClear: { coordinator?.history.removeAll() }
                     )
                 }
-                if !breadcrumbs.isEmpty {
-                    BreadcrumbBar(breadcrumbs: breadcrumbs, onNavigate: navigateToBreadcrumb, onClear: { breadcrumbs.removeAll() })
+                if !figureTypes.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(figureTypes) { type in
+                                Button(action: {
+                                    if selectedTypeFilters.contains(type.name) {
+                                        selectedTypeFilters.remove(type.name)
+                                    } else {
+                                        selectedTypeFilters.insert(type.name)
+                                    }
+                                }) {
+                                    HStack(spacing: 4) {
+                                        Circle().fill(type.color).frame(width: 7, height: 7)
+                                        Text(type.name).font(.caption)
+                                        if selectedTypeFilters.contains(type.name) {
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 8, weight: .bold))
+                                        }
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 3)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(selectedTypeFilters.contains(type.name) ? type.color.opacity(0.2) : Color.primary.opacity(0.05))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .stroke(selectedTypeFilters.contains(type.name) ? type.color : Color.clear, lineWidth: 1)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            if !selectedTypeFilters.isEmpty {
+                                Button("Clear") { selectedTypeFilters.removeAll() }
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.leading, 4)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 4)
+                    }
                 }
-
-                FigureTypeLegend(types: figureTypes)
-                    .padding(.horizontal)
-                    .padding(.bottom, 6)
 
                 Divider()
 
@@ -174,17 +190,12 @@ struct FigureListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List(selection: $selectedFigureID) {
-                        ForEach(displayRows) { row in
-                            switch row.item {
-                            case .header(let label):
-                                Text(label)
-                                    .font(.largeTitle.bold())
-                                    .foregroundStyle(.secondary)
-                                    .listRowSeparator(.hidden)
-                                    .selectionDisabled()
-                            case .entity(let figure):
-                                FigureRow(figure: figure, searchText: searchText)
-                                    .tag(figure.persistentModelID)
+                        ForEach(groupedFigures, id: \.key) { group in
+                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+                                ForEach(group.figures) { figure in
+                                    FigureRow(figure: figure, searchText: searchText)
+                                        .tag(figure.persistentModelID)
+                                }
                             }
                         }
                     }
@@ -200,7 +211,7 @@ struct FigureListView: View {
 
             // Right: detail panel
             if let figure = selectedFigure {
-                Divider()
+                ResizableDivider(width: $detailWidth, range: 200...800)
                 VStack(spacing: 0) {
                     HStack(spacing: 8) {
                         IconActionButton(icon: "pencil", color: .accentColor) {
@@ -226,16 +237,24 @@ struct FigureListView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(8)
-                    FigureDetailView(figure: figure, onSelectFigure: { selected in
-                        coordinator?.pushHistory(id: selected.persistentModelID, name: selected.name, item: .figures)
-                        selectFigure(selected.persistentModelID)
-                    }, onSelectPlace: { place in
-                        coordinator?.navigateToPlace(place.persistentModelID, name: place.name)
-                    }, onSelectEvent: { event in
-                        coordinator?.navigateToEvent(event.persistentModelID, name: event.name)
-                    }, onSelectImage: { imageDetailImage = $0 })
+                    FigureDetailView(
+                        figure: figure,
+                        onSelectFigure: { selected in
+                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                            coordinator?.navigateToFigure(selected.persistentModelID, name: selected.name, recordHistory: false)
+                        },
+                        onSelectPlace: { place in
+                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                            coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
+                        },
+                        onSelectEvent: { event in
+                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                            coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
+                        },
+                        onSelectImage: { imageDetailImage = $0 }
+                    )
                 }
-                .frame(width: 320)
+                .frame(width: detailWidth)
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -245,9 +264,6 @@ struct FigureListView: View {
             FigureFormView(figure: figure)
         }
 
-        .sheet(isPresented: $showingTypeManager) {
-            FigureTypeManagerView()
-        }
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
                 openWindow(id: "image-detail", value: image.persistentModelID)
@@ -359,6 +375,11 @@ struct FigureRow: View {
                     .foregroundStyle(.orange)
                     .fontWeight(.medium)
             }
+            if figure.stickies.contains(where: { !$0.isResolved }) {
+                Circle()
+                    .fill(.yellow)
+                    .frame(width: 10, height: 10)
+            }
             Spacer()
             Text(figure.birthDate.displayLabel)
                 .font(.caption)
@@ -391,7 +412,6 @@ struct FigureFormView: View {
     private var isEditing: Bool { figure != nil }
 
     var body: some View {
-        NavigationStack {
         VStack(spacing: 0) {
             Text(isEditing ? "Edit Figure" : "Add Figure")
                 .font(.title3.bold())
@@ -441,7 +461,6 @@ struct FigureFormView: View {
             }
             .padding()
         }
-        }
         .frame(width: 540, height: 680)
         .onAppear { loadIfEditing() }
     }
@@ -475,6 +494,7 @@ struct FigureFormView: View {
             figure.source = source
             figure.isConcept = false
             figure.tags = selectedTags
+            RecentEditStore.trackEdit(entityType: "Figure", entityName: figure.name)
         } else {
             let newFigure = Figure(
                 name: name, disambiguation: disambiguation.isEmpty ? nil : disambiguation, title: title, figureType: selectedFigureType,
@@ -483,6 +503,7 @@ struct FigureFormView: View {
             )
             newFigure.tags = selectedTags
             modelContext.insert(newFigure)
+            RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
         }
         dismiss()
     }

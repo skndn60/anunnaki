@@ -9,19 +9,27 @@ struct FigureDetailView: View {
     var onSelectPlace: ((Place) -> Void)?
     var onSelectEvent: ((Event) -> Void)?
     var onSelectImage: ((ImageAsset) -> Void)?
+    var backLabel: String?
+    var onBack: (() -> Void)?
     @Environment(\.modelContext) private var modelContext
     @Query private var matchingRelationships: [Relationship]
     @State private var droppedFigureName: String?
     @State private var showDropConfirmation = false
-    @State private var selectedRelationType: Relationship.RelationshipType = .father
+    @State private var selectedRelationTypeName: String = "Father"
+    @State private var allRelationTypes: [RelationshipType] = []
+    @State private var dropSource = ""
     @State private var isDropTargeted = false
+    @State private var showDeleteAltConfirm = false
+    @State private var altToDelete: AlternateName?
 
-    init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil) {
+    init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil, backLabel: String? = nil, onBack: (() -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
         self.onSelectPlace = onSelectPlace
         self.onSelectEvent = onSelectEvent
         self.onSelectImage = onSelectImage
+        self.backLabel = backLabel
+        self.onBack = onBack
         let name = figure.name
         _matchingRelationships = Query(filter: #Predicate<Relationship> { rel in
             rel.fromFigure?.name == name || rel.toFigure?.name == name
@@ -36,6 +44,20 @@ struct FigureDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                if let backLabel, let onBack {
+                    Button(action: onBack) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "chevron.left")
+                                .font(.caption2.weight(.semibold))
+                            Text("Back to \(backLabel)")
+                                .font(.caption)
+                        }
+                        .foregroundColor(.accentColor)
+                    }
+                    .buttonStyle(.plain)
+                    .pointingHand()
+                }
+
                 // Header
                 HStack(spacing: 12) {
                     Circle()
@@ -89,6 +111,12 @@ struct FigureDetailView: View {
                     }
                 }
 
+                // Stickies
+                StickyNoteSection(stickies: figure.stickies) { text in
+                    let note = StickyNote(text: text, figure: figure)
+                    modelContext.insert(note)
+                }
+
                 Divider()
 
                 // Properties grid
@@ -140,6 +168,16 @@ struct FigureDetailView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                                 Spacer()
+                                Button(action: {
+                                    altToDelete = altName
+                                    showDeleteAltConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete alternate name")
                             }
                             if !altName.note.isEmpty {
                                 Text(altName.note)
@@ -183,7 +221,7 @@ struct FigureDetailView: View {
                                     .font(.caption)
                                     .foregroundStyle(.teal)
                                     .frame(width: 14)
-                                Text(assoc.role.rawValue)
+                                Text(assoc.roleType?.name ?? "—")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                 Button(action: {
@@ -196,6 +234,7 @@ struct FigureDetailView: View {
                                         .underline()
                                 }
                                 .buttonStyle(.plain)
+                                .pointingHand()
                                 Spacer()
                                 if !assoc.source.isEmpty {
                                     Text(assoc.source)
@@ -234,6 +273,7 @@ struct FigureDetailView: View {
                                             .underline()
                                     }
                                     .buttonStyle(.plain)
+                                    .pointingHand()
                                     Text(event.eventType?.name ?? "Other")
                                         .font(.caption2)
                                         .foregroundStyle(event.eventType?.color ?? .gray)
@@ -257,6 +297,7 @@ struct FigureDetailView: View {
                                                     .underline()
                                             }
                                             .buttonStyle(.plain)
+                                            .pointingHand()
                                             if idx < event.placeAssociations.count - 1 {
                                                 Text("·")
                                                     .foregroundStyle(.tertiary)
@@ -343,7 +384,7 @@ struct FigureDetailView: View {
                         let allFigures: [Figure] = modelContext.fetchAll()
                         guard let sourceFigure = allFigures.first(where: { $0.name == name }) else { return }
                         droppedFigureName = name
-                        selectedRelationType = inferredType(from: sourceFigure, to: figure)
+                        selectedRelationTypeName = inferredType(from: sourceFigure, to: figure)
                         showDropConfirmation = true
                     }
                 }
@@ -370,14 +411,19 @@ struct FigureDetailView: View {
                 Text("Create Relationship")
                     .font(.title3.bold())
 
-                Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationType.rawValue.lowercased())** of **\(figure.name)**?")
+                Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationTypeName.lowercased())** of **\(figure.name)**?")
                     .multilineTextAlignment(.center)
 
-                Picker("Type", selection: $selectedRelationType) {
-                    ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
-                        Text(type.rawValue).tag(type)
+                Picker("Type", selection: $selectedRelationTypeName) {
+                    ForEach(allRelationTypes, id: \.name) { type in
+                        Text(type.name).tag(type.name)
                     }
                 }
+                .onAppear {
+                    allRelationTypes = (modelContext.fetchAll() as [RelationshipType])
+                }
+
+                TextField("Source", text: $dropSource, prompt: Text("e.g. Enuma Elish, Tablet I"))
 
                 HStack(spacing: 16) {
                     Button("Cancel") { showDropConfirmation = false }
@@ -385,11 +431,12 @@ struct FigureDetailView: View {
                     Button("OK") {
                         let allFigures: [Figure] = modelContext.fetchAll()
                         if let sourceFigure = allFigures.first(where: { $0.name == sourceName }) {
-                            let rel = Relationship(
-                                fromFigure: sourceFigure,
-                                toFigure: figure,
-                                relationshipType: selectedRelationType
-                            )
+                    let rel = Relationship(
+                        fromFigure: sourceFigure,
+                        toFigure: figure,
+                        relationshipType: allRelationTypes.first(where: { $0.name == selectedRelationTypeName }),
+                        source: dropSource
+                    )
                             modelContext.insert(rel)
                         }
                         showDropConfirmation = false
@@ -400,12 +447,20 @@ struct FigureDetailView: View {
             .padding()
             .frame(width: 400)
         }
+        .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(altName)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { altName in
+            Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(altName.figure?.name ?? "?")?")
+        }
     }
 
-    private func inferredType(from source: Figure, to target: Figure) -> Relationship.RelationshipType {
-        if source.gender == .female { return .mother }
-        if source.gender == .male { return .father }
-        return .father
+    private func inferredType(from source: Figure, to target: Figure) -> String {
+        if source.gender == .female { return "Mother" }
+        return "Father"
     }
 }
 
@@ -484,47 +539,51 @@ struct RelationshipRow: View {
                     .underline()
             }
             .buttonStyle(.plain)
+            .pointingHand()
         }
     }
 
     private func labelPrefix(isFrom: Bool) -> String {
-        switch relationship.relationshipType {
-        case .father:
+        let name = relationship.relationshipType?.name ?? ""
+        switch name {
+        case "Father":
             return isFrom ? "Father of" : "\(perspective.gender == .female ? "Daughter" : perspective.gender == .male ? "Son" : "Child") of"
-        case .mother:
+        case "Mother":
             return isFrom ? "Mother of" : "\(perspective.gender == .female ? "Daughter" : perspective.gender == .male ? "Son" : "Child") of"
-        case .spouse:
+        case "Spouse":
             if perspective.gender == .male { return "Husband of" }
             else if perspective.gender == .female { return "Wife of" }
             else { return "Spouse of" }
-        case .consort:
+        case "Consort":
             return "Consort of"
-        case .sibling:
+        case "Sibling":
             if perspective.gender == .male { return "Brother of" }
             else if perspective.gender == .female { return "Sister of" }
             else { return "Sibling of" }
-        case .uncle:
+        case "Uncle":
             return isFrom ? "Uncle of" : "Nephew/Niece of"
-        case .aunt:
+        case "Aunt":
             return isFrom ? "Aunt of" : "Nephew/Niece of"
-        case .creator:
+        case "Creator":
             return isFrom ? "Creator of" : "Created by"
-        case .commander:
+        case "Commander":
             return isFrom ? "Commander of" : "Commanded by"
-        case .servant:
+        case "Servant":
             return isFrom ? "Servant of" : "Served by"
-        case .ally:
+        case "Ally":
             return "Ally of"
-        case .enemy:
+        case "Enemy":
             return "Enemy of"
-        case .worshipper:
+        case "Worshipper":
             return isFrom ? "Worshipper of" : "Worshipped by"
+        default:
+            return "Related to"
         }
     }
 
-    private var relationshipIcon: String { relationship.relationshipType.icon }
+    private var relationshipIcon: String { relationship.relationshipType?.icon ?? "questionmark" }
 
-    private var relationshipColor: Color { relationship.relationshipType.color }
+    private var relationshipColor: Color { relationship.relationshipType?.color ?? .gray }
 }
 
 /// A label-value pair for the properties grid.

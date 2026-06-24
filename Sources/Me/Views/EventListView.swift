@@ -11,11 +11,10 @@ struct EventListView: View {
     @State private var editingEvent: Event?
     @State private var selectedEventID: PersistentIdentifier?
     @State private var sortOrder: EventSortOrder = .name
-    @State private var showingTypeManager = false
     @State private var imageDetailImage: ImageAsset?
+    @AppStorage("eventDetailWidth") private var detailWidth: Double = 320
     @State private var showDeleteConfirm = false
     @Query(sort: \EventType.name) private var eventTypes: [EventType]
-    @State private var breadcrumbs: [Breadcrumb] = []
 
     enum EventSortOrder: String, CaseIterable {
         case name = "Name"
@@ -28,6 +27,17 @@ struct EventListView: View {
         return sortedEvents.first { $0.persistentModelID == id }
     }
 
+    private var backLabel: String? {
+        guard let history = coordinator?.history, history.count >= 2 else { return nil }
+        return history[history.count - 2].name
+    }
+
+    private var backAction: (() -> Void)? {
+        guard let history = coordinator?.history, history.count >= 2 else { return nil }
+        let index = history.count - 2
+        return { self.coordinator?.navigateToHistory(at: index) }
+    }
+
     private var sortedEvents: [Event] {
         switch sortOrder {
         case .name: return events.sorted { $0.name < $1.name }
@@ -36,9 +46,9 @@ struct EventListView: View {
         }
     }
 
-    private var displayRows: [DisplayRow<Event>] {
+    private var groupedEvents: [(key: String, events: [Event])] {
         let sorted = sortedEvents
-        var rows: [DisplayRow<Event>] = []
+        var groups: [(key: String, events: [Event])] = []
         var currentKey: String?
         for event in sorted {
             let key: String = {
@@ -49,28 +59,16 @@ struct EventListView: View {
                 }
             }()
             if key != currentKey {
-                rows.append(DisplayRow(index: rows.count, item: .header(key)))
+                groups.append((key: key, events: []))
                 currentKey = key
             }
-            rows.append(DisplayRow(index: rows.count, item: .entity(event)))
+            groups[groups.count - 1].events.append(event)
         }
-        return rows
+        return groups
     }
 
     private func selectEvent(_ id: PersistentIdentifier) {
-        if let event = events.first(where: { $0.persistentModelID == id }) {
-            if breadcrumbs.last?.id != id {
-                breadcrumbs.append(Breadcrumb(id: id, name: event.name))
-                if breadcrumbs.count > 12 { breadcrumbs.removeFirst() }
-            }
-        }
         selectedEventID = id
-    }
-
-    private func navigateToBreadcrumb(at index: Int) {
-        let crumb = breadcrumbs[index]
-        breadcrumbs = Array(breadcrumbs.prefix(index + 1))
-        selectedEventID = crumb.id
     }
 
     var body: some View {
@@ -90,11 +88,6 @@ struct EventListView: View {
                         Label("Add Event", systemImage: "plus")
                     }
                     .buttonStyle(.borderedProminent)
-                    Button(action: { showingTypeManager = true }) {
-                        Image(systemName: "gearshape")
-                    }
-                    .buttonStyle(.plain)
-                    .help("Manage event types")
                 }
                 .padding()
 
@@ -102,15 +95,11 @@ struct EventListView: View {
                 let coordinatorHistory = coordinator?.history ?? []
                 if !coordinatorHistory.isEmpty {
                     BreadcrumbBar(
-                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name) },
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
                         onNavigate: { index in coordinator?.navigateToHistory(at: index) },
                         onClear: { coordinator?.history.removeAll() }
                     )
                 }
-                if !breadcrumbs.isEmpty {
-                    BreadcrumbBar(breadcrumbs: breadcrumbs, onNavigate: navigateToBreadcrumb, onClear: { breadcrumbs.removeAll() })
-                }
-
                 EventTypeLegend(types: eventTypes)
                     .padding(.horizontal)
                     .padding(.vertical, 4)
@@ -136,17 +125,12 @@ struct EventListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List(selection: $selectedEventID) {
-                        ForEach(displayRows) { row in
-                            switch row.item {
-                            case .header(let label):
-                                Text(label)
-                                    .font(.largeTitle.bold())
-                                    .foregroundStyle(.secondary)
-                                    .listRowSeparator(.hidden)
-                                    .selectionDisabled()
-                            case .entity(let event):
-                                EventRow(event: event)
-                                    .tag(event.persistentModelID)
+                        ForEach(groupedEvents, id: \.key) { group in
+                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+                                ForEach(group.events) { event in
+                                    EventRow(event: event)
+                                        .tag(event.persistentModelID)
+                                }
                             }
                         }
                     }
@@ -159,7 +143,7 @@ struct EventListView: View {
             .frame(minWidth: 450, maxWidth: .infinity)
 
             if let event = selectedEvent {
-                Divider()
+                ResizableDivider(width: $detailWidth, range: 200...800)
                 VStack(spacing: 0) {
                     HStack(spacing: 8) {
                         IconActionButton(icon: "pencil", color: .accentColor) {
@@ -179,13 +163,22 @@ struct EventListView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(8)
-                    EventDetailView(event: event, onSelectFigure: { figure in
-                        coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
-                    }, onSelectPlace: { place in
-                        coordinator?.navigateToPlace(place.persistentModelID, name: place.name)
-                    }, onSelectImage: { imageDetailImage = $0 })
+                    EventDetailView(
+                        event: event,
+                        onSelectFigure: { figure in
+                            coordinator?.pushHistory(id: event.persistentModelID, name: event.name, item: .events)
+                            coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
+                        },
+                        onSelectPlace: { place in
+                            coordinator?.pushHistory(id: event.persistentModelID, name: event.name, item: .events)
+                            coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
+                        },
+                        onSelectImage: { imageDetailImage = $0 },
+                        backLabel: backLabel,
+                        onBack: backAction
+                    )
                 }
-                .frame(width: 320)
+                .frame(width: detailWidth)
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -194,9 +187,7 @@ struct EventListView: View {
         .sheet(item: $editingEvent) { event in
             EventFormView(event: event)
         }
-        .sheet(isPresented: $showingTypeManager) {
-            EventTypeManagerView()
-        }
+
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
                 openWindow(id: "image-detail", value: image.persistentModelID)
@@ -254,6 +245,11 @@ struct EventRow: View {
                     .padding(.vertical, 1)
                     .background(RoundedRectangle(cornerRadius: 3).fill(.orange.opacity(0.12)))
             }
+            if event.stickies.contains(where: { !$0.isResolved }) {
+                Circle()
+                    .fill(.yellow)
+                    .frame(width: 10, height: 10)
+            }
             if let firstPlace = event.placeAssociations.first?.place {
                 Text(firstPlace.name)
                     .font(.caption)
@@ -281,6 +277,7 @@ struct EventFormView: View {
     @Query private var places: [Place]
     @Query(sort: \EventType.name) private var eventTypes: [EventType]
     @Query(sort: \Era.orderIndex) private var eras: [Era]
+    @Query(sort: \EventPlaceRoleType.name) private var eventPlaceRoleTypes: [EventPlaceRoleType]
 
     let event: Event?
 
@@ -299,7 +296,7 @@ struct EventFormView: View {
     private struct PlaceSelection: Identifiable {
         let id = UUID()
         var place: Place
-        var role: EventPlaceAssociation.Role
+        var roleType: EventPlaceRoleType?
     }
 
     private var isEditing: Bool { event != nil }
@@ -356,11 +353,12 @@ struct EventFormView: View {
                                     Text(placeSelections[index].place.name)
                                         .font(.caption)
                                     Picker("", selection: Binding(
-                                        get: { placeSelections[index].role },
-                                        set: { placeSelections[index].role = $0 }
+                                        get: { placeSelections[index].roleType },
+                                        set: { placeSelections[index].roleType = $0 }
                                     )) {
-                                        ForEach(EventPlaceAssociation.Role.allCases, id: \.self) { role in
-                                            Text(role.rawValue).tag(role)
+                                        Text("Select").tag(nil as EventPlaceRoleType?)
+                                        ForEach(eventPlaceRoleTypes) { rt in
+                                            Text(rt.name).tag(rt as EventPlaceRoleType?)
                                         }
                                     }
                                     .pickerStyle(.menu)
@@ -400,7 +398,7 @@ struct EventFormView: View {
                                     Button {
                                         let place = Place(name: placeSearchText, isConcept: true)
                                         modelContext.insert(place)
-                                        placeSelections.append(PlaceSelection(place: place, role: .occurredAt))
+                                        placeSelections.append(PlaceSelection(place: place, roleType: nil))
                                         placeSearchText = ""
                                     } label: {
                                         Label("Create \"\(placeSearchText)\" as new place", systemImage: "plus.circle")
@@ -415,7 +413,7 @@ struct EventFormView: View {
                                 } else {
                                     ForEach(filteredPlaces) { place in
                                         Button {
-                                            placeSelections.append(PlaceSelection(place: place, role: .occurredAt))
+                                            placeSelections.append(PlaceSelection(place: place, roleType: nil))
                                             placeSearchText = ""
                                         } label: {
                                             Text(place.name)
@@ -563,7 +561,7 @@ struct EventFormView: View {
         selectedFigureIDs = Set(event.involvedFigures.map(\.persistentModelID))
         placeSelections = event.placeAssociations.compactMap { assoc in
             guard let place = assoc.place else { return nil }
-            return PlaceSelection(place: place, role: assoc.role)
+            return PlaceSelection(place: place, roleType: assoc.roleType)
         }
         selectedTags = event.tags
     }
@@ -581,11 +579,12 @@ struct EventFormView: View {
             event.involvedFigures = selectedFigs
             for assoc in event.placeAssociations { modelContext.delete(assoc) }
             event.placeAssociations = placeSelections.map { sel in
-                let assoc = EventPlaceAssociation(event: event, place: sel.place, role: sel.role)
+                let assoc = EventPlaceAssociation(event: event, place: sel.place, roleType: sel.roleType)
                 modelContext.insert(assoc)
                 return assoc
             }
             event.tags = selectedTags
+            RecentEditStore.trackEdit(entityType: "Event", entityName: event.name)
         } else {
             let newEvent = Event(
                 name: name, eventType: eventType,
@@ -595,8 +594,9 @@ struct EventFormView: View {
             )
             newEvent.tags = selectedTags
             modelContext.insert(newEvent)
+            RecentEditStore.trackEdit(entityType: "Event", entityName: newEvent.name)
             for sel in placeSelections {
-                let assoc = EventPlaceAssociation(event: newEvent, place: sel.place, role: sel.role)
+                let assoc = EventPlaceAssociation(event: newEvent, place: sel.place, roleType: sel.roleType)
                 modelContext.insert(assoc)
             }
         }

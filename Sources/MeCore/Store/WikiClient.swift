@@ -57,7 +57,7 @@ package struct ParsedWikidata {
     package var domain: String?
     package var placeType: String?
     package var eventType: String?
-    package var relationships: [(type: Relationship.RelationshipType, targetID: String, targetLabel: String)] = []
+    package var relationships: [(type: String, targetID: String, targetLabel: String)] = []
 }
 
 // MARK: - Client

@@ -6,12 +6,14 @@ import SwiftData
 final class MeCoreTests: XCTestCase {
     private func makeContainer() -> ModelContainer {
         let schema = Schema([
-            Figure.self, FigureType.self, Relationship.self, Era.self,
+            Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self,
             Place.self, PlaceType.self, Event.self, EventType.self,
             Source.self, Citation.self, AlternateName.self, Attachment.self,
-            ImageAsset.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self,
-            EventEventAssociation.self, EventPlaceAssociation.self,
-            DataVersion.self, Tag.self
+             ImageAsset.self, FigurePlaceAssociation.self, FigurePlaceRoleType.self,
+             PlacePlaceAssociation.self, PlacePlaceRoleType.self,
+             EventEventAssociation.self, EventEventRoleType.self,
+             EventPlaceAssociation.self, EventPlaceRoleType.self,
+             DataVersion.self, Tag.self
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         do {
@@ -19,6 +21,11 @@ final class MeCoreTests: XCTestCase {
         } catch {
             fatalError("Failed to create test container: \(error)")
         }
+    }
+
+    private func relType(_ name: String, _ context: ModelContext) -> RelationshipType? {
+        let all: [RelationshipType] = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
+        return all.first(where: { $0.name == name })
     }
 
     func testMythologicalDateDisplayLabel() {
@@ -50,8 +57,8 @@ final class MeCoreTests: XCTestCase {
         SeedData.ensureTypesExist(context: context)
 
         let figureTypes = (try? context.fetch(FetchDescriptor<FigureType>(sortBy: [SortDescriptor(\.name)]))) ?? []
-        XCTAssertEqual(figureTypes.count, 5)
-        XCTAssertEqual(figureTypes.map(\.name), ["Deity", "Human", "Igigi", "Primordial", "Semi-Divine"])
+        XCTAssertEqual(figureTypes.count, 7)
+        XCTAssertEqual(figureTypes.map(\.name), ["Archangel", "Commander", "Deity", "Human", "Igigi", "Primordial", "Semi-Divine"])
     }
 
     func testEnsureTypesExistCreatesDefaultPlaceTypes() {
@@ -85,7 +92,7 @@ final class MeCoreTests: XCTestCase {
         let placeTypes = (try? context.fetchCount(FetchDescriptor<PlaceType>())) ?? 0
         let eventTypes = (try? context.fetchCount(FetchDescriptor<EventType>())) ?? 0
 
-        XCTAssertEqual(figureTypes, 5)
+        XCTAssertEqual(figureTypes, 7)
         XCTAssertEqual(placeTypes, 6)
         XCTAssertEqual(eventTypes, 8)
     }
@@ -119,7 +126,7 @@ final class MeCoreTests: XCTestCase {
         context.insert(anu)
         context.insert(enlil)
 
-        let relationship = Relationship(fromFigure: anu, toFigure: enlil, relationshipType: .father)
+        let relationship = Relationship(fromFigure: anu, toFigure: enlil, relationshipType: relType("Father", context))
         context.insert(relationship)
         try? context.save()
 
@@ -147,8 +154,8 @@ final class MeCoreTests: XCTestCase {
         context.insert(antu)
         context.insert(enlil)
 
-        context.insert(Relationship(fromFigure: anu, toFigure: enlil, relationshipType: .father))
-        context.insert(Relationship(fromFigure: antu, toFigure: enlil, relationshipType: .mother))
+        context.insert(Relationship(fromFigure: anu, toFigure: enlil, relationshipType: relType("Father", context)))
+        context.insert(Relationship(fromFigure: antu, toFigure: enlil, relationshipType: relType("Mother", context)))
         try? context.save()
 
         let dossier = context.buildFigureDossier(enlil)
@@ -171,7 +178,7 @@ final class MeCoreTests: XCTestCase {
         context.insert(enki)
         context.insert(ninurta)
 
-        context.insert(Relationship(fromFigure: enki, toFigure: ninurta, relationshipType: .uncle))
+        context.insert(Relationship(fromFigure: enki, toFigure: ninurta, relationshipType: relType("Uncle", context)))
         try? context.save()
 
         let engine = QueryEngine(context: context)
@@ -197,7 +204,7 @@ final class MeCoreTests: XCTestCase {
         context.insert(enki)
         context.insert(ninurta)
 
-        context.insert(Relationship(fromFigure: enki, toFigure: ninurta, relationshipType: .uncle))
+        context.insert(Relationship(fromFigure: enki, toFigure: ninurta, relationshipType: relType("Uncle", context)))
         try? context.save()
 
         let engine = QueryEngine(context: context)
@@ -220,7 +227,7 @@ final class MeCoreTests: XCTestCase {
         context.insert(ninhursag)
         context.insert(ninurta)
 
-        context.insert(Relationship(fromFigure: ninhursag, toFigure: ninurta, relationshipType: .aunt))
+        context.insert(Relationship(fromFigure: ninhursag, toFigure: ninurta, relationshipType: relType("Aunt", context)))
         try? context.save()
 
         let engine = QueryEngine(context: context)
@@ -244,7 +251,7 @@ final class MeCoreTests: XCTestCase {
         context.insert(marduk)
         context.insert(tiamat)
 
-        context.insert(Relationship(fromFigure: tiamat, toFigure: marduk, relationshipType: .enemy))
+        context.insert(Relationship(fromFigure: tiamat, toFigure: marduk, relationshipType: relType("Enemy", context)))
         try? context.save()
 
         let engine = QueryEngine(context: context)
@@ -268,7 +275,7 @@ final class MeCoreTests: XCTestCase {
         context.insert(gilgamesh)
         context.insert(enkidu)
 
-        context.insert(Relationship(fromFigure: gilgamesh, toFigure: enkidu, relationshipType: .ally))
+        context.insert(Relationship(fromFigure: gilgamesh, toFigure: enkidu, relationshipType: relType("Ally", context)))
         try? context.save()
 
         let engine = QueryEngine(context: context)
@@ -602,5 +609,54 @@ final class MeCoreTests: XCTestCase {
             return
         }
         XCTAssertEqual(dossier.figure.name, "Ziusudra")
+    }
+
+    // MARK: - Enoch Backfill
+
+    func testEnsureEnochDataExistsCreatesPlacesAndEvents() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let figureNames = ["Samyaza", "Azazel", "Enoch", "Noah", "Michael", "Uriel", "Raphael"]
+        for name in figureNames {
+            let figure = Figure(name: name, gender: .male)
+            context.insert(figure)
+        }
+        try? context.save()
+
+        SeedData.ensureEnochDataExists(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let placeNames = places.map(\.name).sorted()
+        XCTAssertEqual(places.count, 4)
+        XCTAssertEqual(placeNames, ["Dudael", "Mount Hermon", "Paradise", "Sheol"])
+
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        let eventNames = events.map(\.name)
+        XCTAssertEqual(events.count, 5)
+        XCTAssertTrue(eventNames.contains("The Fall of the Watchers"))
+        XCTAssertTrue(eventNames.contains("The Binding of Azazel"))
+        XCTAssertTrue(eventNames.contains("The Binding of the Watchers"))
+        XCTAssertTrue(eventNames.contains("Enoch's Heavenly Journeys"))
+        XCTAssertTrue(eventNames.contains("The Deluge Judgment"))
+
+        let fallEvent = events.first { $0.name == "The Fall of the Watchers" }
+        XCTAssertNotNil(fallEvent)
+        XCTAssertEqual(fallEvent?.involvedFigures.count, 2)
+        XCTAssertTrue(fallEvent?.involvedFigures.contains { $0.name == "Samyaza" } ?? false)
+        XCTAssertTrue(fallEvent?.involvedFigures.contains { $0.name == "Azazel" } ?? false)
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertTrue(sources.contains { $0.name == "Book of Enoch (1 Enoch)" })
+
+        let sourceCountBefore = sources.count
+        SeedData.ensureEnochDataExists(context: context)
+        let sourcesAfter = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let placesAfter = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let eventsAfter = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        XCTAssertEqual(sourcesAfter.count, sourceCountBefore)
+        XCTAssertEqual(placesAfter.count, 4)
+        XCTAssertEqual(eventsAfter.count, 5)
     }
 }

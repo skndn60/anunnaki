@@ -4,16 +4,18 @@ import SwiftData
 // MARK: - Codable Seed Structs
 
 package struct SeedDate: Codable {
-    package let year: Int?
+    package let startYear: Int?
+    package let endYear: Int?
     package let era: String
     package let isApproximate: Bool
 
     package func toMythologicalDate() -> MythologicalDate {
-        MythologicalDate(year: year, era: era, isApproximate: isApproximate)
+        MythologicalDate(startYear: startYear, endYear: endYear, era: era, isApproximate: isApproximate)
     }
 
-    package init(year: Int? = nil, era: String = "", isApproximate: Bool = false) {
-        self.year = year
+    package init(startYear: Int? = nil, endYear: Int? = nil, era: String = "", isApproximate: Bool = false) {
+        self.startYear = startYear
+        self.endYear = endYear
         self.era = era
         self.isApproximate = isApproximate
     }
@@ -208,14 +210,16 @@ package struct SeedCitation: Codable {
 }
 
 package struct SeedAlternateName: Codable {
-    package let figureId: String
+    package let figureId: String?
+    package let placeId: String?
     package let name: String
     package let tradition: String
     package let nameType: String
     package let note: String
 
-    package init(figureId: String = "", name: String = "", tradition: String = "", nameType: String = "", note: String = "") {
+    package init(figureId: String? = nil, placeId: String? = nil, name: String = "", tradition: String = "", nameType: String = "", note: String = "") {
         self.figureId = figureId
+        self.placeId = placeId
         self.name = name
         self.tradition = tradition
         self.nameType = nameType
@@ -393,14 +397,19 @@ package struct SeedData {
 
         guard figureCount == 0 || force else {
             ensureTypesExist(context: context)
+            ensureEnochDataExists(context: context)
             return
         }
 
         // Load primary seed data
-        guard let url = Bundle.module.url(forResource: "seed_data", withExtension: "json"),
+        let seedURL: URL? = {
+            if let url = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return url }
+            return Bundle.main.url(forResource: "seed_data", withExtension: "json")
+        }()
+        guard let url = seedURL,
               let data = try? Data(contentsOf: url),
-               let seed = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
-            assertionFailure("Failed to load seed_data.json from bundle")
+              let seed = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+            print("[Seed] Failed to load seed_data.json — store may be empty")
             return
         }
 
@@ -466,13 +475,14 @@ package struct SeedData {
         }
 
         // MARK: - Relationships
+        let relTypes: [RelationshipType] = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
         for seedRel in root.relationships {
             guard let from = figuresById[seedRel.fromFigureId],
                   let to = figuresById[seedRel.toFigureId] else { continue }
             let rel = Relationship(
                 fromFigure: from,
                 toFigure: to,
-                relationshipType: Relationship.RelationshipType(rawValue: seedRel.relationshipType) ?? .father,
+                relationshipType: relTypes.first(where: { $0.name.lowercased() == seedRel.relationshipType.lowercased() }),
                 source: seedRel.source
             )
             context.insert(rel)
@@ -580,9 +590,12 @@ package struct SeedData {
 
         // MARK: - Alternate Names
         for seedAltName in root.alternateNames {
-            guard let figure = figuresById[seedAltName.figureId] else { continue }
+            let figure = seedAltName.figureId.flatMap { figuresById[$0] }
+            let place = seedAltName.placeId.flatMap { placesById[$0] }
+            guard figure != nil || place != nil else { continue }
             let altName = AlternateName(
                 figure: figure,
+                place: place,
                 name: seedAltName.name,
                 tradition: AlternateName.Tradition(rawValue: seedAltName.tradition) ?? .sumerian,
                 nameType: AlternateName.NameType(rawValue: seedAltName.nameType) ?? .spelling,
@@ -593,13 +606,15 @@ package struct SeedData {
 
         // MARK: - Figure-Place Associations
         if let associations = root.figurePlaceAssociations {
+            let allRoleTypes: [FigurePlaceRoleType] = (try? context.fetch(FetchDescriptor<FigurePlaceRoleType>())) ?? []
             for seedAssoc in associations {
                 guard let figure = figuresById[seedAssoc.figureId],
                       let place = placesById[seedAssoc.placeId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
                 let assoc = FigurePlaceAssociation(
                     figure: figure,
                     place: place,
-                    role: FigurePlaceAssociation.Role(rawValue: seedAssoc.role) ?? .patronDeity,
+                    roleType: roleType,
                     source: seedAssoc.source
                 )
                 context.insert(assoc)
@@ -608,13 +623,15 @@ package struct SeedData {
 
         // MARK: - Place-Place Associations
         if let placeAssocs = root.placePlaceAssociations {
+            let allRoleTypes: [PlacePlaceRoleType] = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
             for seedAssoc in placeAssocs {
                 guard let from = placesById[seedAssoc.fromPlaceId],
                       let to = placesById[seedAssoc.toPlaceId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
                 let assoc = PlacePlaceAssociation(
                     fromPlace: from,
                     toPlace: to,
-                    role: PlacePlaceAssociation.Role(rawValue: seedAssoc.role) ?? .locatedWithin,
+                    roleType: roleType,
                     source: seedAssoc.source
                 )
                 context.insert(assoc)
@@ -623,13 +640,15 @@ package struct SeedData {
 
         // MARK: - Event-Place Associations
         if let eventPlaceAssocs = root.eventPlaceAssociations {
+            let allRoleTypes: [EventPlaceRoleType] = (try? context.fetch(FetchDescriptor<EventPlaceRoleType>())) ?? []
             for seedAssoc in eventPlaceAssocs {
                 guard let event = eventsById[seedAssoc.eventId],
                       let place = placesById[seedAssoc.placeId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
                 let assoc = EventPlaceAssociation(
                     event: event,
                     place: place,
-                    role: EventPlaceAssociation.Role(rawValue: seedAssoc.role) ?? .occurredAt,
+                    roleType: roleType,
                     source: seedAssoc.source
                 )
                 context.insert(assoc)
@@ -638,13 +657,15 @@ package struct SeedData {
 
         // MARK: - Event-Event Associations
         if let eventAssocs = root.eventEventAssociations {
+            let allRoleTypes: [EventEventRoleType] = (try? context.fetch(FetchDescriptor<EventEventRoleType>())) ?? []
             for seedAssoc in eventAssocs {
                 guard let from = eventsById[seedAssoc.fromEventId],
                       let to = eventsById[seedAssoc.toEventId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
                 let assoc = EventEventAssociation(
                     fromEvent: from,
                     toEvent: to,
-                    role: EventEventAssociation.Role(rawValue: seedAssoc.role) ?? .relatedTo,
+                    roleType: roleType,
                     source: seedAssoc.source
                 )
                 context.insert(assoc)
@@ -719,17 +740,21 @@ package struct SeedData {
         let figureTypeCount = (try? context.fetchCount(FetchDescriptor<FigureType>())) ?? 0
         if figureTypeCount == 0 {
             let typeConfig: [(name: String, icon: String, colorHex: String)] = [
+                ("Archangel", "star.fill", "FBBF24"),
                 ("Deity", "star.fill", "007AFF"),
                 ("Semi-Divine", "star.leadinghalf.filled", "FF9500"),
                 ("Human", "person.fill", "34C759"),
                 ("Primordial", "sparkles", "AF52DE"),
                 ("Igigi", "moon.stars", "8B5CF6"),
+                ("Commander", "chevron.left.forwardslash.chevron.right", "EF4444"),
             ]
             for config in typeConfig {
                 let type = FigureType(name: config.name, icon: config.icon, colorHex: config.colorHex)
                 context.insert(type)
             }
         }
+
+        Migration.ensureCommanderFigureTypeExists(context: context)
 
         let placeTypeCount = (try? context.fetchCount(FetchDescriptor<PlaceType>())) ?? 0
         if placeTypeCount == 0 {
@@ -763,6 +788,110 @@ package struct SeedData {
                 let type = EventType(name: config.name, icon: config.icon, colorHex: config.colorHex)
                 context.insert(type)
             }
+        }
+
+        Migration.ensureRelationTypesExist(context: context)
+        Migration.ensurePlacePlaceRoleTypesExist(context: context)
+        Migration.ensureEventEventRoleTypesExist(context: context)
+        Migration.ensureEventPlaceRoleTypesExist(context: context)
+        Migration.ensureFigurePlaceRoleTypesExist(context: context)
+        Migration.fixAllyIcon(context: context)
+        try? context.save()
+    }
+
+    static func ensureEnochDataExists(context: ModelContext) {
+        Migration.ensureArchangelsExist(context: context)
+
+        let placePredicate = #Predicate<Place> { $0.name == "Mount Hermon" }
+        let mountHermonCount = (try? context.fetchCount(FetchDescriptor<Place>(predicate: placePredicate))) ?? 0
+        guard mountHermonCount == 0 else { return }
+
+        let sourcePredicate = #Predicate<Source> { $0.name == "Book of Enoch (1 Enoch)" }
+        let sourceCount = (try? context.fetchCount(FetchDescriptor<Source>(predicate: sourcePredicate))) ?? 0
+        if sourceCount == 0 {
+            let source = Source(
+                name: "Book of Enoch (1 Enoch)",
+                sourceType: .ancientText,
+                author: "Unknown (attributed to Enoch; Second Temple period Jewish scribes)",
+                language: "Ge'ez (Ethiopic); original Aramaic fragments from Qumran",
+                period: "3rd\u{2013}1st century BCE (Book of the Watchers: ~300\u{2013}200 BCE)",
+                sourceDescription: "An ancient Jewish apocryphal work, fully preserved only in the Ethiopic Ge'ez canon of the Orthodox Tewahedo Church. The Book of the Watchers (chapters 1\u{2013}36) describes the descent of 200 angelic Watchers to Mount Hermon, their taking of human wives, the birth of the Nephilim giants, and the forbidden knowledge they taught humanity. Aramaic fragments from Qumran Cave 4 confirm a pre-Christian origin.",
+                publicationInfo: "Multiple manuscripts: Ethiopic Ge'ez tradition; Aramaic fragments 4QEn ar (4Q201, 4Q202, 4Q204, 4Q206) from Qumran; Greek excerpts by George Syncellus",
+                url: "https://en.wikipedia.org/wiki/Book_of_Enoch"
+            )
+            context.insert(source)
+        }
+
+        let placeTypes = (try? context.fetch(FetchDescriptor<PlaceType>())) ?? []
+        let placeTypesByName = Dictionary(uniqueKeysWithValues: placeTypes.map { ($0.name, $0) })
+
+        let placeConfigs: [(name: String, typeName: String, modernLocation: String, description: String, source: String, lat: Double?, lon: Double?)] = [
+            ("Mount Hermon", "Mountain", "Anti-Lebanon mountain range, on the border between Syria and Lebanon",
+             "The mountain where the 200 Watchers descended and swore an oath under Samyaza's leadership to take human wives. Considered the site of the Watchers' rebellion.",
+             "Book of Enoch (1 Enoch), ch. 6", 33.416, 35.857),
+            ("Dudael", "Region", "Desert wilderness (location uncertain; possibly near the Dead Sea)",
+             "The desert pit where the archangel Raphael bound Azazel hand and foot, covering him with rugged and sharp rocks. Azazel was imprisoned here until the day of judgment.",
+             "Book of Enoch (1 Enoch), ch. 10:4-5", nil, nil),
+            ("Sheol", "Underworld", "",
+             "The underworld realm of the dead, described in Enoch's vision as a place with hollows and compartments where the spirits of the dead await judgment. Includes the place of punishment for the fallen angels, with a great burning fire.",
+             "Book of Enoch (1 Enoch), ch. 22", nil, nil),
+            ("Paradise", "Cosmic Realm", "",
+             "The Garden of Righteousness, a heavenly realm where the tree of life stands. In Enoch's vision, it is located among seven magnificent mountains in the north-west. The dwelling place of the righteous after death, reserved for those who have not been corrupted by the Watchers' teachings.",
+             "Book of Enoch (1 Enoch), ch. 24-25, 32", nil, nil),
+        ]
+        for config in placeConfigs {
+            let place = Place(
+                name: config.name,
+                placeType: placeTypesByName[config.typeName],
+                modernLocation: config.modernLocation,
+                placeDescription: config.description,
+                source: config.source,
+                latitude: config.lat,
+                longitude: config.lon
+            )
+            context.insert(place)
+        }
+
+        let eventTypes = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
+        let eventTypesByName = Dictionary(uniqueKeysWithValues: eventTypes.map { ($0.name, $0) })
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figuresByName = Dictionary(grouping: allFigures, by: { $0.name }).compactMapValues(\.first)
+
+        let eventConfigs: [(name: String, typeName: String, description: String, era: String, source: String, figureNames: [String])] = [
+            ("The Fall of the Watchers", "Descent",
+             "Two hundred Watcher angels under the leadership of Samyaza descended on Mount Hermon, swore an oath to bind themselves together, and took human wives. They fathered the Nephilim, giants who consumed the labor of mankind. The Watchers also taught humanity forbidden knowledge: sorcery, weapon-making, cosmetics, astrology, and divination.",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 6-8",
+             ["Samyaza", "Azazel"]),
+            ("The Binding of Azazel", "Battle",
+             "God commanded Raphael to bind Azazel hand and foot, cast him into the darkness of Dudael, and cover him with rugged and sharp rocks. Azazel was to remain there until the great day of judgment, when he would be cast into the fire.",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:4-8",
+             ["Azazel", "Raphael"]),
+            ("The Binding of the Watchers", "Battle",
+             "God commanded Michael to bind Samyaza and his associates under the hills of the earth for seventy generations until the day of judgment. The Watchers were to be cast into the abyss of fire for eternity. Their sons, the Nephilim, were destroyed by being set against each other with the sword.",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:11-12",
+             ["Samyaza", "Michael"]),
+            ("Enoch's Heavenly Journeys", "Ascension",
+             "Enoch was taken by the angels and shown the mysteries of heaven and earth. He visited the heavenly temple and saw God's throne of glory, the dwelling places of the righteous, the places of punishment for the wicked, the tree of life, the seven mountains, and the storehouses of the winds and luminaries. The archangel Uriel revealed to him the movements of the sun, moon, and stars.",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 17-36",
+             ["Enoch", "Uriel"]),
+            ("The Deluge Judgment", "Flood",
+             "God decreed the destruction of all flesh by the Great Flood as judgment for the corruption brought by the Watchers and the Nephilim. Uriel was sent to warn Noah to build an ark. The Flood cleansed the earth, preserving only Noah and his family. The Watchers were already bound and awaiting final judgment.",
+             "The Great Flood", "Book of Enoch (1 Enoch), ch. 10:1-3, 106-107",
+             ["Noah", "Uriel"]),
+        ]
+        for config in eventConfigs {
+            let figures = config.figureNames.compactMap { figuresByName[$0] }
+            let event = Event(
+                name: config.name,
+                eventType: eventTypesByName[config.typeName],
+                eventDescription: config.description,
+                date: MythologicalDate(year: nil, era: config.era, isApproximate: true),
+                era: config.era,
+                source: config.source,
+                involvedFigures: figures
+            )
+            context.insert(event)
         }
 
         try? context.save()

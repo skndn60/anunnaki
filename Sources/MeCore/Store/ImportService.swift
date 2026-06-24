@@ -69,13 +69,15 @@ package struct ImportService {
         if figure.figureDescription.isEmpty { figure.figureDescription = extract }
         figure.source = wikiURL
 
+        let allTypes: [RelationshipType] = modelContext.fetchAll()
         for rel in parsed.relationships {
             let targetName = rel.targetLabel.lowercased()
             if let target = allFigures.first(where: { $0.name.lowercased() == targetName }) {
+                let isParent = rel.type == "father" || rel.type == "mother"
                 let relationship = Relationship(
-                    fromFigure: rel.type == .father || rel.type == .mother ? target : figure,
-                    toFigure: rel.type == .father || rel.type == .mother ? figure : target,
-                    relationshipType: rel.type,
+                    fromFigure: isParent ? target : figure,
+                    toFigure: isParent ? figure : target,
+                    relationshipType: allTypes.first(where: { $0.name.lowercased() == rel.type.lowercased() }),
                     source: wikiURL
                 )
                 modelContext.insert(relationship)

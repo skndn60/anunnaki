@@ -11,11 +11,10 @@ struct PlaceListView: View {
     @State private var editingPlace: Place?
     @State private var selectedPlaceID: PersistentIdentifier?
     @State private var sortOrder: PlaceSortOrder = .name
-    @State private var showingTypeManager = false
     @State private var imageDetailImage: ImageAsset?
+    @AppStorage("placeDetailWidth") private var detailWidth: Double = 320
     @State private var showDeleteConfirm = false
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
-    @State private var breadcrumbs: [Breadcrumb] = []
 
     enum PlaceSortOrder: String, CaseIterable {
         case name = "Name"
@@ -27,6 +26,17 @@ struct PlaceListView: View {
         return sortedPlaces.first { $0.persistentModelID == id }
     }
 
+    private var backLabel: String? {
+        guard let history = coordinator?.history, history.count >= 2 else { return nil }
+        return history[history.count - 2].name
+    }
+
+    private var backAction: (() -> Void)? {
+        guard let history = coordinator?.history, history.count >= 2 else { return nil }
+        let index = history.count - 2
+        return { self.coordinator?.navigateToHistory(at: index) }
+    }
+
     private var sortedPlaces: [Place] {
         switch sortOrder {
         case .name: return places.sorted { $0.name < $1.name }
@@ -34,9 +44,9 @@ struct PlaceListView: View {
         }
     }
 
-    private var displayRows: [DisplayRow<Place>] {
+    private var groupedPlaces: [(key: String, places: [Place])] {
         let sorted = sortedPlaces
-        var rows: [DisplayRow<Place>] = []
+        var groups: [(key: String, places: [Place])] = []
         var currentKey: String?
         for place in sorted {
             let key: String = {
@@ -46,28 +56,16 @@ struct PlaceListView: View {
                 }
             }()
             if key != currentKey {
-                rows.append(DisplayRow(index: rows.count, item: .header(key)))
+                groups.append((key: key, places: []))
                 currentKey = key
             }
-            rows.append(DisplayRow(index: rows.count, item: .entity(place)))
+            groups[groups.count - 1].places.append(place)
         }
-        return rows
+        return groups
     }
 
     private func selectPlace(_ id: PersistentIdentifier) {
-        if let place = places.first(where: { $0.persistentModelID == id }) {
-            if breadcrumbs.last?.id != id {
-                breadcrumbs.append(Breadcrumb(id: id, name: place.name))
-                if breadcrumbs.count > 12 { breadcrumbs.removeFirst() }
-            }
-        }
         selectedPlaceID = id
-    }
-
-    private func navigateToBreadcrumb(at index: Int) {
-        let crumb = breadcrumbs[index]
-        breadcrumbs = Array(breadcrumbs.prefix(index + 1))
-        selectedPlaceID = crumb.id
     }
 
     var body: some View {
@@ -87,11 +85,6 @@ struct PlaceListView: View {
                         Label("Add Place", systemImage: "plus")
                     }
                     .buttonStyle(.borderedProminent)
-                    Button(action: { showingTypeManager = true }) {
-                        Image(systemName: "gearshape")
-                    }
-                    .buttonStyle(.plain)
-                    .help("Manage place types")
                 }
                 .padding()
 
@@ -99,15 +92,11 @@ struct PlaceListView: View {
                 let coordinatorHistory = coordinator?.history ?? []
                 if !coordinatorHistory.isEmpty {
                     BreadcrumbBar(
-                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name) },
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
                         onNavigate: { index in coordinator?.navigateToHistory(at: index) },
                         onClear: { coordinator?.history.removeAll() }
                     )
                 }
-                if !breadcrumbs.isEmpty {
-                    BreadcrumbBar(breadcrumbs: breadcrumbs, onNavigate: navigateToBreadcrumb, onClear: { breadcrumbs.removeAll() })
-                }
-
                 PlaceTypeLegend(types: placeTypes)
                     .padding(.horizontal)
                     .padding(.vertical, 4)
@@ -133,17 +122,12 @@ struct PlaceListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List(selection: $selectedPlaceID) {
-                        ForEach(displayRows) { row in
-                            switch row.item {
-                            case .header(let label):
-                                Text(label)
-                                    .font(.largeTitle.bold())
-                                    .foregroundStyle(.secondary)
-                                    .listRowSeparator(.hidden)
-                                    .selectionDisabled()
-                            case .entity(let place):
-                                PlaceRow(place: place)
-                                    .tag(place.persistentModelID)
+                        ForEach(groupedPlaces, id: \.key) { group in
+                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+                                ForEach(group.places) { place in
+                                    PlaceRow(place: place)
+                                        .tag(place.persistentModelID)
+                                }
                             }
                         }
                     }
@@ -156,7 +140,7 @@ struct PlaceListView: View {
             .frame(minWidth: 450, maxWidth: .infinity)
 
             if let place = selectedPlace {
-                Divider()
+                ResizableDivider(width: $detailWidth, range: 200...800)
                 VStack(spacing: 0) {
                     HStack(spacing: 8) {
                         IconActionButton(icon: "pencil", color: .accentColor) {
@@ -176,13 +160,22 @@ struct PlaceListView: View {
                         .buttonStyle(.plain)
                     }
                     .padding(8)
-                    PlaceDetailView(place: place, onSelectFigure: { figure in
-                        coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
-                    }, onSelectEvent: { event in
-                        coordinator?.navigateToEvent(event.persistentModelID, name: event.name)
-                    }, onSelectImage: { imageDetailImage = $0 })
+                    PlaceDetailView(
+                        place: place,
+                        onSelectFigure: { figure in
+                            coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
+                            coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
+                        },
+                        onSelectEvent: { event in
+                            coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
+                            coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
+                        },
+                        onSelectImage: { imageDetailImage = $0 },
+                        backLabel: backLabel,
+                        onBack: backAction
+                    )
                 }
-                .frame(width: 320)
+                .frame(width: detailWidth)
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -191,9 +184,7 @@ struct PlaceListView: View {
         .sheet(item: $editingPlace) { place in
             PlaceFormView(place: place)
         }
-        .sheet(isPresented: $showingTypeManager) {
-            PlaceTypeManagerView()
-        }
+
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
                 openWindow(id: "image-detail", value: image.persistentModelID)
@@ -254,6 +245,11 @@ struct PlaceRow: View {
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
                     .background(RoundedRectangle(cornerRadius: 3).fill(.orange.opacity(0.12)))
+            }
+            if place.stickies.contains(where: { !$0.isResolved }) {
+                Circle()
+                    .fill(.yellow)
+                    .frame(width: 10, height: 10)
             }
             Spacer()
         }
@@ -351,6 +347,7 @@ struct PlaceFormView: View {
             place.longitude = Double(longitudeStr)
             place.isConcept = false
             place.tags = selectedTags
+            RecentEditStore.trackEdit(entityType: "Place", entityName: place.name)
         } else {
             let newPlace = Place(
                 name: name, placeType: placeType,
@@ -361,6 +358,7 @@ struct PlaceFormView: View {
             )
             newPlace.tags = selectedTags
             modelContext.insert(newPlace)
+            RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
         }
         dismiss()
     }

@@ -1,10 +1,11 @@
 import Foundation
 import SwiftData
 
-/// An alternate name or cross-cultural equivalent for a figure.
+/// An alternate name or cross-cultural equivalent for a figure or place.
 @Model
 package final class AlternateName {
     package var figure: Figure?
+    package var place: Place?
     package var name: String
     package var tradition: Tradition
     package var nameType: NameType
@@ -37,12 +38,14 @@ package final class AlternateName {
 
     package init(
         figure: Figure? = nil,
+        place: Place? = nil,
         name: String = "",
         tradition: Tradition = .sumerian,
         nameType: NameType = .spelling,
         note: String = ""
     ) {
         self.figure = figure
+        self.place = place
         self.name = name
         self.tradition = tradition
         self.nameType = nameType

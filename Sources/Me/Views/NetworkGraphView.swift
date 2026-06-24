@@ -126,7 +126,7 @@ struct ForceEngine {
     }
 }
 
-// MARK: - Network Graph View
+// MARK: - Object Graph View
 
 struct NetworkGraphView: View {
     var coordinator: NavigationCoordinator?
@@ -214,7 +214,7 @@ struct NetworkGraphView: View {
 
     private var toolbar: some View {
         HStack(spacing: 12) {
-            Text("Network Graph")
+            Text("Object Graph")
                 .font(.title2.bold())
 
             Divider().frame(height: 20)
@@ -772,8 +772,8 @@ struct NetworkGraphView: View {
                   let fromID = figureNodeMap[fromName], let toID = figureNodeMap[toName] else { continue }
             newEdges.append(GraphEdge(
                 id: UUID(), sourceID: fromID, targetID: toID,
-                label: rel.relationshipType.rawValue,
-                color: rel.relationshipType.color
+                label: rel.relationshipType?.name ?? "",
+                color: rel.relationshipType?.color ?? .gray
             ))
         }
 
@@ -782,7 +782,7 @@ struct NetworkGraphView: View {
                   let fID = figureNodeMap[fName], let pID = placeNodeMap[pName] else { continue }
             newEdges.append(GraphEdge(
                 id: UUID(), sourceID: fID, targetID: pID,
-                label: assoc.role.rawValue,
+                label: assoc.roleType?.name ?? "—",
                 color: .teal
             ))
         }
@@ -792,7 +792,7 @@ struct NetworkGraphView: View {
                   let eID = eventNodeMap[eName], let pID = placeNodeMap[pName] else { continue }
             newEdges.append(GraphEdge(
                 id: UUID(), sourceID: eID, targetID: pID,
-                label: assoc.role.rawValue,
+                label: assoc.roleType?.name ?? "—",
                 color: .mint
             ))
         }
@@ -802,7 +802,7 @@ struct NetworkGraphView: View {
                   let fromID = eventNodeMap[fromName], let toID = eventNodeMap[toName] else { continue }
             newEdges.append(GraphEdge(
                 id: UUID(), sourceID: fromID, targetID: toID,
-                label: assoc.role.rawValue,
+                label: assoc.roleType?.name ?? "—",
                 color: .purple
             ))
         }

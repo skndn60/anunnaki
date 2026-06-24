@@ -52,6 +52,12 @@ package struct VersionManager {
             return
         }
 
+        let currentCount = (try? context.fetchCount(FetchDescriptor<Figure>())) ?? 0
+        if currentCount > 0 {
+            let autoName = "Auto-saved before restore of: \(version.name)"
+            commit(name: autoName, branch: version.branch, parentId: version.id, context: context)
+        }
+
         SeedData.clearAll(context: context)
         try? context.save()
 
@@ -151,8 +157,8 @@ package struct VersionManager {
                 name: era.name,
                 orderIndex: era.orderIndex,
                 eraDescription: era.eraDescription,
-                startDate: SeedDate(year: era.startDate.year, era: era.startDate.era, isApproximate: era.startDate.isApproximate),
-                endDate: SeedDate(year: era.endDate.year, era: era.endDate.era, isApproximate: era.endDate.isApproximate)
+                startDate: SeedDate(startYear: era.startDate.startYear, endYear: era.startDate.endYear, era: era.startDate.era, isApproximate: era.startDate.isApproximate),
+                endDate: SeedDate(startYear: era.endDate.startYear, endYear: era.endDate.endYear, era: era.endDate.era, isApproximate: era.endDate.isApproximate)
             ))
         }
 
@@ -171,8 +177,8 @@ package struct VersionManager {
                 gender: figure.gender.rawValue,
                 domain: figure.domain,
                 figureDescription: figure.figureDescription,
-                birthDate: SeedDate(year: figure.birthDate.year, era: figure.birthDate.era, isApproximate: figure.birthDate.isApproximate),
-                deathDate: SeedDate(year: figure.deathDate.year, era: figure.deathDate.era, isApproximate: figure.deathDate.isApproximate),
+                birthDate: SeedDate(startYear: figure.birthDate.startYear, endYear: figure.birthDate.endYear, era: figure.birthDate.era, isApproximate: figure.birthDate.isApproximate),
+                deathDate: SeedDate(startYear: figure.deathDate.startYear, endYear: figure.deathDate.endYear, era: figure.deathDate.era, isApproximate: figure.deathDate.isApproximate),
                 source: figure.source
             ))
         }
@@ -187,7 +193,7 @@ package struct VersionManager {
             root.relationships.append(SeedRelationship(
                 fromFigureId: fromId,
                 toFigureId: toId,
-                relationshipType: rel.relationshipType.rawValue,
+                relationshipType: rel.relationshipType?.name ?? "",
                 source: rel.source
             ))
         }
@@ -222,7 +228,7 @@ package struct VersionManager {
                 name: event.name,
                 eventType: event.eventType?.name ?? "",
                 eventDescription: event.eventDescription,
-                date: SeedDate(year: event.date.year, era: event.date.era, isApproximate: event.date.isApproximate),
+                date: SeedDate(startYear: event.date.startYear, endYear: event.date.endYear, era: event.date.era, isApproximate: event.date.isApproximate),
                 era: event.era,
                 source: event.source,
                 involvedFigureIds: involvedFigureIds
@@ -279,10 +285,11 @@ package struct VersionManager {
         // Alternate Names
         let alternateNames = (try? context.fetch(FetchDescriptor<AlternateName>())) ?? []
         for altName in alternateNames {
-            guard let figure = altName.figure,
-                  let figId = figureIds[figure.persistentModelID.hashValue.description] else { continue }
+            let figId = altName.figure.flatMap { figureIds[$0.persistentModelID.hashValue.description] }
+            guard figId != nil || altName.place != nil else { continue }
             root.alternateNames.append(SeedAlternateName(
                 figureId: figId,
+                placeId: altName.place.flatMap { placeIds[$0.persistentModelID.hashValue.description] },
                 name: altName.name,
                 tradition: altName.tradition.rawValue,
                 nameType: altName.nameType.rawValue,
@@ -297,7 +304,7 @@ package struct VersionManager {
                   let figId = figureIds[figure.persistentModelID.hashValue.description],
                   let plcId = placeIds[place.persistentModelID.hashValue.description] else { continue }
             root.figurePlaceAssociations = (root.figurePlaceAssociations ?? []) + [
-                SeedFigurePlaceAssociation(figureId: figId, placeId: plcId, role: assoc.role.rawValue, source: assoc.source)
+                SeedFigurePlaceAssociation(figureId: figId, placeId: plcId, role: assoc.roleType?.name ?? "", source: assoc.source)
             ]
         }
 
@@ -308,7 +315,7 @@ package struct VersionManager {
                   let fromId = placeIds[from.persistentModelID.hashValue.description],
                   let toId = placeIds[to.persistentModelID.hashValue.description] else { continue }
             root.placePlaceAssociations = (root.placePlaceAssociations ?? []) + [
-                SeedPlacePlaceAssociation(fromPlaceId: fromId, toPlaceId: toId, role: assoc.role.rawValue, source: assoc.source)
+                SeedPlacePlaceAssociation(fromPlaceId: fromId, toPlaceId: toId, role: assoc.roleType?.name ?? "", source: assoc.source)
             ]
         }
 
@@ -319,7 +326,7 @@ package struct VersionManager {
                   let evtId = eventIds[event.persistentModelID.hashValue.description],
                   let plcId = placeIds[place.persistentModelID.hashValue.description] else { continue }
             root.eventPlaceAssociations = (root.eventPlaceAssociations ?? []) + [
-                SeedEventPlaceAssociation(eventId: evtId, placeId: plcId, role: assoc.role.rawValue, source: assoc.source)
+                SeedEventPlaceAssociation(eventId: evtId, placeId: plcId, role: assoc.roleType?.name ?? "", source: assoc.source)
             ]
         }
 
@@ -330,7 +337,7 @@ package struct VersionManager {
                   let fromId = eventIds[from.persistentModelID.hashValue.description],
                   let toId = eventIds[to.persistentModelID.hashValue.description] else { continue }
             root.eventEventAssociations = (root.eventEventAssociations ?? []) + [
-                SeedEventEventAssociation(fromEventId: fromId, toEventId: toId, role: assoc.role.rawValue, source: assoc.source)
+                SeedEventEventAssociation(fromEventId: fromId, toEventId: toId, role: assoc.roleType?.name ?? "", source: assoc.source)
             ]
         }
 

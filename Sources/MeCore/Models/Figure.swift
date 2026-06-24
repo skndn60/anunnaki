@@ -29,6 +29,10 @@ package final class Figure {
     @Relationship(deleteRule: .cascade, inverse: \AlternateName.figure)
     package var alternateNames: [AlternateName] = []
 
+    /// Events this figure is involved in
+    @Relationship(inverse: \Event.involvedFigures)
+    package var events: [Event] = []
+
     /// Images attached to this figure
     @Relationship(deleteRule: .nullify, inverse: \ImageAsset.figures)
     package var images: [ImageAsset] = []
@@ -40,6 +44,10 @@ package final class Figure {
     /// Places associated with this figure (patron deity of, ruler of, etc.)
     @Relationship(deleteRule: .cascade, inverse: \FigurePlaceAssociation.figure)
     package var placeAssociations: [FigurePlaceAssociation] = []
+
+    /// Sticky notes attached to this figure
+    @Relationship(deleteRule: .cascade, inverse: \StickyNote.figure)
+    package var stickies: [StickyNote] = []
 
     package enum Gender: String, Codable, CaseIterable, Hashable {
         case male = "Male"

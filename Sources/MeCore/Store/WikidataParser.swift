@@ -25,15 +25,15 @@ package struct WikidataParser {
             case "P21": // sex/gender
                 result.gender = qidMapper.gender(for: targetID)
             case "P22": // father
-                result.relationships.append((.father, targetID, ""))
+                result.relationships.append(("father", targetID, ""))
             case "P25": // mother
-                result.relationships.append((.mother, targetID, ""))
+                result.relationships.append(("mother", targetID, ""))
             case "P26": // spouse
-                result.relationships.append((.spouse, targetID, ""))
+                result.relationships.append(("spouse", targetID, ""))
             case "P40": // child
-                result.relationships.append((.father, targetID, ""))
+                result.relationships.append(("father", targetID, ""))
             case "P3373": // sibling
-                result.relationships.append((.sibling, targetID, ""))
+                result.relationships.append(("sibling", targetID, ""))
             default:
                 break
             }

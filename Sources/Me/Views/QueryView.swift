@@ -329,7 +329,7 @@ struct FigureDossierView: View {
                                 .font(.caption)
                                 .foregroundStyle(.teal)
                                 .frame(width: 14)
-                            Text(assoc.role.rawValue)
+                            Text(assoc.roleType?.name ?? "—")
                                 .font(.caption)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)

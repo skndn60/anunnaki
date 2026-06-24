@@ -7,6 +7,40 @@ struct RelationshipListView: View {
     @Query private var relationships: [Relationship]
     @Query private var figures: [Figure]
     @State private var showingAddSheet = false
+    @State private var editingRelationship: Relationship?
+    @State private var searchText = ""
+    @State private var sortOrder: RelationshipSortOrder = .fromFigure
+
+    enum RelationshipSortOrder: String, CaseIterable {
+        case fromFigure = "From Figure"
+        case toFigure = "To Figure"
+        case type = "Type"
+        case source = "Source"
+    }
+
+    private var filteredRelationships: [Relationship] {
+        var result = relationships
+        if !searchText.isEmpty {
+            let query = searchText.lowercased()
+            result = result.filter {
+                ($0.fromFigure?.name ?? "").lowercased().contains(query) ||
+                ($0.toFigure?.name ?? "").lowercased().contains(query) ||
+                ($0.relationshipType?.name ?? "").lowercased().contains(query) ||
+                $0.source.lowercased().contains(query)
+            }
+        }
+        switch sortOrder {
+        case .fromFigure:
+            result.sort { ($0.fromFigure?.name ?? "") < ($1.fromFigure?.name ?? "") }
+        case .toFigure:
+            result.sort { ($0.toFigure?.name ?? "") < ($1.toFigure?.name ?? "") }
+        case .type:
+            result.sort { ($0.relationshipType?.name ?? "") < ($1.relationshipType?.name ?? "") }
+        case .source:
+            result.sort { $0.source < $1.source }
+        }
+        return result
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -14,6 +48,26 @@ struct RelationshipListView: View {
                 Text("Relationships")
                     .font(.title2.bold())
                 Spacer()
+                Picker("Sort", selection: $sortOrder) {
+                    ForEach(RelationshipSortOrder.allCases, id: \.self) { order in
+                        Text(order.rawValue).tag(order)
+                    }
+                }
+                .frame(width: 150)
+                TextField("🔍 Filter", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(width: 200)
+                    .overlay(alignment: .trailing) {
+                        if !searchText.isEmpty {
+                            Button(action: { searchText = "" }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.trailing, 6)
+                        }
+                    }
                 Button(action: { showingAddSheet = true }) {
                     Label("Add Relationship", systemImage: "plus")
                 }
@@ -41,9 +95,32 @@ struct RelationshipListView: View {
                     Spacer()
                 }
                 .frame(maxWidth: .infinity)
+            } else if filteredRelationships.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No results for \"\(searchText)\"")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             } else {
-                List(relationships) { rel in
-                    RelationshipRowView(relationship: rel, onDelete: { modelContext.delete(rel) })
+                List {
+                    ForEach(filteredRelationships) { rel in
+                        RelationshipRowView(
+                            relationship: rel,
+                            onEdit: { editingRelationship = rel },
+                            onDelete: { modelContext.delete(rel) }
+                        )
+                    }
+                    .onDelete { indexSet in
+                        for index in indexSet {
+                            modelContext.delete(filteredRelationships[index])
+                        }
+                    }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
             }
@@ -51,30 +128,51 @@ struct RelationshipListView: View {
         .sheet(isPresented: $showingAddSheet) {
             RelationshipFormView()
         }
+        .sheet(item: $editingRelationship) { rel in
+            EditRelationshipForm(relationship: rel)
+        }
     }
 }
 
 struct RelationshipRowView: View {
+    @Environment(\.modelContext) private var modelContext
     let relationship: Relationship
+    let onEdit: () -> Void
     let onDelete: () -> Void
+
+    private var isPreferred: Bool { relationship.isPreferred == true }
 
     var body: some View {
         HStack(spacing: 10) {
+            if isPreferred {
+                Button(action: {
+                    relationship.isPreferred = false
+                    try? modelContext.save()
+                }) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 9))
+                        .foregroundStyle(.yellow)
+                }
+                .buttonStyle(.plain)
+                .help("Click to unset as default")
+            }
             Text(relationship.fromFigure?.name ?? "?")
-                .fontWeight(.medium)
-            Image(systemName: relationship.relationshipType.icon)
+                .fontWeight(isPreferred ? .bold : .medium)
+                .foregroundStyle(isPreferred ? .primary : .secondary)
+            Image(systemName: relationship.relationshipType?.icon ?? "questionmark")
                 .font(.caption)
-                .foregroundStyle(relationship.relationshipType.color)
-            Text(relationship.relationshipType.rawValue)
+                .foregroundStyle(relationship.relationshipType?.color ?? .gray)
+            Text(relationship.relationshipType?.name ?? "")
                 .font(.caption)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(RoundedRectangle(cornerRadius: 4).fill(relationship.relationshipType.color.opacity(0.12)))
+                .background(RoundedRectangle(cornerRadius: 4).fill((relationship.relationshipType?.color ?? .gray).opacity(0.12)))
             Image(systemName: "arrow.right")
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
             Text(relationship.toFigure?.name ?? "?")
-                .fontWeight(.medium)
+                .fontWeight(isPreferred ? .bold : .medium)
+                .foregroundStyle(isPreferred ? .primary : .secondary)
             if !relationship.source.isEmpty {
                 Text(relationship.source)
                     .font(.caption)
@@ -82,7 +180,20 @@ struct RelationshipRowView: View {
                     .lineLimit(1)
             }
             Spacer()
+            Button(action: onEdit) {
+                Image(systemName: "pencil.circle.fill")
+                    .font(.body)
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            Button(action: onDelete) {
+                Image(systemName: "trash.circle.fill")
+                    .font(.body)
+                    .foregroundStyle(.red.opacity(0.7))
+            }
+            .buttonStyle(.plain)
         }
+
     }
 }
 
@@ -92,12 +203,14 @@ struct RelationshipFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
     @Query private var figures: [Figure]
+    @Query private var relationships: [Relationship]
 
     @State private var fromFigure: Figure?
     @State private var toFigure: Figure?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
-    @State private var relationshipType: Relationship.RelationshipType = .father
+    @Query private var allRelationTypes: [RelationshipType]
+    @State private var selectedType: RelationshipType?
     @State private var source = ""
 
     private var filteredFromFigures: [Figure] {
@@ -134,9 +247,9 @@ struct RelationshipFormView: View {
                 }
 
                 Section("Type") {
-                    Picker("Type", selection: $relationshipType) {
-                        ForEach(Relationship.RelationshipType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
+                    Picker("Type", selection: $selectedType) {
+                        ForEach(allRelationTypes, id: \.self) { type in
+                            Text(type.name).tag(type as RelationshipType?)
                         }
                     }
                 }
@@ -168,6 +281,36 @@ struct RelationshipFormView: View {
         }
         .frame(width: 450, height: 520)
         .onChange(of: fromFigure) { _, _ in inferType() }
+        .alert("Duplicate Relationship", isPresented: $showDuplicateAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Add Anyway") { showPreferredPrompt = true }
+        } message: {
+            Text(duplicateMessage)
+        }
+        .alert("Preferred Relationship", isPresented: $showPreferredPrompt) {
+            Button("Make Default") { commit(isPreferred: true) }
+            Button("Keep Existing as Default") { commit(isPreferred: false) }
+        } message: {
+            Text("Should this be the default \(selectedType?.name ?? "relationship") for \(fromFigure?.name ?? "?")?")
+        }
+    }
+
+    private func commit(isPreferred: Bool) {
+        guard let from = fromFigure, let to = toFigure, let type = selectedType else { return }
+        if isPreferred {
+            let existing = relationships.filter {
+                $0.fromFigure?.persistentModelID == from.persistentModelID &&
+                $0.relationshipType?.name == type.name
+            }
+            for rel in existing { rel.isPreferred = false }
+        }
+        let relationship = Relationship(
+            fromFigure: from, toFigure: to,
+            relationshipType: selectedType, source: source,
+            isPreferred: isPreferred
+        )
+        modelContext.insert(relationship)
+        dismiss()
     }
 
     private var isValid: Bool {
@@ -175,20 +318,38 @@ struct RelationshipFormView: View {
         return from.persistentModelID != to.persistentModelID
     }
 
+    @State private var duplicateMessage = ""
+
     private func save() {
-        guard let from = fromFigure, let to = toFigure else { return }
-        let relationship = Relationship(
-            fromFigure: from, toFigure: to,
-            relationshipType: relationshipType, source: source
-        )
-        modelContext.insert(relationship)
-        dismiss()
+        guard let from = fromFigure, let to = toFigure, let type = selectedType else { return }
+
+        let existing = relationships.filter {
+            $0.fromFigure?.persistentModelID == from.persistentModelID &&
+            $0.relationshipType?.name == type.name
+        }
+        if existing.isEmpty {
+            let relationship = Relationship(
+                fromFigure: from, toFigure: to,
+                relationshipType: selectedType, source: source,
+                isPreferred: false
+            )
+            modelContext.insert(relationship)
+            dismiss()
+        } else if type.category == "parent" {
+            duplicateMessage = "\(from.name) already has a \(type.name) relationship (\(existing.first?.toFigure?.name ?? "?")). Adding another will create conflicting lineages."
+            showDuplicateAlert = true
+        } else {
+            showPreferredPrompt = true
+        }
     }
+
+    @State private var showDuplicateAlert = false
+    @State private var showPreferredPrompt = false
 
     private func inferType() {
         switch fromFigure?.gender {
-        case .female: relationshipType = .mother
-        case .male: relationshipType = .father
+        case .female: selectedType = allRelationTypes.first(where: { $0.name == "Mother" })
+        case .male: selectedType = allRelationTypes.first(where: { $0.name == "Father" })
         default: break
         }
     }

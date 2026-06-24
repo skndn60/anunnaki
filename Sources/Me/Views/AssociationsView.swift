@@ -21,7 +21,6 @@ struct AssociationsView: View {
     @State private var editingEventEventAssoc: EventEventAssociation?
     @State private var editingEventPlaceAssoc: EventPlaceAssociation?
     @State private var editingRelationship: Relationship?
-
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -120,9 +119,9 @@ struct AssociationsView: View {
                 List(relationships) { rel in
                     HStack(spacing: 10) {
                         Text(rel.fromFigure?.name ?? "?").fontWeight(.medium)
-                        Image(systemName: rel.relationshipType.icon).font(.caption).foregroundStyle(rel.relationshipType.color)
-                        Text(rel.relationshipType.rawValue).font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(rel.relationshipType.color.opacity(0.12)))
+                        Image(systemName: rel.relationshipType?.icon ?? "questionmark").font(.caption).foregroundStyle(rel.relationshipType?.color ?? .gray)
+                        Text(rel.relationshipType?.name ?? "").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(RoundedRectangle(cornerRadius: 3).fill((rel.relationshipType?.color ?? .gray).opacity(0.12)))
                         Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
                         Text(rel.toFigure?.name ?? "?").fontWeight(.medium)
                         Spacer()
@@ -151,7 +150,7 @@ struct AssociationsView: View {
                     HStack(spacing: 10) {
                         Circle().fill(assoc.figure?.figureType?.color ?? .gray).frame(width: 8, height: 8)
                         Text(assoc.figure?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.role.rawValue).font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color.teal.opacity(0.12)))
                         Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
                         Image(systemName: assoc.place?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
@@ -182,7 +181,7 @@ struct AssociationsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: assoc.fromPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
                         Text(assoc.fromPlace?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.role.rawValue).font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color.green.opacity(0.12)))
                         Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
                         Image(systemName: assoc.toPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
@@ -213,7 +212,7 @@ struct AssociationsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: assoc.event?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.event?.eventType?.color ?? .gray)
                         Text(assoc.event?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.role.rawValue).font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color.indigo.opacity(0.12)))
                         Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
                         Image(systemName: assoc.place?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
@@ -244,7 +243,7 @@ struct AssociationsView: View {
                     HStack(spacing: 10) {
                         Image(systemName: assoc.fromEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.fromEvent?.eventType?.color ?? .gray)
                         Text(assoc.fromEvent?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.role.rawValue).font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color.orange.opacity(0.12)))
                         Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
                         Image(systemName: assoc.toEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.toEvent?.eventType?.color ?? .gray)
@@ -291,11 +290,30 @@ struct AddFigurePlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var figures: [Figure]
     @Query private var places: [Place]
+    @Query(sort: \FigurePlaceRoleType.name) private var roleTypes: [FigurePlaceRoleType]
 
     @State private var selectedFigure: Figure?
     @State private var selectedPlace: Place?
-    @State private var role: FigurePlaceAssociation.Role = .patronDeity
+    @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var source = ""
+    @State private var figureSearchText = ""
+    @State private var placeSearchText = ""
+
+    private var filteredFigures: [Figure] {
+        guard !figureSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (selectedFigure == nil || fig.persistentModelID != selectedFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(figureSearchText)
+        }
+    }
+
+    private var filteredPlaces: [Place] {
+        guard !placeSearchText.isEmpty else { return [] }
+        return places.filter { p in
+            (selectedPlace == nil || p.persistentModelID != selectedPlace!.persistentModelID) &&
+            p.name.localizedCaseInsensitiveContains(placeSearchText)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -303,18 +321,136 @@ struct AddFigurePlaceAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("Figure", selection: $selectedFigure) {
-                    Text("Select").tag(nil as Figure?)
-                    ForEach(figures) { f in Text("\(f.gender.symbol) \(f.name)").tag(f as Figure?) }
+                Section("Figure") {
+                    if let fig = selectedFigure {
+                        HStack(spacing: 6) {
+                            Text("\(fig.gender.symbol) \(fig.name)")
+                                .fontWeight(.medium)
+                            Spacer()
+                            Button { selectedFigure = nil } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(.quaternary.opacity(0.3))
+                        .cornerRadius(6)
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        TextField("Search figures\u{2026}", text: $figureSearchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(.quaternary.opacity(0.15))
+                    .cornerRadius(6)
+                    if !figureSearchText.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if filteredFigures.isEmpty {
+                                    Text("No figures match \"\(figureSearchText)\"")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                } else {
+                                    ForEach(filteredFigures) { fig in
+                                        Button {
+                                            selectedFigure = fig
+                                            figureSearchText = ""
+                                        } label: {
+                                            Text("\(fig.gender.symbol) \(fig.name)")
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .background(Color.primary.opacity(0.05))
+                                        .cornerRadius(4)
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 140)
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(FigurePlaceAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+
+                Section("Place") {
+                    if let place = selectedPlace {
+                        HStack(spacing: 6) {
+                            Text(place.name)
+                                .fontWeight(.medium)
+                            Spacer()
+                            Button { selectedPlace = nil } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(.quaternary.opacity(0.3))
+                        .cornerRadius(6)
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        TextField("Search places\u{2026}", text: $placeSearchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(.quaternary.opacity(0.15))
+                    .cornerRadius(6)
+                    if !placeSearchText.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if filteredPlaces.isEmpty {
+                                    Text("No places match \"\(placeSearchText)\"")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                } else {
+                                    ForEach(filteredPlaces) { p in
+                                        Button {
+                                            selectedPlace = p
+                                            placeSearchText = ""
+                                        } label: {
+                                            Text(p.name)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .background(Color.primary.opacity(0.05))
+                                        .cornerRadius(4)
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 140)
+                    }
                 }
-                Picker("Place", selection: $selectedPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
+
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as FigurePlaceRoleType?)
+                        ForEach(roleTypes) { rt in
+                            Text(rt.name).tag(rt as FigurePlaceRoleType?)
+                        }
+                    }
                 }
-                TextField("Source", text: $source)
+
+                Section("Source") {
+                    TextField("Source", text: $source)
+                }
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -324,13 +460,92 @@ struct AddFigurePlaceAssociationForm: View {
                 Button("Add") { save() }.keyboardShortcut(.defaultAction).disabled(selectedFigure == nil || selectedPlace == nil)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 520)
     }
 
     private func save() {
-        let assoc = FigurePlaceAssociation(figure: selectedFigure, place: selectedPlace, role: role, source: source)
+        let assoc = FigurePlaceAssociation(figure: selectedFigure, place: selectedPlace, roleType: selectedRoleType, source: source)
         modelContext.insert(assoc)
         dismiss()
+    }
+}
+
+struct SearchableEntityList<Entity: PersistentModel>: View {
+    let filtered: [Entity]
+    let label: (Entity) -> Text
+    let select: (Entity) -> Void
+
+    var body: some View {
+        if filtered.isEmpty {
+            Text("No matches").font(.caption).foregroundStyle(.tertiary)
+                .padding(.horizontal, 8).padding(.vertical, 6)
+        } else {
+            ForEach(filtered, id: \.persistentModelID) { entity in
+                Button {
+                    select(entity)
+                } label: {
+                    label(entity)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(Color.primary.opacity(0.05)).cornerRadius(4)
+            }
+        }
+    }
+}
+
+struct SearchSection<Entity: PersistentModel>: View {
+    let title: String
+    let entities: [Entity]
+    let selected: Binding<Entity?>
+    let label: (Entity) -> Text
+    @Binding var searchText: String
+    let filter: (Entity, String) -> Bool
+
+    private var filtered: [Entity] {
+        guard !searchText.isEmpty else { return [] }
+        return entities.filter { e in
+            (selected.wrappedValue == nil || e.persistentModelID != selected.wrappedValue!.persistentModelID) &&
+            filter(e, searchText)
+        }
+    }
+
+    var body: some View {
+        Section(title) {
+            if let entity = selected.wrappedValue {
+                HStack(spacing: 6) {
+                    label(entity).fontWeight(.medium)
+                    Spacer()
+                    Button { selected.wrappedValue = nil } label: {
+                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                    }.buttonStyle(.plain)
+                }
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(.quaternary.opacity(0.3)).cornerRadius(6)
+            }
+            HStack(spacing: 4) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.caption)
+                TextField("Search\u{2026}", text: $searchText).textFieldStyle(.plain)
+            }
+            .padding(8).background(.quaternary.opacity(0.15)).cornerRadius(6)
+            if !searchText.isEmpty {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 2) {
+                        SearchableEntityList(
+                            filtered: filtered,
+                            label: label,
+                            select: { entity in
+                                selected.wrappedValue = entity
+                                searchText = ""
+                            }
+                        )
+                    }
+                }
+                .frame(maxHeight: 120)
+            }
+        }
     }
 }
 
@@ -338,11 +553,14 @@ struct AddPlacePlaceAssociationForm: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
     @Query private var places: [Place]
+    @Query(sort: \PlacePlaceRoleType.name) private var roleTypes: [PlacePlaceRoleType]
 
     @State private var fromPlace: Place?
     @State private var toPlace: Place?
-    @State private var role: PlacePlaceAssociation.Role = .locatedWithin
+    @State private var selectedRoleType: PlacePlaceRoleType?
     @State private var source = ""
+    @State private var fromSearchText = ""
+    @State private var toSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -350,18 +568,31 @@ struct AddPlacePlaceAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("From Place", selection: $fromPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
+                SearchSection(
+                    title: "From Place",
+                    entities: places,
+                    selected: $fromPlace,
+                    label: { Text($0.name) },
+                    searchText: $fromSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as PlacePlaceRoleType?)
+                        ForEach(roleTypes) { rt in Text(rt.name).tag(rt as PlacePlaceRoleType?) }
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(PlacePlaceAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+                SearchSection(
+                    title: "To Place",
+                    entities: places,
+                    selected: $toPlace,
+                    label: { Text($0.name) },
+                    searchText: $toSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Source") {
+                    TextField("Source", text: $source)
                 }
-                Picker("To Place", selection: $toPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
-                }
-                TextField("Source", text: $source)
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -371,11 +602,11 @@ struct AddPlacePlaceAssociationForm: View {
                 Button("Add") { save() }.keyboardShortcut(.defaultAction).disabled(fromPlace == nil || toPlace == nil)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 420)
     }
 
     private func save() {
-        let assoc = PlacePlaceAssociation(fromPlace: fromPlace, toPlace: toPlace, role: role, source: source)
+        let assoc = PlacePlaceAssociation(fromPlace: fromPlace, toPlace: toPlace, roleType: selectedRoleType, source: source)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -385,11 +616,14 @@ struct AddEventEventAssociationForm: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
     @Query private var events: [Event]
+    @Query(sort: \EventEventRoleType.name) private var roleTypes: [EventEventRoleType]
 
     @State private var fromEvent: Event?
     @State private var toEvent: Event?
-    @State private var role: EventEventAssociation.Role = .caused
+    @State private var selectedRoleType: EventEventRoleType?
     @State private var source = ""
+    @State private var fromSearchText = ""
+    @State private var toSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -397,18 +631,31 @@ struct AddEventEventAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("From Event", selection: $fromEvent) {
-                    Text("Select").tag(nil as Event?)
-                    ForEach(events) { e in Text(e.name).tag(e as Event?) }
+                SearchSection(
+                    title: "From Event",
+                    entities: events,
+                    selected: $fromEvent,
+                    label: { Text($0.name) },
+                    searchText: $fromSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as EventEventRoleType?)
+                        ForEach(roleTypes) { rt in Text(rt.name).tag(rt as EventEventRoleType?) }
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(EventEventAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+                SearchSection(
+                    title: "To Event",
+                    entities: events,
+                    selected: $toEvent,
+                    label: { Text($0.name) },
+                    searchText: $toSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Source") {
+                    TextField("Source", text: $source)
                 }
-                Picker("To Event", selection: $toEvent) {
-                    Text("Select").tag(nil as Event?)
-                    ForEach(events) { e in Text(e.name).tag(e as Event?) }
-                }
-                TextField("Source", text: $source)
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -418,11 +665,11 @@ struct AddEventEventAssociationForm: View {
                 Button("Add") { save() }.keyboardShortcut(.defaultAction).disabled(fromEvent == nil || toEvent == nil)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 420)
     }
 
     private func save() {
-        let assoc = EventEventAssociation(fromEvent: fromEvent, toEvent: toEvent, role: role, source: source)
+        let assoc = EventEventAssociation(fromEvent: fromEvent, toEvent: toEvent, roleType: selectedRoleType, source: source)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -435,12 +682,31 @@ struct EditFigurePlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var figures: [Figure]
     @Query private var places: [Place]
+    @Query(sort: \FigurePlaceRoleType.name) private var roleTypes: [FigurePlaceRoleType]
     let assoc: FigurePlaceAssociation
 
     @State private var selectedFigure: Figure?
     @State private var selectedPlace: Place?
-    @State private var role: FigurePlaceAssociation.Role = .patronDeity
+    @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var source = ""
+    @State private var figureSearchText = ""
+    @State private var placeSearchText = ""
+
+    private var filteredFigures: [Figure] {
+        guard !figureSearchText.isEmpty else { return [] }
+        return figures.filter { fig in
+            (selectedFigure == nil || fig.persistentModelID != selectedFigure!.persistentModelID) &&
+            fig.name.localizedCaseInsensitiveContains(figureSearchText)
+        }
+    }
+
+    private var filteredPlaces: [Place] {
+        guard !placeSearchText.isEmpty else { return [] }
+        return places.filter { p in
+            (selectedPlace == nil || p.persistentModelID != selectedPlace!.persistentModelID) &&
+            p.name.localizedCaseInsensitiveContains(placeSearchText)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -448,18 +714,136 @@ struct EditFigurePlaceAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("Figure", selection: $selectedFigure) {
-                    Text("Select").tag(nil as Figure?)
-                    ForEach(figures) { f in Text("\(f.gender.symbol) \(f.name)").tag(f as Figure?) }
+                Section("Figure") {
+                    if let fig = selectedFigure {
+                        HStack(spacing: 6) {
+                            Text("\(fig.gender.symbol) \(fig.name)")
+                                .fontWeight(.medium)
+                            Spacer()
+                            Button { selectedFigure = nil } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(.quaternary.opacity(0.3))
+                        .cornerRadius(6)
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        TextField("Search figures\u{2026}", text: $figureSearchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(.quaternary.opacity(0.15))
+                    .cornerRadius(6)
+                    if !figureSearchText.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if filteredFigures.isEmpty {
+                                    Text("No figures match \"\(figureSearchText)\"")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                } else {
+                                    ForEach(filteredFigures) { fig in
+                                        Button {
+                                            selectedFigure = fig
+                                            figureSearchText = ""
+                                        } label: {
+                                            Text("\(fig.gender.symbol) \(fig.name)")
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .background(Color.primary.opacity(0.05))
+                                        .cornerRadius(4)
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 140)
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(FigurePlaceAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+
+                Section("Place") {
+                    if let place = selectedPlace {
+                        HStack(spacing: 6) {
+                            Text(place.name)
+                                .fontWeight(.medium)
+                            Spacer()
+                            Button { selectedPlace = nil } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 6)
+                        .background(.quaternary.opacity(0.3))
+                        .cornerRadius(6)
+                    }
+                    HStack(spacing: 4) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        TextField("Search places\u{2026}", text: $placeSearchText)
+                            .textFieldStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(.quaternary.opacity(0.15))
+                    .cornerRadius(6)
+                    if !placeSearchText.isEmpty {
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 2) {
+                                if filteredPlaces.isEmpty {
+                                    Text("No places match \"\(placeSearchText)\"")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                } else {
+                                    ForEach(filteredPlaces) { p in
+                                        Button {
+                                            selectedPlace = p
+                                            placeSearchText = ""
+                                        } label: {
+                                            Text(p.name)
+                                                .padding(.horizontal, 8)
+                                                .padding(.vertical, 4)
+                                                .frame(maxWidth: .infinity, alignment: .leading)
+                                                .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                        .background(Color.primary.opacity(0.05))
+                                        .cornerRadius(4)
+                                    }
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 140)
+                    }
                 }
-                Picker("Place", selection: $selectedPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
+
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as FigurePlaceRoleType?)
+                        ForEach(roleTypes) { rt in
+                            Text(rt.name).tag(rt as FigurePlaceRoleType?)
+                        }
+                    }
                 }
-                TextField("Source", text: $source)
+
+                Section("Source") {
+                    TextField("Source", text: $source)
+                }
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -469,11 +853,11 @@ struct EditFigurePlaceAssociationForm: View {
                 Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 520)
         .onAppear {
             selectedFigure = assoc.figure
             selectedPlace = assoc.place
-            role = assoc.role
+            selectedRoleType = assoc.roleType
             source = assoc.source
         }
     }
@@ -481,7 +865,7 @@ struct EditFigurePlaceAssociationForm: View {
     private func save() {
         assoc.figure = selectedFigure
         assoc.place = selectedPlace
-        assoc.role = role
+        assoc.roleType = selectedRoleType
         assoc.source = source
         dismiss()
     }
@@ -490,12 +874,15 @@ struct EditFigurePlaceAssociationForm: View {
 struct EditPlacePlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var places: [Place]
+    @Query(sort: \PlacePlaceRoleType.name) private var roleTypes: [PlacePlaceRoleType]
     let assoc: PlacePlaceAssociation
 
     @State private var fromPlace: Place?
     @State private var toPlace: Place?
-    @State private var role: PlacePlaceAssociation.Role = .locatedWithin
+    @State private var selectedRoleType: PlacePlaceRoleType?
     @State private var source = ""
+    @State private var fromSearchText = ""
+    @State private var toSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -503,18 +890,31 @@ struct EditPlacePlaceAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("From Place", selection: $fromPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
+                SearchSection(
+                    title: "From Place",
+                    entities: places,
+                    selected: $fromPlace,
+                    label: { Text($0.name) },
+                    searchText: $fromSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as PlacePlaceRoleType?)
+                        ForEach(roleTypes) { rt in Text(rt.name).tag(rt as PlacePlaceRoleType?) }
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(PlacePlaceAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+                SearchSection(
+                    title: "To Place",
+                    entities: places,
+                    selected: $toPlace,
+                    label: { Text($0.name) },
+                    searchText: $toSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Source") {
+                    TextField("Source", text: $source)
                 }
-                Picker("To Place", selection: $toPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
-                }
-                TextField("Source", text: $source)
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -524,11 +924,11 @@ struct EditPlacePlaceAssociationForm: View {
                 Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 420)
         .onAppear {
             fromPlace = assoc.fromPlace
             toPlace = assoc.toPlace
-            role = assoc.role
+            selectedRoleType = assoc.roleType
             source = assoc.source
         }
     }
@@ -536,7 +936,7 @@ struct EditPlacePlaceAssociationForm: View {
     private func save() {
         assoc.fromPlace = fromPlace
         assoc.toPlace = toPlace
-        assoc.role = role
+        assoc.roleType = selectedRoleType
         assoc.source = source
         dismiss()
     }
@@ -545,12 +945,15 @@ struct EditPlacePlaceAssociationForm: View {
 struct EditEventEventAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var events: [Event]
+    @Query(sort: \EventEventRoleType.name) private var roleTypes: [EventEventRoleType]
     let assoc: EventEventAssociation
 
     @State private var fromEvent: Event?
     @State private var toEvent: Event?
-    @State private var role: EventEventAssociation.Role = .caused
+    @State private var selectedRoleType: EventEventRoleType?
     @State private var source = ""
+    @State private var fromSearchText = ""
+    @State private var toSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -558,18 +961,31 @@ struct EditEventEventAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("From Event", selection: $fromEvent) {
-                    Text("Select").tag(nil as Event?)
-                    ForEach(events) { e in Text(e.name).tag(e as Event?) }
+                SearchSection(
+                    title: "From Event",
+                    entities: events,
+                    selected: $fromEvent,
+                    label: { Text($0.name) },
+                    searchText: $fromSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as EventEventRoleType?)
+                        ForEach(roleTypes) { rt in Text(rt.name).tag(rt as EventEventRoleType?) }
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(EventEventAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+                SearchSection(
+                    title: "To Event",
+                    entities: events,
+                    selected: $toEvent,
+                    label: { Text($0.name) },
+                    searchText: $toSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Source") {
+                    TextField("Source", text: $source)
                 }
-                Picker("To Event", selection: $toEvent) {
-                    Text("Select").tag(nil as Event?)
-                    ForEach(events) { e in Text(e.name).tag(e as Event?) }
-                }
-                TextField("Source", text: $source)
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -579,11 +995,11 @@ struct EditEventEventAssociationForm: View {
                 Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 420)
         .onAppear {
             fromEvent = assoc.fromEvent
             toEvent = assoc.toEvent
-            role = assoc.role
+            selectedRoleType = assoc.roleType
             source = assoc.source
         }
     }
@@ -591,7 +1007,7 @@ struct EditEventEventAssociationForm: View {
     private func save() {
         assoc.fromEvent = fromEvent
         assoc.toEvent = toEvent
-        assoc.role = role
+        assoc.roleType = selectedRoleType
         assoc.source = source
         dismiss()
     }
@@ -607,7 +1023,8 @@ struct EditRelationshipForm: View {
     @State private var toFigure: Figure?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
-    @State private var relationshipType: Relationship.RelationshipType = .father
+    @Query private var allRelationTypes: [RelationshipType]
+    @State private var selectedType: RelationshipType?
     @State private var source = ""
 
     private var filteredFromFigures: [Figure] {
@@ -642,8 +1059,8 @@ struct EditRelationshipForm: View {
                     )
                 }
                 Section("Type") {
-                    Picker("Type", selection: $relationshipType) {
-                        ForEach(Relationship.RelationshipType.allCases, id: \.self) { t in Text(t.rawValue).tag(t) }
+                    Picker("Type", selection: $selectedType) {
+                        ForEach(allRelationTypes, id: \.self) { t in Text(t.name).tag(t as RelationshipType?) }
                     }
                 }
                 Section("To") {
@@ -669,7 +1086,7 @@ struct EditRelationshipForm: View {
         .onAppear {
             fromFigure = relationship.fromFigure
             toFigure = relationship.toFigure
-            relationshipType = relationship.relationshipType
+            selectedType = relationship.relationshipType
             source = relationship.source
         }
         .onChange(of: fromFigure) { _, _ in inferType() }
@@ -678,15 +1095,15 @@ struct EditRelationshipForm: View {
     private func save() {
         relationship.fromFigure = fromFigure
         relationship.toFigure = toFigure
-        relationship.relationshipType = relationshipType
+        relationship.relationshipType = selectedType
         relationship.source = source
         dismiss()
     }
 
     private func inferType() {
         switch fromFigure?.gender {
-        case .female: relationshipType = .mother
-        case .male: relationshipType = .father
+        case .female: selectedType = allRelationTypes.first(where: { $0.name == "Mother" })
+        case .male: selectedType = allRelationTypes.first(where: { $0.name == "Father" })
         default: break
         }
     }
@@ -699,11 +1116,14 @@ struct AddEventPlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var events: [Event]
     @Query private var places: [Place]
+    @Query(sort: \EventPlaceRoleType.name) private var roleTypes: [EventPlaceRoleType]
 
     @State private var selectedEvent: Event?
     @State private var selectedPlace: Place?
-    @State private var role: EventPlaceAssociation.Role = .occurredAt
+    @State private var selectedRoleType: EventPlaceRoleType?
     @State private var source = ""
+    @State private var eventSearchText = ""
+    @State private var placeSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -711,18 +1131,31 @@ struct AddEventPlaceAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("Event", selection: $selectedEvent) {
-                    Text("Select").tag(nil as Event?)
-                    ForEach(events) { e in Text(e.name).tag(e as Event?) }
+                SearchSection(
+                    title: "Event",
+                    entities: events,
+                    selected: $selectedEvent,
+                    label: { Text($0.name) },
+                    searchText: $eventSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as EventPlaceRoleType?)
+                        ForEach(roleTypes) { rt in Text(rt.name).tag(rt as EventPlaceRoleType?) }
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(EventPlaceAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+                SearchSection(
+                    title: "Place",
+                    entities: places,
+                    selected: $selectedPlace,
+                    label: { Text($0.name) },
+                    searchText: $placeSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Source") {
+                    TextField("Source", text: $source)
                 }
-                Picker("Place", selection: $selectedPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
-                }
-                TextField("Source", text: $source)
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -732,11 +1165,11 @@ struct AddEventPlaceAssociationForm: View {
                 Button("Add") { save() }.keyboardShortcut(.defaultAction).disabled(selectedEvent == nil || selectedPlace == nil)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 420)
     }
 
     private func save() {
-        let assoc = EventPlaceAssociation(event: selectedEvent, place: selectedPlace, role: role, source: source)
+        let assoc = EventPlaceAssociation(event: selectedEvent, place: selectedPlace, roleType: selectedRoleType, source: source)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -746,12 +1179,15 @@ struct EditEventPlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var events: [Event]
     @Query private var places: [Place]
+    @Query(sort: \EventPlaceRoleType.name) private var roleTypes: [EventPlaceRoleType]
     let assoc: EventPlaceAssociation
 
     @State private var selectedEvent: Event?
     @State private var selectedPlace: Place?
-    @State private var role: EventPlaceAssociation.Role = .occurredAt
+    @State private var selectedRoleType: EventPlaceRoleType?
     @State private var source = ""
+    @State private var eventSearchText = ""
+    @State private var placeSearchText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -759,18 +1195,31 @@ struct EditEventPlaceAssociationForm: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                Picker("Event", selection: $selectedEvent) {
-                    Text("Select").tag(nil as Event?)
-                    ForEach(events) { e in Text(e.name).tag(e as Event?) }
+                SearchSection(
+                    title: "Event",
+                    entities: events,
+                    selected: $selectedEvent,
+                    label: { Text($0.name) },
+                    searchText: $eventSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Role") {
+                    Picker("Role", selection: $selectedRoleType) {
+                        Text("Select").tag(nil as EventPlaceRoleType?)
+                        ForEach(roleTypes) { rt in Text(rt.name).tag(rt as EventPlaceRoleType?) }
+                    }
                 }
-                Picker("Role", selection: $role) {
-                    ForEach(EventPlaceAssociation.Role.allCases, id: \.self) { r in Text(r.rawValue).tag(r) }
+                SearchSection(
+                    title: "Place",
+                    entities: places,
+                    selected: $selectedPlace,
+                    label: { Text($0.name) },
+                    searchText: $placeSearchText,
+                    filter: { $0.name.localizedCaseInsensitiveContains($1) }
+                )
+                Section("Source") {
+                    TextField("Source", text: $source)
                 }
-                Picker("Place", selection: $selectedPlace) {
-                    Text("Select").tag(nil as Place?)
-                    ForEach(places) { p in Text(p.name).tag(p as Place?) }
-                }
-                TextField("Source", text: $source)
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -780,11 +1229,11 @@ struct EditEventPlaceAssociationForm: View {
                 Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }.padding()
         }
-        .frame(width: 450, height: 340)
+        .frame(width: 450, height: 420)
         .onAppear {
             selectedEvent = assoc.event
             selectedPlace = assoc.place
-            role = assoc.role
+            selectedRoleType = assoc.roleType
             source = assoc.source
         }
     }
@@ -792,7 +1241,7 @@ struct EditEventPlaceAssociationForm: View {
     private func save() {
         assoc.event = selectedEvent
         assoc.place = selectedPlace
-        assoc.role = role
+        assoc.roleType = selectedRoleType
         assoc.source = source
         dismiss()
     }

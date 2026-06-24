@@ -19,11 +19,11 @@ struct TimelinePostView: View {
     }
 
     private var bceMinYear: Int {
-        (postFloodErasWithFigures.compactMap(\.startDate.year).min()) ?? -2900
+        (postFloodErasWithFigures.compactMap(\.startDate.startYear).min()) ?? -2900
     }
 
     private var bceMaxYear: Int {
-        (postFloodErasWithFigures.compactMap(\.endDate.year).max()) ?? -1794
+        (postFloodErasWithFigures.compactMap(\.endDate.endYear).max()) ?? -1794
     }
 
     private var bceSpan: Int {

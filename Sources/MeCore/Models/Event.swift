@@ -28,6 +28,10 @@ package final class Event {
     @Relationship(deleteRule: .nullify, inverse: \ImageAsset.events)
     package var images: [ImageAsset] = []
 
+    /// Sticky notes attached to this event
+    @Relationship(deleteRule: .cascade, inverse: \StickyNote.event)
+    package var stickies: [StickyNote] = []
+
     package init(
         name: String = "",
         eventType: EventType? = nil,

@@ -25,9 +25,17 @@ package final class Place {
     @Relationship(deleteRule: .nullify, inverse: \Tag.places)
     package var tags: [Tag] = []
 
+    /// Alternate names for this place
+    @Relationship(deleteRule: .cascade, inverse: \AlternateName.place)
+    package var alternateNames: [AlternateName] = []
+
     /// Images attached to this place
     @Relationship(deleteRule: .nullify, inverse: \ImageAsset.places)
     package var images: [ImageAsset] = []
+
+    /// Sticky notes attached to this place
+    @Relationship(deleteRule: .cascade, inverse: \StickyNote.place)
+    package var stickies: [StickyNote] = []
 
     package init(
         name: String = "",

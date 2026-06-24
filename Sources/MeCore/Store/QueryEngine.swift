@@ -322,7 +322,7 @@ package class QueryEngine {
     }
 
     private func formatEraDuration(_ era: Era) -> QueryResult? {
-        guard let startYear = era.startDate.year, let endYear = era.endDate.year else {
+        guard let startYear = era.startDate.startYear, let endYear = era.endDate.endYear else {
             return .answer("The \(era.name) has no specific start and end dates recorded.")
         }
         let years = endYear - startYear
@@ -339,7 +339,7 @@ package class QueryEngine {
     }
 
     private func formatFigureLifespan(_ figure: Figure) -> QueryResult? {
-        guard let birthYear = figure.birthDate.year, let deathYear = figure.deathDate.year else {
+        guard let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear else {
             return .answer("\(figure.name) has no specific birth and death dates recorded.")
         }
         let years = deathYear - birthYear
@@ -400,7 +400,7 @@ package class QueryEngine {
                 }
                 if matched.isEmpty { return nil }
                 let totalYears = matched.compactMap { fig -> Int? in
-                    guard let birth = fig.birthDate.year, let death = fig.deathDate.year else { return nil }
+                    guard let birth = fig.birthDate.startYear, let death = fig.deathDate.endYear else { return nil }
                     return death - birth
                 }
                 if !totalYears.isEmpty {
@@ -641,91 +641,91 @@ package class QueryEngine {
     private func findChildren(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func findParents(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findSpouses(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .spouse && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.category == "partner" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findSiblings(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .sibling && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.category == "sibling" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findCreators(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .creator && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "creator" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findCreations(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .creator && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.category == "creator" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func findUncles(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .uncle && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Uncle" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findAunts(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .aunt && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Aunt" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findCommanders(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .commander && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Commander" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findServants(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .servant && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Servant" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findAllies(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .ally && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.name == "Ally" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findEnemies(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .enemy && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
+            .filter { $0.relationshipType?.name == "Enemy" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findWorshippers(of figure: Figure) -> [Figure] {
         let relationships = context.fetchAll() as [Relationship]
         return relationships
-            .filter { $0.relationshipType == .worshipper && $0.toFigure?.persistentModelID == figure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Worshipper" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 

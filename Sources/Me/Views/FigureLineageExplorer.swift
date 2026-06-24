@@ -72,12 +72,12 @@ struct FigureLineageExplorer: View {
         VStack(spacing: 0) {
             // ── Ancestors ──
             if showGrandparents {
-                generationRow(grandparents, label: "Grandparents")
+                generationRow(grandparents, label: "Grandparents", alts: grandparentAlts, onSelectAlt: { recenter(on: $0) })
                 connector()
             }
 
             if !parents.isEmpty {
-                generationRow(parents, label: "Parents")
+                generationRow(parents, label: "Parents", alts: parentAlts, onSelectAlt: { recenter(on: $0) })
                 if !grandparents.isEmpty && !showGrandparents {
                     expandButton("Show Grandparents") { showGrandparents = true }
                 }
@@ -94,7 +94,7 @@ struct FigureLineageExplorer: View {
             // ── Descendants ──
             if !children.isEmpty {
                 connector()
-                generationRow(children, label: "Children")
+                generationRow(children, label: "Children", alts: childAlts, onSelectAlt: { recenter(on: $0) })
                 if !grandchildren.isEmpty && !showGrandchildren {
                     expandButton("Show Grandchildren") { showGrandchildren = true }
                 }
@@ -104,7 +104,7 @@ struct FigureLineageExplorer: View {
 
             if showGrandchildren {
                 connector()
-                generationRow(grandchildren, label: "Grandchildren")
+                generationRow(grandchildren, label: "Grandchildren", alts: grandchildAlts, onSelectAlt: { recenter(on: $0) })
             }
         }
     }
@@ -203,7 +203,7 @@ struct FigureLineageExplorer: View {
             .filter {
                 guard let fromID = $0.fromFigure?.persistentModelID,
                       let toID = $0.toFigure?.persistentModelID,
-                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      $0.relationshipType?.category == "parent",
                       parentIDs.contains(fromID),
                       toID != focusFigure.persistentModelID else { return false }
                 return true
@@ -218,7 +218,7 @@ struct FigureLineageExplorer: View {
             .filter {
                 guard let toID = $0.toFigure?.persistentModelID,
                       let fromID = $0.fromFigure?.persistentModelID,
-                      ($0.relationshipType == .father || $0.relationshipType == .mother),
+                      $0.relationshipType?.category == "parent",
                       childIDs.contains(toID),
                       fromID != focusFigure.persistentModelID else { return false }
                 return true
@@ -271,7 +271,7 @@ struct FigureLineageExplorer: View {
 
     // MARK: - Generation Row
 
-    private func generationRow(_ list: [Figure], label: String? = nil) -> some View {
+    private func generationRow(_ list: [Figure], label: String? = nil, alts: [PersistentIdentifier: [Figure]] = [:], onSelectAlt: ((Figure) -> Void)? = nil) -> some View {
         VStack(spacing: 6) {
             if let label {
                 Text(label)
@@ -281,7 +281,7 @@ struct FigureLineageExplorer: View {
             }
             HStack(spacing: 10) {
                 ForEach(list) { fig in
-                    FigureCardView(figure: fig, isSelected: false)
+                    FigureCardView(figure: fig, isSelected: false, alternatives: alts[fig.persistentModelID] ?? [], onSelectAlt: onSelectAlt)
                         .onTapGesture { recenter(on: fig) }
                         .help("View \(fig.name)")
                 }
@@ -336,59 +336,85 @@ struct FigureLineageExplorer: View {
 
     // MARK: - Relationship Queries
 
-    private var parents: [Figure] {
-        relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
-            .compactMap { $0.fromFigure }
+    /// Returns at most one figure per relationship type, plus a dictionary of alternatives.
+    private func resolveGeneration(_ rels: [Relationship]) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
+        let grouped = Dictionary(grouping: rels) { $0.relationshipType?.name ?? "" }
+        var figures: [Figure] = []
+        var alts: [PersistentIdentifier: [Figure]] = [:]
+        for (_, group) in grouped {
+            guard let chosen = group.first(where: { $0.isPreferred == true }) ?? group.first,
+                  let chosenFig = chosen.fromFigure else { continue }
+            figures.append(chosenFig)
+            if group.count > 1 {
+                alts[chosenFig.persistentModelID] = group.compactMap { $0.fromFigure }.filter { $0.persistentModelID != chosenFig.persistentModelID }
+            }
+        }
+        return (figures, alts)
     }
 
-    private var children: [Figure] {
-        relationships
-            .filter { ($0.relationshipType == .father || $0.relationshipType == .mother) && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
-            .compactMap { $0.toFigure }
+    private var resolvedParents: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
+        resolveGeneration(relationships.filter {
+            $0.relationshipType?.category == "parent" &&
+            $0.toFigure?.persistentModelID == focusFigure.persistentModelID
+        })
     }
+
+    private var parents: [Figure] { resolvedParents.figures }
+    private var parentAlts: [PersistentIdentifier: [Figure]] { resolvedParents.alts }
+
+    private var resolvedChildren: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
+        resolveGeneration(relationships.filter {
+            $0.relationshipType?.category == "parent" &&
+            $0.fromFigure?.persistentModelID == focusFigure.persistentModelID
+        })
+    }
+
+    private var children: [Figure] { resolvedChildren.figures }
+    private var childAlts: [PersistentIdentifier: [Figure]] { resolvedChildren.alts }
 
     private var spousesLeft: [Figure] {
         relationships
-            .filter { $0.relationshipType == .spouse && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Spouse" && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private var spousesRight: [Figure] {
         relationships
-            .filter { $0.relationshipType == .spouse && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Spouse" && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private var consortsLeft: [Figure] {
         relationships
-            .filter { $0.relationshipType == .consort && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Consort" && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private var consortsRight: [Figure] {
         relationships
-            .filter { $0.relationshipType == .consort && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
+            .filter { $0.relationshipType?.name == "Consort" && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
-    private var grandparents: [Figure] {
+    private var resolvedGrandparents: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let parentIDs = Set(parents.map(\.persistentModelID))
-        return relationships
-            .filter {
-                guard let toID = $0.toFigure?.persistentModelID else { return false }
-                return ($0.relationshipType == .father || $0.relationshipType == .mother) && parentIDs.contains(toID)
-            }
-            .compactMap { $0.fromFigure }
+        return resolveGeneration(relationships.filter {
+            guard let toID = $0.toFigure?.persistentModelID else { return false }
+            return $0.relationshipType?.category == "parent" && parentIDs.contains(toID)
+        })
     }
 
-    private var grandchildren: [Figure] {
+    private var grandparents: [Figure] { resolvedGrandparents.figures }
+    private var grandparentAlts: [PersistentIdentifier: [Figure]] { resolvedGrandparents.alts }
+
+    private var resolvedGrandchildren: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let childIDs = Set(children.map(\.persistentModelID))
-        return relationships
-            .filter {
-                guard let fromID = $0.fromFigure?.persistentModelID else { return false }
-                return ($0.relationshipType == .father || $0.relationshipType == .mother) && childIDs.contains(fromID)
-            }
-            .compactMap { $0.toFigure }
+        return resolveGeneration(relationships.filter {
+            guard let fromID = $0.fromFigure?.persistentModelID else { return false }
+            return $0.relationshipType?.category == "parent" && childIDs.contains(fromID)
+        })
     }
+
+    private var grandchildren: [Figure] { resolvedGrandchildren.figures }
+    private var grandchildAlts: [PersistentIdentifier: [Figure]] { resolvedGrandchildren.alts }
 }
