@@ -13,12 +13,15 @@ package final class StickyNote {
 
     package var event: Event?
 
-    package init(text: String = "", createdAt: Date = .now, isResolved: Bool = false, figure: Figure? = nil, place: Place? = nil, event: Event? = nil) {
+    package var thing: Thing?
+
+    package init(text: String = "", createdAt: Date = .now, isResolved: Bool = false, figure: Figure? = nil, place: Place? = nil, event: Event? = nil, thing: Thing? = nil) {
         self.text = text
         self.createdAt = createdAt
         self.isResolved = isResolved
         self.figure = figure
         self.place = place
         self.event = event
+        self.thing = thing
     }
 }

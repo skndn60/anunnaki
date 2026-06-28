@@ -50,16 +50,19 @@ struct EntityReportWindow: View {
                         FigureDossierView(dossier: buildFigureDossier(figure))
                             .padding(20)
                     }
+                    .textSelection(.enabled)
                 } else if let place {
                     ScrollView {
                         PlaceDossierView(dossier: buildPlaceDossier(place))
                             .padding(20)
                     }
+                    .textSelection(.enabled)
                 } else if let event {
                     ScrollView {
                         EventDossierView(dossier: buildEventDossier(event))
                             .padding(20)
                     }
+                    .textSelection(.enabled)
                 } else {
                     notFoundView
                 }

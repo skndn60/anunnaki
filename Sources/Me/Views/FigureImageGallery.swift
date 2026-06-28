@@ -18,7 +18,10 @@ private struct ImageDropTarget: NSViewRepresentable {
         return view
     }
 
-    func updateNSView(_ nsView: NSView, context: Context) { }
+    func updateNSView(_ nsView: NSView, context: Context) {
+        guard let dropView = nsView as? _DropView else { return }
+        dropView.onDrop = onDrop
+    }
 }
 
 private class _DropView: NSView {
@@ -107,8 +110,8 @@ struct ImageGallery: View {
                         .textCase(.uppercase)
                     Spacer()
                     Button(action: { showingFilePicker = true }) {
-                        Image(systemName: "plus.circle")
-                            .font(.caption)
+                        Image(systemName: "plus")
+                            .font(.system(size: 10, weight: .bold))
                     }
                     .buttonStyle(.plain)
                 }
@@ -240,8 +243,9 @@ private struct AllImagesGallery: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: { showingFilePicker = true }) {
-                        Image(systemName: "plus.circle")
+                        Image(systemName: "plus")
                     }
+                    .help("Add image")
                 }
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Close") { dismiss() }
@@ -321,11 +325,13 @@ struct ImageThumbnail: View {
 
                 if isHovered {
                     Button(action: onDelete) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 14))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
                             .foregroundStyle(.white)
+                            .frame(width: 16, height: 16)
                             .background(Circle().fill(Color.red).frame(width: 16, height: 16))
                     }
+                    .help("Delete image")
                     .buttonStyle(.plain)
                     .padding(4)
                 }
@@ -377,6 +383,7 @@ struct ImageDetailContent: View {
     @Query(sort: \Figure.name) private var figures: [Figure]
     @Query(sort: \Place.name) private var places: [Place]
     @Query(sort: \Event.name) private var events: [Event]
+    @Query(sort: \Thing.name) private var things: [Thing]
     @Query(sort: \Tag.name) private var allTags: [Tag]
 
     @State private var previewImage: NSImage?
@@ -495,6 +502,23 @@ struct ImageDetailContent: View {
                     }
                 }
 
+                linkedSection(title: "Associated Things (\(image.things.count))", icon: "cube.box") {
+                    if image.things.isEmpty {
+                        Text("None").foregroundStyle(.tertiary)
+                    }
+                    ForEach(image.things) { thg in
+                        HStack {
+                            Label(thg.name, systemImage: "cube.box")
+                            Spacer()
+                            Button("Remove") {
+                                image.things.removeAll { $0.persistentModelID == thg.persistentModelID }
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.red)
+                        }
+                    }
+                }
+
                 linkedSection(title: "Tags (\(image.tags.count))", icon: "tag") {
                     if image.tags.isEmpty {
                         Text("None").foregroundStyle(.tertiary)
@@ -518,15 +542,16 @@ struct ImageDetailContent: View {
                 Text("Add Links")
                     .font(.subheadline.bold())
 
-                TextField("Search figures, places, or events\u{2026}", text: $searchText)
+                TextField("Search figures, places, events, or things\u{2026}", text: $searchText)
                     .textFieldStyle(.roundedBorder)
 
                 if !searchText.isEmpty {
                     let filteredFigures = figures.filter { !image.figures.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
                     let filteredPlaces = places.filter { !image.places.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
                     let filteredEvents = events.filter { !image.events.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
+                    let filteredThings = things.filter { !image.things.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
 
-                    if filteredFigures.isEmpty && filteredPlaces.isEmpty && filteredEvents.isEmpty {
+                    if filteredFigures.isEmpty && filteredPlaces.isEmpty && filteredEvents.isEmpty && filteredThings.isEmpty {
                         Text("No matches").foregroundStyle(.tertiary)
                     } else {
                         VStack(alignment: .leading, spacing: 2) {
@@ -556,6 +581,16 @@ struct ImageDetailContent: View {
                                     searchText = ""
                                 } label: {
                                     Label(evt.name, systemImage: "bolt.fill")
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            ForEach(filteredThings) { thg in
+                                Button {
+                                    image.things.append(thg)
+                                    searchText = ""
+                                } label: {
+                                    Label(thg.name, systemImage: "cube.box")
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                 }
                                 .buttonStyle(.plain)

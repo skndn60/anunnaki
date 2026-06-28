@@ -38,7 +38,22 @@ struct AlternateNameListView: View {
                 ($0.place?.name.localizedCaseInsensitiveContains(filterEntityText) ?? false)
             }
         }
-        return result
+        return result.sorted { $0.name < $1.name }
+    }
+
+    private var groupedNames: [(key: String, names: [AlternateName])] {
+        let sorted = filteredNames
+        var groups: [(key: String, names: [AlternateName])] = []
+        var currentKey: String?
+        for name in sorted {
+            let key = name.name.uppercased().prefix(1).description
+            if key != currentKey {
+                groups.append((key: key, names: []))
+                currentKey = key
+            }
+            groups[groups.count - 1].names.append(name)
+        }
+        return groups
     }
 
     var body: some View {
@@ -94,12 +109,13 @@ struct AlternateNameListView: View {
                         .overlay(alignment: .trailing) {
                             if !filterEntityText.isEmpty {
                                 Button(action: { filterEntityText = "" }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 10))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 9, weight: .bold))
                                         .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
                                 .padding(.trailing, 4)
+                                .help("Clear filter")
                             }
                         }
                 }
@@ -131,60 +147,36 @@ struct AlternateNameListView: View {
                         .frame(maxWidth: 300)
                     Spacer()
                 }
+            } else if filteredNames.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No results for filter")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
             } else {
-                Table(filteredNames, selection: $selectedAltNameID) {
-                    TableColumn("Entity") { altName in
-                        Text(entityLabel(for: altName))
-                            .fontWeight(.medium)
-                    }
-                    .width(min: 100, ideal: 140)
-
-                    TableColumn("Alternate Name") { altName in
-                        Text(altName.name)
-                            .fontWeight(.medium)
-                    }
-                    .width(min: 100, ideal: 140)
-
-                    TableColumn("Tradition") { altName in
-                        Text(altName.tradition.rawValue)
-                            .font(.caption)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(traditionColor(altName.tradition).opacity(0.12))
-                            )
-                    }
-                    .width(100)
-
-                    TableColumn("Type") { altName in
-                        Text(altName.nameType.rawValue)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .width(min: 100, ideal: 130)
-
-                    TableColumn("Note") { altName in
-                        Text(altName.note)
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(2)
-                    }
-                    .width(min: 140, ideal: 200)
-
-                    TableColumn("") { altName in
-                        HStack(spacing: 4) {
-                            IconActionButton(icon: "pencil", color: .accentColor) {
-                                editingAltName = altName
-                            }
-                            IconActionButton(icon: "trash", color: .red) {
-                                altNameToDelete = altName
-                                showDeleteConfirm = true
+                List(selection: $selectedAltNameID) {
+                    ForEach(groupedNames, id: \.key) { group in
+                        Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+                            ForEach(group.names) { altName in
+                                AlternateNameRow(
+                                    altName: altName,
+                                    onEdit: { editingAltName = altName },
+                                    onDelete: {
+                                        altNameToDelete = altName
+                                        showDeleteConfirm = true
+                                    }
+                                )
+                                .tag(altName.persistentModelID)
                             }
                         }
                     }
-                    .width(60)
                 }
+                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -207,7 +199,6 @@ struct AlternateNameListView: View {
         altName.figure?.name ?? altName.place?.name ?? "—"
     }
 
-    private func traditionColor(_ tradition: AlternateName.Tradition) -> Color { tradition.color }
 }
 
 // MARK: - Alternate Name Form
@@ -219,6 +210,8 @@ struct AlternateNameFormView: View {
     @Query private var places: [Place]
 
     let alternateName: AlternateName?
+    var preSelectedFigure: Figure?
+    var preSelectedPlace: Place?
 
     private enum LinkType: String, CaseIterable {
         case figure = "Figure"
@@ -316,10 +309,12 @@ struct AlternateNameFormView: View {
                     .fontWeight(.medium)
                 Spacer()
                 Button { selectedFigure = nil } label: {
-                    Image(systemName: "xmark.circle.fill")
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .help("Clear selection")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
@@ -381,10 +376,12 @@ struct AlternateNameFormView: View {
                 }
                 Spacer()
                 Button { selectedPlace = nil } label: {
-                    Image(systemName: "xmark.circle.fill")
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .help("Clear selection")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
@@ -439,14 +436,21 @@ struct AlternateNameFormView: View {
     }
 
     private func loadIfEditing() {
-        guard let alternateName else { return }
-        selectedFigure = alternateName.figure
-        selectedPlace = alternateName.place
-        if alternateName.place != nil { linkType = .place }
-        name = alternateName.name
-        tradition = alternateName.tradition
-        nameType = alternateName.nameType
-        note = alternateName.note
+        if let alternateName {
+            selectedFigure = alternateName.figure
+            selectedPlace = alternateName.place
+            if alternateName.place != nil { linkType = .place }
+            name = alternateName.name
+            tradition = alternateName.tradition
+            nameType = alternateName.nameType
+            note = alternateName.note
+        } else if let place = preSelectedPlace {
+            linkType = .place
+            selectedPlace = place
+        } else if let figure = preSelectedFigure {
+            linkType = .figure
+            selectedFigure = figure
+        }
     }
 
     private func save() {
@@ -467,5 +471,59 @@ struct AlternateNameFormView: View {
             modelContext.insert(newAltName)
         }
         dismiss()
+    }
+}
+
+// MARK: - Alternate Name Row
+
+struct AlternateNameRow: View {
+    let altName: AlternateName
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(altName.name)
+                        .fontWeight(.medium)
+                    Text(altName.tradition.rawValue)
+                        .font(.caption2)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(altName.tradition.color.opacity(0.12))
+                        )
+                    Text(altName.nameType.rawValue)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                HStack(spacing: 4) {
+                    Image(systemName: altName.figure != nil ? "person.fill" : "mappin")
+                        .font(.system(size: 9))
+                        .foregroundStyle(altName.figure != nil ? Color.blue : Color.teal)
+                    Text(entityLabel(for: altName))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if !altName.note.isEmpty {
+                        Text(altName.note)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            Spacer()
+            HStack(spacing: 4) {
+                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: onEdit)
+                IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func entityLabel(for altName: AlternateName) -> String {
+        altName.figure?.name ?? altName.place?.name ?? "\u{2014}"
     }
 }

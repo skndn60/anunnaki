@@ -175,8 +175,8 @@ struct EnochView: View {
     private func figureDetailPanel(figure: Figure) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                IconActionButton(icon: "pencil", color: .accentColor) { editingFigure = figure }
-                IconActionButton(icon: "trash", color: .red) {
+                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") { editingFigure = figure }
+                IconActionButton(icon: "trash", color: .red, help: "Delete") {
                     showDeleteConfirm = true
                 }
                 Spacer()
@@ -204,7 +204,7 @@ struct EnochView: View {
     private func placeDetailPanel(place: Place) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                IconActionButton(icon: "pencil", color: .accentColor) { editingPlace = place }
+                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") { editingPlace = place }
                 Spacer()
                 Button(action: { selectedID = nil }) {
                     Image(systemName: "xmark")

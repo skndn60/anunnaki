@@ -13,6 +13,7 @@ final class NavigationCoordinator {
     var pendingFigureID: PersistentIdentifier?
     var pendingPlaceID: PersistentIdentifier?
     var pendingEventID: PersistentIdentifier?
+    var pendingThingID: PersistentIdentifier?
     var history: [NavigationBreadcrumb] = []
 
     func navigateToFigure(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
@@ -33,6 +34,12 @@ final class NavigationCoordinator {
         selectedItem = .events
     }
 
+    func navigateToThing(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
+        if recordHistory { pushHistory(id: id, name: name, item: .things) }
+        pendingThingID = id
+        selectedItem = .things
+    }
+
     func navigateToHistory(at index: Int) {
         guard index < history.count else { return }
         let entry = history[index]
@@ -41,6 +48,7 @@ final class NavigationCoordinator {
         case .figures: navigateToFigure(entry.id, recordHistory: false)
         case .places: navigateToPlace(entry.id, recordHistory: false)
         case .events: navigateToEvent(entry.id, recordHistory: false)
+        case .things: navigateToThing(entry.id, recordHistory: false)
         default: break
         }
     }
@@ -60,6 +68,12 @@ final class NavigationCoordinator {
     func consumePendingEventID() -> PersistentIdentifier? {
         let id = pendingEventID
         pendingEventID = nil
+        return id
+    }
+
+    func consumePendingThingID() -> PersistentIdentifier? {
+        let id = pendingThingID
+        pendingThingID = nil
         return id
     }
 

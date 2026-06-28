@@ -22,7 +22,7 @@ struct VersionListView: View {
                     .font(.title2.bold())
                 Spacer()
                 Button(action: { showingCommitSheet = true }) {
-                    Label("Commit", systemImage: "plus.circle")
+                    Label("Commit", systemImage: "plus")
                 }
                 .buttonStyle(.borderedProminent)
             }

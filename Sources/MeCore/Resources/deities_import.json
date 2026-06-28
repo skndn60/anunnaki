@@ -1,0 +1,510 @@
+{
+  "figures": [
+    {
+      "id": "88f5a117-77bb-51c5-9357-a75cfe9737bb",
+      "name": "Ishkur",
+      "disambiguation": "",
+      "title": "Lord of the Abundance",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Rain, lightning, thunder, devastating tempests",
+      "figureDescription": "The storm god whose dual nature provides the vital rains that nourish crops, or the violent flash floods and thunderbolts that devastate fields in anger.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "6642268b-1f1a-5def-9499-959caccc4dd1",
+      "name": "Ura\u0161",
+      "disambiguation": "",
+      "title": "The Protector of the Fields",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Local agriculture, farming, martial protection",
+      "figureDescription": "The localized male tutelary deity of Dilbat. Distinct from the primordial female earth goddess of the same name, he was later syncretized with Ninurta.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "05f82d85-44a3-5bd1-ab78-d6010dc5b088",
+      "name": "Zababa",
+      "disambiguation": "",
+      "title": "The Eagle of the Battlefield",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Weapons, warfare, military triumph",
+      "figureDescription": "The fiercely aggressive warrior patron of Kish, the traditional seat of human kingship. He is associated with specialized weapons and martial victory.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "04ad4d19-3d92-5712-8f5a-b8e532f26e8a",
+      "name": "Ninazu",
+      "disambiguation": "",
+      "title": "Lord of the Healers",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "The underworld, chthonic snakes, transformation, medical healing",
+      "figureDescription": "A transitional underworld deity associated with agricultural renewal, subterranean waters, sacred serpents, and early pharmacopeia.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5015dc81-d248-564e-957c-dcd57e06c978",
+      "name": "Ningishzida",
+      "disambiguation": "",
+      "title": "Lord of the Good Tree",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Underworld guard, horned serpents, magic, vegetative decay",
+      "figureDescription": "The guardian of the gates of heaven and a master of chthonic mysteries. Represented by twin intertwined snakes, he bridges the underworld and mortal realms.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7046d42c-6e1b-5959-a60f-cc4e7dedc14a",
+      "name": "Gugalanna",
+      "disambiguation": "",
+      "title": "The Great Bull of Heaven",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Celestial destruction, underworld royalty",
+      "figureDescription": "The cosmic bull sent to punish Gilgamesh. His death prompts Inanna's descent to the underworld to attend his funeral rites as Ereshkigal's first husband.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "79037a71-5255-595a-a4bd-c86c49166d48",
+      "name": "Birtu",
+      "disambiguation": "",
+      "title": "The Shackle",
+      "figureType": "Deity",
+      "gender": "Unknown",
+      "domain": "Underworld incarceration, policing the dead",
+      "figureDescription": "A minor, specialized underworld entity who functions as a permanent jailer or enforcer within the subterranean palace complex.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "1708a1d5-fce9-50b8-b789-71bd8037a61a",
+      "name": "Kulla",
+      "disambiguation": "",
+      "title": "The Brick God",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Brick-making, architecture, temple foundations",
+      "figureDescription": "The specialized god invoked by priests and masons during the initial creation of mud-bricks and the laying of sacred temple foundations.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ee8efa38-df53-5917-9626-d3ed52fa845f",
+      "name": "Mushdamma",
+      "disambiguation": "",
+      "title": "The Great Builder of Enlil",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Structural construction, masonry, domestic dwellings",
+      "figureDescription": "The divine architect charged with supervising the structural integrity of houses, palaces, and public administrative centers.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ef14c26f-7fbb-55cf-a678-4876f0edd945",
+      "name": "Hendursaga",
+      "disambiguation": "",
+      "title": "The Night Watchman",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Law enforcement, urban safety, street patrols, night heraldry",
+      "figureDescription": "The watchful herald who guards city streets after dark, protecting vulnerable citizens and maintaining civic order while the high gods sleep.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "bc29b3e5-652b-5605-a06b-41a26b0b36b6",
+      "name": "Isimud",
+      "disambiguation": "",
+      "title": "The Two-Faced Minister",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Diplomacy, divine messaging, bureaucratic gatekeeping",
+      "figureDescription": "Enki's literal two-faced vizier. His physical form represents absolute duality, foresight, and diplomatic tact when dealing with rival cosmic factions.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d282ac73-73ba-58c9-8b1d-f86b1d754e39",
+      "name": "Papsukkal",
+      "disambiguation": "",
+      "title": "The Herald of the Great Gods",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine decrees, processing celestial paperwork, intercession",
+      "figureDescription": "The administrative vizier of An and Enlil, tasked with relaying major imperial cosmic decrees down to the lesser gods and mortal kings.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "194b2000-b79e-5743-902b-90b0cdd6520b",
+      "name": "Lugal-Marada",
+      "disambiguation": "",
+      "title": "King of Marad",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Localized military defense, regional protection",
+      "figureDescription": "The highly specific regional tutelary warrior god who served as the defensive anchor and civic pride of the city of Marad.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "47eaf998-d04c-596e-9f7d-14ebbe33c784",
+      "name": "Numushda",
+      "disambiguation": "",
+      "title": "Lord of the Wild Steppe",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Wild nature, untamed herds, nomadic frontiers",
+      "figureDescription": "The patron deity of Kazallu, associated with the untamed wilderness, open pastures, and the protection of cattle roaming the steppe fringes.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "81b23391-6760-532b-bef5-ffa1da4c9925",
+      "name": "Shara",
+      "disambiguation": "",
+      "title": "The Caretaker of the Eanna",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Minor warfare, celestial curation, localized defense",
+      "figureDescription": "The patron deity of Umma. Mythologically cast as Inanna's loyal son or personal barber/beautician who defends her border claims against Lagash.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ec4e9506-5981-529f-b3cf-ed0033988a78",
+      "name": "Pabilsag",
+      "disambiguation": "",
+      "title": "The Divine Hunter",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Archery, hunting, physical healing, constellations",
+      "figureDescription": "A multi-faceted god of the wild steppe and physical therapy, later associated directly by ancient astronomers with the constellation Sagittarius.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "de8a63b6-d01b-5127-9001-4fedcdae78c5",
+      "name": "Lulal",
+      "disambiguation": "",
+      "title": "The Guardian of the Hearth",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Domestic protection, urban defense",
+      "figureDescription": "A fierce but minor martial defender who lives on the thresholds of domestic households to scare away ambient evil spirits.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "84ccd539-f3ce-53a4-94c1-7141e0743091",
+      "name": "Enkimdu",
+      "disambiguation": "",
+      "title": "The Lord of Ditch and Canal",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Irrigation labor, canal digging, agricultural boundaries",
+      "figureDescription": "The peaceful, industrious farming god who manages water systems, famous for his friendly debate with Dumuzi the shepherd for Inanna's hand.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c6f0cbc7-c394-558c-b093-788820ff1bfc",
+      "name": "Ninshubur",
+      "disambiguation": "",
+      "title": "The Chief Vizier of Heaven",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Diplomatic strategy, threshold protection, prayer translation",
+      "figureDescription": "The ultimate administrative workhorse of the pantheon. Unwaveringly loyal, this entity runs the logistics of Heaven and rescues Inanna from the underworld. Gender fluid across millennia. Female in early Sumerian traditions; heavily masculinized in later Assyro-Babylonian theology.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    }
+  ],
+  "alternateNames": [
+    {
+      "figureId": "88f5a117-77bb-51c5-9357-a75cfe9737bb",
+      "placeId": null,
+      "name": "Adad",
+      "tradition": "akkadian",
+      "nameType": "spelling",
+      "note": ""
+    },
+    {
+      "figureId": "bc29b3e5-652b-5605-a06b-41a26b0b36b6",
+      "placeId": null,
+      "name": "Usm\u00fb",
+      "tradition": "akkadian",
+      "nameType": "spelling",
+      "note": ""
+    },
+    {
+      "figureId": "d282ac73-73ba-58c9-8b1d-f86b1d754e39",
+      "placeId": null,
+      "name": "Ilabrat",
+      "tradition": "akkadian",
+      "nameType": "spelling",
+      "note": ""
+    },
+    {
+      "figureId": "c6f0cbc7-c394-558c-b093-788820ff1bfc",
+      "placeId": null,
+      "name": "Papsukkal",
+      "tradition": "akkadian",
+      "nameType": "spelling",
+      "note": ""
+    }
+  ],
+  "figurePlaceAssociations": [
+    {
+      "figureId": "05f82d85-44a3-5bd1-ab78-d6010dc5b088",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Patron Deity",
+      "source": ""
+    },
+    {
+      "figureId": "7046d42c-6e1b-5959-a60f-cc4e7dedc14a",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Patron Deity",
+      "source": ""
+    },
+    {
+      "figureId": "bc29b3e5-652b-5605-a06b-41a26b0b36b6",
+      "placeId": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
+      "role": "Patron Deity",
+      "source": ""
+    }
+  ],
+  "eras": [],
+  "relationships": [],
+  "places": [],
+  "events": [],
+  "sources": [],
+  "attachments": [],
+  "citations": [],
+  "figureTypes": [],
+  "placeTypes": [],
+  "eventTypes": [],
+  "placePlaceAssociations": [],
+  "eventPlaceAssociations": [],
+  "eventEventAssociations": [],
+  "imageAssets": [],
+  "tags": []
+}

@@ -58,33 +58,38 @@ struct SourceListView: View {
             }
             .frame(minWidth: 450, maxWidth: .infinity)
 
-            if let source = selectedSource {
-                ResizableDivider(width: $detailWidth, range: 200...800)
-                VStack(spacing: 0) {
-                    HStack(spacing: 8) {
-                        IconActionButton(icon: "pencil", color: .accentColor) {
-                            editingSource = source
-                        }
-                        IconActionButton(icon: "trash", color: .red) {
-                            selectedSourceID = nil
-                            modelContext.delete(source)
-                        }
-                        Spacer()
-                        Button(action: { selectedSourceID = nil }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 22, height: 22)
-                                .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                        }
+            Group {
+                if let source = selectedSource {
+                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
+                                editingSource = source
+                            }
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
+                                selectedSourceID = nil
+                                modelContext.delete(source)
+                            }
+                            Spacer()
+                            Button(action: { selectedSourceID = nil }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 22, height: 22)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
+                            }
                         .buttonStyle(.plain)
                     }
-                    .padding(8)
+                    .padding(.vertical, 8)
                     SourceDetailView(source: source)
-                }
+                    }
                 .frame(width: detailWidth)
+                .background(.thinMaterial)
+                }
             }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
+        .animation(.easeInOut(duration: 0.25), value: selectedSourceID)
         .sheet(isPresented: $showingAddSheet) {
             SourceFormView(source: nil)
         }
@@ -249,6 +254,7 @@ struct SourceDetailView: View {
                 AttachmentsSection(source: source)
             }
             .padding(20)
+            .textSelection(.enabled)
         }
     }
 }
@@ -268,10 +274,11 @@ struct AttachmentsSection: View {
                     .textCase(.uppercase)
                 Spacer()
                 Button(action: { showingAddSheet = true }) {
-                    Image(systemName: "plus.circle")
-                        .font(.caption)
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
                 }
                 .buttonStyle(.plain)
+                .help("Add reference")
             }
 
             if source.attachments.isEmpty {

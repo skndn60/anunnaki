@@ -341,6 +341,53 @@ package struct VersionManager {
             ]
         }
 
+        // Things
+        let things = (try? context.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []
+        var thingIds: [String: String] = [:]
+        for thing in things {
+            let id = UUID().uuidString
+            thingIds[thing.persistentModelID.hashValue.description] = id
+            root.things.append(SeedThing(
+                id: id,
+                name: thing.name,
+                thingDescription: thing.thingDescription,
+                source: thing.source
+            ))
+        }
+
+        // Thing-Figure Associations
+        let tfa = (try? context.fetch(FetchDescriptor<ThingFigureAssociation>())) ?? []
+        for assoc in tfa {
+            guard let thing = assoc.thing, let figure = assoc.figure,
+                  let thgId = thingIds[thing.persistentModelID.hashValue.description],
+                  let figId = figureIds[figure.persistentModelID.hashValue.description] else { continue }
+            root.thingFigureAssociations = (root.thingFigureAssociations ?? []) + [
+                SeedThingFigureAssociation(thingId: thgId, figureId: figId, role: assoc.roleType?.name ?? "", source: assoc.source)
+            ]
+        }
+
+        // Thing-Place Associations
+        let tpa = (try? context.fetch(FetchDescriptor<ThingPlaceAssociation>())) ?? []
+        for assoc in tpa {
+            guard let thing = assoc.thing, let place = assoc.place,
+                  let thgId = thingIds[thing.persistentModelID.hashValue.description],
+                  let plcId = placeIds[place.persistentModelID.hashValue.description] else { continue }
+            root.thingPlaceAssociations = (root.thingPlaceAssociations ?? []) + [
+                SeedThingPlaceAssociation(thingId: thgId, placeId: plcId, role: assoc.roleType?.name ?? "", source: assoc.source)
+            ]
+        }
+
+        // Thing-Event Associations
+        let tea = (try? context.fetch(FetchDescriptor<ThingEventAssociation>())) ?? []
+        for assoc in tea {
+            guard let thing = assoc.thing, let event = assoc.event,
+                  let thgId = thingIds[thing.persistentModelID.hashValue.description],
+                  let evtId = eventIds[event.persistentModelID.hashValue.description] else { continue }
+            root.thingEventAssociations = (root.thingEventAssociations ?? []) + [
+                SeedThingEventAssociation(thingId: thgId, eventId: evtId, role: assoc.roleType?.name ?? "", source: assoc.source)
+            ]
+        }
+
         // Image Assets
         let images = (try? context.fetch(FetchDescriptor<ImageAsset>())) ?? []
         var imageIds: [String: String] = [:]
@@ -350,8 +397,9 @@ package struct VersionManager {
             let figIds = image.figures.compactMap { figureIds[$0.persistentModelID.hashValue.description] }
             let plcIds = image.places.compactMap { placeIds[$0.persistentModelID.hashValue.description] }
             let evtIds = image.events.compactMap { eventIds[$0.persistentModelID.hashValue.description] }
+            let thgIds = image.things.compactMap { thingIds[$0.persistentModelID.hashValue.description] }
             root.imageAssets = (root.imageAssets ?? []) + [
-                SeedImageAsset(id: id, filename: image.filename, caption: image.caption, source: image.source, figureIds: figIds, placeIds: plcIds, eventIds: evtIds)
+                SeedImageAsset(id: id, filename: image.filename, caption: image.caption, source: image.source, figureIds: figIds, placeIds: plcIds, eventIds: evtIds, thingIds: thgIds)
             ]
         }
 
@@ -362,8 +410,9 @@ package struct VersionManager {
             let plcIds = tag.places.compactMap { placeIds[$0.persistentModelID.hashValue.description] }
             let evtIds = tag.events.compactMap { eventIds[$0.persistentModelID.hashValue.description] }
             let imgIds = tag.images.compactMap { imageIds[$0.persistentModelID.hashValue.description] }
+            let thgIds = tag.things.compactMap { thingIds[$0.persistentModelID.hashValue.description] }
             root.tags = (root.tags ?? []) + [
-                SeedTag(id: UUID().uuidString, name: tag.name, colorHex: tag.colorHex, figureIds: figIds, placeIds: plcIds, eventIds: evtIds, imageIds: imgIds)
+                SeedTag(id: UUID().uuidString, name: tag.name, colorHex: tag.colorHex, figureIds: figIds, placeIds: plcIds, eventIds: evtIds, imageIds: imgIds, thingIds: thgIds)
             ]
         }
 

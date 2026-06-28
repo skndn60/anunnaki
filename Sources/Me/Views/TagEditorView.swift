@@ -17,8 +17,8 @@ struct TagEditorView: View {
                             Button {
                                 tags.removeAll { $0.persistentModelID == tag.persistentModelID }
                             } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 10))
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)

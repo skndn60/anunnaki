@@ -13,6 +13,8 @@ package final class Place {
     package var latitude: Double? // nil for cosmic/mythological places
     package var longitude: Double?
 
+    package var foundedDate: MythologicalDate?
+
     /// Figures associated with this place
     @Relationship(deleteRule: .cascade, inverse: \FigurePlaceAssociation.place)
     package var figureAssociations: [FigurePlaceAssociation] = []
@@ -28,6 +30,10 @@ package final class Place {
     /// Alternate names for this place
     @Relationship(deleteRule: .cascade, inverse: \AlternateName.place)
     package var alternateNames: [AlternateName] = []
+
+    /// Things associated with this place
+    @Relationship(deleteRule: .cascade, inverse: \ThingPlaceAssociation.place)
+    package var thingAssociations: [ThingPlaceAssociation] = []
 
     /// Images attached to this place
     @Relationship(deleteRule: .nullify, inverse: \ImageAsset.places)

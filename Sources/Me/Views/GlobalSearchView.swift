@@ -11,6 +11,7 @@ struct GlobalSearchView: View {
     @Query private var events: [Event]
     @Query private var sources: [Source]
     @Query private var eras: [Era]
+    @Query private var things: [Thing]
 
     private var query: String { searchText.lowercased().trimmingCharacters(in: .whitespaces) }
     private var hasQuery: Bool { !query.isEmpty }
@@ -43,6 +44,15 @@ struct GlobalSearchView: View {
         }
     }
 
+    private var matchedThings: [Thing] {
+        guard hasQuery else { return [] }
+        return things.filter {
+            $0.name.lowercased().contains(query) ||
+            $0.thingDescription.lowercased().contains(query) ||
+            $0.source.lowercased().contains(query)
+        }
+    }
+
     private var matchedSources: [Source] {
         guard hasQuery else { return [] }
         return sources.filter {
@@ -57,7 +67,7 @@ struct GlobalSearchView: View {
     }
 
     private var totalCount: Int {
-        matchedFigures.count + matchedPlaces.count + matchedEvents.count + matchedSources.count + matchedEras.count
+        matchedFigures.count + matchedPlaces.count + matchedEvents.count + matchedSources.count + matchedEras.count + matchedThings.count
     }
 
     var body: some View {
@@ -136,6 +146,33 @@ struct GlobalSearchView: View {
                                         Text(event.eventType?.name ?? "")
                                             .font(.caption)
                                             .foregroundStyle(.tertiary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+
+                    if !matchedThings.isEmpty {
+                        Section("Things (\(matchedThings.count))") {
+                            ForEach(matchedThings, id: \.persistentModelID) { thing in
+                                Button {
+                                    onNavigateTo?(.things)
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "cube.box")
+                                            .font(.caption)
+                                            .foregroundStyle(.tertiary)
+                                        VStack(alignment: .leading) {
+                                            Text(thing.name)
+                                                .font(.body)
+                                            if !thing.thingDescription.isEmpty {
+                                                Text(thing.thingDescription)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.tertiary)
+                                                    .lineLimit(1)
+                                            }
+                                        }
                                     }
                                 }
                                 .buttonStyle(.plain)

@@ -142,6 +142,151 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(figures.first?.name, "Enlil")
     }
 
+    func testQueryEngineHowManyChildrenNatural() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let anu = Figure(name: "Anu", gender: .male)
+        let enlil = Figure(name: "Enlil", gender: .male)
+        let enki = Figure(name: "Enki", gender: .male)
+        context.insert(anu)
+        context.insert(enlil)
+        context.insert(enki)
+
+        context.insert(Relationship(fromFigure: anu, toFigure: enlil, relationshipType: relType("Father", context)))
+        context.insert(Relationship(fromFigure: anu, toFigure: enki, relationshipType: relType("Father", context)))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+
+        let result = engine.query("how many children did anu have? I want a number and a list of their names")
+
+        let title: String
+        let figures: [Figure]
+        switch result {
+        case .figureList(let t, let f):
+            title = t; figures = f
+        case .answer(let text):
+            XCTFail("Expected figureList, got answer: '\(text)'")
+            return
+        case .figure(let dossier):
+            XCTFail("Expected figureList, got figure dossier for '\(dossier.figure.name)'")
+            return
+        default:
+            XCTFail("Expected figureList, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Anu had 2 children", "Title was: '\(title)'")
+        XCTAssertEqual(figures.count, 2)
+        XCTAssertTrue(figures.contains(where: { $0.name == "Enlil" }))
+        XCTAssertTrue(figures.contains(where: { $0.name == "Enki" }))
+    }
+
+    func testQueryEngineEmbeddingSynonymKids() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let anu = Figure(name: "Anu", gender: .male)
+        let enlil = Figure(name: "Enlil", gender: .male)
+        let enki = Figure(name: "Enki", gender: .male)
+        context.insert(anu)
+        context.insert(enlil)
+        context.insert(enki)
+
+        context.insert(Relationship(fromFigure: anu, toFigure: enlil, relationshipType: relType("Father", context)))
+        context.insert(Relationship(fromFigure: anu, toFigure: enki, relationshipType: relType("Father", context)))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+
+        let result = engine.query("how many kids does anu have")
+
+        let title: String
+        let figures: [Figure]
+        switch result {
+        case .figureList(let t, let f):
+            title = t; figures = f
+        case .answer(let text):
+            XCTFail("Expected figureList, got answer: '\(text)'")
+            return
+        default:
+            XCTFail("Expected figureList, got \(result)")
+            return
+        }
+        XCTAssertTrue(title.lowercased().contains("2"), "Title should mention the count: '\(title)'")
+        XCTAssertEqual(figures.count, 2)
+        XCTAssertTrue(figures.contains(where: { $0.name == "Enlil" }))
+        XCTAssertTrue(figures.contains(where: { $0.name == "Enki" }))
+    }
+
+    func testQueryEnginePossessiveSynonymMom() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let enki = Figure(name: "Enki", gender: .male)
+        let nammu = Figure(name: "Nammu", gender: .female)
+        context.insert(enki)
+        context.insert(nammu)
+        context.insert(Relationship(fromFigure: nammu, toFigure: enki, relationshipType: relType("Mother", context)))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("enki's mom")
+        let title: String
+        let figures: [Figure]
+        switch result {
+        case .figureList(let t, let f):
+            title = t; figures = f
+        default:
+            XCTFail("Expected figureList, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Mother of Enki")
+        XCTAssertEqual(figures.count, 1)
+        XCTAssertEqual(figures.first?.name, "Nammu")
+    }
+
+    func testQueryEngineYesNoChoice() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let enki = Figure(name: "Enki", gender: .male)
+        let deityType = FigureType(name: "Deity", icon: "star", colorHex: "#FFD700")
+        context.insert(deityType)
+        enki.figureType = deityType
+        context.insert(enki)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+
+        let result = engine.query("Was Enki a deity or a human?")
+
+        switch result {
+        case .answer(let text):
+            XCTAssertEqual(text, "Enki is a Deity, not a Human.")
+        default:
+            XCTFail("Expected answer string, got \(result)")
+        }
+    }
+
+    func testQueryEngineUnknownReturnsNoMatch() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let engine = QueryEngine(context: context)
+
+        let result = engine.query("and humans?")
+        switch result {
+        case .noMatch:
+            break
+        default:
+            XCTFail("Expected noMatch for unknown query, got \(result)")
+        }
+    }
+
     func testDossierBuilderCollectsParentsAndChildren() {
         let container = makeContainer()
         let context = ModelContext(container)
@@ -592,23 +737,18 @@ final class MeCoreTests: XCTestCase {
 
     // MARK: - Fallback Resolution
 
-    func testQueryEngineFallbackResolveByTitle() {
+    func testQueryEngineUnmatchedReturnsNoMatch() {
         let container = makeContainer()
         let context = ModelContext(container)
         SeedData.ensureTypesExist(context: context)
 
-        let figure = Figure(name: "Ziusudra", title: "King of Shuruppak", gender: .male)
-        context.insert(figure)
-        try? context.save()
-
         let engine = QueryEngine(context: context)
         let result = engine.query("king of shuruppak")
 
-        guard case .figure(let dossier) = result else {
-            XCTFail("Expected figure result, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch for unresolved query, got \(result)")
             return
         }
-        XCTAssertEqual(dossier.figure.name, "Ziusudra")
     }
 
     // MARK: - Enoch Backfill

@@ -386,8 +386,8 @@ struct LineageTreeView: View {
     private func expandButton(_ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Image(systemName: "plus.circle")
-                    .font(.system(size: 9))
+                Image(systemName: "plus")
+                    .font(.system(size: 8, weight: .bold))
                 Text(label)
                     .font(.caption)
             }
@@ -609,10 +609,11 @@ struct FigureCardView: View {
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(figure.figureType?.color.opacity(0.15) ?? .gray.opacity(0.15))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(isSelected ? Color.accentColor : figure.figureType?.color.opacity(0.4) ?? .gray.opacity(0.4), lineWidth: isSelected ? 2 : 1)
-                )
+                .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(isSelected ? Color.accentColor : figure.figureType?.color.opacity(0.4) ?? .gray.opacity(0.4), lineWidth: isSelected ? 2 : 1)
         )
         .overlay(alignment: .topTrailing) {
             if !alternatives.isEmpty {

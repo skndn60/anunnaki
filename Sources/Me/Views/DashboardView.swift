@@ -14,11 +14,13 @@ struct DashboardView: View {
     @Query private var relationships: [Relationship]
     @Query private var figureTypes: [FigureType]
     @Query private var citations: [Citation]
+    @Query private var things: [Thing]
     private var recentEdits: [RecentEdit] { RecentEditStore.items }
 
     @State private var showingAddFigure = false
     @State private var showingAddPlace = false
     @State private var showingAddEvent = false
+    @State private var showingAddThing = false
     @State private var showingReseedAlert = false
     @State private var isReseeding = false
     private var mostConnectedFigure: (name: String, count: Int)? {
@@ -74,6 +76,7 @@ struct DashboardView: View {
             StatCard(title: "Eras", count: eras.count, icon: "clock.arrow.circlepath", color: .purple, action: { onNavigateTo?(.eras) })
             StatCard(title: "Sources", count: sources.count, icon: "books.vertical", color: .red, action: { onNavigateTo?(.sources) })
             StatCard(title: "Relationships", count: relationships.count, icon: "link", color: .teal, action: { onNavigateTo?(.relationships) })
+            StatCard(title: "Things", count: things.count, icon: "cube.box", color: .cyan, action: { onNavigateTo?(.things) })
         }
     }
 
@@ -84,8 +87,9 @@ struct DashboardView: View {
                 QuickActionButton(title: "New Figure", icon: "person.badge.plus", color: .blue) { showingAddFigure = true }
                 QuickActionButton(title: "New Place", icon: "building.2", color: .green) { showingAddPlace = true }
                 QuickActionButton(title: "New Event", icon: "calendar.badge.plus", color: .orange) { showingAddEvent = true }
+                QuickActionButton(title: "New Thing", icon: "cube.box", color: .cyan) { showingAddThing = true }
                 QuickActionButton(title: "Go to Query", icon: "text.magnifyingglass", color: .indigo) { onNavigateTo?(.query) }
-                QuickActionButton(title: "Reseed Database", icon: "arrow.counterclockwise.circle", color: .red) { showingReseedAlert = true }
+                QuickActionButton(title: "Reseed Database", icon: "arrow.counterclockwise", color: .red) { showingReseedAlert = true }
                     .disabled(isReseeding)
                 QuickActionButton(title: "Versions", icon: "clock.arrow.circlepath", color: .teal) { onNavigateTo?(.versions) }
             }
@@ -93,6 +97,7 @@ struct DashboardView: View {
         .sheet(isPresented: $showingAddFigure) { FigureFormView(figure: nil) }
         .sheet(isPresented: $showingAddPlace) { PlaceFormView(place: nil) }
         .sheet(isPresented: $showingAddEvent) { EventFormView(event: nil) }
+        .sheet(isPresented: $showingAddThing) { ThingFormView(thing: nil) }
         .alert("Reseed Database?", isPresented: $showingReseedAlert) {
             Button("Cancel", role: .cancel) { }
             Button("Reseed", role: .destructive) {
@@ -199,13 +204,14 @@ struct DashboardView: View {
                             case "Figure": onNavigateTo?(.figures)
                             case "Place": onNavigateTo?(.places)
                             case "Event": onNavigateTo?(.events)
+                            case "Thing": onNavigateTo?(.things)
                             default: break
                             }
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: edit.entityType == "Figure" ? "person.fill" : edit.entityType == "Place" ? "building.columns" : "bolt.fill")
+                                Image(systemName: edit.entityType == "Figure" ? "person.fill" : edit.entityType == "Place" ? "building.columns" : edit.entityType == "Event" ? "bolt.fill" : "cube.box")
                                     .font(.caption)
-                                    .foregroundStyle(edit.entityType == "Figure" ? .blue : edit.entityType == "Place" ? .green : .orange)
+                                    .foregroundStyle(edit.entityType == "Figure" ? .blue : edit.entityType == "Place" ? .green : edit.entityType == "Event" ? .orange : .cyan)
                                     .frame(width: 16)
                                 Text(edit.entityName)
                                     .font(.subheadline)
@@ -265,6 +271,7 @@ private struct StatCard: View {
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(color.opacity(0.08))
+                    .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -294,6 +301,7 @@ private struct QuickActionButton: View {
             .background(
                 RoundedRectangle(cornerRadius: 8)
                     .fill(color.opacity(0.1))
+                    .shadow(color: .black.opacity(0.06), radius: 2, y: 1)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 8)

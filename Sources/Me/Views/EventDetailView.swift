@@ -12,6 +12,12 @@ struct EventDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var figures: [Figure]
     @Query private var places: [Place]
+    @State private var showFigureLinkPopover = false
+    @State private var figureSearchText = ""
+    @State private var showPlaceLinkPopover = false
+    @State private var placeSearchText = ""
+    @State private var selectedPlaceForLink: Place?
+    @State private var selectedPlaceRole: EventPlaceRoleType?
 
     private var involvedFigures: [Figure] { event.involvedFigures }
 
@@ -97,14 +103,36 @@ struct EventDetailView: View {
                 }
 
                 // Involved Figures
-                if !involvedFigures.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
                         Text("Involved Figures")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
+                        Spacer()
+                        Button(action: { showFigureLinkPopover = true }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Link a figure")
+                        .popover(isPresented: $showFigureLinkPopover) {
+                            EventFigureLinkPopover(
+                                event: event,
+                                searchText: $figureSearchText,
+                                isPresented: $showFigureLinkPopover
+                            )
+                            .frame(width: 340, height: 400)
+                        }
+                    }
 
+                    if involvedFigures.isEmpty {
+                        Text("No figures linked")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.vertical, 4)
+                    } else {
                         ForEach(involvedFigures) { figure in
                             HStack(spacing: 8) {
                                 Circle()
@@ -173,14 +201,38 @@ struct EventDetailView: View {
 
                 // Associated places
                 let associatedPlaces = event.placeAssociations
-                if !associatedPlaces.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
                         Text("Locations")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
+                        Spacer()
+                        Button(action: { showPlaceLinkPopover = true }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Link a place")
+                        .popover(isPresented: $showPlaceLinkPopover) {
+                            EventPlaceLinkPopover(
+                                event: event,
+                                searchText: $placeSearchText,
+                                selectedPlace: $selectedPlaceForLink,
+                                selectedRole: $selectedPlaceRole,
+                                isPresented: $showPlaceLinkPopover
+                            )
+                            .frame(width: 340, height: 400)
+                        }
+                    }
 
+                    if associatedPlaces.isEmpty {
+                        Text("No locations linked")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.vertical, 4)
+                    } else {
                         ForEach(associatedPlaces) { assoc in
                             if let place = assoc.place {
                                 HStack(spacing: 8) {
@@ -247,6 +299,7 @@ struct EventDetailView: View {
                 Spacer()
             }
             .padding(20)
+            .textSelection(.enabled)
         }
     }
 
@@ -259,4 +312,193 @@ struct EventDetailView: View {
 
     private var eventColor: Color { event.eventType?.color ?? .gray }
 
+}
+
+// MARK: - Figure Link Popover
+
+private struct EventFigureLinkPopover: View {
+    let event: Event
+    @Binding var searchText: String
+    @Binding var isPresented: Bool
+
+    @Environment(\.modelContext) private var modelContext
+
+    private var allFigures: [Figure] {
+        (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var filteredFigures: [Figure] {
+        let linked = Set(event.involvedFigures.map(\.persistentModelID))
+        let available = allFigures.filter { !linked.contains($0.persistentModelID) }
+        if searchText.isEmpty { return available }
+        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search figures…", text: $searchText)
+                    .textFieldStyle(.plain)
+            }
+            .padding(10)
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(6)
+
+            if filteredFigures.isEmpty {
+                Text("No matching figures")
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 20)
+            } else {
+                List(filteredFigures, id: \.persistentModelID) { figure in
+                    Button(action: { linkFigure(figure) }) {
+                        HStack(spacing: 10) {
+                            Text(figure.gender.symbol)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14)
+                            Text(figure.name)
+                                .font(.body)
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel") { isPresented = false }
+                    .buttonStyle(.bordered)
+            }
+        }
+        .padding()
+    }
+
+    private func linkFigure(_ figure: Figure) {
+        event.involvedFigures.append(figure)
+        try? modelContext.save()
+        isPresented = false
+    }
+}
+
+// MARK: - Place Link Popover
+
+private struct EventPlaceLinkPopover: View {
+    let event: Event
+    @Binding var searchText: String
+    @Binding var selectedPlace: Place?
+    @Binding var selectedRole: EventPlaceRoleType?
+    @Binding var isPresented: Bool
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var allRoles: [EventPlaceRoleType] = []
+
+    private var allPlaces: [Place] {
+        (try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var filteredPlaces: [Place] {
+        let linked = Set(event.placeAssociations.compactMap { $0.place?.persistentModelID })
+        let available = allPlaces.filter { !linked.contains($0.persistentModelID) }
+        if searchText.isEmpty { return available }
+        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search places…", text: $searchText)
+                    .textFieldStyle(.plain)
+            }
+            .padding(10)
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(6)
+
+            if filteredPlaces.isEmpty {
+                Text("No matching places")
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 20)
+            } else {
+                List(filteredPlaces, id: \.persistentModelID) { place in
+                    Button(action: { selectedPlace = place }) {
+                        HStack(spacing: 10) {
+                            Image(systemName: place.placeType?.icon ?? "mappin")
+                                .font(.caption)
+                                .foregroundStyle(.teal)
+                                .frame(width: 16)
+                            Text(place.name)
+                                .font(.body)
+                            if !place.modernLocation.isEmpty {
+                                Text(place.modernLocation)
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Spacer()
+                            if selectedPlace?.persistentModelID == place.persistentModelID {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+            }
+
+            Divider()
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Role:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("Role", selection: $selectedRole) {
+                        Text("Select…").tag(nil as EventPlaceRoleType?)
+                        ForEach(allRoles, id: \.persistentModelID) { role in
+                            HStack(spacing: 6) {
+                                Image(systemName: role.icon)
+                                Text(role.name)
+                            }
+                            .tag(role as EventPlaceRoleType?)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Cancel") { isPresented = false }
+                        .buttonStyle(.bordered)
+                    Button("Link") {
+                        createAssociation()
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedPlace == nil || selectedRole == nil)
+                }
+            }
+        }
+        .padding()
+        .onAppear {
+            allRoles = (try? modelContext.fetch(FetchDescriptor<EventPlaceRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
+        }
+    }
+
+    private func createAssociation() {
+        guard let place = selectedPlace, let role = selectedRole else { return }
+        let assoc = EventPlaceAssociation()
+        modelContext.insert(assoc)
+        event.placeAssociations.append(assoc)
+        place.eventAssociations.append(assoc)
+        role.associations.append(assoc)
+        try? modelContext.save()
+    }
 }

@@ -45,6 +45,10 @@ package final class Figure {
     @Relationship(deleteRule: .cascade, inverse: \FigurePlaceAssociation.figure)
     package var placeAssociations: [FigurePlaceAssociation] = []
 
+    /// Things associated with this figure
+    @Relationship(deleteRule: .cascade, inverse: \ThingFigureAssociation.figure)
+    package var thingAssociations: [ThingFigureAssociation] = []
+
     /// Sticky notes attached to this figure
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.figure)
     package var stickies: [StickyNote] = []

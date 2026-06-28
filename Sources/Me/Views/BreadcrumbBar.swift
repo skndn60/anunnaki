@@ -40,12 +40,13 @@ struct BreadcrumbBar: View {
                     }
                     Spacer()
                     Button(action: onClear) {
-                        Image(systemName: "xmark.circle")
-                            .font(.system(size: 11))
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.tertiary)
                     }
                     .buttonStyle(.plain)
                     .pointingHand()
+                    .help("Clear breadcrumbs")
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)

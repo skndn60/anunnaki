@@ -474,11 +474,12 @@ struct NetworkGraphView: View {
             .buttonStyle(.plain)
             Spacer()
             Button { selectedNode = nil } label: {
-                Image(systemName: "xmark.circle.fill")
+                Image(systemName: "xmark")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             }
             .buttonStyle(.plain)
+            .help("Close panel")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

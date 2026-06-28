@@ -6,6 +6,7 @@ package final class ImageAsset {
     package var figures: [Figure] = []
     package var places: [Place] = []
     package var events: [Event] = []
+    package var things: [Thing] = []
     package var filename: String
     package var caption: String
     package var source: String
@@ -17,6 +18,7 @@ package final class ImageAsset {
         figures: [Figure] = [],
         places: [Place] = [],
         events: [Event] = [],
+        things: [Thing] = [],
         filename: String = "",
         caption: String = "",
         source: String = ""
@@ -24,6 +26,7 @@ package final class ImageAsset {
         self.figures = figures
         self.places = places
         self.events = events
+        self.things = things
         self.filename = filename
         self.caption = caption
         self.source = source
@@ -36,7 +39,7 @@ package final class ImageAsset {
     }
 
     package static var imagesDirectory: URL {
-        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Me", isDirectory: true)
             .appendingPathComponent("Images", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)

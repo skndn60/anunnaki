@@ -24,6 +24,10 @@ package final class Event {
     @Relationship(deleteRule: .nullify, inverse: \Tag.events)
     package var tags: [Tag] = []
 
+    /// Things associated with this event
+    @Relationship(deleteRule: .cascade, inverse: \ThingEventAssociation.event)
+    package var thingAssociations: [ThingEventAssociation] = []
+
     /// Images attached to this event
     @Relationship(deleteRule: .nullify, inverse: \ImageAsset.events)
     package var images: [ImageAsset] = []

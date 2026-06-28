@@ -21,6 +21,8 @@ struct AssociationsView: View {
     @State private var editingEventEventAssoc: EventEventAssociation?
     @State private var editingEventPlaceAssoc: EventPlaceAssociation?
     @State private var editingRelationship: Relationship?
+    @State private var showDeleteRelConfirm = false
+    @State private var relToDelete: Relationship?
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -96,6 +98,15 @@ struct AssociationsView: View {
         .sheet(item: $editingRelationship) { rel in
             EditRelationshipForm(relationship: rel)
         }
+        .alert("Delete Relationship?", isPresented: $showDeleteRelConfirm, presenting: relToDelete) { rel in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(rel)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { rel in
+            Text("Delete relationship between \(rel.fromFigure?.name ?? "?") and \(rel.toFigure?.name ?? "?")?")
+        }
     }
 
     private func addForCurrentTab() {
@@ -126,12 +137,11 @@ struct AssociationsView: View {
                         Text(rel.toFigure?.name ?? "?").fontWeight(.medium)
                         Spacer()
                         Text(rel.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        Button(action: { editingRelationship = rel }) {
-                            Image(systemName: "pencil.circle.fill").font(.body).foregroundStyle(Color.accentColor)
-                        }.buttonStyle(.plain)
-                        Button(action: { modelContext.delete(rel) }) {
-                            Image(systemName: "trash.circle.fill").font(.body).foregroundStyle(.red.opacity(0.7))
-                        }.buttonStyle(.plain)
+                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingRelationship = rel })
+                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: {
+                            relToDelete = rel
+                            showDeleteRelConfirm = true
+                        })
                     }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -157,12 +167,8 @@ struct AssociationsView: View {
                         Text(assoc.place?.name ?? "?").fontWeight(.medium)
                         Spacer()
                         Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        Button(action: { editingFigurePlaceAssoc = assoc }) {
-                            Image(systemName: "pencil.circle.fill").font(.body).foregroundStyle(Color.accentColor)
-                        }.buttonStyle(.plain)
-                        Button(action: { modelContext.delete(assoc) }) {
-                            Image(systemName: "trash.circle.fill").font(.body).foregroundStyle(.red.opacity(0.7))
-                        }.buttonStyle(.plain)
+                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingFigurePlaceAssoc = assoc })
+                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
                     }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -188,12 +194,8 @@ struct AssociationsView: View {
                         Text(assoc.toPlace?.name ?? "?").fontWeight(.medium)
                         Spacer()
                         Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        Button(action: { editingPlacePlaceAssoc = assoc }) {
-                            Image(systemName: "pencil.circle.fill").font(.body).foregroundStyle(Color.accentColor)
-                        }.buttonStyle(.plain)
-                        Button(action: { modelContext.delete(assoc) }) {
-                            Image(systemName: "trash.circle.fill").font(.body).foregroundStyle(.red.opacity(0.7))
-                        }.buttonStyle(.plain)
+                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingPlacePlaceAssoc = assoc })
+                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
                     }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -219,12 +221,8 @@ struct AssociationsView: View {
                         Text(assoc.place?.name ?? "?").fontWeight(.medium)
                         Spacer()
                         Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        Button(action: { editingEventPlaceAssoc = assoc }) {
-                            Image(systemName: "pencil.circle.fill").font(.body).foregroundStyle(Color.accentColor)
-                        }.buttonStyle(.plain)
-                        Button(action: { modelContext.delete(assoc) }) {
-                            Image(systemName: "trash.circle.fill").font(.body).foregroundStyle(.red.opacity(0.7))
-                        }.buttonStyle(.plain)
+                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingEventPlaceAssoc = assoc })
+                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
                     }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -250,12 +248,8 @@ struct AssociationsView: View {
                         Text(assoc.toEvent?.name ?? "?").fontWeight(.medium)
                         Spacer()
                         Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        Button(action: { editingEventEventAssoc = assoc }) {
-                            Image(systemName: "pencil.circle.fill").font(.body).foregroundStyle(Color.accentColor)
-                        }.buttonStyle(.plain)
-                        Button(action: { modelContext.delete(assoc) }) {
-                            Image(systemName: "trash.circle.fill").font(.body).foregroundStyle(.red.opacity(0.7))
-                        }.buttonStyle(.plain)
+                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingEventEventAssoc = assoc })
+                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
                     }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -328,10 +322,12 @@ struct AddFigurePlaceAssociationForm: View {
                                 .fontWeight(.medium)
                             Spacer()
                             Button { selectedFigure = nil } label: {
-                                Image(systemName: "xmark.circle.fill")
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .help("Clear selection")
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
@@ -387,10 +383,12 @@ struct AddFigurePlaceAssociationForm: View {
                                 .fontWeight(.medium)
                             Spacer()
                             Button { selectedPlace = nil } label: {
-                                Image(systemName: "xmark.circle.fill")
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .help("Clear selection")
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
@@ -519,8 +517,11 @@ struct SearchSection<Entity: PersistentModel>: View {
                     label(entity).fontWeight(.medium)
                     Spacer()
                     Button { selected.wrappedValue = nil } label: {
-                        Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.secondary)
                     }.buttonStyle(.plain)
+                    .help("Clear selection")
                 }
                 .padding(.horizontal, 8).padding(.vertical, 6)
                 .background(.quaternary.opacity(0.3)).cornerRadius(6)
@@ -721,10 +722,12 @@ struct EditFigurePlaceAssociationForm: View {
                                 .fontWeight(.medium)
                             Spacer()
                             Button { selectedFigure = nil } label: {
-                                Image(systemName: "xmark.circle.fill")
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .help("Clear selection")
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
@@ -780,10 +783,12 @@ struct EditFigurePlaceAssociationForm: View {
                                 .fontWeight(.medium)
                             Spacer()
                             Button { selectedPlace = nil } label: {
-                                Image(systemName: "xmark.circle.fill")
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 9, weight: .bold))
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
+                            .help("Clear selection")
                         }
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)

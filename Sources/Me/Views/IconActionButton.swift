@@ -5,6 +5,7 @@ struct IconActionButton: View {
     let icon: String
     let color: Color
     var isVisible: Bool = true
+    var help: String? = nil
     let action: () -> Void
 
     @State private var isHovered = false
@@ -25,5 +26,6 @@ struct IconActionButton: View {
         .onHover { isHovered = $0 }
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .pointingHand()
+        .help(help ?? "")
     }
 }

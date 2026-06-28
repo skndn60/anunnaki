@@ -7,9 +7,11 @@ struct MiniLineageView: View {
     let figure: Figure
     let relationships: [Relationship]
     var onSelectFigure: ((Figure) -> Void)?
+    var onTapUnknownParent: ((String) -> Void)?
     var showGrandparents: Bool = true
 
     @Query private var allRelationships: [Relationship]
+    @Environment(\.modelContext) private var modelContext
 
     private func parents(typeName: String, of figure: Figure, from pool: [Relationship]) -> (preferred: Figure?, alternatives: [Figure]) {
         let matching = pool.filter {
@@ -58,9 +60,7 @@ struct MiniLineageView: View {
                 .padding(.bottom, 12)
 
             VStack(spacing: 10) {
-                // Two-column layout: paternal lineage (left) | mother (right)
                 HStack(alignment: .top, spacing: 16) {
-                    // Left column: paternal grandparents → father
                     VStack(spacing: 6) {
                         if showGrandparents, hasGrandparents {
                             HStack(spacing: 6) {
@@ -82,11 +82,10 @@ struct MiniLineageView: View {
                                 onSelectFigure?(father)
                             }
                         } else {
-                            unknownChip(label: "unknown father")
+                            unknownChip(typeName: "Father")
                         }
                     }
 
-                    // Right column: mother
                     VStack(spacing: 6) {
                         if showGrandparents, hasGrandparents {
                             Color.clear.frame(height: chipRowHeight + connectorHeight)
@@ -96,18 +95,26 @@ struct MiniLineageView: View {
                                 onSelectFigure?(mother)
                             }
                         } else {
-                            unknownChip(label: "unknown mother")
+                            unknownChip(typeName: "Mother")
                         }
                     }
                 }
 
                 connectorPiece
 
-                // Figure
                 MiniChip(name: figure.name, symbol: figure.gender.symbol, color: chipColor(figure), isHighlighted: true)
             }
             .padding(.vertical, 8)
         }
+    }
+
+    private func unknownChip(typeName: String) -> some View {
+        Button(action: {
+            onTapUnknownParent?(typeName)
+        }) {
+            MiniChip(name: "unknown \(typeName.lowercased())", symbol: "?", color: .red)
+        }
+        .buttonStyle(.plain)
     }
 
     private func parentChip(name: String, symbol: String, color: Color, alternatives: [Figure], onSelect: @escaping () -> Void) -> some View {
@@ -129,10 +136,6 @@ struct MiniLineageView: View {
     }
 
     private func chipColor(_ fig: Figure) -> Color { fig.figureType?.color ?? .gray }
-
-    private func unknownChip(label: String) -> some View {
-        MiniChip(name: label, symbol: "?", color: .red, isClickable: false)
-    }
 }
 
 // MARK: - Parent Chip (with alternative popover)
@@ -207,7 +210,7 @@ struct MiniChip: View {
 
     @State private var isHovered = false
 
-    var body: some View {
+    private var chipContent: some View {
         HStack(spacing: 3) {
             Text(symbol)
                 .font(.system(size: 9))
@@ -230,9 +233,18 @@ struct MiniChip: View {
         .onHover { hovering in
             if isClickable { isHovered = hovering }
         }
-        .onTapGesture {
-            if isClickable { onTap?() }
+    }
+
+    var body: some View {
+        if isClickable {
+            chipContent
+                .onTapGesture {
+                    print("[MiniChip] tap on \(name)")
+                    onTap?()
+                }
+                .help("View \(name)")
+        } else {
+            chipContent
         }
-        .help(isClickable ? "View \(name)" : "")
     }
 }

@@ -39,7 +39,7 @@ struct PlaceListView: View {
 
     private var sortedPlaces: [Place] {
         switch sortOrder {
-        case .name: return places.sorted { $0.name < $1.name }
+        case .name: return places.sorted { sortName(for: $0.name) < sortName(for: $1.name) }
         case .type: return places.sorted { $0.placeType?.name ?? "" < $1.placeType?.name ?? "" }
         }
     }
@@ -51,7 +51,7 @@ struct PlaceListView: View {
         for place in sorted {
             let key: String = {
                 switch sortOrder {
-                case .name: return String(place.name.uppercased().prefix(1))
+                case .name: return String(sortName(for: place.name).uppercased().prefix(1))
                 case .type: return place.placeType?.name ?? "?"
                 }
             }()
@@ -123,12 +123,7 @@ struct PlaceListView: View {
                 } else {
                     List(selection: $selectedPlaceID) {
                         ForEach(groupedPlaces, id: \.key) { group in
-                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
-                                ForEach(group.places) { place in
-                                    PlaceRow(place: place)
-                                        .tag(place.persistentModelID)
-                                }
-                            }
+                            placeGroupSection(group)
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -139,45 +134,52 @@ struct PlaceListView: View {
             }
             .frame(minWidth: 450, maxWidth: .infinity)
 
-            if let place = selectedPlace {
-                ResizableDivider(width: $detailWidth, range: 200...800)
-                VStack(spacing: 0) {
-                    HStack(spacing: 8) {
-                        IconActionButton(icon: "pencil", color: .accentColor) {
-                            editingPlace = place
-                        }
-                        IconActionButton(icon: "trash", color: .red) {
-                            showDeleteConfirm = true
-                        }
-                        Spacer()
-                        Button(action: { selectedPlaceID = nil }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 22, height: 22)
-                                .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                        }
+            Group {
+                if let place = selectedPlace {
+                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
+                                editingPlace = place
+                            }
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
+                                showDeleteConfirm = true
+                            }
+                            Spacer()
+                            Button(action: { selectedPlaceID = nil }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 22, height: 22)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
+                            }
                         .buttonStyle(.plain)
                     }
-                    .padding(8)
+                    .padding(.vertical, 8)
                     PlaceDetailView(
-                        place: place,
-                        onSelectFigure: { figure in
-                            coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
-                            coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
-                        },
-                        onSelectEvent: { event in
-                            coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
-                            coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
-                        },
-                        onSelectImage: { imageDetailImage = $0 },
-                        backLabel: backLabel,
-                        onBack: backAction
-                    )
+                            place: place,
+                            onSelectFigure: { figure in
+                                if let id = figure.persistentModelID as? PersistentIdentifier {
+                                    coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
+                                    coordinator?.navigateToFigure(id, name: figure.name, recordHistory: false)
+                                }
+                            },
+                            onSelectEvent: { event in
+                                if let id = event.persistentModelID as? PersistentIdentifier {
+                                    coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
+                                    coordinator?.navigateToEvent(id, name: event.name, recordHistory: false)
+                                }
+                            },
+                            onSelectImage: { imageDetailImage = $0 }
+                        )
+                    }
+                    .frame(width: detailWidth)
+                    .background(.thinMaterial)
                 }
-                .frame(width: detailWidth)
             }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
+        .animation(.easeInOut(duration: 0.25), value: selectedPlaceID)
         .sheet(isPresented: $showingAddSheet) {
             PlaceFormView(place: nil)
         }
@@ -209,6 +211,15 @@ struct PlaceListView: View {
         guard let id = coordinator?.consumePendingPlaceID() else { return }
         if places.contains(where: { $0.persistentModelID == id }) {
             selectPlace(id)
+        }
+    }
+
+    private func placeGroupSection(_ group: (key: String, places: [Place])) -> some View {
+        Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+            ForEach(group.places) { place in
+                PlaceRow(place: place)
+                    .tag(place.persistentModelID)
+            }
         }
     }
 
@@ -273,6 +284,7 @@ struct PlaceFormView: View {
     @State private var latitudeStr = ""
     @State private var longitudeStr = ""
     @State private var selectedTags: [Tag] = []
+    @State private var foundedDate: MythologicalDate = .unknown
 
     private var isEditing: Bool { place != nil }
 
@@ -304,6 +316,8 @@ struct PlaceFormView: View {
                         .frame(minHeight: 80)
                 }
 
+                MythologicalDateEditor(label: "Founded", date: $foundedDate)
+
                 Section("Tags") {
                     TagEditorView(tags: $selectedTags)
                 }
@@ -334,6 +348,7 @@ struct PlaceFormView: View {
         latitudeStr = place.latitude.map { String($0) } ?? ""
         longitudeStr = place.longitude.map { String($0) } ?? ""
         selectedTags = place.tags
+        foundedDate = place.foundedDate ?? .unknown
     }
 
     private func save() {
@@ -347,6 +362,7 @@ struct PlaceFormView: View {
             place.longitude = Double(longitudeStr)
             place.isConcept = false
             place.tags = selectedTags
+            place.foundedDate = foundedDate
             RecentEditStore.trackEdit(entityType: "Place", entityName: place.name)
         } else {
             let newPlace = Place(
@@ -357,6 +373,7 @@ struct PlaceFormView: View {
                 longitude: Double(longitudeStr)
             )
             newPlace.tags = selectedTags
+            newPlace.foundedDate = foundedDate
             modelContext.insert(newPlace)
             RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
         }

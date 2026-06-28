@@ -1,4 +1,5 @@
 import Foundation
+import NaturalLanguage
 import SwiftData
 
 /// Result of a query — what entity was matched and all related data.
@@ -9,12 +10,22 @@ package enum QueryResult {
     case figureList(String, [Figure])
     case eventList(String, [Event])
     case placeList(String, [Place])
+    case thing(Thing)
+    case thingList(String, [Thing])
+    case imageList(String, [ImageAsset])
     case answer(String)
     case noMatch(String)
 }
 
 /// Resolves natural language queries against the database.
 package class QueryEngine {
+
+    package enum EntityRef {
+        case figure(Figure)
+        case place(Place)
+        case event(Event)
+        case thing(Thing)
+    }
     private let context: ModelContext
 
     package init(context: ModelContext) {
@@ -184,6 +195,21 @@ package class QueryEngine {
         // Era-based: "figures of the early dynastic period"
         if let result = matchEraQuery(text) { return result }
 
+        // "how many X had Y" — uses lemmatized text for verb normalization
+        if let result = matchHowManyQuery(text) { return result }
+
+        // "how many [type]" — count entities by type
+        if let result = matchHowManyTypeQuery(text) { return result }
+
+        // Yes/no and choice questions: "was X a Y", "is X a Y or a Z"
+        if let result = matchYesNoQuery(text) { return result }
+
+        // Image search: "images of X", "pictures of X"
+        if let result = matchImageQuery(text) { return result }
+
+        // Structured pipeline: extract entity + classify intent from remaining text
+        if let result = matchStructuredQuery(text) { return result }
+
         // Direct entity match
         if let figure = resolveFigure(text) {
             let alias = matchedAliasName(for: figure, query: text)
@@ -194,6 +220,9 @@ package class QueryEngine {
         }
         if let event = resolveEvent(text) {
             return .event(context.buildEventDossier(event))
+        }
+        if let thing = resolveThing(text) {
+            return .thing(thing)
         }
 
         // Question prefix stripping
@@ -218,11 +247,9 @@ package class QueryEngine {
             if let event = resolveEvent(cleaned) {
                 return .event(context.buildEventDossier(event))
             }
-        }
-
-        // Fallback: search descriptions and titles
-        if let figure = resolveFigureByFallback(text) {
-            return .figure(context.buildFigureDossier(figure))
+            if let thing = resolveThing(cleaned) {
+                return .thing(thing)
+            }
         }
 
         return .noMatch(input)
@@ -438,6 +465,9 @@ package class QueryEngine {
             return .placeList("All Places", allPlaces())
         case "list all events", "show all events", "all events", "list events", "show events":
             return .eventList("All Events", allEvents())
+        case "list all things", "show all things", "all things", "list things", "show things":
+            let things = context.fetchAll() as [Thing]
+            return .thingList("All Things", things)
         case "list all sources", "show all sources", "all sources", "list sources", "show sources":
             let sources = (context.fetchAll() as [Source])
             return .figureList("All Sources", sources.compactMap { $0.name.isEmpty ? nil : nil })
@@ -578,6 +608,322 @@ package class QueryEngine {
         return nil
     }
 
+    private func matchHowManyQuery(_ text: String) -> QueryResult? {
+        guard text.hasPrefix("how many ") else { return nil }
+        let rest = String(text.dropFirst("how many ".count))
+        let lemRest = lemmatize(rest)
+
+        for pattern in figureRelationPatterns {
+            for (suffix, lemSuffix) in zip(pattern.possessiveSuffixes, pattern.possessiveSuffixes.map({ lemmatize($0) })) {
+                if let range = lemRest.range(of: "\(lemSuffix) have "),
+                   range.lowerBound == lemRest.startIndex
+                {
+                    let entityName = String(lemRest[range.upperBound...])
+                        .trimmingCharacters(in: .punctuationCharacters)
+                        .trimmingCharacters(in: .whitespaces)
+                    if let figure = resolveFigure(entityName) {
+                        let results = pattern.finder(figure)
+                        let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : suffix)"
+                        return .figureList(label, results)
+                    }
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func singularize(_ word: String) -> String {
+        let lower = word.lowercased()
+        if lower.hasSuffix("ies") { return String(lower.dropLast(3)) + "y" }
+        if lower.hasSuffix("ses") { return String(lower.dropLast(2)) }
+        if lower.hasSuffix("s") && !lower.hasSuffix("ss") { return String(lower.dropLast()) }
+        return lower
+    }
+
+    private func matchHowManyTypeQuery(_ text: String) -> QueryResult? {
+        guard text.hasPrefix("how many ") else { return nil }
+        let rest = String(text.dropFirst("how many ".count))
+            .replacingOccurrences(of: "[?.,!;:()]", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+
+        let noisePatterns = [" do i have", " do we have", " are there", " exist",
+                             " in this database", " in the database", " in database",
+                             " do you have", " does this database have"]
+        var cleaned = rest
+        for pattern in noisePatterns {
+            cleaned = cleaned.replacingOccurrences(of: pattern, with: "")
+        }
+        cleaned = cleaned.trimmingCharacters(in: .whitespaces)
+
+        let firstWord = cleaned.components(separatedBy: .whitespaces).first ?? cleaned
+        let sing = singularize(firstWord)
+
+        let figureTypes: [FigureType] = context.fetchAll()
+        for ft in figureTypes {
+            let name = ft.name.lowercased()
+            if firstWord == name || sing == name {
+                let count = ft.figures.count
+                let label = count == 1 ? "There is 1 \(name) in the database." : "There are \(count) \(firstWord) in the database."
+                return .answer(label)
+            }
+        }
+
+        let aliasMap: [String: String] = ["gods": "deity", "goddesses": "deity", "goddess": "deity"]
+        if let typeName = aliasMap[firstWord] ?? aliasMap[sing] {
+            if let ft = figureTypes.first(where: { $0.name.lowercased() == typeName }) {
+                let count = ft.figures.count
+                return .answer("There are \(count) \(firstWord) in the database.")
+            }
+        }
+
+        let singClean = singularize(cleaned)
+        if singClean == "figure" || sing == "figure" {
+            let all: [Figure] = context.fetchAll()
+            return .answer("There are \(all.count) figures in the database.")
+        }
+        if singClean == "place" || sing == "place" {
+            let all: [Place] = context.fetchAll()
+            return .answer("There are \(all.count) places in the database.")
+        }
+        if singClean == "event" || sing == "event" {
+            let all: [Event] = context.fetchAll()
+            return .answer("There are \(all.count) events in the database.")
+        }
+        if singClean == "source" || sing == "source" {
+            let all: [Source] = context.fetchAll()
+            return .answer("There are \(all.count) sources in the database.")
+        }
+        if singClean == "thing" || sing == "thing" {
+            let all: [Thing] = context.fetchAll()
+            return .answer("There are \(all.count) things in the database.")
+        }
+
+        return nil
+    }
+
+    // MARK: - Structured Pipeline (Phase 2)
+
+    private func matchStructuredQuery(_ text: String) -> QueryResult? {
+        let stripped = text.replacingOccurrences(of: "[?.,!;:()]", with: " ", options: .regularExpression)
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        let lemText = lemmatize(stripped)
+
+        guard let (entityRef, entityName) = extractEntity(from: text, lemText: lemText) else {
+            return nil
+        }
+
+        var remaining = lemText
+        if let range = remaining.range(of: entityName.lowercased()) {
+            remaining.removeSubrange(range)
+        }
+
+        let clean = cleanQueryText(remaining)
+        guard !clean.isEmpty else { return nil }
+
+        return classifyEntityQuery(clean, entity: entityRef)
+    }
+
+    private func extractEntity(from text: String, lemText: String) -> (EntityRef, String)? {
+        let tokens = tokenize(lemText)
+        let figures: [Figure] = context.fetchAll()
+        let places: [Place] = context.fetchAll()
+        let events: [Event] = context.fetchAll()
+        let things: [Thing] = context.fetchAll()
+
+        var candidates: [(EntityRef, String, String)] = []
+        for figure in figures { candidates.append((.figure(figure), figure.name, figure.name.lowercased())) }
+        for place in places { candidates.append((.place(place), place.name, place.name.lowercased())) }
+        for event in events { candidates.append((.event(event), event.name, event.name.lowercased())) }
+        for thing in things { candidates.append((.thing(thing), thing.name, thing.name.lowercased())) }
+
+        candidates.sort { $0.2.count > $1.2.count }
+
+        for (entityRef, displayName, lowerName) in candidates {
+            if tokens.contains(lowerName) {
+                return (entityRef, displayName)
+            }
+        }
+
+        if tokens.count >= 2 {
+            for i in 0..<(tokens.count - 1) {
+                let bigram = "\(tokens[i]) \(tokens[i + 1])"
+                for (entityRef, displayName, lowerName) in candidates {
+                    if lowerName == bigram { return (entityRef, displayName) }
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private func tokenize(_ text: String) -> [String] {
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+        var tokens: [String] = []
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
+            tokens.append(String(text[range]))
+            return true
+        }
+        return tokens
+    }
+
+    private func cleanQueryText(_ text: String) -> String {
+        let helperVerbs: Set<String> = ["be", "have", "do", "can", "could", "will", "would", "shall", "should", "may", "might"]
+        let questionWords: Set<String> = ["what", "who", "which", "where", "when", "why"]
+        let articles: Set<String> = ["the", "a", "an"]
+
+        let tokens = text.split(separator: " ").map(String.init)
+        var filtered: [String] = []
+
+        var i = 0
+        while i < tokens.count {
+            if tokens[i] == "how" && i + 1 < tokens.count && tokens[i + 1] == "many" {
+                filtered.append("how_many")
+                i += 2
+                continue
+            }
+
+            let token = tokens[i]
+            if helperVerbs.contains(token) || articles.contains(token) || questionWords.contains(token) {
+                i += 1
+                continue
+            }
+
+            filtered.append(token)
+            i += 1
+        }
+
+        return filtered.joined(separator: " ")
+    }
+
+    private let specificRelationshipTypes: [String: String] = [
+        "father": "Father", "mother": "Mother",
+        "brother": "Brother", "sister": "Sister",
+        "uncle": "Uncle", "aunt": "Aunt",
+        "spouse": "Spouse", "consort": "Consort",
+        "servant": "Servant", "commander": "Commander",
+        "worshipper": "Worshipper", "creator": "Creator",
+        "ally": "Ally", "enemy": "Enemy",
+    ]
+
+    private func labeledResults(for suffix: String, figure: Figure, pattern: FigureRelationPattern) -> (label: String, results: [Figure]) {
+        let lemSuffix = lemmatize(suffix)
+        if let typeName = specificRelationshipTypes[lemSuffix] {
+            let allResults = pattern.finder(figure)
+            let rels: [Relationship] = context.fetchAll()
+            let filtered = allResults.filter { fig in
+                rels.contains { rel in
+                    rel.relationshipType?.name == typeName &&
+                    ((rel.fromFigure?.persistentModelID == figure.persistentModelID && rel.toFigure?.persistentModelID == fig.persistentModelID) ||
+                     (rel.toFigure?.persistentModelID == figure.persistentModelID && rel.fromFigure?.persistentModelID == fig.persistentModelID))
+                }
+            }
+            return ("\(typeName) of \(figure.name)", filtered)
+        }
+        return (pattern.label(figure.name), pattern.finder(figure))
+    }
+
+    private func classifyEntityQuery(_ cleanText: String, entity: EntityRef) -> QueryResult? {
+        let isCount = cleanText.hasPrefix("how_many ")
+
+        for pattern in figureRelationPatterns {
+            let lemSuffixes = pattern.possessiveSuffixes.map { lemmatize($0) }
+            for (suffix, lemSuffix) in zip(pattern.possessiveSuffixes, lemSuffixes) {
+                if cleanText.contains(lemSuffix) || cleanText.contains(suffix) {
+                    switch entity {
+                    case .figure(let figure):
+                        if isCount {
+                            let results = pattern.finder(figure)
+                            let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : suffix)"
+                            return .figureList(label, results)
+                        } else {
+                            let (label, results) = labeledResults(for: suffix, figure: figure, pattern: pattern)
+                            return .figureList(label, results)
+                        }
+                    case .place, .event, .thing:
+                        return nil
+                    }
+                }
+            }
+        }
+
+        // Phase 3: word embedding fallback for synonyms (e.g., "kids" → children)
+        if let match = bestEmbeddingMatch(for: cleanText) {
+            switch entity {
+            case .figure(let figure):
+                if isCount {
+                    let results = match.pattern.finder(figure)
+                    let lemSuffix = lemmatize(match.suffix)
+                    let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : match.suffix)"
+                    return .figureList(label, results)
+                } else {
+                    let (label, results) = labeledResults(for: match.suffix, figure: figure, pattern: match.pattern)
+                    return .figureList(label, results)
+                }
+            case .place, .event, .thing:
+                return nil
+            }
+        }
+
+        return nil
+    }
+
+    // MARK: - Word Embedding (Phase 3)
+
+    private func cosineDistance(_ a: String, _ b: String, embedding: NLEmbedding) -> Double? {
+        guard let va = embedding.vector(for: a), let vb = embedding.vector(for: b) else { return nil }
+        let dot = zip(va, vb).reduce(0.0) { $0 + $1.0 * $1.1 }
+        let na = sqrt(va.reduce(0.0) { $0 + $1 * $1 })
+        let nb = sqrt(vb.reduce(0.0) { $0 + $1 * $1 })
+        return 1 - (dot / (na * nb))
+    }
+
+    private func bestEmbeddingMatch(for cleanText: String) -> (pattern: FigureRelationPattern, suffix: String)? {
+        guard let embedding = NLEmbedding.wordEmbedding(for: .english) else { return nil }
+
+        let tokens = cleanText.split(separator: " ").map(String.init)
+        let noiseWords: Set<String> = ["i", "me", "my", "want", "number", "list", "their", "its", "give", "show", "tell", "find", "name", "names", "and", "or", "of", "for", "the", "a", "an", "that", "this"]
+
+        var suffixVectors: [(pattern: FigureRelationPattern, suffix: String, vector: [Double])] = []
+        for pattern in figureRelationPatterns {
+            for suffix in pattern.possessiveSuffixes {
+                let lemSuffix = lemmatize(suffix)
+                if let vec = embedding.vector(for: lemSuffix) {
+                    suffixVectors.append((pattern, suffix, vec))
+                }
+            }
+        }
+
+        var bestResult: (pattern: FigureRelationPattern, suffix: String, distance: Double)?
+
+        for token in tokens {
+            let lower = token.lowercased()
+            guard !noiseWords.contains(lower) else { continue }
+            guard let tokenVec = embedding.vector(for: lower) else { continue }
+
+            let tokenNorm = sqrt(tokenVec.reduce(0.0) { $0 + $1 * $1 })
+
+            for (pattern, suffix, vec) in suffixVectors {
+                let dot = zip(tokenVec, vec).reduce(0.0) { $0 + $1.0 * $1.1 }
+                let vecNorm = sqrt(vec.reduce(0.0) { $0 + $1 * $1 })
+                let distance = 1 - (dot / (tokenNorm * vecNorm))
+
+                let threshold = 0.45
+
+                if distance < threshold {
+                    if bestResult == nil || distance < bestResult!.distance {
+                        bestResult = (pattern, suffix, distance)
+                    }
+                }
+            }
+        }
+
+        return bestResult.map { ($0.pattern, $0.suffix) }
+    }
+
     // MARK: - Entity Resolution
 
     private func resolveFigure(_ name: String) -> Figure? {
@@ -634,6 +980,15 @@ package class QueryEngine {
             return match
         }
         return events.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) })
+    }
+
+    private func resolveThing(_ name: String) -> Thing? {
+        let things = context.fetchAll() as [Thing]
+        let query = name.lowercased()
+        if let match = things.first(where: { $0.name.lowercased() == query }) {
+            return match
+        }
+        return things.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) })
     }
 
     // MARK: - Relationship Finders
@@ -743,7 +1098,134 @@ package class QueryEngine {
         })?.name
     }
 
+    // MARK: - Yes/No and Choice Questions
+
+    private func matchYesNoQuery(_ text: String) -> QueryResult? {
+        guard text.hasPrefix("was ") || text.hasPrefix("is ") else { return nil }
+
+        let stripped = text.replacingOccurrences(of: "[?.,!;:()]", with: " ", options: .regularExpression)
+            .components(separatedBy: .whitespaces)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        let lemText = lemmatize(stripped)
+
+        guard let (entityRef, entityName) = extractEntity(from: text, lemText: lemText) else { return nil }
+
+        var remaining = lemText
+        if let range = remaining.range(of: entityName.lowercased()) {
+            remaining.removeSubrange(range)
+        }
+
+        let clean = cleanQueryText(remaining)
+        guard !clean.isEmpty else { return nil }
+
+        let isChoice = clean.contains(" or ")
+
+        switch entityRef {
+        case .figure(let figure):
+            let typeName = figure.figureType?.name.lowercased() ?? ""
+            let domain = figure.domain.lowercased()
+            let description = figure.figureDescription.lowercased()
+
+            if isChoice {
+                guard let orRange = clean.range(of: " or ") else { return nil }
+                let first = stripLeadingArticle(String(clean[..<orRange.lowerBound]).trimmingCharacters(in: .whitespaces))
+                let second = stripLeadingArticle(String(clean[orRange.upperBound...]).trimmingCharacters(in: .whitespaces))
+                guard !first.isEmpty, !second.isEmpty else { return nil }
+
+                let matchFirst = typeName == first || domain == first || description.contains(first)
+                let matchSecond = typeName == second || domain == second || description.contains(second)
+
+                if matchFirst && !matchSecond {
+                    return .answer("\(figure.name) is a \(first.capitalized), not a \(second.capitalized).")
+                } else if matchSecond && !matchFirst {
+                    return .answer("\(figure.name) is a \(second.capitalized), not a \(first.capitalized).")
+                } else {
+                    return .answer("\(figure.name) is a \(typeName.capitalized).")
+                }
+            } else {
+                let first = stripLeadingArticle(clean.trimmingCharacters(in: .whitespaces))
+                guard !first.isEmpty else { return nil }
+
+                let match = typeName == first || domain == first || description.contains(first)
+                if match {
+                    return .answer("Yes, \(figure.name) is a \(first.capitalized).")
+                } else {
+                    return .answer("No, \(figure.name) is a \(typeName.capitalized), not a \(first.capitalized).")
+                }
+            }
+
+        case .place(let place):
+            let typeName = place.placeType?.name.lowercased() ?? ""
+            return handleEntityTypeCheck(clean, entityName: place.name, typeName: typeName, isChoice: isChoice)
+
+        case .event(let event):
+            let typeName = event.eventType?.name.lowercased() ?? ""
+            return handleEntityTypeCheck(clean, entityName: event.name, typeName: typeName, isChoice: isChoice)
+
+        case .thing:
+            return nil
+        }
+    }
+
+    private func handleEntityTypeCheck(_ clean: String, entityName: String, typeName: String, isChoice: Bool) -> QueryResult? {
+        if isChoice {
+            guard let orRange = clean.range(of: " or ") else { return nil }
+            let first = stripLeadingArticle(String(clean[..<orRange.lowerBound]).trimmingCharacters(in: .whitespaces))
+            let second = stripLeadingArticle(String(clean[orRange.upperBound...]).trimmingCharacters(in: .whitespaces))
+            guard !first.isEmpty, !second.isEmpty else { return nil }
+
+            let matchFirst = typeName == first
+            let matchSecond = typeName == second
+
+            if matchFirst && !matchSecond {
+                return .answer("\(entityName) is a \(first.capitalized), not a \(second.capitalized).")
+            } else if matchSecond && !matchFirst {
+                return .answer("\(entityName) is a \(second.capitalized), not a \(first.capitalized).")
+            } else {
+                return .answer("\(entityName) is a \(typeName.capitalized).")
+            }
+        } else {
+            let first = stripLeadingArticle(clean.trimmingCharacters(in: .whitespaces))
+            guard !first.isEmpty else { return nil }
+
+            if typeName == first {
+                return .answer("Yes, \(entityName) is a \(first.capitalized).")
+            } else {
+                return .answer("No, \(entityName) is a \(typeName.capitalized), not a \(first.capitalized).")
+            }
+        }
+    }
+
+    private func stripLeadingArticle(_ s: String) -> String {
+        let articles = ["a ", "an ", "the "]
+        var result = s
+        for article in articles {
+            if result.hasPrefix(article) {
+                result = String(result.dropFirst(article.count))
+                break
+            }
+        }
+        return result
+    }
+
     // MARK: - Helpers
+
+    private func lemmatize(_ text: String) -> String {
+        let tagger = NLTagger(tagSchemes: [.lemma])
+        tagger.string = text
+        var result = ""
+        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .lemma) { tag, range in
+            let raw = tag?.rawValue ?? String(text[range])
+            if raw.hasSuffix("'s") {
+                result += String(raw.dropLast(2))
+            } else {
+                result += raw
+            }
+            return true
+        }
+        return result.lowercased()
+    }
 
     private func extractPattern(_ text: String, patterns: [String]) -> String? {
         for pattern in patterns {
@@ -764,6 +1246,43 @@ package class QueryEngine {
                 if !extracted.isEmpty { return extracted }
             }
         }
+        return nil
+    }
+
+    private func matchImageQuery(_ text: String) -> QueryResult? {
+        let patterns = ["images of ", "pictures of ", "show images of ", "show pictures of ", "image of ", "picture of "]
+        guard let name = extractPattern(text, patterns: patterns) else { return nil }
+
+        let allImages: [ImageAsset] = context.fetchAll()
+
+        if let figure = resolveFigure(name) {
+            if !figure.images.isEmpty {
+                return .imageList("Images of \(figure.name)", figure.images)
+            }
+        }
+        if let place = resolvePlace(name) {
+            if !place.images.isEmpty {
+                return .imageList("Images of \(place.name)", place.images)
+            }
+        }
+        if let event = resolveEvent(name) {
+            if !event.images.isEmpty {
+                return .imageList("Images of \(event.name)", event.images)
+            }
+        }
+
+        let q = name.lowercased()
+        let matched = allImages.filter {
+            $0.caption.lowercased().contains(q) ||
+            $0.filename.lowercased().contains(q) ||
+            $0.figures.contains(where: { $0.name.lowercased().contains(q) }) ||
+            $0.places.contains(where: { $0.name.lowercased().contains(q) }) ||
+            $0.events.contains(where: { $0.name.lowercased().contains(q) })
+        }
+        if !matched.isEmpty {
+            return .imageList("Images matching \"\(name)\"", matched)
+        }
+
         return nil
     }
 }

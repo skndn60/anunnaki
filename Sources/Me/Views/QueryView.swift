@@ -127,6 +127,7 @@ struct QueryView: View {
                     .frame(maxWidth: .infinity)
                 }
             }
+            .textSelection(.enabled)
 
         }
     }
@@ -168,10 +169,44 @@ struct QueryView: View {
             EventListDossierView(title: title, events: events)
         case .placeList(let title, let places):
             PlaceListDossierView(title: title, places: places)
+        case .thing(let thing):
+            ThingDossierView(thing: thing)
+        case .thingList(let title, let things):
+            ThingListDossierView(title: title, things: things)
         case .answer(let text):
             AnswerView(text: text)
+        case .imageList(let title, let images):
+            ImageListResultView(title: title, images: images)
         case .noMatch(let query):
             NoMatchView(query: query)
+        }
+    }
+}
+
+// MARK: - Image List Result
+
+private struct ImageListResultView: View {
+    let title: String
+    let images: [ImageAsset]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(title)
+                    .font(.title2.bold())
+                if images.isEmpty {
+                    Text("No images found")
+                        .foregroundStyle(.secondary)
+                } else {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 150), spacing: 12)], spacing: 12) {
+                        ForEach(images) { image in
+                            ImageThumbnail(image: image, onDelete: {}, onTap: {})
+                        }
+                    }
+                }
+            }
+            .padding(20)
+            .textSelection(.enabled)
         }
     }
 }
@@ -429,7 +464,21 @@ struct FigureDossierView: View {
                     }
                 }
             }
+
+            // Images
+            if !dossier.figure.images.isEmpty {
+                Divider()
+                ImageGallery(
+                    title: "Images (\(dossier.figure.images.count))",
+                    images: dossier.figure.images,
+                    onLinkImage: { asset in
+                        asset.figures.append(dossier.figure)
+                    }
+                )
+                .padding(.top, 4)
+            }
         }
+        .textSelection(.enabled)
     }
 
     private func dossierSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
@@ -505,7 +554,21 @@ struct PlaceDossierView: View {
                     }
                 }
             }
+
+            // Images
+            if !dossier.place.images.isEmpty {
+                Divider()
+                ImageGallery(
+                    title: "Images (\(dossier.place.images.count))",
+                    images: dossier.place.images,
+                    onLinkImage: { asset in
+                        asset.places.append(dossier.place)
+                    }
+                )
+                .padding(.top, 4)
+            }
         }
+        .textSelection(.enabled)
     }
 }
 
@@ -567,7 +630,21 @@ struct EventDossierView: View {
                     }
                 }
             }
+
+            // Images
+            if !dossier.event.images.isEmpty {
+                Divider()
+                ImageGallery(
+                    title: "Images (\(dossier.event.images.count))",
+                    images: dossier.event.images,
+                    onLinkImage: { asset in
+                        asset.events.append(dossier.event)
+                    }
+                )
+                .padding(.top, 4)
+            }
         }
+        .textSelection(.enabled)
     }
 }
 
@@ -678,6 +755,17 @@ struct AnswerView: View {
 struct NoMatchView: View {
     let query: String
 
+    private let examples: [(label: String, query: String)] = [
+        ("Figure details", "Enki"),
+        ("Parents", "Enki's mom"),
+        ("Children count", "how many children did Anu have"),
+        ("Synonym search", "how many kids does Anu have"),
+        ("Yes/No question", "Was Enki a deity or a human?"),
+        ("Type count", "how many deities"),
+        ("Relationships", "Enki's children"),
+        ("Timeline", "Sumerian King List"),
+    ]
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "questionmark.circle")
@@ -686,11 +774,136 @@ struct NoMatchView: View {
             Text("No match found for \"\(query)\"")
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            Text("Try a figure name, place name, event name, or alternate name.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Try one of these:")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.bottom, 4)
+                ForEach(examples, id: \.query) { example in
+                    HStack(spacing: 6) {
+                        Text(example.label)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .frame(width: 100, alignment: .trailing)
+                        Text("\"\(example.query)\"")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 40)
+    }
+}
+
+// MARK: - Thing Dossier
+
+private struct ThingDossierView: View {
+    let thing: Thing
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "cube.box")
+                    .font(.title2)
+                    .foregroundStyle(.cyan)
+                    .frame(width: 32)
+                Text(thing.name)
+                    .font(.title.bold())
+            }
+
+            if !thing.thingDescription.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Description")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(thing.thingDescription)
+                        .font(.body)
+                }
+            }
+
+            if !thing.source.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Source")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(thing.source)
+                        .font(.body)
+                }
+            }
+
+            if !thing.figureAssociations.isEmpty {
+                label("Associated Figures")
+                ForEach(thing.figureAssociations) { assoc in
+                    Text("\(assoc.figure?.name ?? "?") (\(assoc.roleType?.name ?? "related"))")
+                        .font(.subheadline)
+                }
+            }
+
+            if !thing.placeAssociations.isEmpty {
+                label("Associated Places")
+                ForEach(thing.placeAssociations) { assoc in
+                    Text("\(assoc.place?.name ?? "?") (\(assoc.roleType?.name ?? "related"))")
+                        .font(.subheadline)
+                }
+            }
+
+            if !thing.eventAssociations.isEmpty {
+                label("Associated Events")
+                ForEach(thing.eventAssociations) { assoc in
+                    Text("\(assoc.event?.name ?? "?") (\(assoc.roleType?.name ?? "related"))")
+                        .font(.subheadline)
+                }
+            }
+
+            if !thing.tags.isEmpty {
+                label("Tags")
+                Text(thing.tags.map(\.name).joined(separator: ", "))
+                    .font(.subheadline)
+            }
+        }
+    }
+
+    private func label(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.top, 4)
+    }
+}
+
+private struct ThingListDossierView: View {
+    let title: String
+    let things: [Thing]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.title3.bold())
+            if things.isEmpty {
+                Text("No things found")
+                    .font(.subheadline)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(things) { thing in
+                    HStack(spacing: 8) {
+                        Image(systemName: "cube.box")
+                            .font(.caption)
+                            .foregroundStyle(.cyan)
+                        Text(thing.name)
+                            .font(.subheadline)
+                        if !thing.thingDescription.isEmpty {
+                            Text(thing.thingDescription)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

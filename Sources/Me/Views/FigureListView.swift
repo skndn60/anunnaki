@@ -45,7 +45,7 @@ struct FigureListView: View {
             }
         }
         switch sortOrder {
-        case .name: result.sort { $0.name < $1.name }
+        case .name: result.sort { sortName(for: $0.name) < sortName(for: $1.name) }
         case .type: result.sort { (a: Figure, b: Figure) in (a.figureType?.name ?? "") < (b.figureType?.name ?? "") }
         case .domain: result.sort { $0.domain < $1.domain }
         }
@@ -59,7 +59,7 @@ struct FigureListView: View {
         for figure in sorted {
             let key: String = {
                 switch sortOrder {
-                case .name: return String(figure.name.uppercased().prefix(1))
+                case .name: return String(sortName(for: figure.name).uppercased().prefix(1))
                 case .type: return figure.figureType?.name ?? "?"
                 case .domain: return figure.domain.isEmpty ? "?" : figure.domain
                 }
@@ -97,12 +97,13 @@ struct FigureListView: View {
                         .overlay(alignment: .trailing) {
                             if !searchText.isEmpty {
                                 Button(action: { searchText = "" }) {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 12))
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(.secondary)
                                 }
                                 .buttonStyle(.plain)
                                 .padding(.trailing, 6)
+                                .help("Clear filter")
                             }
                         }
                     Button(action: { showingAddSheet = true }) {
@@ -125,33 +126,7 @@ struct FigureListView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(figureTypes) { type in
-                                Button(action: {
-                                    if selectedTypeFilters.contains(type.name) {
-                                        selectedTypeFilters.remove(type.name)
-                                    } else {
-                                        selectedTypeFilters.insert(type.name)
-                                    }
-                                }) {
-                                    HStack(spacing: 4) {
-                                        Circle().fill(type.color).frame(width: 7, height: 7)
-                                        Text(type.name).font(.caption)
-                                        if selectedTypeFilters.contains(type.name) {
-                                            Image(systemName: "xmark")
-                                                .font(.system(size: 8, weight: .bold))
-                                        }
-                                    }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(selectedTypeFilters.contains(type.name) ? type.color.opacity(0.2) : Color.primary.opacity(0.05))
-                                    )
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .stroke(selectedTypeFilters.contains(type.name) ? type.color : Color.clear, lineWidth: 1)
-                                    )
-                                }
-                                .buttonStyle(.plain)
+                                typeFilterButton(type)
                             }
                             if !selectedTypeFilters.isEmpty {
                                 Button("Clear") { selectedTypeFilters.removeAll() }
@@ -191,12 +166,7 @@ struct FigureListView: View {
                 } else {
                     List(selection: $selectedFigureID) {
                         ForEach(groupedFigures, id: \.key) { group in
-                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
-                                ForEach(group.figures) { figure in
-                                    FigureRow(figure: figure, searchText: searchText)
-                                        .tag(figure.persistentModelID)
-                                }
-                            }
+                            figureGroupSection(group)
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -210,53 +180,58 @@ struct FigureListView: View {
             .frame(minWidth: 450, maxWidth: .infinity)
 
             // Right: detail panel
-            if let figure = selectedFigure {
-                ResizableDivider(width: $detailWidth, range: 200...800)
-                VStack(spacing: 0) {
-                    HStack(spacing: 8) {
-                        IconActionButton(icon: "pencil", color: .accentColor) {
-                            editingFigure = figure
+            Group {
+                if let figure = selectedFigure {
+                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
+                                editingFigure = figure
+                            }
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
+                                showDeleteConfirm = true
+                            }
+                            IconActionButton(icon: "tree", color: .green, help: "Show lineage") {
+                                openWindow(id: "lineage", value: figure.persistentModelID)
+                            }
+                            Spacer()
+                            Button(action: { selectedFigureID = nil }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 22, height: 22)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 5)
+                                            .fill(Color.secondary.opacity(0.1))
+                                    )
+                            }
+                            .buttonStyle(.plain)
                         }
-                        IconActionButton(icon: "trash", color: .red) {
-                            showDeleteConfirm = true
-                        }
-                        IconActionButton(icon: "tree", color: .green) {
-                            openWindow(id: "lineage", value: figure.persistentModelID)
-                        }
-                        Spacer()
-                        Button(action: { selectedFigureID = nil }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 22, height: 22)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 5)
-                                        .fill(Color.secondary.opacity(0.1))
-                                )
-                        }
-                        .buttonStyle(.plain)
+                        .padding(.vertical, 8)
+                        FigureDetailView(
+                            figure: figure,
+                            onSelectFigure: { selected in
+                                coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                                coordinator?.navigateToFigure(selected.persistentModelID, name: selected.name, recordHistory: false)
+                            },
+                            onSelectPlace: { place in
+                                coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                                coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
+                            },
+                            onSelectEvent: { event in
+                                coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                                coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
+                            },
+                            onSelectImage: { imageDetailImage = $0 }
+                        )
                     }
-                    .padding(8)
-                    FigureDetailView(
-                        figure: figure,
-                        onSelectFigure: { selected in
-                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
-                            coordinator?.navigateToFigure(selected.persistentModelID, name: selected.name, recordHistory: false)
-                        },
-                        onSelectPlace: { place in
-                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
-                            coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
-                        },
-                        onSelectEvent: { event in
-                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
-                            coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
-                        },
-                        onSelectImage: { imageDetailImage = $0 }
-                    )
+                    .frame(width: detailWidth)
+                    .background(.thinMaterial)
                 }
-                .frame(width: detailWidth)
             }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
+        .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
         .sheet(isPresented: $showingAddSheet) {
             FigureFormView(figure: nil)
         }
@@ -288,6 +263,45 @@ struct FigureListView: View {
         guard let id = coordinator?.consumePendingFigureID() else { return }
         if figures.contains(where: { $0.persistentModelID == id }) {
             selectFigure(id)
+        }
+    }
+
+    private func typeFilterButton(_ type: FigureType) -> some View {
+        Button(action: {
+            if selectedTypeFilters.contains(type.name) {
+                selectedTypeFilters.remove(type.name)
+            } else {
+                selectedTypeFilters.insert(type.name)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Circle().fill(type.color).frame(width: 7, height: 7)
+                Text(type.name).font(.caption)
+                if selectedTypeFilters.contains(type.name) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(selectedTypeFilters.contains(type.name) ? type.color.opacity(0.2) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(selectedTypeFilters.contains(type.name) ? type.color : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func figureGroupSection(_ group: (key: String, figures: [Figure])) -> some View {
+        Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+            ForEach(group.figures) { figure in
+                FigureRow(figure: figure, searchText: searchText)
+                    .tag(figure.persistentModelID)
+            }
         }
     }
 

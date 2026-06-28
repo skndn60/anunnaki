@@ -313,4 +313,103 @@ package struct Migration {
         }
         try? context.save()
     }
+
+    // MARK: - Thing Role Types
+
+    package static let defaultThingFigureRoleTypes: [(name: String, icon: String, colorHex: String)] = [
+        ("Owned By", "person.fill", "007AFF"),
+        ("Used By", "hand.raised.fill", "34C759"),
+        ("Created By", "hammer.fill", "AF52DE"),
+        ("Wielded By", "shield.fill", "FF9500"),
+        ("Gifted To", "gift.fill", "FF2D55"),
+        ("Sacred To", "star.fill", "FFCC00"),
+        ("Associated With", "link", "8E8E93"),
+    ]
+
+    package static let defaultThingPlaceRoleTypes: [(name: String, icon: String, colorHex: String)] = [
+        ("Located At", "mappin.and.ellipse", "007AFF"),
+        ("Housed At", "building.2.fill", "34C759"),
+        ("Used At", "location.fill", "FF9500"),
+        ("Created At", "hammer.fill", "AF52DE"),
+        ("Associated With", "link", "8E8E93"),
+    ]
+
+    package static let defaultThingEventRoleTypes: [(name: String, icon: String, colorHex: String)] = [
+        ("Used In", "bolt.fill", "FF3B30"),
+        ("Created During", "hammer.fill", "AF52DE"),
+        ("Central To", "target", "FF9500"),
+        ("Appears In", "eye.fill", "5856D6"),
+        ("Associated With", "link", "8E8E93"),
+    ]
+
+    package static func ensureThingFigureRoleTypesExist(context: ModelContext) {
+        let count = (try? context.fetchCount(FetchDescriptor<ThingFigureRoleType>())) ?? 0
+        guard count == 0 else { return }
+        for config in defaultThingFigureRoleTypes {
+            let type = ThingFigureRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
+            context.insert(type)
+        }
+        try? context.save()
+    }
+
+    package static func ensureThingPlaceRoleTypesExist(context: ModelContext) {
+        let count = (try? context.fetchCount(FetchDescriptor<ThingPlaceRoleType>())) ?? 0
+        guard count == 0 else { return }
+        for config in defaultThingPlaceRoleTypes {
+            let type = ThingPlaceRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
+            context.insert(type)
+        }
+        try? context.save()
+    }
+
+    package static func ensureThingEventRoleTypesExist(context: ModelContext) {
+        let count = (try? context.fetchCount(FetchDescriptor<ThingEventRoleType>())) ?? 0
+        guard count == 0 else { return }
+        for config in defaultThingEventRoleTypes {
+            let type = ThingEventRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
+            context.insert(type)
+        }
+        try? context.save()
+    }
+
+    /// Import deities from deities_import.json that don't already exist in the database.
+    package static func ensureDeitiesImportExist(context: ModelContext) {
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+        let targetNames: Set<String> = [
+            "Ishkur", "Uraš", "Zababa", "Ninazu", "Ningishzida",
+            "Gugalanna", "Birtu", "Kulla", "Mushdamma", "Hendursaga",
+            "Isimud", "Papsukkal", "Lugal-Marada", "Numushda", "Shara",
+            "Pabilsag", "Lulal", "Enkimdu", "Ninshubur",
+        ]
+        guard targetNames.intersection(existingNames).count != targetNames.count else { return }
+
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "deities_import", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "deities_import", withExtension: "json")
+        }()
+        guard let u = url,
+              let data = try? Data(contentsOf: u),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+            print("[Migration] Failed to load deities_import.json")
+            return
+        }
+
+        let rootExistingNames = Set(root.figures.map(\.name))
+        guard rootExistingNames.isSubset(of: targetNames) else {
+            print("[Migration] deities_import.json contains unexpected figures")
+            return
+        }
+
+        let toImport = root.figures.filter { !existingNames.contains($0.name) }
+        guard !toImport.isEmpty else { return }
+
+        let importedIds = Set(toImport.map(\.id))
+        var filteredRoot = root
+        filteredRoot.figures = toImport
+        filteredRoot.alternateNames = root.alternateNames.filter { importedIds.contains($0.figureId ?? "") }
+        filteredRoot.figurePlaceAssociations = root.figurePlaceAssociations?.filter { importedIds.contains($0.figureId) }
+
+        SeedData.importFrom(root: filteredRoot, context: context)
+        print("[Migration] Imported \(toImport.count) new deities: \(toImport.map(\.name).joined(separator: ", "))")
+    }
 }

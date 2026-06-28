@@ -23,12 +23,15 @@ package struct MythologicalDate: Codable, Hashable {
             let startStr = formatYearAbs(start)
             let endStr = formatYearAbs(end)
             let suffix = start < 0 ? " BCE" : " CE"
-            return "\(prefix)\(startStr)\u{2013}\(endStr)\(suffix)"
+            return "\(prefix)\(startStr) \u{2013} \(endStr)\(suffix)"
         }
 
         if let year = startYear ?? endYear {
             let absYear = abs(year)
-            let formatted = NumberFormatter.localizedString(from: NSNumber(value: absYear), number: .decimal)
+            let fmt = NumberFormatter()
+            fmt.numberStyle = .decimal
+            fmt.locale = Locale(identifier: "en_US")
+            let formatted = fmt.string(from: NSNumber(value: absYear)) ?? "\(absYear)"
             if year < 0 {
                 return "\(prefix)\(formatted) BCE"
             } else {
@@ -67,6 +70,9 @@ package struct MythologicalDate: Codable, Hashable {
     }
 
     private func formatYearAbs(_ year: Int) -> String {
-        NumberFormatter.localizedString(from: NSNumber(value: abs(year)), number: .decimal)
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .decimal
+        fmt.locale = Locale(identifier: "en_US")
+        return fmt.string(from: NSNumber(value: abs(year))) ?? "\(abs(year))"
     }
 }

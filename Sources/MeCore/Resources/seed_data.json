@@ -5559,7 +5559,8 @@
       "source": "Sumerian King List",
       "latitude": 30.816,
       "longitude": 45.996,
-      "id": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
+      "id": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
+      "foundedDate": {"startYear": -5500, "endYear": -5000, "era": "Pre-Sumerian", "isApproximate": true}
     },
     {
       "name": "Uruk",
@@ -5569,7 +5570,8 @@
       "source": "Epic of Gilgamesh",
       "latitude": 31.322,
       "longitude": 45.637,
-      "id": "81476542-a174-55cf-a47e-4032687cd00e"
+      "id": "81476542-a174-55cf-a47e-4032687cd00e",
+      "foundedDate": {"startYear": -4000, "endYear": -3100, "era": "Late Uruk", "isApproximate": true}
     },
     {
       "name": "Ur",
@@ -5579,7 +5581,8 @@
       "source": "Sumerian texts",
       "latitude": 30.963,
       "longitude": 46.103,
-      "id": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+      "id": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "foundedDate": {"startYear": -3800, "era": "Ubaid", "isApproximate": true}
     },
     {
       "name": "Nippur",
@@ -5589,7 +5592,8 @@
       "source": "Sumerian texts",
       "latitude": 32.126,
       "longitude": 45.233,
-      "id": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
+      "id": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "foundedDate": {"startYear": -5000, "endYear": -4500, "era": "Ubaid", "isApproximate": true}
     },
     {
       "name": "Babylon",
@@ -5599,7 +5603,8 @@
       "source": "Enuma Elish",
       "latitude": 32.536,
       "longitude": 44.421,
-      "id": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+      "id": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
+      "foundedDate": {"startYear": -2300, "era": "Old Babylonian", "isApproximate": true}
     },
     {
       "name": "Kish",

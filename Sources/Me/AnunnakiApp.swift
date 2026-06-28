@@ -32,7 +32,7 @@ struct MeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     static let sharedContainer: ModelContainer = {
-        let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self, StickyNote.self])
+        let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self, StickyNote.self, Thing.self, ThingType.self, ThingFigureAssociation.self, ThingFigureRoleType.self, ThingPlaceAssociation.self, ThingPlaceRoleType.self, ThingEventAssociation.self, ThingEventRoleType.self])
 
         let forceReseed = CommandLine.arguments.contains("--reseed")
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
@@ -118,5 +118,133 @@ struct MeApp: App {
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 640, height: 520)
+
+        WindowGroup("Place", id: "place-quickview", for: PersistentIdentifier.self) { $placeID in
+            PlaceQuicklookWindow(placeID: placeID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 380, height: 420)
+
+        WindowGroup("Event", id: "event-quickview", for: PersistentIdentifier.self) { $eventID in
+            EventQuicklookWindow(eventID: eventID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 380, height: 420)
+    }
+}
+
+struct PlaceQuicklookWindow: View {
+    let placeID: PersistentIdentifier?
+    @Environment(\.modelContext) private var modelContext
+    @State private var place: Place?
+
+    var body: some View {
+        Group {
+            if let place {
+                PlaceQuicklookContent(place: place)
+            } else {
+                Text("Place not found")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard let placeID else { return }
+            let fetch = FetchDescriptor<Place>(predicate: #Predicate { $0.persistentModelID == placeID })
+            place = try? modelContext.fetch(fetch).first
+        }
+    }
+}
+
+private struct PlaceQuicklookContent: View {
+    let place: Place
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "building.columns")
+                    .foregroundStyle(.teal)
+                    .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(place.name)
+                        .font(.headline)
+                    Text(place.placeType?.name ?? "Unknown")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            if !place.modernLocation.isEmpty {
+                PropertyRow(label: "Modern Location", value: place.modernLocation)
+            }
+
+            if !place.placeDescription.isEmpty {
+                Text(place.placeDescription)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(6)
+            }
+        }
+        .padding(16)
+    }
+}
+
+struct EventQuicklookWindow: View {
+    let eventID: PersistentIdentifier?
+    @Environment(\.modelContext) private var modelContext
+    @State private var event: Event?
+
+    var body: some View {
+        Group {
+            if let event {
+                EventQuicklookContent(event: event)
+            } else {
+                Text("Event not found")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard let eventID else { return }
+            let fetch = FetchDescriptor<Event>(predicate: #Predicate { $0.persistentModelID == eventID })
+            event = try? modelContext.fetch(fetch).first
+        }
+    }
+}
+
+private struct EventQuicklookContent: View {
+    let event: Event
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "bolt.fill")
+                    .foregroundStyle(.orange)
+                    .frame(width: 32, height: 32)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.name)
+                        .font(.headline)
+                    Text(event.eventType?.name ?? "Unknown")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+
+            if event.date != .unknown {
+                PropertyRow(label: "Date", value: event.date.displayLabel)
+            }
+
+            if !event.eventDescription.isEmpty {
+                Text(event.eventDescription)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(6)
+            }
+        }
+        .padding(16)
     }
 }

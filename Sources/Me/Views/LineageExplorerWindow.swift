@@ -242,8 +242,8 @@ private struct FigureLineageExplorerContent: View {
     private func expandButton(_ label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 4) {
-                Image(systemName: "plus.circle")
-                    .font(.system(size: 9))
+                Image(systemName: "plus")
+                    .font(.system(size: 8, weight: .bold))
                 Text(label)
                     .font(.caption)
             }

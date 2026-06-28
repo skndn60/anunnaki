@@ -18,7 +18,7 @@ struct ImageLibraryView: View {
                     .font(.title2.bold())
                 Spacer()
                 Button(action: { showingFilePicker = true }) {
-                    Label("Upload", systemImage: "plus.circle")
+                    Label("Upload", systemImage: "plus")
                 }
                 .buttonStyle(.borderedProminent)
             }

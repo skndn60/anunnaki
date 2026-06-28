@@ -44,12 +44,17 @@ struct SumerianKingListView: View {
             }
             .frame(minWidth: 500, maxWidth: .infinity)
 
-            if let figure = selectedFigure {
-                ResizableDivider(width: $detailWidth, range: 200...800)
-                detailPanel(figure: figure)
+            Group {
+                if let figure = selectedFigure {
+                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    detailPanel(figure: figure)
                     .frame(width: detailWidth)
+                    .background(.thinMaterial)
+                }
             }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
+        .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
         .onChange(of: selectedFigureID) { _, newValue in
             if newValue == nil { selectedFigureID = nil }
         }
@@ -139,10 +144,10 @@ struct SumerianKingListView: View {
     private func detailPanel(figure: Figure) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                IconActionButton(icon: "pencil", color: .accentColor) {
+                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
                     editingFigure = figure
                 }
-                IconActionButton(icon: "trash", color: .red) {
+                IconActionButton(icon: "trash", color: .red, help: "Delete") {
                     showDeleteConfirm = true
                 }
                 Spacer()
@@ -154,8 +159,9 @@ struct SumerianKingListView: View {
                         .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
+                .help("Close")
             }
-            .padding(8)
+            .padding(.vertical, 8)
             FigureDetailView(figure: figure, onSelectFigure: { selected in
                 coordinator?.pushHistory(id: selected.persistentModelID, name: selected.name, item: .figures)
                 selectedFigureID = selected.persistentModelID

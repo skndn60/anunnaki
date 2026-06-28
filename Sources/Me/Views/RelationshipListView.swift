@@ -10,6 +10,8 @@ struct RelationshipListView: View {
     @State private var editingRelationship: Relationship?
     @State private var searchText = ""
     @State private var sortOrder: RelationshipSortOrder = .fromFigure
+    @State private var showDeleteConfirm = false
+    @State private var relToDelete: Relationship?
 
     enum RelationshipSortOrder: String, CaseIterable {
         case fromFigure = "From Figure"
@@ -60,12 +62,13 @@ struct RelationshipListView: View {
                     .overlay(alignment: .trailing) {
                         if !searchText.isEmpty {
                             Button(action: { searchText = "" }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 12))
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 10, weight: .semibold))
                                     .foregroundStyle(.secondary)
                             }
                             .buttonStyle(.plain)
                             .padding(.trailing, 6)
+                            .help("Clear filter")
                         }
                     }
                 Button(action: { showingAddSheet = true }) {
@@ -113,12 +116,16 @@ struct RelationshipListView: View {
                         RelationshipRowView(
                             relationship: rel,
                             onEdit: { editingRelationship = rel },
-                            onDelete: { modelContext.delete(rel) }
+                            onDelete: {
+                                relToDelete = rel
+                                showDeleteConfirm = true
+                            }
                         )
                     }
                     .onDelete { indexSet in
-                        for index in indexSet {
-                            modelContext.delete(filteredRelationships[index])
+                        if let index = indexSet.first {
+                            relToDelete = filteredRelationships[index]
+                            showDeleteConfirm = true
                         }
                     }
                 }
@@ -130,6 +137,15 @@ struct RelationshipListView: View {
         }
         .sheet(item: $editingRelationship) { rel in
             EditRelationshipForm(relationship: rel)
+        }
+        .alert("Delete Relationship?", isPresented: $showDeleteConfirm, presenting: relToDelete) { rel in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(rel)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { rel in
+            Text("Delete relationship between \(rel.fromFigure?.name ?? "?") and \(rel.toFigure?.name ?? "?")?")
         }
     }
 }
@@ -180,18 +196,8 @@ struct RelationshipRowView: View {
                     .lineLimit(1)
             }
             Spacer()
-            Button(action: onEdit) {
-                Image(systemName: "pencil.circle.fill")
-                    .font(.body)
-                    .foregroundStyle(Color.accentColor)
-            }
-            .buttonStyle(.plain)
-            Button(action: onDelete) {
-                Image(systemName: "trash.circle.fill")
-                    .font(.body)
-                    .foregroundStyle(.red.opacity(0.7))
-            }
-            .buttonStyle(.plain)
+            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: onEdit)
+            IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
         }
 
     }
@@ -371,10 +377,12 @@ struct FigureSearchSelector: View {
                     .fontWeight(.medium)
                 Spacer()
                 Button { selection = nil } label: {
-                    Image(systemName: "xmark.circle.fill")
+                    Image(systemName: "xmark")
+                        .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
+                .help("Clear selection")
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)

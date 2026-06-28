@@ -40,7 +40,7 @@ struct EventListView: View {
 
     private var sortedEvents: [Event] {
         switch sortOrder {
-        case .name: return events.sorted { $0.name < $1.name }
+        case .name: return events.sorted { sortName(for: $0.name) < sortName(for: $1.name) }
         case .type: return events.sorted { $0.eventType?.name ?? "" < $1.eventType?.name ?? "" }
         case .date: return events.sorted { $0.date.sortValue < $1.date.sortValue }
         }
@@ -53,7 +53,7 @@ struct EventListView: View {
         for event in sorted {
             let key: String = {
                 switch sortOrder {
-                case .name: return String(event.name.uppercased().prefix(1))
+                case .name: return String(sortName(for: event.name).uppercased().prefix(1))
                 case .type: return event.eventType?.name ?? "?"
                 case .date: return event.date.era.isEmpty ? "Unknown" : event.date.era
                 }
@@ -126,12 +126,7 @@ struct EventListView: View {
                 } else {
                     List(selection: $selectedEventID) {
                         ForEach(groupedEvents, id: \.key) { group in
-                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
-                                ForEach(group.events) { event in
-                                    EventRow(event: event)
-                                        .tag(event.persistentModelID)
-                                }
-                            }
+                            eventGroupSection(group)
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -142,45 +137,48 @@ struct EventListView: View {
             }
             .frame(minWidth: 450, maxWidth: .infinity)
 
-            if let event = selectedEvent {
-                ResizableDivider(width: $detailWidth, range: 200...800)
-                VStack(spacing: 0) {
-                    HStack(spacing: 8) {
-                        IconActionButton(icon: "pencil", color: .accentColor) {
-                            editingEvent = event
-                        }
-                        IconActionButton(icon: "trash", color: .red) {
-                            showDeleteConfirm = true
-                        }
-                        Spacer()
-                        Button(action: { selectedEventID = nil }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 22, height: 22)
-                                .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                        }
+            Group {
+                if let event = selectedEvent {
+                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    VStack(spacing: 0) {
+                        HStack(spacing: 8) {
+                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
+                                editingEvent = event
+                            }
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
+                                showDeleteConfirm = true
+                            }
+                            Spacer()
+                            Button(action: { selectedEventID = nil }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 22, height: 22)
+                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
+                            }
                         .buttonStyle(.plain)
                     }
-                    .padding(8)
+                    .padding(.vertical, 8)
                     EventDetailView(
-                        event: event,
-                        onSelectFigure: { figure in
-                            coordinator?.pushHistory(id: event.persistentModelID, name: event.name, item: .events)
-                            coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
-                        },
-                        onSelectPlace: { place in
-                            coordinator?.pushHistory(id: event.persistentModelID, name: event.name, item: .events)
-                            coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
-                        },
-                        onSelectImage: { imageDetailImage = $0 },
-                        backLabel: backLabel,
-                        onBack: backAction
-                    )
+                            event: event,
+                            onSelectFigure: { figure in
+                                coordinator?.pushHistory(id: event.persistentModelID, name: event.name, item: .events)
+                                coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
+                            },
+                            onSelectPlace: { place in
+                                coordinator?.pushHistory(id: event.persistentModelID, name: event.name, item: .events)
+                                coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
+                            },
+                            onSelectImage: { imageDetailImage = $0 }
+                        )
+                    }
+                    .frame(width: detailWidth)
+                    .background(.thinMaterial)
                 }
-                .frame(width: detailWidth)
             }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
+        .animation(.easeInOut(duration: 0.25), value: selectedEventID)
         .sheet(isPresented: $showingAddSheet) {
             EventFormView(event: nil)
         }
@@ -212,6 +210,15 @@ struct EventListView: View {
         guard let id = coordinator?.consumePendingEventID() else { return }
         if events.contains(where: { $0.persistentModelID == id }) {
             selectEvent(id)
+        }
+    }
+
+    private func eventGroupSection(_ group: (key: String, events: [Event])) -> some View {
+        Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+            ForEach(group.events) { event in
+                EventRow(event: event)
+                    .tag(event.persistentModelID)
+            }
         }
     }
 
@@ -367,10 +374,12 @@ struct EventFormView: View {
                                     Button {
                                         placeSelections.remove(at: index)
                                     } label: {
-                                        Image(systemName: "xmark.circle.fill")
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 9, weight: .bold))
                                             .foregroundStyle(.secondary)
                                     }
                                     .buttonStyle(.plain)
+                                    .help("Remove place")
                                 }
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
@@ -401,7 +410,7 @@ struct EventFormView: View {
                                         placeSelections.append(PlaceSelection(place: place, roleType: nil))
                                         placeSearchText = ""
                                     } label: {
-                                        Label("Create \"\(placeSearchText)\" as new place", systemImage: "plus.circle")
+                                        Label("Create \"\(placeSearchText)\" as new place", systemImage: "plus")
                                             .font(.caption)
                                             .foregroundStyle(.orange)
                                             .padding(.horizontal, 4)
@@ -452,11 +461,12 @@ struct EventFormView: View {
                                         Button {
                                             selectedFigureIDs.remove(figure.persistentModelID)
                                         } label: {
-                                            Image(systemName: "xmark.circle.fill")
+                                            Image(systemName: "xmark")
+                                                .font(.system(size: 9, weight: .bold))
                                                 .foregroundStyle(.secondary)
-                                                .font(.caption)
                                         }
                                         .buttonStyle(.plain)
+                                        .help("Remove figure")
                                     }
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 3)
@@ -488,7 +498,7 @@ struct EventFormView: View {
                                         selectedFigureIDs.insert(fig.persistentModelID)
                                         figureSearchText = ""
                                     } label: {
-                                        Label("Create \"\(figureSearchText)\" as new figure", systemImage: "plus.circle")
+                                        Label("Create \"\(figureSearchText)\" as new figure", systemImage: "plus")
                                             .font(.caption)
                                             .foregroundStyle(.orange)
                                             .padding(.horizontal, 4)

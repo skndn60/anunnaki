@@ -132,8 +132,9 @@ package struct SeedPlace: Codable {
     package let source: String
     package let latitude: Double?
     package let longitude: Double?
+    package let foundedDate: SeedDate?
 
-    package init(id: String = "", name: String = "", placeType: String = "", modernLocation: String = "", placeDescription: String = "", source: String = "", latitude: Double? = nil, longitude: Double? = nil) {
+    package init(id: String = "", name: String = "", placeType: String = "", modernLocation: String = "", placeDescription: String = "", source: String = "", latitude: Double? = nil, longitude: Double? = nil, foundedDate: SeedDate? = nil) {
         self.id = id
         self.name = name
         self.placeType = placeType
@@ -142,6 +143,7 @@ package struct SeedPlace: Codable {
         self.source = source
         self.latitude = latitude
         self.longitude = longitude
+        self.foundedDate = foundedDate
     }
 }
 
@@ -293,8 +295,9 @@ package struct SeedImageAsset: Codable {
     package let figureIds: [String]
     package let placeIds: [String]
     package let eventIds: [String]
+    package let thingIds: [String]
 
-    package init(id: String = "", filename: String = "", caption: String = "", source: String = "", figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = []) {
+    package init(id: String = "", filename: String = "", caption: String = "", source: String = "", figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = [], thingIds: [String] = []) {
         self.id = id
         self.filename = filename
         self.caption = caption
@@ -302,6 +305,63 @@ package struct SeedImageAsset: Codable {
         self.figureIds = figureIds
         self.placeIds = placeIds
         self.eventIds = eventIds
+        self.thingIds = thingIds
+    }
+}
+
+package struct SeedThing: Codable {
+    package let id: String
+    package let name: String
+    package let thingDescription: String
+    package let source: String
+
+    package init(id: String = "", name: String = "", thingDescription: String = "", source: String = "") {
+        self.id = id
+        self.name = name
+        self.thingDescription = thingDescription
+        self.source = source
+    }
+}
+
+package struct SeedThingFigureAssociation: Codable {
+    package let thingId: String
+    package let figureId: String
+    package let role: String
+    package let source: String
+
+    package init(thingId: String = "", figureId: String = "", role: String = "", source: String = "") {
+        self.thingId = thingId
+        self.figureId = figureId
+        self.role = role
+        self.source = source
+    }
+}
+
+package struct SeedThingPlaceAssociation: Codable {
+    package let thingId: String
+    package let placeId: String
+    package let role: String
+    package let source: String
+
+    package init(thingId: String = "", placeId: String = "", role: String = "", source: String = "") {
+        self.thingId = thingId
+        self.placeId = placeId
+        self.role = role
+        self.source = source
+    }
+}
+
+package struct SeedThingEventAssociation: Codable {
+    package let thingId: String
+    package let eventId: String
+    package let role: String
+    package let source: String
+
+    package init(thingId: String = "", eventId: String = "", role: String = "", source: String = "") {
+        self.thingId = thingId
+        self.eventId = eventId
+        self.role = role
+        self.source = source
     }
 }
 
@@ -313,8 +373,9 @@ package struct SeedTag: Codable {
     package let placeIds: [String]
     package let eventIds: [String]
     package let imageIds: [String]
+    package let thingIds: [String]
 
-    package init(id: String = "", name: String = "", colorHex: String? = nil, figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = [], imageIds: [String] = []) {
+    package init(id: String = "", name: String = "", colorHex: String? = nil, figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = [], imageIds: [String] = [], thingIds: [String] = []) {
         self.id = id
         self.name = name
         self.colorHex = colorHex
@@ -322,6 +383,7 @@ package struct SeedTag: Codable {
         self.placeIds = placeIds
         self.eventIds = eventIds
         self.imageIds = imageIds
+        self.thingIds = thingIds
     }
 }
 
@@ -358,8 +420,12 @@ package struct SeedDataRoot: Codable {
     package var eventEventAssociations: [SeedEventEventAssociation]?
     package var imageAssets: [SeedImageAsset]?
     package var tags: [SeedTag]?
+    package var things: [SeedThing]
+    package var thingFigureAssociations: [SeedThingFigureAssociation]?
+    package var thingPlaceAssociations: [SeedThingPlaceAssociation]?
+    package var thingEventAssociations: [SeedThingEventAssociation]?
 
-    package init(eras: [SeedEra] = [], figures: [SeedFigure] = [], relationships: [SeedRelationship] = [], places: [SeedPlace] = [], events: [SeedEvent] = [], sources: [SeedSource] = [], attachments: [SeedAttachment] = [], citations: [SeedCitation] = [], alternateNames: [SeedAlternateName] = [], figureTypes: [SeedFigureType]? = nil, placeTypes: [SeedPlaceType]? = nil, eventTypes: [SeedEventType]? = nil, figurePlaceAssociations: [SeedFigurePlaceAssociation]? = nil, placePlaceAssociations: [SeedPlacePlaceAssociation]? = nil, eventPlaceAssociations: [SeedEventPlaceAssociation]? = nil, eventEventAssociations: [SeedEventEventAssociation]? = nil, imageAssets: [SeedImageAsset]? = nil, tags: [SeedTag]? = nil) {
+    package init(eras: [SeedEra] = [], figures: [SeedFigure] = [], relationships: [SeedRelationship] = [], places: [SeedPlace] = [], events: [SeedEvent] = [], sources: [SeedSource] = [], attachments: [SeedAttachment] = [], citations: [SeedCitation] = [], alternateNames: [SeedAlternateName] = [], figureTypes: [SeedFigureType]? = nil, placeTypes: [SeedPlaceType]? = nil, eventTypes: [SeedEventType]? = nil, figurePlaceAssociations: [SeedFigurePlaceAssociation]? = nil, placePlaceAssociations: [SeedPlacePlaceAssociation]? = nil, eventPlaceAssociations: [SeedEventPlaceAssociation]? = nil, eventEventAssociations: [SeedEventEventAssociation]? = nil, imageAssets: [SeedImageAsset]? = nil, tags: [SeedTag]? = nil, things: [SeedThing] = [], thingFigureAssociations: [SeedThingFigureAssociation]? = nil, thingPlaceAssociations: [SeedThingPlaceAssociation]? = nil, thingEventAssociations: [SeedThingEventAssociation]? = nil) {
         self.eras = eras
         self.figures = figures
         self.relationships = relationships
@@ -378,6 +444,10 @@ package struct SeedDataRoot: Codable {
         self.eventEventAssociations = eventEventAssociations
         self.imageAssets = imageAssets
         self.tags = tags
+        self.things = things
+        self.thingFigureAssociations = thingFigureAssociations
+        self.thingPlaceAssociations = thingPlaceAssociations
+        self.thingEventAssociations = thingEventAssociations
     }
 }
 
@@ -398,6 +468,7 @@ package struct SeedData {
         guard figureCount == 0 || force else {
             ensureTypesExist(context: context)
             ensureEnochDataExists(context: context)
+            Migration.ensureDeitiesImportExist(context: context)
             return
         }
 
@@ -414,6 +485,7 @@ package struct SeedData {
         }
 
         importFrom(root: seed, context: context)
+        Migration.ensureDeitiesImportExist(context: context)
     }
 
     package static func importFrom(root: SeedDataRoot, context: ModelContext) {
@@ -512,6 +584,7 @@ package struct SeedData {
                 latitude: seedPlace.latitude,
                 longitude: seedPlace.longitude
             )
+            place.foundedDate = seedPlace.foundedDate?.toMythologicalDate()
             context.insert(place)
             placesById[seedPlace.id] = place
         }
@@ -672,6 +745,69 @@ package struct SeedData {
             }
         }
 
+        // MARK: - Things
+        var thingsById: [String: Thing] = [:]
+        for seedThing in root.things {
+            let thing = Thing(
+                name: seedThing.name,
+                thingDescription: seedThing.thingDescription,
+                source: seedThing.source
+            )
+            context.insert(thing)
+            thingsById[seedThing.id] = thing
+        }
+
+        // MARK: - Thing-Figure Associations
+        if let assocs = root.thingFigureAssociations {
+            let allRoleTypes: [ThingFigureRoleType] = (try? context.fetch(FetchDescriptor<ThingFigureRoleType>())) ?? []
+            for seedAssoc in assocs {
+                guard let thing = thingsById[seedAssoc.thingId],
+                      let figure = figuresById[seedAssoc.figureId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
+                let assoc = ThingFigureAssociation(
+                    thing: thing,
+                    figure: figure,
+                    roleType: roleType,
+                    source: seedAssoc.source
+                )
+                context.insert(assoc)
+            }
+        }
+
+        // MARK: - Thing-Place Associations
+        if let assocs = root.thingPlaceAssociations {
+            let allRoleTypes: [ThingPlaceRoleType] = (try? context.fetch(FetchDescriptor<ThingPlaceRoleType>())) ?? []
+            for seedAssoc in assocs {
+                guard let thing = thingsById[seedAssoc.thingId],
+                      let place = placesById[seedAssoc.placeId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
+                let assoc = ThingPlaceAssociation(
+                    thing: thing,
+                    place: place,
+                    roleType: roleType,
+                    source: seedAssoc.source
+                )
+                context.insert(assoc)
+            }
+        }
+
+        // MARK: - Thing-Event Associations
+        if let assocs = root.thingEventAssociations {
+            let allRoleTypes: [ThingEventRoleType] = (try? context.fetch(FetchDescriptor<ThingEventRoleType>())) ?? []
+            for seedAssoc in assocs {
+                guard let thing = thingsById[seedAssoc.thingId],
+                      let event = eventsById[seedAssoc.eventId] else { continue }
+                let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
+                let assoc = ThingEventAssociation(
+                    thing: thing,
+                    event: event,
+                    roleType: roleType,
+                    source: seedAssoc.source
+                )
+                context.insert(assoc)
+            }
+        }
+
         // MARK: - Image Assets
         if let images = root.imageAssets {
             var imagesById: [String: ImageAsset] = [:]
@@ -680,6 +816,7 @@ package struct SeedData {
                     figures: si.figureIds.compactMap { figuresById[$0] },
                     places: si.placeIds.compactMap { placesById[$0] },
                     events: si.eventIds.compactMap { eventsById[$0] },
+                    things: si.thingIds.compactMap { thingsById[$0] },
                     filename: si.filename,
                     caption: si.caption,
                     source: si.source
@@ -699,6 +836,7 @@ package struct SeedData {
                     tag.places = st.placeIds.compactMap { placesById[$0] }
                     tag.events = st.eventIds.compactMap { eventsById[$0] }
                     tag.images = st.imageIds.compactMap { imagesById[$0] }
+                    tag.things = st.thingIds.compactMap { thingsById[$0] }
                     context.insert(tag)
                 }
             }
@@ -732,8 +870,12 @@ package struct SeedData {
         for entity in (try? context.fetch(FetchDescriptor<FigureType>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<PlaceType>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<EventType>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<ThingEventAssociation>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<ThingPlaceAssociation>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<ThingFigureAssociation>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<Tag>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<DataVersion>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<Thing>())) ?? [] { context.delete(entity) }
     }
 
     static func ensureTypesExist(context: ModelContext) {
@@ -790,11 +932,30 @@ package struct SeedData {
             }
         }
 
+        let thingTypeCount = (try? context.fetchCount(FetchDescriptor<ThingType>())) ?? 0
+        if thingTypeCount == 0 {
+            let thingTypeConfig: [(name: String, icon: String, colorHex: String)] = [
+                ("Artifact", "cube.box", "8B5CF6"),
+                ("Monument", "building.columns", "F59E0B"),
+                ("Text", "doc.text", "3B82F6"),
+                ("Tool", "hammer", "EF4444"),
+                ("Weapon", "shield.righthalf.filled", "EF4444"),
+                ("Jewelry", "circle.dotted", "EC4899"),
+            ]
+            for config in thingTypeConfig {
+                let type = ThingType(name: config.name, icon: config.icon, colorHex: config.colorHex)
+                context.insert(type)
+            }
+        }
+
         Migration.ensureRelationTypesExist(context: context)
         Migration.ensurePlacePlaceRoleTypesExist(context: context)
         Migration.ensureEventEventRoleTypesExist(context: context)
         Migration.ensureEventPlaceRoleTypesExist(context: context)
         Migration.ensureFigurePlaceRoleTypesExist(context: context)
+        Migration.ensureThingFigureRoleTypesExist(context: context)
+        Migration.ensureThingPlaceRoleTypesExist(context: context)
+        Migration.ensureThingEventRoleTypesExist(context: context)
         Migration.fixAllyIcon(context: context)
         try? context.save()
     }

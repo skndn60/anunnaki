@@ -12,12 +12,14 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case dashboard = "Dashboard"
     case importWiki = "Import from Wikipedia"
     case query = "Query"
+    case tagCloud = "Tag Cloud"
     case networkGraph = "Object Graph"
     case lineage = "Lineage Tree"
     case timeline = "Timeline"
     case figures = "Figures"
     case places = "Places"
     case events = "Events"
+    case things = "Things"
     case relationships = "Relationships"
     case associations = "Associations"
     case typeSettings = "Type Settings"
@@ -29,6 +31,8 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case versions = "Versions"
     case enoch = "Book of Enoch"
     case sumerianKingList = "Sumerian King List"
+    case sklPlaces = "SKL Capitals"
+    case sklEvents = "SKL Events"
     case flood = "The Flood"
     case theMes = "The Me’s"
 
@@ -37,6 +41,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .dashboard: return "house"
         case .importWiki: return "globe"
         case .query: return "text.magnifyingglass"
+        case .tagCloud: return "cloud"
         case .networkGraph: return "arrow.triangle.branch"
         case .lineage: return "tree"
         case .timeline: return "calendar.day.timeline.left"
@@ -54,8 +59,11 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .versions: return "clock.arrow.circlepath"
         case .enoch: return "book.fill"
         case .sumerianKingList: return "list.star"
+        case .sklPlaces: return "building.columns"
+        case .sklEvents: return "bolt.shield"
         case .flood: return "drop"
         case .theMes: return "rectangle.3.group"
+        case .things: return "cube.box"
         }
     }
 
@@ -63,9 +71,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
         switch self {
         case .dashboard: return .overview
         case .importWiki, .versions: return .tools
-        case .query, .networkGraph, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources: return .data
-        case .enoch, .sumerianKingList, .flood, .theMes: return .history
+        case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
+        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things: return .data
+        case .enoch, .sumerianKingList, .sklPlaces, .sklEvents, .flood, .theMes: return .history
         }
     }
 
@@ -75,12 +83,14 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .dashboard: DashboardView()
         case .importWiki: ImportView()
         case .query: QueryView()
+        case .tagCloud: TagCloudView()
         case .networkGraph: NetworkGraphView()
         case .lineage: LineageTreeView()
         case .timeline: TimelineContainerView()
         case .figures: FigureListView()
         case .places: PlaceListView()
         case .events: EventListView()
+        case .things: ThingListView()
         case .relationships: RelationshipListView()
         case .associations: AssociationsView()
         case .typeSettings: TypeSettingsView()
@@ -92,6 +102,8 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .versions: VersionListView()
         case .enoch: EnochView()
         case .sumerianKingList: SumerianKingListView()
+        case .sklPlaces: SumerianKingPlaceListView()
+        case .sklEvents: SumerianKingEventListView()
         case .flood: ComingSoonView(title: "The Flood")
         case .theMes: ComingSoonView(title: "The Me’s")
         }
@@ -174,10 +186,16 @@ struct ContentView: View {
                         PlaceListView(coordinator: coordinator)
                     } else if selectedItem == .events {
                         EventListView(coordinator: coordinator)
+                    } else if selectedItem == .things {
+                        ThingListView(coordinator: coordinator)
                     } else if selectedItem == .enoch {
                         EnochView(coordinator: coordinator)
                     } else if selectedItem == .sumerianKingList {
                         SumerianKingListView(coordinator: coordinator)
+                    } else if selectedItem == .sklPlaces {
+                        SumerianKingPlaceListView(coordinator: coordinator)
+                    } else if selectedItem == .sklEvents {
+                        SumerianKingEventListView(coordinator: coordinator)
                     } else {
                         selectedItem.destination
                     }

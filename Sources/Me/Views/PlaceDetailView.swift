@@ -12,6 +12,15 @@ struct PlaceDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var altToDelete: AlternateName?
     @State private var showDeleteAltConfirm = false
+    @State private var showAddAltSheet = false
+    @State private var showFigureLinkPopover = false
+    @State private var figureSearchText = ""
+    @State private var selectedFigureForLink: Figure?
+    @State private var selectedFigureRole: FigurePlaceRoleType?
+    @State private var showEventLinkPopover = false
+    @State private var eventSearchText = ""
+    @State private var selectedEventForLink: Event?
+    @State private var selectedEventRole: EventPlaceRoleType?
 
     private var relatedEvents: [Event] {
         place.eventAssociations.compactMap { $0.event }
@@ -94,6 +103,9 @@ struct PlaceDetailView: View {
                     if !place.source.isEmpty {
                         PropertyRow(label: "Source", value: place.source)
                     }
+                    if let founded = place.foundedDate, founded != .unknown {
+                        PropertyRow(label: "Founded", value: founded.displayLabel)
+                    }
                 }
 
                 // Description
@@ -109,14 +121,29 @@ struct PlaceDetailView: View {
                 }
 
                 // Alternate Names
-                if !place.alternateNames.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
                         Text("Also Known As")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
+                        Spacer()
+                        Button {
+                            showAddAltSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Add alternate name")
+                    }
 
+                    if place.alternateNames.isEmpty {
+                        Text("No alternate names")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else {
                         ForEach(place.alternateNames) { altName in
                             HStack(spacing: 8) {
                                 Text(altName.name)
@@ -150,43 +177,6 @@ struct PlaceDetailView: View {
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .padding(.leading, 4)
-                            }
-                        }
-                    }
-                }
-
-                // Figure associations (patron deity, ruler, etc.)
-                if !place.figureAssociations.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Associated Figures")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        ForEach(place.figureAssociations) { assoc in
-                            HStack(spacing: 8) {
-                                Circle()
-                                    .fill(assoc.figure?.figureType?.color ?? .gray)
-                                    .frame(width: 8, height: 8)
-                                Text(assoc.figure?.gender.symbol ?? "?")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Button(action: {
-                                    if let fig = assoc.figure { onSelectFigure?(fig) }
-                                }) {
-                                    Text(assoc.figure?.name ?? "?")
-                                        .font(.callout)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(Color.accentColor)
-                                        .underline()
-                                }
-                                .buttonStyle(.plain)
-                                .pointingHand()
-                                Text("— \(assoc.roleType?.name ?? "—")")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
                             }
                         }
                     }
@@ -241,14 +231,38 @@ struct PlaceDetailView: View {
                 }
 
                 // Events at this place
-                if !relatedEvents.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
                         Text("Events Here")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
+                        Spacer()
+                        Button(action: { showEventLinkPopover = true }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Link an event")
+                        .popover(isPresented: $showEventLinkPopover) {
+                            PlaceEventLinkPopover(
+                                place: place,
+                                searchText: $eventSearchText,
+                                selectedEvent: $selectedEventForLink,
+                                selectedRole: $selectedEventRole,
+                                isPresented: $showEventLinkPopover
+                            )
+                            .frame(width: 340, height: 400)
+                        }
+                    }
 
+                    if relatedEvents.isEmpty {
+                        Text("No events linked")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.vertical, 4)
+                    } else {
                         ForEach(relatedEvents) { event in
                             HStack(spacing: 8) {
                                 Image(systemName: eventIcon(event.eventType))
@@ -276,17 +290,53 @@ struct PlaceDetailView: View {
                     }
                 }
 
-                // Figures associated with this place
-                if !relatedFigures.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
+                // All figures (direct associations + event-derived)
+                let allFigures = { () -> [Figure] in
+                    let direct = place.figureAssociations.compactMap { $0.figure }
+                    var seen = Set<PersistentIdentifier>()
+                    var result: [Figure] = []
+                    for fig in direct + relatedFigures {
+                        if seen.insert(fig.persistentModelID).inserted {
+                            result.append(fig)
+                        }
+                    }
+                    return result
+                }()
+
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
                         Text("Associated Figures")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
+                        Spacer()
+                        Button(action: { showFigureLinkPopover = true }) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Link a figure")
+                        .popover(isPresented: $showFigureLinkPopover) {
+                            PlaceFigureLinkPopover(
+                                place: place,
+                                searchText: $figureSearchText,
+                                selectedFigure: $selectedFigureForLink,
+                                selectedRole: $selectedFigureRole,
+                                isPresented: $showFigureLinkPopover
+                            )
+                            .frame(width: 340, height: 400)
+                        }
+                    }
 
+                    if allFigures.isEmpty {
+                        Text("No figures linked")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .padding(.vertical, 4)
+                    } else {
                         FlowLayout(spacing: 6) {
-                            ForEach(relatedFigures) { figure in
+                            ForEach(allFigures) { figure in
                                 Button(action: { onSelectFigure?(figure) }) {
                                     HStack(spacing: 3) {
                                         Text(figure.gender.symbol)
@@ -369,6 +419,7 @@ struct PlaceDetailView: View {
                 MapPreviewButton(place: place)
             }
             .padding(20)
+            .textSelection(.enabled)
         }
         .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
             Button("Delete", role: .destructive) {
@@ -378,6 +429,9 @@ struct PlaceDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: { altName in
             Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(altName.place?.name ?? "?")?")
+        }
+        .sheet(isPresented: $showAddAltSheet) {
+            AlternateNameFormView(alternateName: nil, preSelectedPlace: place)
         }
     }
 
@@ -432,5 +486,229 @@ struct FlowLayout: Layout {
         }
 
         return (CGSize(width: maxWidth, height: totalHeight), positions)
+    }
+}
+
+// MARK: - Figure Link Popover
+
+private struct PlaceFigureLinkPopover: View {
+    let place: Place
+    @Binding var searchText: String
+    @Binding var selectedFigure: Figure?
+    @Binding var selectedRole: FigurePlaceRoleType?
+    @Binding var isPresented: Bool
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var allRoles: [FigurePlaceRoleType] = []
+
+    private var allFigures: [Figure] {
+        (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var filteredFigures: [Figure] {
+        let linked = Set(place.figureAssociations.compactMap { $0.figure?.persistentModelID })
+        let available = allFigures.filter { !linked.contains($0.persistentModelID) }
+        if searchText.isEmpty { return available }
+        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search figures…", text: $searchText)
+                    .textFieldStyle(.plain)
+            }
+            .padding(10)
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(6)
+
+            if filteredFigures.isEmpty {
+                Text("No matching figures")
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 20)
+            } else {
+                List(filteredFigures, id: \.persistentModelID) { figure in
+                    Button(action: { selectedFigure = figure }) {
+                        HStack(spacing: 10) {
+                            Text(figure.gender.symbol)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14)
+                            Text(figure.name)
+                                .font(.body)
+                            Spacer()
+                            if selectedFigure?.persistentModelID == figure.persistentModelID {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+            }
+
+            Divider()
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Role:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("Role", selection: $selectedRole) {
+                        Text("Select…").tag(nil as FigurePlaceRoleType?)
+                        ForEach(allRoles, id: \.persistentModelID) { role in
+                            HStack(spacing: 6) {
+                                Image(systemName: role.icon)
+                                Text(role.name)
+                            }
+                            .tag(role as FigurePlaceRoleType?)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Cancel") { isPresented = false }
+                        .buttonStyle(.bordered)
+                    Button("Link") {
+                        createAssociation()
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedFigure == nil || selectedRole == nil)
+                }
+            }
+        }
+        .padding()
+        .onAppear {
+            allRoles = (try? modelContext.fetch(FetchDescriptor<FigurePlaceRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
+        }
+    }
+
+    private func createAssociation() {
+        guard let figure = selectedFigure, let role = selectedRole else { return }
+        let assoc = FigurePlaceAssociation()
+        modelContext.insert(assoc)
+        place.figureAssociations.append(assoc)
+        figure.placeAssociations.append(assoc)
+        role.associations.append(assoc)
+        try? modelContext.save()
+    }
+}
+
+// MARK: - Event Link Popover
+
+private struct PlaceEventLinkPopover: View {
+    let place: Place
+    @Binding var searchText: String
+    @Binding var selectedEvent: Event?
+    @Binding var selectedRole: EventPlaceRoleType?
+    @Binding var isPresented: Bool
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var allRoles: [EventPlaceRoleType] = []
+
+    private var allEvents: [Event] {
+        (try? modelContext.fetch(FetchDescriptor<Event>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var filteredEvents: [Event] {
+        let linked = Set(place.eventAssociations.compactMap { $0.event?.persistentModelID })
+        let available = allEvents.filter { !linked.contains($0.persistentModelID) }
+        if searchText.isEmpty { return available }
+        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search events…", text: $searchText)
+                    .textFieldStyle(.plain)
+            }
+            .padding(10)
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(6)
+
+            if filteredEvents.isEmpty {
+                Text("No matching events")
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 20)
+            } else {
+                List(filteredEvents, id: \.persistentModelID) { event in
+                    Button(action: { selectedEvent = event }) {
+                        HStack(spacing: 10) {
+                            Image(systemName: event.eventType?.icon ?? "bolt")
+                                .font(.caption)
+                                .foregroundStyle(event.eventType?.color ?? .gray)
+                                .frame(width: 16)
+                            Text(event.name)
+                                .font(.body)
+                            Spacer()
+                            if selectedEvent?.persistentModelID == event.persistentModelID {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+            }
+
+            Divider()
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Role:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("Role", selection: $selectedRole) {
+                        Text("Select…").tag(nil as EventPlaceRoleType?)
+                        ForEach(allRoles, id: \.persistentModelID) { role in
+                            HStack(spacing: 6) {
+                                Image(systemName: role.icon)
+                                Text(role.name)
+                            }
+                            .tag(role as EventPlaceRoleType?)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Cancel") { isPresented = false }
+                        .buttonStyle(.bordered)
+                    Button("Link") {
+                        createAssociation()
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedEvent == nil || selectedRole == nil)
+                }
+            }
+        }
+        .padding()
+        .onAppear {
+            allRoles = (try? modelContext.fetch(FetchDescriptor<EventPlaceRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
+        }
+    }
+
+    private func createAssociation() {
+        guard let event = selectedEvent, let role = selectedRole else { return }
+        let assoc = EventPlaceAssociation()
+        modelContext.insert(assoc)
+        place.eventAssociations.append(assoc)
+        event.placeAssociations.append(assoc)
+        role.associations.append(assoc)
+        try? modelContext.save()
     }
 }

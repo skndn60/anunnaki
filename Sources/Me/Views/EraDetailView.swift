@@ -101,6 +101,7 @@ struct EraDetailView: View {
                 Spacer()
             }
             .padding(20)
+            .textSelection(.enabled)
         }
         .onChange(of: selectedFigure) { _, newValue in
             if let figure = newValue {

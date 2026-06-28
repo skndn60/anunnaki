@@ -25,6 +25,12 @@ struct TypeSettingsView: View {
                             icon: "bolt",
                             color: .orange
                         )
+                        Divider()
+                        EntityTypeSubSection<ThingType>(
+                            title: "Thing Types",
+                            icon: "cube.box",
+                            color: .purple
+                        )
                     }
                     .padding()
                 }
@@ -104,7 +110,8 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
-                    Image(systemName: "plus.circle")
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(color)
                 }
                 .buttonStyle(.plain)
@@ -183,7 +190,8 @@ private struct RelationshipTypeSubSection: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
-                    Image(systemName: "plus.circle")
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.purple)
                 }
                 .buttonStyle(.plain)
@@ -273,7 +281,8 @@ private struct RoleTypeSubSection<T: RoleTypeProtocol>: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
-                    Image(systemName: "plus.circle")
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(color)
                 }
                 .buttonStyle(.plain)
@@ -404,7 +413,27 @@ extension EventType: IconColorSettable {
     func setIcon(_ i: String) { icon = i }
     func setColorHex(_ h: String) { colorHex = h }
 }
+extension ThingType: IconColorSettable {
+    func setIcon(_ i: String) { icon = i }
+    func setColorHex(_ h: String) { colorHex = h }
+}
 extension RelationshipType: IconColorSettable {
+    func setIcon(_ i: String) { icon = i }
+    func setColorHex(_ h: String) { colorHex = h }
+}
+extension FigurePlaceRoleType: IconColorSettable {
+    func setIcon(_ i: String) { icon = i }
+    func setColorHex(_ h: String) { colorHex = h }
+}
+extension PlacePlaceRoleType: IconColorSettable {
+    func setIcon(_ i: String) { icon = i }
+    func setColorHex(_ h: String) { colorHex = h }
+}
+extension EventEventRoleType: IconColorSettable {
+    func setIcon(_ i: String) { icon = i }
+    func setColorHex(_ h: String) { colorHex = h }
+}
+extension EventPlaceRoleType: IconColorSettable {
     func setIcon(_ i: String) { icon = i }
     func setColorHex(_ h: String) { colorHex = h }
 }
@@ -578,6 +607,16 @@ extension EventType: EntityTypeProtocol {
     var countLabel: String { "events" }
     static func make(name: String, icon: String, colorHex: String) -> EventType? {
         EventType(name: name, icon: icon, colorHex: colorHex)
+    }
+}
+extension ThingType: EntityTypeProtocol {
+    var uiName: String { name }
+    var uiIcon: String { icon }
+    var uiColor: Color { color }
+    var countValue: Int { things.count }
+    var countLabel: String { "things" }
+    static func make(name: String, icon: String, colorHex: String) -> ThingType? {
+        ThingType(name: name, icon: icon, colorHex: colorHex)
     }
 }
 

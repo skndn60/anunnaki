@@ -38,7 +38,7 @@ struct StickyNoteCard: View {
                 Button {
                     withAnimation { note.isResolved = true }
                 } label: {
-                    Image(systemName: "checkmark.circle")
+                    Image(systemName: "checkmark")
                         .font(.caption)
                 }
                 .buttonStyle(.plain)
@@ -88,11 +88,13 @@ struct StickyNoteSection: View {
                     .textFieldStyle(.plain)
                     .onSubmit(submitSticky)
                 Button(action: submitSticky) {
-                    Image(systemName: "plus.circle.fill")
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.yellow)
                 }
                 .buttonStyle(.plain)
                 .disabled(newStickyText.trimmingCharacters(in: .whitespaces).isEmpty)
+                .help("Add sticky note")
             }
             .padding(8)
             .background(Color.yellow.opacity(0.08))
@@ -178,7 +180,7 @@ struct StickyNoteListView: View {
                         .font(.title3)
                         .foregroundStyle(.secondary)
                     Text(allStickies.isEmpty
-                        ? "Add sticky notes to figures, places, and events from their detail panels."
+                        ? "Add sticky notes to figures, places, events, and things from their detail panels."
                         : "Toggle \"Show Resolved\" to see completed stickies.")
                         .font(.body)
                         .foregroundStyle(.tertiary)
@@ -222,7 +224,7 @@ struct StickyNoteListView: View {
                             Button {
                                 note.isResolved = true
                             } label: {
-                                Image(systemName: "checkmark.circle")
+                                Image(systemName: "checkmark")
                                     .font(.caption)
                             }
                             .buttonStyle(.plain)
@@ -240,6 +242,7 @@ struct StickyNoteListView: View {
         if let fig = note.figure { return "\(fig.gender.symbol) \(fig.name)" }
         if let place = note.place { return place.name }
         if let event = note.event { return event.name }
+        if let thing = note.thing { return thing.name }
         return "?"
     }
 
@@ -257,6 +260,10 @@ struct StickyNoteListView: View {
             Image(systemName: "bolt.fill")
                 .font(.caption)
                 .foregroundStyle(.orange)
+        } else if note.thing != nil {
+            Image(systemName: "cube.box")
+                .font(.caption)
+                .foregroundStyle(.purple)
         }
     }
 }

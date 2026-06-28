@@ -1,0 +1,22 @@
+import Foundation
+import SwiftData
+
+@Model
+package final class ThingEventAssociation {
+    package var thing: Thing?
+    package var event: Event?
+    package var roleType: ThingEventRoleType?
+    package var source: String
+
+    package init(
+        thing: Thing? = nil,
+        event: Event? = nil,
+        roleType: ThingEventRoleType? = nil,
+        source: String = ""
+    ) {
+        self.thing = thing
+        self.event = event
+        self.roleType = roleType
+        self.source = source
+    }
+}
