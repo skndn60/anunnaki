@@ -269,6 +269,15 @@ struct EraSwimlaneRow: View {
             }
         }
         .frame(width: containerWidth, height: swimlaneHeight)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(eraColor.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(eraColor.opacity(0.15), lineWidth: 0.5)
+                )
+                .padding(.horizontal, 2)
+        )
         )
     }
 
