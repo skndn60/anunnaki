@@ -245,7 +245,6 @@ struct EraSwimlaneRow: View {
             eraEndX = 0
             hasValidDates = false
         }
-
         return AnyView(ZStack(alignment: .leading) {
             ForEach(figures) { figure in
                 if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
@@ -258,10 +257,8 @@ struct EraSwimlaneRow: View {
                         .position(x: birthX + barWidth / 2, y: swimlaneHeight / 2 + 12)
                 }
             }
-            .opacity(hasValidDates ? 1 : 0)
 
             eraBar(startX: eraStartX, endX: eraEndX)
-                .opacity(hasValidDates ? 1 : 0)
 
             ForEach(chipLayouts, id: \.figure.id) { layout in
                 FigureSwimlaneChip(figure: layout.figure)
