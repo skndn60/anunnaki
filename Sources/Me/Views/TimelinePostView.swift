@@ -6,7 +6,7 @@ struct TimelinePostView: View {
     @Query private var figures: [Figure]
 
     private let pointsPerYear: CGFloat = 4
-    private let swimlaneHeight: CGFloat = 44
+    private let swimlaneHeight: CGFloat = 120
 
     private var postFloodEras: [Era] {
         eras.filter { $0.orderIndex >= 7 }

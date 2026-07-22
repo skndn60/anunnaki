@@ -264,22 +264,23 @@ struct EraSwimlaneRow: View {
                 FigureSwimlaneChip(figure: layout.figure)
                     .position(
                         x: layout.x,
-                        y: 18 + CGFloat(layout.level - minLevel) * 28 + 14
+                        y: swimlaneHeight / 2 - 5 + CGFloat(layout.level) * 18
                     )
             }
         }
         .frame(width: containerWidth, height: swimlaneHeight)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(eraColor.opacity(0.08))
+                .fill(eraColor.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(eraColor.opacity(0.15), lineWidth: 0.5)
+                        .stroke(eraColor.opacity(0.25), lineWidth: 0.5)
                 )
                 .padding(.horizontal, 2)
         )
         )
     }
+
 
 
 
@@ -303,10 +304,10 @@ struct EraSwimlaneRow: View {
     .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(eraColor.opacity(0.08))
+                .fill(eraColor.opacity(0.15))
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(eraColor.opacity(0.15), lineWidth: 0.5)
+                        .stroke(eraColor.opacity(0.25), lineWidth: 0.5)
                 )
                 .padding(.horizontal, 2)
         )
@@ -314,10 +315,10 @@ struct EraSwimlaneRow: View {
 
     private func eraBar(startX: CGFloat, endX: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 4)
-            .fill(eraColor.opacity(0.12))
+            .fill(eraColor.opacity(0.25))
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
-                    .stroke(eraColor.opacity(0.25), lineWidth: 0.5)
+                    .stroke(eraColor.opacity(0.35), lineWidth: 0.5)
             )
             .frame(width: max(20, endX - startX), height: swimlaneHeight - 8)
             .position(x: (startX + endX) / 2, y: swimlaneHeight / 2)
