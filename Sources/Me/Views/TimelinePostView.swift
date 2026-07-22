@@ -9,7 +9,7 @@ struct TimelinePostView: View {
     private let swimlaneHeight: CGFloat = 44
 
     private var postFloodEras: [Era] {
-        eras.filter { $0.orderIndex >= 5 }
+        eras.filter { $0.orderIndex >= 7 }
     }
 
     private var postFloodErasWithFigures: [Era] {

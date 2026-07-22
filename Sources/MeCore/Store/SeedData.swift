@@ -292,16 +292,18 @@ package struct SeedImageAsset: Codable {
     package let filename: String
     package let caption: String
     package let source: String
+    package let imageDescription: String
     package let figureIds: [String]
     package let placeIds: [String]
     package let eventIds: [String]
     package let thingIds: [String]
 
-    package init(id: String = "", filename: String = "", caption: String = "", source: String = "", figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = [], thingIds: [String] = []) {
+    package init(id: String = "", filename: String = "", caption: String = "", source: String = "", imageDescription: String = "", figureIds: [String] = [], placeIds: [String] = [], eventIds: [String] = [], thingIds: [String] = []) {
         self.id = id
         self.filename = filename
         self.caption = caption
         self.source = source
+        self.imageDescription = imageDescription
         self.figureIds = figureIds
         self.placeIds = placeIds
         self.eventIds = eventIds
@@ -469,6 +471,8 @@ package struct SeedData {
             ensureTypesExist(context: context)
             ensureEnochDataExists(context: context)
             Migration.ensureDeitiesImportExist(context: context)
+            Migration.ensureDumuziFamilyExists(context: context)
+            Migration.fixEraOrderIndices(context: context)
             return
         }
 
@@ -480,7 +484,6 @@ package struct SeedData {
         guard let url = seedURL,
               let data = try? Data(contentsOf: url),
               let seed = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
-            print("[Seed] Failed to load seed_data.json — store may be empty")
             return
         }
 
@@ -819,7 +822,8 @@ package struct SeedData {
                     things: si.thingIds.compactMap { thingsById[$0] },
                     filename: si.filename,
                     caption: si.caption,
-                    source: si.source
+                    source: si.source,
+                    imageDescription: si.imageDescription
                 )
                 context.insert(image)
                 imagesById[si.id] = image

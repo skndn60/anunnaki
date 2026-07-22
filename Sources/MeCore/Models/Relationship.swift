@@ -10,18 +10,21 @@ package final class Relationship {
     package var fromFigure: Figure?
     package var toFigure: Figure?
     package var isPreferred: Bool?
+    package var groupID: String = ""
 
     package init(
         fromFigure: Figure? = nil,
         toFigure: Figure? = nil,
         relationshipType: RelationshipType? = nil,
         source: String = "",
-        isPreferred: Bool = false
+        isPreferred: Bool = false,
+        groupID: String = ""
     ) {
         self.fromFigure = fromFigure
         self.toFigure = toFigure
         self.relationshipType = relationshipType
         self.source = source
         self.isPreferred = isPreferred
+        self.groupID = groupID
     }
 }

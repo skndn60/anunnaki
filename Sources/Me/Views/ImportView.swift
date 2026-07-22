@@ -148,7 +148,7 @@ struct ImportView: View {
 
         Task {
             do {
-                results = try await wikiClient.search(query: searchText)
+                (results, _) = try await wikiClient.search(query: searchText)
                 isSearching = false
             } catch {
                 errorMessage = error.localizedDescription

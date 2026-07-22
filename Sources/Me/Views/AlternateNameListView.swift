@@ -42,18 +42,11 @@ struct AlternateNameListView: View {
     }
 
     private var groupedNames: [(key: String, names: [AlternateName])] {
-        let sorted = filteredNames
-        var groups: [(key: String, names: [AlternateName])] = []
-        var currentKey: String?
-        for name in sorted {
-            let key = name.name.uppercased().prefix(1).description
-            if key != currentKey {
-                groups.append((key: key, names: []))
-                currentKey = key
-            }
-            groups[groups.count - 1].names.append(name)
+        Dictionary(grouping: filteredNames) { name in
+            name.name.uppercased().prefix(1).description
         }
-        return groups
+        .sorted { $0.key < $1.key }
+        .map { (key: $0.key, names: $0.value) }
     }
 
     var body: some View {

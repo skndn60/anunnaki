@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 import AppKit
 import Foundation
+import os
 
 struct EntityReportRequest: Codable, Hashable {
     let name: String
@@ -27,59 +28,64 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+private let logger = Logger(subsystem: "com.me.app", category: "container")
+
+package func storeURL() -> URL {
+    let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+    return appSupport.appendingPathComponent("Me").appendingPathComponent("Me.store")
+}
+
 @main
 struct MeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
-    static let sharedContainer: ModelContainer = {
-        let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self, StickyNote.self, Thing.self, ThingType.self, ThingFigureAssociation.self, ThingFigureRoleType.self, ThingPlaceAssociation.self, ThingPlaceRoleType.self, ThingEventAssociation.self, ThingEventRoleType.self])
+    package static let sharedContainer: ModelContainer = {
+        let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, DataVersion.self, StickyNote.self, Thing.self, ThingType.self, ThingFigureAssociation.self, ThingFigureRoleType.self, ThingPlaceAssociation.self, ThingPlaceRoleType.self, ThingEventAssociation.self, ThingEventRoleType.self, Agent.self, CollectedDatum.self, BlindSpot.self, BlockedSource.self, DictionaryEntry.self])
 
         let forceReseed = CommandLine.arguments.contains("--reseed")
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let storeDirectory = appSupport.appendingPathComponent("Me", isDirectory: true)
-        let storeURL = storeDirectory.appendingPathComponent("Me.store", isDirectory: false)
-
-        print("[Me] Store URL: \(storeURL.path)")
-        print("[Me] Force reseed: \(forceReseed)")
+        let storeURL = storeURL()
+        let storeDirectory = storeURL.deletingLastPathComponent()
 
         if forceReseed {
             try? FileManager.default.removeItem(at: storeURL)
-            print("[Me] Deleted store for reseed")
         }
 
-        do {
-            try FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
-        } catch {
-            print("[Me] Failed to create store directory: \(error)")
-        }
+        try? FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
 
         let config = ModelConfiguration(schema: schema, url: storeURL)
         do {
             let container = try ModelContainer(for: schema, configurations: [config])
-            print("[Me] ModelContainer created successfully")
+            logger.notice("Opened store at \(storeURL.path, privacy: .public)")
             return container
         } catch {
-            print("[Me] Failed to create ModelContainer: \(error)")
-            print("[Me] Store file: \(storeURL.path)")
-            print("[Me] Attempting backup before recovery...")
-            let backupURL = storeDirectory.appendingPathComponent("Me.store.crashed-\(Int(Date().timeIntervalSince1970))")
-            try? FileManager.default.moveItem(at: storeURL, to: backupURL)
-            print("[Me] Backed up old store to: \(backupURL.path)")
-            do {
-                let container = try ModelContainer(for: schema, configurations: [config])
-                print("[Me] ModelContainer created after recovering from crash")
+            logger.error("ModelContainer creation failed: \(error, privacy: .public)")
+            let nsError = error as NSError
+            logger.error("NSError domain=\(nsError.domain, privacy: .public) code=\(nsError.code)")
+            Self.recoveryError = error.localizedDescription
+            Self.recoveryBackupPath = storeURL.path
+            logger.notice("Store left in place at \(storeURL.path, privacy: .public)")
+            let fallback = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+            if let container = try? ModelContainer(for: schema, configurations: [fallback]) {
+                logger.notice("Using in-memory fallback container")
                 return container
-            } catch {
-                fatalError("Failed to create ModelContainer after crash recovery: \(error)")
             }
+            fatalError("Cannot create any ModelContainer: \(error)")
         }
     }()
+
+    package static var recoveryError: String?
+    package static var recoveryBackupPath: String?
 
     let container: ModelContainer = Self.sharedContainer
 
     var body: some Scene {
         WindowGroup("Me") {
             ContentView()
+                .onAppear {
+                    if AgentService.container == nil {
+                        AgentService.container = container
+                    }
+                }
         }
         .modelContainer(container)
         .defaultSize(width: 1200, height: 800)
@@ -112,6 +118,13 @@ struct MeApp: App {
         .windowResizability(.contentMinSize)
         .defaultSize(width: 380, height: 420)
 
+        WindowGroup("Figure Detail", id: "figure-detail", for: PersistentIdentifier.self) { $figureID in
+            FigureDetailWindow(figureID: figureID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 600, height: 500)
+
         WindowGroup("Entity Report", id: "entity-report", for: EntityReportRequest.self) { $request in
             EntityReportWindow(request: request)
                 .modelContainer(container)
@@ -132,8 +145,17 @@ struct MeApp: App {
         }
         .windowResizability(.contentMinSize)
         .defaultSize(width: 380, height: 420)
+
+        WindowGroup("Collected Data", id: "datum-zoom", for: PersistentIdentifier.self) { $datumID in
+            DatumZoomWindow(datumID: datumID)
+                .modelContainer(container)
+        }
+        .windowResizability(.contentMinSize)
+        .defaultSize(width: 720, height: 600)
     }
 }
+
+// MARK: - Quicklook windows
 
 struct PlaceQuicklookWindow: View {
     let placeID: PersistentIdentifier?
@@ -246,5 +268,27 @@ private struct EventQuicklookContent: View {
             }
         }
         .padding(16)
+    }
+}
+
+struct FigureDetailWindow: View {
+    let figureID: PersistentIdentifier?
+    @Environment(\.modelContext) private var modelContext
+    @State private var figure: Figure?
+
+    var body: some View {
+        Group {
+            if let figure {
+                FigureDetailView(figure: figure)
+            } else {
+                Text("Figure not found")
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .task {
+            guard let figureID else { return }
+            let fetch = FetchDescriptor<Figure>(predicate: #Predicate { $0.persistentModelID == figureID })
+            figure = try? modelContext.fetch(fetch).first
+        }
     }
 }

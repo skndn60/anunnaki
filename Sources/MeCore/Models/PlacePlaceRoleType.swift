@@ -3,7 +3,7 @@ import SwiftUI
 import SwiftData
 
 @Model
-package final class PlacePlaceRoleType {
+package final class PlacePlaceRoleType: Equatable {
     package var name: String
     package var icon: String
     package var colorHex: String
@@ -19,5 +19,9 @@ package final class PlacePlaceRoleType {
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
+    }
+
+    package static func == (lhs: PlacePlaceRoleType, rhs: PlacePlaceRoleType) -> Bool {
+        lhs.persistentModelID == rhs.persistentModelID
     }
 }

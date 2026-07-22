@@ -500,6 +500,7 @@ private struct PlaceFigureLinkPopover: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var allRoles: [FigurePlaceRoleType] = []
+    @State private var comments: String = ""
 
     private var allFigures: [Figure] {
         (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
@@ -571,6 +572,17 @@ private struct PlaceFigureLinkPopover: View {
                     .frame(maxWidth: .infinity)
                 }
 
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Comments:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("e.g. first antediluvian king", text: $comments)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(.textBackgroundColor))
+                        .cornerRadius(6)
+                }
+
                 HStack {
                     Spacer()
                     Button("Cancel") { isPresented = false }
@@ -592,7 +604,7 @@ private struct PlaceFigureLinkPopover: View {
 
     private func createAssociation() {
         guard let figure = selectedFigure, let role = selectedRole else { return }
-        let assoc = FigurePlaceAssociation()
+        let assoc = FigurePlaceAssociation(comments: comments.isEmpty ? nil : comments)
         modelContext.insert(assoc)
         place.figureAssociations.append(assoc)
         figure.placeAssociations.append(assoc)

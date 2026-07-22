@@ -64,7 +64,7 @@ struct EraListView: View {
 
             Group {
                 if let era = selectedEra {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
                             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
@@ -87,6 +87,7 @@ struct EraListView: View {
                     EraDetailView(era: era)
                     }
                 .frame(width: detailWidth)
+                .frame(maxHeight: .infinity)
                 .background(.thinMaterial)
                 }
             }

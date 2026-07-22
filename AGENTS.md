@@ -92,6 +92,7 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - **Breadcrumbs**: Tuple type `[(id: PersistentIdentifier, name: String)]` consistent across list views.
 - **SwiftData**: Inverse relationships specified with `@Relationship(deleteRule: .cascade, inverse: ...)`.
 - **SwiftData relationship setting**: Always set relationships via the side that HAS `@Relationship(inverse:)`. For example, `type.relationships.append(rel)` works but `rel.relationshipType = type` silently fails (leaves property nil). This is because the forward side (`Relationship.relationshipType`) lacks `@Relationship` while the inverse side (`RelationshipType.relationships`) has it. Always use the annotated side to establish links.
+- **SwiftData migration safety**: Every new property added to an existing `@Model` must be **optional** (`Type?`), not non-optional with a default. SwiftData lightweight migration fails on non-optional new attributes — existing rows have no value and CoreData rejects the mandatory column. Use `?? defaultValue` in computed properties or at call sites instead.
 - **Shared container**: `MeApp.sharedContainer` is a static property on the `@main` App struct, allowing direct access to the `ModelContainer` from anywhere (useful for debugging or bypassing environment inheritance issues).
 - **Mock data**: `SeedData` uses private Codable structs mirroring the entities (e.g., `SeedFigure`, `SeedEvent`).
 - **No external packages** — all dependencies are Apple SDKs.
@@ -233,6 +234,85 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/Me/Views/LineageExplorerWindow.swift` — Updated
 - `Sources/Me/Views/MiniLineageView.swift` — Updated + `ParentChipView` extracted
 
+### 2026-07-03 — Yes/no relationship questions
+
+**Problem:** "Was Bau a sibling of Enki?" returned Enki's full sibling list instead of a yes/no answer. Two bugs:
+1. **Execution order**: `matchFigureRelationPrepositional` (line 136, matches "sibling of X") ran before `matchYesNoQuery` (line 206), so "was bau a sibling of enki" was interpreted as "siblings of enki" — a list query.
+2. **No relationship awareness**: `matchYesNoQuery` only compared remaining text against the figure's type/domain/description — it couldn't answer "is X a sibling/father/child... of Y?"
+
+**Fix:**
+- Moved `matchYesNoQuery` to the top of the `query()` chain so yes/no questions are evaluated before any list-returning matcher.
+- Added `matchRelationshipYesNo(text:lemText:)` — parses `"[relationshipWord] of [target]"` patterns from the lemmatized text, extracts both the subject and target figures directly (bypassing `extractEntity` which picks by name length, not position), and checks the relationship.
+- 6 helper methods (`isFatherOf`, `isMotherOf`, `isChildOf`, `isCreatorOf`, `isSpouseOf`, `isSiblingOf`) using `outgoingRelationships`/`incomingRelationships` with explicit `for` loops to avoid Swift compiler type-checking timeouts on complex `contains(where:)` closures.
+- Gender checking: "brother of" for a female figure returns "No, X is not a brother. X is a sister."
+
+**Relevant files:**
+- `Sources/MeCore/Store/QueryEngine.swift` — `query()` reordering, new `matchRelationshipYesNo()` + 6 helper methods
+
+### 2026-07-18 — Fix lineage line coordinate mismatch
+
+**Problem:** Lines drawn by `Canvas` appeared at wrong positions relative to figure cards. The `GeometryReader` in `FigureCardView` reported frames via `.frame(in: .named(coordinateSpace))`, but the named coordinate space was applied to the view *after* `.padding(40)`, while the `Canvas` drew relative to the ZStack's own top-left (inside the padding). This caused a 40pt offset — the GeometryReader coordinates included the padding offset, but the Canvas drawing did not.
+
+**Root cause:** `.coordinateSpace(name: "tree")` was applied to the ScrollView's content (after `.padding(40)`), so the named space origin was 40pt away from the ZStack's origin. The Canvas draws at (0,0) relative to its own bounds (the ZStack), but `geo.frame(in: .named("tree"))` reported coordinates relative to the padded view's top-left.
+
+**Partial fix:** Moved `.coordinateSpace(name:)` from the ScrollView content (after padding) to the ZStack returned by `lineageContent`. Both the Canvas and the GeometryReader are children of this ZStack, so they now share the exact same coordinate origin. This fixed the initial static rendering — lines now appear at correct positions on first load.
+
+**Known remaining issue:** Lines are still visually wrong when clicking figures to recenter. The `nodePositions` dictionary accumulates stale entries from previous renders, and the Canvas `.id(nodePositions.count)` key doesn't invalidate correctly when positions change (only when count changes, not when values update). Lines become a "utter mess" after a few clicks.
+
+**Relevant files:**
+- `Sources/Me/Views/LineageTreeView.swift` — moved `.coordinateSpace` to ZStack inside `lineageContent(for:)`
+- `Sources/Me/Views/FigureLineageExplorer.swift` — same fix
+- `Sources/Me/Views/LineageExplorerWindow.swift` — same fix
+
+### 2026-07-20 — Interactive lineage tree, Canvas gestures, unknown parent placeholders, figure→lineage nav
+
+**Changes made:**
+
+- `Sources/Me/Views/LineageTreeView.swift` — Full rewrite of interaction layer:
+  - Canvas-native gestures: `onTapGesture` (tap-to-recenter + badge hit-testing for +N alternatives), `contextMenu` (Show Details / Recenter / Collapse Branch via `rightClickFigureID`), `onContinuousHover` (cursor tracking for context menu targeting).
+  - Sheets extracted to separate `AlternativePartnersSheet` and `FigureDetailSheet` view structs with `.sheet(item:)` to avoid re-entrancy crashes.
+  - **Unknown parent placeholders**: When a figure has no father/mother relationship, a dashed-border card with `?` icon and "UNKNOWN FATHER" / "UNKNOWN MOTHER" label appears as a lineage dead-end. Partial coverage (mother known, father missing) shows real card alongside placeholder for the missing type. Placeholder Figure objects created transiently (not persisted), looked up from `data.entries` in `drawNodes` to avoid being skipped by `@Query figures`.
+  - **Gender indicator**: Gender symbol (♂/♀/⚧) shown next to figure name in each card.
+  - **Back navigation**: `centerHistory` stack + `← Back` button in header, `goBack()` pops last entry.
+  - **Stepper redesign**: Generation depth controls use `.bordered` button style with `title3` icons (32×28pt frames), max clamped to 4 per side. Removed line-visibility toggle button.
+  - `collectAncestors` extended to create placeholder entries and backfill missing parent types (Father/Mother) per-figure.
+- `Sources/Me/Views/FigureCardView.swift` — New shared view component for figure cards in lineage trees.
+- `Sources/Me/Views/NavigationCoordinator.swift` — Added `pendingLineageFigureID`, `navigateToLineageFigure(_:)`, `consumePendingLineageFigureID()`.
+- `Sources/Me/Views/FigureListView.swift` — Tree icon button now calls `coordinator?.navigateToLineageFigure()` (inline sidebar tree) instead of `openWindow(id:"lineage")` (separate window).
+- `Sources/Me/Views/ContentView.swift` — Added `.lineage` branch in the detail `if/else` chain to pass `coordinator` to `LineageTreeView`.
+
+**Key design decisions:**
+- Placeholder Figure objects are created as transient `Figure(name: "Unknown Father")` outside of any ModelContext. They have temporary `persistentModelID` values that serve as layout keys within a single render cycle.
+- `drawNodes` falls back to `data.entries` when a figure ID isn't found in `@Query figures` — necessary because transient figures don't appear in database queries.
+- Placeholder cards are rendered with dashed borders, muted secondary colors, no partner alternatives or detail navigation.
+- The `.bordered` button style for steppers provides clear visual affordance on macOS.
+- `NavigationCoordinator.pendingLineageFigureID` follows the same consume-on-appear pattern as `pendingFigureID` for figures.
+
+**Lessons learned:**
+- Overlay views with `.position()` fail for popovers/sheets in Canvas — use `.sheet(item:)` with view structs and `onClose` callbacks instead.
+- `NSCursor.push()/pop()` can unbalance the AppKit cursor stack — avoid in SwiftUI contexts.
+- `NavigationSplitView` sidebar can be toggled off via `Cmd+Opt+S` on macOS — not a code bug.
+- Transient `@Model` instances are valid SwiftData objects with usable `persistentModelID`, but won't appear in `@Query` results.
+
+**Relevant files:**
+- `Sources/Me/Views/LineageTreeView.swift` — Major rewrite
+- `Sources/Me/Views/FigureCardView.swift` — New file
+- `Sources/Me/Views/NavigationCoordinator.swift` — Extended
+- `Sources/Me/Views/FigureListView.swift` — Updated tree icon handler
+- `Sources/Me/Views/ContentView.swift` — Added `.lineage` coordinator branch
+
+## TODO
+
+- [ ] **Lineage lines broken on recenter:** This issue was in the old overlay-based LineageTreeView and is no longer present in the current Canvas-based implementation. Remove if confirmed fixed.
+- [ ] **Lineage lines: consider PreferenceKey approach:** Named coordinate spaces are fragile. A `PreferenceKey` where each `FigureCardView` reports its frame via `.preference(key:value:)`, collected with `.onPreferenceChange`, would be more robust and avoid coordinate space mismatches entirely.
+
+- [ ] Lineage source discriminator: Decide whether to add source picker to lineage views
+- [ ] Lineage source discriminator: Promote Relationship.source from free-text to @Relationship with Source model
+- [ ] Lineage source discriminator: Implement display for contradictory traditions (e.g., Enuma Elish vs Atra-Hasis)
+- [ ] Lineage source discriminator: Add source discrimination to QueryEngine/natural language queries
+- [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
+- [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
+
 ## Hard Constraints
 
 - **NO reseeding.** Never run `--reseed`, never call `clearAll`, never destroy user data. All migrations must be additive only (check-by-name before creating). The user's existing database is sacred.
@@ -271,3 +351,25 @@ This is faster and more reliable than reading code to simulate the layout engine
 - Run `swift build` before submitting changes.
 - Branch naming: `feat/`, `bugfix/`, `migration/` prefixes.
 - Do not commit secrets, keys, or provisioning profiles.
+
+### 2026-06-30 — Parental couples: groupID for Relationship, ParentCoupleSheet, couple-groped lineage
+
+**Problem:** Adding parents via separate Father/Mother sheets created unlinked relationships. The lineage view displayed father and mother as independent columns with per-parent alternatives (e.g., father: Dumuzi alt: Nanna, mother: Inanna alt: Ningal), allowing semantically invalid pairings like Dumuzi+Ningal. The `isPreferred` flag couldn't express which parents belong together as couples.
+
+**Solution:**
+1. **`groupID: String = ""` on `Relationship`** — Two relationships with the same non-empty `groupID` (one Father, one Mother) form a parental couple. Declaration-site default `= ""` ensures safe lightweight migration.
+2. **`ParentCoupleSheet`** — New two-column sheet (Father + Mother side by side). Each side has a search field and figure list. Both parents are optional (add one or both). On "Add", both relationships are created with the same `UUID().uuidString` groupID.
+3. **`buildCouples()`** — File-level function that groups parent relationships by `groupID`. Legacy relationships (empty `groupID`) are paired dynamically: first Father + first Mother = couple 1, etc. No data mutation needed.
+4. **`MiniLineageView` refactor** — Replaced independent father/mother columns with couple-based display. Shows one preferred couple's father + mother with a `—` connector. Alternative couples shown via `+N` badge → popover → selecting an alternative calls `setPreferredCouple()` to toggle `isPreferred`.
+
+**Design decisions:**
+- Legacy relationships are NOT migrated in the database — `buildCouples()` handles pairing dynamically using insertion order.
+- New relationships created via `ParentCoupleSheet` always get a `UUID().uuidString` groupID.
+- `setPreferredCouple()` marks all relationships in the selected couple as `isPreferred = true` and all others as false.
+- The larger lineage views (FigureLineageExplorer, LineageTreeView, LineageExplorerWindow) remain unchanged — they group by `relationshipType.name` and handle alternatives independently.
+- `parentSearchText` state var removed from FigureDetailView (now internal to ParentCoupleSheet).
+
+**Relevant files:**
+- `Sources/MeCore/Models/Relationship.swift` — Added `groupID: String = ""` field + init parameter
+- `Sources/Me/Views/MiniLineageView.swift` — Refactored to couple-based layout: `buildCouples()`, `ParentCouple`, `AltCouplesButton`, `setPreferredCouple()`
+- `Sources/Me/Views/FigureDetailView.swift` — Replaced `ParentSearchSheet` + `parentSearchText` with `ParentCoupleSheet` (two-column father+mother selection)

@@ -26,17 +26,19 @@ package struct MythologicalDate: Codable, Hashable {
             return "\(prefix)\(startStr) \u{2013} \(endStr)\(suffix)"
         }
 
+        if startYear == nil, let end = endYear {
+            let suffix = end < 0 ? " BCE" : " CE"
+            return "\(prefix)before \(formatYearAbs(end))\(suffix)"
+        }
+
+        if let start = startYear, endYear == nil {
+            let suffix = start < 0 ? " BCE" : " CE"
+            return "\(prefix)after \(formatYearAbs(start))\(suffix)"
+        }
+
         if let year = startYear ?? endYear {
-            let absYear = abs(year)
-            let fmt = NumberFormatter()
-            fmt.numberStyle = .decimal
-            fmt.locale = Locale(identifier: "en_US")
-            let formatted = fmt.string(from: NSNumber(value: absYear)) ?? "\(absYear)"
-            if year < 0 {
-                return "\(prefix)\(formatted) BCE"
-            } else {
-                return "\(prefix)\(formatted) CE"
-            }
+            let suffix = year < 0 ? " BCE" : " CE"
+            return "\(prefix)\(formatYearAbs(year))\(suffix)"
         }
 
         return era.isEmpty ? "Unknown" : era

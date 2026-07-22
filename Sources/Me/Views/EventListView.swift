@@ -47,24 +47,15 @@ struct EventListView: View {
     }
 
     private var groupedEvents: [(key: String, events: [Event])] {
-        let sorted = sortedEvents
-        var groups: [(key: String, events: [Event])] = []
-        var currentKey: String?
-        for event in sorted {
-            let key: String = {
-                switch sortOrder {
-                case .name: return String(sortName(for: event.name).uppercased().prefix(1))
-                case .type: return event.eventType?.name ?? "?"
-                case .date: return event.date.era.isEmpty ? "Unknown" : event.date.era
-                }
-            }()
-            if key != currentKey {
-                groups.append((key: key, events: []))
-                currentKey = key
+        Dictionary(grouping: sortedEvents) { event in
+            switch sortOrder {
+            case .name: String(sortName(for: event.name).uppercased().prefix(1))
+            case .type: event.eventType?.name ?? "?"
+            case .date: event.date.era.isEmpty ? "Unknown" : event.date.era
             }
-            groups[groups.count - 1].events.append(event)
         }
-        return groups
+        .sorted { $0.key < $1.key }
+        .map { (key: $0.key, events: $0.value) }
     }
 
     private func selectEvent(_ id: PersistentIdentifier) {
@@ -139,7 +130,7 @@ struct EventListView: View {
 
             Group {
                 if let event = selectedEvent {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
                             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
@@ -173,6 +164,7 @@ struct EventListView: View {
                         )
                     }
                     .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
                 }
             }

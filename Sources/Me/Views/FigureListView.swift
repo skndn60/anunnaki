@@ -53,24 +53,15 @@ struct FigureListView: View {
     }
 
     private var groupedFigures: [(key: String, figures: [Figure])] {
-        let sorted = filteredFigures
-        var groups: [(key: String, figures: [Figure])] = []
-        var currentKey: String?
-        for figure in sorted {
-            let key: String = {
-                switch sortOrder {
-                case .name: return String(sortName(for: figure.name).uppercased().prefix(1))
-                case .type: return figure.figureType?.name ?? "?"
-                case .domain: return figure.domain.isEmpty ? "?" : figure.domain
-                }
-            }()
-            if key != currentKey {
-                groups.append((key: key, figures: []))
-                currentKey = key
+        Dictionary(grouping: filteredFigures) { figure in
+            switch sortOrder {
+            case .name: String(sortName(for: figure.name).uppercased().prefix(1))
+            case .type: figure.figureType?.name ?? "?"
+            case .domain: figure.domain.isEmpty ? "?" : figure.domain
             }
-            groups[groups.count - 1].figures.append(figure)
         }
-        return groups
+        .sorted { $0.key < $1.key }
+        .map { (key: $0.key, figures: $0.value) }
     }
 
     private func selectFigure(_ id: PersistentIdentifier) {
@@ -182,7 +173,7 @@ struct FigureListView: View {
             // Right: detail panel
             Group {
                 if let figure = selectedFigure {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
                             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
@@ -191,8 +182,8 @@ struct FigureListView: View {
                             IconActionButton(icon: "trash", color: .red, help: "Delete") {
                                 showDeleteConfirm = true
                             }
-                            IconActionButton(icon: "tree", color: .green, help: "Show lineage") {
-                                openWindow(id: "lineage", value: figure.persistentModelID)
+                            IconActionButton(icon: "tree", color: .green, help: "Show in inline lineage tree") {
+                                coordinator?.navigateToLineageFigure(figure.persistentModelID)
                             }
                             Spacer()
                             Button(action: { selectedFigureID = nil }) {
@@ -226,6 +217,7 @@ struct FigureListView: View {
                         )
                     }
                     .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
                 }
             }

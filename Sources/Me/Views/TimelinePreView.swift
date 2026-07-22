@@ -5,10 +5,10 @@ struct TimelinePreView: View {
     @Query(sort: \Era.orderIndex) private var eras: [Era]
     @Query private var figures: [Figure]
 
-    private let swimlaneHeight: CGFloat = 44
+    private let swimlaneHeight: CGFloat = 56
 
     private var preFloodEras: [Era] {
-        eras.filter { $0.orderIndex < 5 }
+        eras.filter { $0.orderIndex < 7 }
     }
 
     var body: some View {

@@ -372,6 +372,72 @@ package struct Migration {
         try? context.save()
     }
 
+    /// Add Duttur (mother of Dumuzi & Geshtinanna) and parent relationships
+    /// so sibling inference via shared parents works for Dumuzi <-> Geshtinanna.
+    package static func ensureDumuziFamilyExists(context: ModelContext) {
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+
+        let fatherType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Father" })).first
+        let motherType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Mother" })).first
+
+        // Create Duttur if missing
+        let dutturID: PersistentIdentifier?
+        if existingNames.contains("Duttur") {
+            dutturID = (try? context.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.name == "Duttur" })).first)?.persistentModelID
+        } else {
+            let figureType = try? context.fetch(FetchDescriptor<FigureType>(predicate: #Predicate { $0.name == "Deity" })).first
+            let date = MythologicalDate(year: nil, era: "Age of the First Gods", isApproximate: true)
+            let unknown = MythologicalDate(year: nil, era: "", isApproximate: true)
+            let duttur = Figure(
+                name: "Duttur",
+                title: "Ewe Goddess, Mother of Dumuzi",
+                figureType: figureType,
+                gender: .female,
+                domain: "Sheep, Motherhood",
+                figureDescription: "Ewe goddess, mother of Dumuzi and Geshtinanna.",
+                birthDate: date,
+                deathDate: unknown,
+                source: "Sumerian mythology"
+            )
+            context.insert(duttur)
+            try? context.save()
+            dutturID = duttur.persistentModelID
+        }
+
+        guard let dutturID else { return }
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        guard let enki = allFigures.first(where: { $0.name == "Enki" }),
+              let dumuzi = allFigures.first(where: { $0.name == "Dumuzi" }),
+              let geshtinanna = allFigures.first(where: { $0.name == "Geshtinanna" }),
+              let duttur = allFigures.first(where: { $0.persistentModelID == dutturID }),
+              let fatherType, let motherType else { return }
+
+        let existingRels = context.fetchAll() as [Relationship]
+        let hasRel: (Figure, Figure) -> Bool = { from, to in
+            existingRels.contains(where: { $0.fromFigure?.persistentModelID == from.persistentModelID && $0.toFigure?.persistentModelID == to.persistentModelID })
+        }
+
+        if !hasRel(enki, dumuzi) {
+            let rel = Relationship(fromFigure: enki, toFigure: dumuzi, relationshipType: fatherType, source: "Sumerian mythology")
+            context.insert(rel)
+        }
+        if !hasRel(duttur, dumuzi) {
+            let rel = Relationship(fromFigure: duttur, toFigure: dumuzi, relationshipType: motherType, source: "Sumerian mythology")
+            context.insert(rel)
+        }
+        if !hasRel(enki, geshtinanna) {
+            let rel = Relationship(fromFigure: enki, toFigure: geshtinanna, relationshipType: fatherType, source: "Sumerian mythology")
+            context.insert(rel)
+        }
+        if !hasRel(duttur, geshtinanna) {
+            let rel = Relationship(fromFigure: duttur, toFigure: geshtinanna, relationshipType: motherType, source: "Sumerian mythology")
+            context.insert(rel)
+        }
+
+        try? context.save()
+    }
+
     /// Import deities from deities_import.json that don't already exist in the database.
     package static func ensureDeitiesImportExist(context: ModelContext) {
         let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
@@ -389,14 +455,12 @@ package struct Migration {
         }()
         guard let u = url,
               let data = try? Data(contentsOf: u),
-              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
-            print("[Migration] Failed to load deities_import.json")
+               let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
             return
         }
 
         let rootExistingNames = Set(root.figures.map(\.name))
         guard rootExistingNames.isSubset(of: targetNames) else {
-            print("[Migration] deities_import.json contains unexpected figures")
             return
         }
 
@@ -410,6 +474,49 @@ package struct Migration {
         filteredRoot.figurePlaceAssociations = root.figurePlaceAssociations?.filter { importedIds.contains($0.figureId) }
 
         SeedData.importFrom(root: filteredRoot, context: context)
-        print("[Migration] Imported \(toImport.count) new deities: \(toImport.map(\.name).joined(separator: ", "))")
+    }
+
+    /// Update era orderIndex values to match current seed data ordering.
+    /// Fixes the pre/post flood split that shifted when new eras were inserted.
+    package static func fixEraOrderIndices(context: ModelContext) {
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let newOrder: [String: Int] = [
+            "Creation": 0,
+            "Age of the Watchers": 1,
+            "Age of the First Gods": 2,
+            "Anunnaki on Earth": 3,
+            "Creation of Mankind": 4,
+            "Antediluvian Period": 5,
+            "Antediluvian": 6,
+            "SKL Antediluvian": 6,
+            "The Great Flood": 7,
+            "Post-Flood Kingdoms": 8,
+            "Early Dynastic Period": 9,
+        ]
+        var changed = false
+        for era in eras {
+            if let newOI = newOrder[era.name] {
+                if era.orderIndex != newOI {
+                    era.orderIndex = newOI
+                    changed = true
+                }
+            } else if era.orderIndex >= 9 {
+                // SKL dynasty eras — shift by +1 to account for the inserted eras
+                era.orderIndex = era.orderIndex + 1
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
+    }
+
+    /// Remove all auto-generated "Missing father/mother — look up on Wikipedia" stickies.
+    package static func removeAutoGeneratedStickies(context: ModelContext) {
+        let allStickies = (try? context.fetch(FetchDescriptor<StickyNote>())) ?? []
+        let toDelete = allStickies.filter { $0.text.hasPrefix("Missing ") }
+        guard !toDelete.isEmpty else { return }
+        for sticky in toDelete {
+            context.delete(sticky)
+        }
+        try? context.save()
     }
 }

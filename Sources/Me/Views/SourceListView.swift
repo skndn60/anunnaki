@@ -60,7 +60,7 @@ struct SourceListView: View {
 
             Group {
                 if let source = selectedSource {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
                             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
@@ -84,6 +84,7 @@ struct SourceListView: View {
                     SourceDetailView(source: source)
                     }
                 .frame(width: detailWidth)
+                .frame(maxHeight: .infinity)
                 .background(.thinMaterial)
                 }
             }

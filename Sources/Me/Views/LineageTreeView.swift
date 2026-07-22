@@ -1,53 +1,159 @@
 import SwiftUI
 import SwiftData
 
-/// Displays the family lineage radiating from a configurable center figure.
-/// Default center is Anu. Right-click any figure card to recenter the tree.
+// MARK: - Tree Model Types
+
+private struct TreeEntry: Identifiable {
+    let primary: Figure
+    let partner: Figure?
+    let altPartnerCount: Int
+    let generation: Int
+
+    var id: String { "\(primary.name)@\(generation)" }
+}
+
+private struct TreeData {
+    let rootID: PersistentIdentifier
+    let entries: [String: TreeEntry]
+    let levels: [[TreeEntry]]
+    let parentToChild: [String: [String]]
+}
+
+private struct LayoutResult {
+    let nodeLayouts: [PersistentIdentifier: CGRect]
+    let figureAltCounts: [PersistentIdentifier: Int]
+    let canvasWidth: CGFloat
+    let canvasHeight: CGFloat
+}
+
+// MARK: - Lineage Tree View
+
 struct LineageTreeView: View {
+    var coordinator: NavigationCoordinator?
+
     @Query private var figures: [Figure]
     @Query private var figureTypes: [FigureType]
     @Query private var relationships: [Relationship]
+
     @State private var centerFigure: Figure?
-    @State private var showGrandparents = false
-    @State private var showGrandchildren = false
+    @State private var generationsAbove = 1
+    @State private var generationsBelow = 1
+    @State private var collapsedIDs: Set<String> = []
+    @State private var detailFigure: Figure?
+    @State private var altForFigure: Figure?
+    @State private var rightClickFigureID: PersistentIdentifier?
+    @State private var centerHistory: [Figure] = []
+
+    private let cardWidth: CGFloat = 100
+    private let cardHeight: CGFloat = 44
+    private let coupleSpacing: CGFloat = 40
+    private let partnerSpacing: CGFloat = 12
+    private let verticalSpacing: CGFloat = 120
+    private let canvasPadding: CGFloat = 60
+    private let branchBarOffset: CGFloat = 12
 
     var body: some View {
         VStack(spacing: 0) {
-            header
+            headerView
             Divider()
             if figures.isEmpty {
                 emptyState
             } else if let center = centerFigure {
-                ScrollView([.horizontal, .vertical]) {
-                    lineageContent(for: center)
-                        .padding(40)
-                }
+                treeCanvas(center)
             } else {
                 emptyState
             }
         }
+        .sheet(item: $altForFigure) { fig in
+            AlternativePartnersSheet(
+                figure: fig,
+                partners: alternativePartners(of: fig),
+                onClose: { altForFigure = nil },
+                onRecenter: { altForFigure = nil; recenterTree(to: $0) }
+            )
+        }
+        .sheet(item: $detailFigure) { fig in
+            FigureDetailSheet(
+                figure: fig,
+                onClose: { detailFigure = nil },
+                onRecenter: { detailFigure = nil; recenterTree(to: $0) }
+            )
+        }
         .onAppear {
-            if centerFigure == nil {
+            if let pendingID = coordinator?.consumePendingLineageFigureID(),
+               let fig = figures.first(where: { $0.persistentModelID == pendingID }) {
+                centerFigure = fig
+            } else if centerFigure == nil {
                 centerFigure = figures.first(where: { $0.name == "Anu" }) ?? figures.first
+            }
+        }
+        .onChange(of: coordinator?.pendingLineageFigureID) { _, _ in
+            if let pendingID = coordinator?.consumePendingLineageFigureID(),
+               let fig = figures.first(where: { $0.persistentModelID == pendingID }) {
+                centerFigure = fig
+                collapsedIDs.removeAll()
             }
         }
     }
 
     // MARK: - Header
 
-    private var header: some View {
+    private var headerView: some View {
         HStack(spacing: 8) {
             Text("Lineage Tree")
                 .font(.title2.bold())
+            if !centerHistory.isEmpty {
+                Button(action: goBack) {
+                    HStack(spacing: 2) {
+                        Image(systemName: "chevron.left")
+                        Text("Back")
+                    }
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .help("Go back to previous figure")
+            }
             Spacer()
             FigureTypeLegend(types: figureTypes)
-            if let center = centerFigure {
-                Text(center.name)
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-            }
+
+            stepperButton(direction: .up, value: $generationsAbove, maximum: 4)
+            stepperButton(direction: .down, value: $generationsBelow, maximum: 4)
         }
         .padding()
+    }
+
+    // MARK: - Stepper
+
+    private enum StepperDirection {
+        case up, down
+        var label: String { self == .up ? "↑" : "↓" }
+    }
+
+    private func stepperButton(direction: StepperDirection, value: Binding<Int>, maximum: Int) -> some View {
+        HStack(spacing: 4) {
+            Button(action: { value.wrappedValue = max(0, value.wrappedValue - 1) }) {
+                Image(systemName: "minus")
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 32, height: 28)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+
+            Text("\(direction.label) \(value.wrappedValue)")
+                .font(.body.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 32)
+
+            Button(action: { value.wrappedValue = min(maximum, value.wrappedValue + 1) }) {
+                Image(systemName: "plus")
+                    .font(.title3.weight(.semibold))
+                    .frame(width: 32, height: 28)
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
+        }
+        .help(direction == .up ? "Generations above" : "Generations below")
     }
 
     // MARK: - Empty State
@@ -55,606 +161,759 @@ struct LineageTreeView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Spacer()
-            Image(systemName: "tree")
-                .font(.system(size: 48))
-                .foregroundStyle(.secondary)
-            Text("No figures yet")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+            Image(systemName: "tree").font(.system(size: 48)).foregroundStyle(.secondary)
+            Text("No figures yet").font(.title3).foregroundStyle(.secondary)
             Text("Add figures and relationships using the input screens to build the lineage tree.")
-                .font(.body)
-                .foregroundStyle(.tertiary)
-                .multilineTextAlignment(.center)
+                .font(.body).foregroundStyle(.tertiary).multilineTextAlignment(.center)
                 .frame(maxWidth: 300)
             Spacer()
         }
     }
 
-    // MARK: - Lineage Content
+    // MARK: - Tree Canvas
 
-    private func lineageContent(for center: Figure) -> some View {
-        VStack(spacing: 0) {
-            if showGrandparents {
-                generationRow(grandparents(of: center), label: "Grandparents", alts: grandparentAlts(of: center), onSelectAlt: { recenter(on: $0) })
-                connector()
-            }
-
-            if !parents(of: center).isEmpty {
-                generationRow(parents(of: center), label: "Parents", alts: parentAlts(of: center), onSelectAlt: { recenter(on: $0) })
-                if !grandparents(of: center).isEmpty && !showGrandparents {
-                    expandButton("Show Grandparents") { showGrandparents = true }
-                }
-                connector()
-            } else if !grandparents(of: center).isEmpty && !showGrandparents {
-                expandButton("Show Grandparents") { showGrandparents = true }
-            }
-
-            centerRow(center, siblings: siblingsExcludingCoParents(of: center), coParents: coParents(of: center))
-
-            if !children(of: center).isEmpty {
-                connector()
-                generationRow(children(of: center), label: "Children", alts: childAlts(of: center), onSelectAlt: { recenter(on: $0) })
-                if !grandchildren(of: center).isEmpty && !showGrandchildren {
-                    expandButton("Show Grandchildren") { showGrandchildren = true }
-                }
-            } else if !grandchildren(of: center).isEmpty && !showGrandchildren {
-                expandButton("Show Grandchildren") { showGrandchildren = true }
-            }
-
-            if showGrandchildren {
-                connector()
-                generationRow(grandchildren(of: center), label: "Grandchildren", alts: grandchildAlts(of: center), onSelectAlt: { recenter(on: $0) })
-            }
-
-            // Non-family relationships
-            let nonFamily = nonFamilyRelationships(for: center)
-            if !nonFamily.isEmpty {
-                Divider()
-                    .padding(.vertical, 16)
-                VStack(spacing: 8) {
-                    Text("Service & Alliances")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    ForEach(nonFamily, id: \.label) { group in
-                        if !group.figures.isEmpty {
-                            serviceRow(label: group.label, figures: group.figures, color: group.color)
-                        }
-                    }
-                }
-            }
-        }
+    private var treeData: TreeData? {
+        guard let center = centerFigure else { return nil }
+        return buildTreeData(center: center)
     }
 
-    // MARK: - Non-Family Section
+    private func treeCanvas(_ center: Figure) -> some View {
+        let data = buildTreeData(center: center)
+        let layout = computeLayout(data: data)
 
-    private func serviceRow(label: String, figures: [Figure], color: Color) -> some View {
-        HStack(spacing: 8) {
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(color)
-                .frame(width: 100, alignment: .trailing)
-            ForEach(figures) { fig in
-                MiniChip(name: fig.name, symbol: fig.gender.symbol, color: fig.figureType?.color ?? .gray, isClickable: true) {
-                    recenter(on: fig)
+        return ScrollView([.horizontal, .vertical], showsIndicators: true) {
+            ZStack(alignment: .topLeading) {
+                Canvas { context, _ in
+                    drawBrackets(context: &context, data: data, layout: layout)
+                }
+                .allowsHitTesting(false)
+                .frame(width: layout.canvasWidth, height: layout.canvasHeight)
+
+                Canvas { context, _ in
+                    drawNodes(context: &context, data: data, layout: layout, centerID: center.persistentModelID)
+                }
+                .frame(width: layout.canvasWidth, height: layout.canvasHeight)
+                .onTapGesture { location in
+                    handleTap(at: location, layout: layout)
                 }
                 .contextMenu {
-                    Button("Make \(fig.name) center figure") {
-                        recenter(on: fig)
-                    }
-                }
-            }
-        }
-    }
-
-    private struct ServiceGroup {
-        let label: String
-        let figures: [Figure]
-        let color: Color
-    }
-
-    private func nonFamilyRelationships(for center: Figure) -> [ServiceGroup] {
-        var groups: [ServiceGroup] = []
-
-        let commanders = commanders(of: center)
-        if !commanders.isEmpty {
-            groups.append(ServiceGroup(label: "Commands", figures: commanders, color: .yellow))
-        }
-        let commandedBy = commandedBy(center)
-        if !commandedBy.isEmpty {
-            groups.append(ServiceGroup(label: "Commanded by", figures: commandedBy, color: .yellow))
-        }
-        let servants = servants(of: center)
-        if !servants.isEmpty {
-            groups.append(ServiceGroup(label: "Served by", figures: servants, color: .brown))
-        }
-        let masters = masters(of: center)
-        if !masters.isEmpty {
-            groups.append(ServiceGroup(label: "Serves", figures: masters, color: .brown))
-        }
-        let worshippers = worshippers(of: center)
-        if !worshippers.isEmpty {
-            groups.append(ServiceGroup(label: "Worshipped by", figures: worshippers, color: .indigo))
-        }
-        let worshipped = worshippedBy(center)
-        if !worshipped.isEmpty {
-            groups.append(ServiceGroup(label: "Worships", figures: worshipped, color: .indigo))
-        }
-        let allies = allies(of: center)
-        if !allies.isEmpty {
-            groups.append(ServiceGroup(label: "Allies", figures: allies, color: .green))
-        }
-        let enemies = enemies(of: center)
-        if !enemies.isEmpty {
-            groups.append(ServiceGroup(label: "Enemies", figures: enemies, color: .red))
-        }
-
-        return groups
-    }
-
-    // MARK: - Center Row
-
-    private func centerRow(_ center: Figure, siblings: [Figure] = [], coParents: [Figure] = []) -> some View {
-        HStack(spacing: 8) {
-            let leftSpouses = spousesLeft(of: center)
-            let leftConsorts = consortsLeft(of: center)
-            let rightSpouses = spousesRight(of: center)
-            let rightConsorts = consortsRight(of: center)
-
-            if !leftSpouses.isEmpty {
-                ForEach(leftSpouses) { spouse in
-                    figureChip(spouse)
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 7))
-                        .foregroundStyle(.pink.opacity(0.4))
-                }
-            }
-            if !leftConsorts.isEmpty {
-                ForEach(leftConsorts) { consort in
-                    consortChip(consort)
-                    Image(systemName: "heart.circle")
-                        .font(.system(size: 7))
-                        .foregroundStyle(.purple.opacity(0.5))
-                }
-            }
-
-            if !siblings.isEmpty {
-                HStack(spacing: 0) {
-                    VStack(spacing: 2) {
-                        Text("Siblings")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .textCase(.uppercase)
-                        HStack(spacing: 6) {
-                            ForEach(siblings) { sibling in
-                                FigureCardView(figure: sibling)
-                                    .contextMenu {
-                                        Button("Make \(sibling.name) center figure") {
-                                            recenter(on: sibling)
-                                        }
-                                    }
-                                    .onTapGesture { recenter(on: sibling) }
-                            }
-                        }
-                    }
-
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.12))
-                        .frame(width: 1, height: 50)
-                        .padding(.horizontal, 12)
-                }
-            }
-
-            if !coParents.isEmpty {
-                VStack(spacing: 2) {
-                    Text("Parent")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                        .textCase(.uppercase)
-                    HStack(spacing: 6) {
-                        ForEach(coParents) { parent in
-                            FigureCardView(figure: parent)
-                                .contextMenu {
-                                    Button("Make \(parent.name) center figure") {
-                                        recenter(on: parent)
-                                    }
-                                }
-                                .onTapGesture { recenter(on: parent) }
+                    if let figID = rightClickFigureID,
+                       let fig = figures.first(where: { $0.persistentModelID == figID }) {
+                        Button("Show Details") { detailFigure = fig }
+                        Divider()
+                        Button("Recenter") { recenterTree(to: figID) }
+                        if collapsedIDs.contains(fig.name) {
+                            Button("Expand Branch") { collapsedIDs.remove(fig.name) }
+                        } else {
+                            Button("Collapse Branch") { collapsedIDs.insert(fig.name) }
                         }
                     }
                 }
-            }
-
-            FigureCardView(figure: center, isSelected: true)
-
-            if !rightConsorts.isEmpty {
-                ForEach(rightConsorts) { consort in
-                    Image(systemName: "heart.circle")
-                        .font(.system(size: 7))
-                        .foregroundStyle(.purple.opacity(0.5))
-                    consortChip(consort)
+                .onContinuousHover { phase in
+                    if case .active(let location) = phase {
+                        rightClickFigureID = figureAt(location: location, in: layout)
+                    }
                 }
             }
-            if !rightSpouses.isEmpty {
-                ForEach(rightSpouses) { spouse in
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 7))
-                        .foregroundStyle(.pink.opacity(0.4))
-                    figureChip(spouse)
+            .padding(40)
+        }
+        .id("tree-\(center.persistentModelID)-\(generationsAbove)-\(generationsBelow)")
+    }
+
+    // MARK: - Tree Building
+
+    private func buildTreeData(center: Figure) -> TreeData {
+        var entries: [String: TreeEntry] = [:]
+        var levelsMap: [Int: [TreeEntry]] = [:]
+        var parentToChild: [String: [String]] = [:]
+        var seenFigures: Set<PersistentIdentifier> = []
+
+        let centerPartner = preferredPartner(of: center)
+        let centerAlt = partnerCount(of: center)
+        let centerAltCount = max(0, centerAlt - (centerPartner != nil ? 1 : 0))
+        let centerEntry = TreeEntry(primary: center, partner: centerPartner, altPartnerCount: centerAltCount, generation: 0)
+        entries[centerEntry.id] = centerEntry
+        levelsMap[0] = [centerEntry]
+        seenFigures.insert(center.persistentModelID)
+        if let partner = centerPartner {
+            seenFigures.insert(partner.persistentModelID)
+        }
+
+        if generationsAbove > 0 {
+            collectAncestors(of: center, currentGen: 0, maxGen: -generationsAbove, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
+        }
+
+        if generationsBelow > 0 {
+            collectDescendants(of: center, currentGen: 0, maxGen: generationsBelow, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
+        }
+
+        let levels = levelsMap.sorted(by: { $0.key < $1.key }).map(\.value)
+        return TreeData(rootID: center.persistentModelID, entries: entries, levels: levels, parentToChild: parentToChild)
+    }
+
+    private func isUnknownParent(_ figure: Figure) -> Bool {
+        figure.name == "Unknown Father" || figure.name == "Unknown Mother"
+    }
+
+    private func collectAncestors(of figure: Figure, currentGen: Int, maxGen: Int, entries: inout [String: TreeEntry], levelsMap: inout [Int: [TreeEntry]], parentToChild: inout [String: [String]], seenFigures: inout Set<PersistentIdentifier>) {
+        let nextGen = currentGen - 1
+        guard nextGen >= maxGen else { return }
+        guard !collapsedIDs.contains(figure.name) else { return }
+
+        let rels = relationships.filter { $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID }
+        let childID = idFor(figure, gen: currentGen)
+
+        if rels.isEmpty {
+            for placeholder in [(name: "Unknown Father", gender: Figure.Gender.male), (name: "Unknown Mother", gender: Figure.Gender.female)] {
+                let parentID = "\(placeholder.name)@\(nextGen)"
+                if entries[parentID] != nil {
+                    parentToChild[parentID, default: []].append(childID)
+                    continue
                 }
+                let placeholderFig = Figure(name: placeholder.name, gender: placeholder.gender)
+                let entry = TreeEntry(primary: placeholderFig, partner: nil, altPartnerCount: 0, generation: nextGen)
+                entries[parentID] = entry
+                levelsMap[nextGen, default: []].append(entry)
+                parentToChild[parentID, default: []].append(childID)
             }
+            return
         }
-        .padding(.vertical, 12)
-        .padding(.horizontal, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(center.figureType?.color.opacity(0.06) ?? .gray.opacity(0.06))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(center.figureType?.color.opacity(0.15) ?? .gray.opacity(0.15), lineWidth: 1)
-                )
-        )
-    }
 
-    private func consortChip(_ figure: Figure) -> some View {
-        HStack(spacing: 3) {
-            Text(figure.gender.symbol)
-                .font(.system(size: 8))
-            Text(figure.name)
-                .font(.system(size: 10, weight: .medium))
-                .lineLimit(1)
-            Text("consort")
-                .font(.system(size: 7))
-                .foregroundStyle(.purple)
-                .padding(.horizontal, 3)
-                .padding(.vertical, 1)
-                .background(
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(.purple.opacity(0.12))
-                )
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(figure.figureType?.color.opacity(0.08) ?? .gray.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 5)
-                        .stroke(figure.figureType?.color.opacity(0.2) ?? .gray.opacity(0.2), lineWidth: 0.5)
-                )
-        )
-        .contextMenu {
-            Button("Make \(figure.name) center figure") {
-                recenter(on: figure)
-            }
-        }
-        .onTapGesture { recenter(on: figure) }
-        .help("\(figure.name) — consort of \(centerFigure?.name ?? "")")
-    }
-
-    private func figureChip(_ figure: Figure) -> some View {
-        MiniChip(name: figure.name, symbol: figure.gender.symbol, color: figure.figureType?.color ?? .gray, isClickable: true) {
-            recenter(on: figure)
-        }
-        .contextMenu {
-            Button("Make \(figure.name) center figure") {
-                recenter(on: figure)
-            }
-        }
-    }
-
-    // MARK: - Generation Row
-
-    private func generationRow(_ list: [Figure], label: String? = nil, alts: [PersistentIdentifier: [Figure]] = [:], onSelectAlt: ((Figure) -> Void)? = nil) -> some View {
-        VStack(spacing: 6) {
-            if let label {
-                Text(label)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-                    .textCase(.uppercase)
-            }
-            HStack(spacing: 10) {
-                ForEach(list) { fig in
-                    FigureCardView(figure: fig, alternatives: alts[fig.persistentModelID] ?? [], onSelectAlt: onSelectAlt)
-                        .contextMenu {
-                            Button("Make \(fig.name) center figure") {
-                                recenter(on: fig)
-                            }
-                        }
-                        .onTapGesture { recenter(on: fig) }
-                        .help("View \(fig.name)")
-                }
-            }
-        }
-    }
-
-    // MARK: - Connectors
-
-    private func connector() -> some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(width: 1.5, height: 18)
-            Circle()
-                .fill(Color.secondary.opacity(0.25))
-                .frame(width: 5, height: 5)
-        }
-    }
-
-    // MARK: - Expand Button
-
-    private func expandButton(_ label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: "plus")
-                    .font(.system(size: 8, weight: .bold))
-                Text(label)
-                    .font(.caption)
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.secondary.opacity(0.06))
-            )
-        }
-        .buttonStyle(.plain)
-        .padding(.vertical, 4)
-    }
-
-    // MARK: - Actions
-
-    private func recenter(on figure: Figure) {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            centerFigure = figure
-            showGrandparents = false
-            showGrandchildren = false
-        }
-    }
-
-    // MARK: - Relationship Queries
-
-    /// Returns at most one figure per relationship type, plus a dictionary of alternatives.
-    private func resolveGeneration(_ rels: [Relationship]) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let grouped = Dictionary(grouping: rels) { $0.relationshipType?.name ?? "" }
-        var figures: [Figure] = []
-        var alts: [PersistentIdentifier: [Figure]] = [:]
-        for (_, group) in grouped {
+        var placedFigureIDs: Set<PersistentIdentifier> = []
+        var knownRelationTypes: Set<String> = []
+        var parentedChildIDs: Set<String> = []
+
+        for (typeName, group) in grouped.sorted(by: { $0.key < $1.key }) {
+            knownRelationTypes.insert(typeName)
             guard let chosen = group.first(where: { $0.isPreferred == true }) ?? group.first,
-                  let chosenFig = chosen.fromFigure else { continue }
-            figures.append(chosenFig)
-            if group.count > 1 {
-                alts[chosenFig.persistentModelID] = group.compactMap { $0.fromFigure }.filter { $0.persistentModelID != chosenFig.persistentModelID }
+                  let parentFig = chosen.fromFigure,
+                  !placedFigureIDs.contains(parentFig.persistentModelID),
+                  seenFigures.insert(parentFig.persistentModelID).inserted,
+                  !parentedChildIDs.contains(childID) else { continue }
+
+            let partner = preferredPartner(of: parentFig)
+
+            if let partner {
+                let partnerWasNew = seenFigures.insert(partner.persistentModelID).inserted
+                placedFigureIDs.insert(partner.persistentModelID)
+                // Partner already existed as a figure elsewhere in the tree;
+                // skip this entry to avoid sharing one figure across two entries
+                if !partnerWasNew { continue }
+            }
+
+            placedFigureIDs.insert(parentFig.persistentModelID)
+
+            let parentID = idFor(parentFig, gen: nextGen)
+            if entries[parentID] != nil {
+                parentToChild[parentID, default: []].append(childID)
+                parentedChildIDs.insert(childID)
+                continue
+            }
+
+            let alt = max(0, partnerCount(of: parentFig) - (partner != nil ? 1 : 0))
+            let entry = TreeEntry(primary: parentFig, partner: partner, altPartnerCount: alt, generation: nextGen)
+            entries[entry.id] = entry
+            levelsMap[nextGen, default: []].append(entry)
+            parentToChild[entry.id, default: []].append(childID)
+            parentedChildIDs.insert(childID)
+
+            collectAncestors(of: parentFig, currentGen: nextGen, maxGen: maxGen, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
+        }
+
+        if !knownRelationTypes.contains("Father") {
+            let parentID = "Unknown Father@\(nextGen)"
+            if entries[parentID] == nil {
+                let placeholderFig = Figure(name: "Unknown Father", gender: .male)
+                let entry = TreeEntry(primary: placeholderFig, partner: nil, altPartnerCount: 0, generation: nextGen)
+                entries[parentID] = entry
+                levelsMap[nextGen, default: []].append(entry)
+            }
+            parentToChild[parentID, default: []].append(childID)
+        }
+        if !knownRelationTypes.contains("Mother") {
+            let parentID = "Unknown Mother@\(nextGen)"
+            if entries[parentID] == nil {
+                let placeholderFig = Figure(name: "Unknown Mother", gender: .female)
+                let entry = TreeEntry(primary: placeholderFig, partner: nil, altPartnerCount: 0, generation: nextGen)
+                entries[parentID] = entry
+                levelsMap[nextGen, default: []].append(entry)
+            }
+            parentToChild[parentID, default: []].append(childID)
+        }
+    }
+
+    private func collectDescendants(of figure: Figure, currentGen: Int, maxGen: Int, entries: inout [String: TreeEntry], levelsMap: inout [Int: [TreeEntry]], parentToChild: inout [String: [String]], seenFigures: inout Set<PersistentIdentifier>) {
+        let nextGen = currentGen + 1
+        guard nextGen <= maxGen else { return }
+        guard !collapsedIDs.contains(figure.name) else { return }
+
+        let rels = relationships.filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+        let parentID = idFor(figure, gen: currentGen)
+        var seen: Set<PersistentIdentifier> = []
+
+        // Pass 1: collect all children — register in seenFigures breadth-first
+        // so that gen+N entries always win over gen+(N+1) duplicates
+        var children: [(Figure, String)] = []
+        for rel in rels {
+            guard let childFig = rel.toFigure,
+                  seen.insert(childFig.persistentModelID).inserted,
+                  seenFigures.insert(childFig.persistentModelID).inserted else { continue }
+            children.append((childFig, idFor(childFig, gen: nextGen)))
+        }
+
+        // Pass 2: add all children to the tree
+        for (childFig, childID) in children {
+            let partner = preferredPartner(of: childFig)
+            let alt = max(0, partnerCount(of: childFig) - (partner != nil ? 1 : 0))
+            let entry = TreeEntry(primary: childFig, partner: partner, altPartnerCount: alt, generation: nextGen)
+            entries[entry.id] = entry
+            levelsMap[nextGen, default: []].append(entry)
+            parentToChild[parentID, default: []].append(childID)
+        }
+
+        // Pass 3: recurse into each child
+        for (childFig, _) in children {
+            collectDescendants(of: childFig, currentGen: nextGen, maxGen: maxGen, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
+        }
+
+        if !rels.isEmpty,
+           let currentEntry = entries[parentID],
+           currentEntry.partner == nil {
+            let parentTypeNames = Set(rels.compactMap { $0.relationshipType?.name })
+            let unknownParent: (name: String, gender: Figure.Gender)?
+            if parentTypeNames.contains("Father") && !parentTypeNames.contains("Mother") {
+                unknownParent = ("Unknown Mother", .female)
+            } else if parentTypeNames.contains("Mother") && !parentTypeNames.contains("Father") {
+                unknownParent = ("Unknown Father", .male)
+            } else {
+                unknownParent = nil
+            }
+            if let (name, gender) = unknownParent {
+                let placeholder = Figure(name: name, gender: gender)
+                let updatedEntry = TreeEntry(primary: currentEntry.primary, partner: placeholder, altPartnerCount: currentEntry.altPartnerCount, generation: currentEntry.generation)
+                entries[parentID] = updatedEntry
+                if let idx = levelsMap[currentGen]?.firstIndex(where: { $0.id == parentID }) {
+                    levelsMap[currentGen]?[idx] = updatedEntry
+                }
             }
         }
-        return (figures, alts)
     }
 
-    private func parentsAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
-        resolveGeneration(relationships.filter {
-            $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID
-        })
+    private func idFor(_ figure: Figure, gen: Int) -> String {
+        "\(figure.name)@\(gen)"
     }
 
-    private func parents(of figure: Figure) -> [Figure] { parentsAndAlts(of: figure).figures }
-    private func parentAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { parentsAndAlts(of: figure).alts }
+    // MARK: - Partner Helpers
 
-    private func childrenAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
-        resolveGeneration(relationships.filter {
-            $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID
-        })
+    private func preferredPartner(of figure: Figure) -> Figure? {
+        let rels = relationships.filter {
+            ($0.relationshipType?.name == "Spouse" || $0.relationshipType?.name == "Consort") &&
+            ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID)
+        }
+        guard let chosen = rels.first(where: { $0.isPreferred == true }) ?? rels.first else { return nil }
+        return chosen.fromFigure?.persistentModelID == figure.persistentModelID ? chosen.toFigure : chosen.fromFigure
     }
 
-    private func children(of figure: Figure) -> [Figure] { childrenAndAlts(of: figure).figures }
-    private func childAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { childrenAndAlts(of: figure).alts }
-
-    private func spousesLeft(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Spouse" && $0.toFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.fromFigure }
+    private func partnerCount(of figure: Figure) -> Int {
+        let rels = relationships.filter {
+            ($0.relationshipType?.name == "Spouse" || $0.relationshipType?.name == "Consort") &&
+            ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID)
+        }
+        var seen: Set<PersistentIdentifier> = []
+        for rel in rels {
+            let p = rel.fromFigure?.persistentModelID == figure.persistentModelID ? rel.toFigure : rel.fromFigure
+            if let pid = p?.persistentModelID { seen.insert(pid) }
+        }
+        return seen.count
     }
 
-    private func spousesRight(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Spouse" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.toFigure }
-    }
+    // MARK: - Layout
 
-    private func consortsLeft(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Consort" && $0.toFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.fromFigure }
-    }
+    private func computeLayout(data: TreeData) -> LayoutResult {
+        var nodeLayouts: [PersistentIdentifier: CGRect] = [:]
+        var figureAltCounts: [PersistentIdentifier: Int] = [:]
+        var genWidths: [(Int, CGFloat)] = []
+        let genKeys = data.levels.compactMap(\.first?.generation).sorted()
 
-    private func consortsRight(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Consort" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.toFigure }
-    }
-
-    private func grandparentsAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
-        let parentIDs = Set(parents(of: figure).map(\.persistentModelID))
-        return resolveGeneration(relationships.filter {
-            guard let toID = $0.toFigure?.persistentModelID else { return false }
-            return $0.relationshipType?.category == "parent" && parentIDs.contains(toID)
-        })
-    }
-
-    private func grandparents(of figure: Figure) -> [Figure] { grandparentsAndAlts(of: figure).figures }
-    private func grandparentAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { grandparentsAndAlts(of: figure).alts }
-
-    private func grandchildrenAndAlts(of figure: Figure) -> (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
-        let childIDs = Set(children(of: figure).map(\.persistentModelID))
-        return resolveGeneration(relationships.filter {
-            guard let fromID = $0.fromFigure?.persistentModelID else { return false }
-            return $0.relationshipType?.category == "parent" && childIDs.contains(fromID)
-        })
-    }
-
-    private func grandchildren(of figure: Figure) -> [Figure] { grandchildrenAndAlts(of: figure).figures }
-    private func grandchildAlts(of figure: Figure) -> [PersistentIdentifier: [Figure]] { grandchildrenAndAlts(of: figure).alts }
-
-    private func siblings(of figure: Figure) -> [Figure] {
-        let parentIDs = Set(parents(of: figure).map(\.persistentModelID))
-        guard !parentIDs.isEmpty else { return [] }
-        return relationships
-            .filter {
-                guard let fromID = $0.fromFigure?.persistentModelID,
-                      let toID = $0.toFigure?.persistentModelID,
-                      $0.relationshipType?.category == "parent",
-                      parentIDs.contains(fromID),
-                      toID != figure.persistentModelID else { return false }
-                return true
+        for gen in genKeys {
+            let entriesAtGen = data.levels.first(where: { $0.first?.generation == gen }) ?? []
+            var w: CGFloat = 0
+            for e in entriesAtGen {
+                w += cardWidth
+                if e.partner != nil { w += partnerSpacing + cardWidth }
             }
-            .compactMap { $0.toFigure }
-    }
+            w += CGFloat(max(0, entriesAtGen.count - 1)) * coupleSpacing
+            genWidths.append((gen, w))
+        }
 
-    private func coParents(of figure: Figure) -> [Figure] {
-        let childIDs = Set(children(of: figure).map(\.persistentModelID))
-        guard !childIDs.isEmpty else { return [] }
-        let otherParentIDs = Set(relationships
-            .filter {
-                guard let toID = $0.toFigure?.persistentModelID,
-                      let fromID = $0.fromFigure?.persistentModelID,
-                      $0.relationshipType?.category == "parent",
-                      childIDs.contains(toID),
-                      fromID != figure.persistentModelID else { return false }
-                return true
+        guard !genWidths.isEmpty else {
+            return LayoutResult(nodeLayouts: [:], figureAltCounts: [:], canvasWidth: 600, canvasHeight: 400)
+        }
+
+        let maxW = (genWidths.map(\.1).max() ?? 0) + canvasPadding * 2
+        let minGen = genKeys.min() ?? 0
+        let maxGen = genKeys.max() ?? 0
+        let topNeeded = 2 * (canvasPadding + cardHeight / 2 - CGFloat(minGen) * verticalSpacing)
+        let bottomNeeded = 2 * (canvasPadding + cardHeight / 2 + CGFloat(maxGen) * verticalSpacing)
+        let totalH = max(topNeeded, bottomNeeded)
+
+        for gen in genKeys {
+            let entriesAtGen = data.levels.first(where: { $0.first?.generation == gen }) ?? []
+            let genW = genWidths.first(where: { $0.0 == gen })?.1 ?? 0
+            let startX = (maxW - genW) / 2
+            let y = totalH / 2 + CGFloat(gen) * verticalSpacing - cardHeight / 2
+            var cx = startX
+
+            for entry in entriesAtGen {
+                nodeLayouts[entry.primary.persistentModelID] = CGRect(x: cx, y: y, width: cardWidth, height: cardHeight)
+                figureAltCounts[entry.primary.persistentModelID] = entry.altPartnerCount
+                cx += cardWidth
+
+                if let partner = entry.partner {
+                    cx += partnerSpacing
+                    nodeLayouts[partner.persistentModelID] = CGRect(x: cx, y: y, width: cardWidth, height: cardHeight)
+                    figureAltCounts[partner.persistentModelID] = 0
+                    cx += cardWidth
+                }
+                cx += coupleSpacing
             }
-            .compactMap { $0.fromFigure?.persistentModelID })
-        return self.figures.filter { otherParentIDs.contains($0.persistentModelID) }
+        }
+
+        // Cascading alignment: shift each ancestor generation so its midpoint
+        // aligns with the primary child's midX, processed from center outward
+        for childGen in genKeys.reversed() where childGen <= 0 {
+            for (parentID, childIDs) in data.parentToChild {
+                guard let firstChildID = childIDs.first,
+                      let childEntry = data.entries[firstChildID],
+                      childEntry.generation == childGen,
+                      let parentEntry = data.entries[parentID],
+                      let childFrame = nodeLayouts[childEntry.primary.persistentModelID],
+                      let parentFrame = nodeLayouts[parentEntry.primary.persistentModelID] else { continue }
+
+                let parentEntriesAtGen = data.levels.first(where: { $0.first?.generation == parentEntry.generation }) ?? []
+                guard parentEntriesAtGen.count == 1 else { continue }
+
+                // Skip if parent generation is much narrower than the child generation;
+                // narrow single-entry generations look more balanced when left centered
+                let parentW = genWidths.first(where: { $0.0 == parentEntry.generation })?.1 ?? 0
+                let childW = genWidths.first(where: { $0.0 == childGen })?.1 ?? maxW
+                guard parentW >= childW * 0.5 else { continue }
+
+                let partnerFrame = parentEntry.partner.flatMap { nodeLayouts[$0.persistentModelID] }
+                let trunkX = partnerFrame.map { (parentFrame.midX + $0.midX) / 2 } ?? parentFrame.midX
+
+                let childPartnerFrame = childEntry.partner.flatMap { nodeLayouts[$0.persistentModelID] }
+                let childMidX = childPartnerFrame.map { (childFrame.midX + $0.midX) / 2 } ?? childFrame.midX
+
+                let shift = childMidX - trunkX
+                guard abs(shift) > 2 else { continue }
+
+                let canvasCenter = maxW / 2
+                let newTrunkX = trunkX + shift
+                if newTrunkX < canvasCenter {
+                    let clampedShift = canvasCenter - trunkX
+                    for entry in parentEntriesAtGen {
+                        let ids = [entry.primary.persistentModelID] + (entry.partner.map { [$0.persistentModelID] } ?? [])
+                        for id in ids {
+                            if let frame = nodeLayouts[id] {
+                                nodeLayouts[id] = frame.offsetBy(dx: clampedShift, dy: 0)
+                            }
+                        }
+                    }
+                    continue
+                }
+
+                for entry in parentEntriesAtGen {
+                    let ids = [entry.primary.persistentModelID] + (entry.partner.map { [$0.persistentModelID] } ?? [])
+                    for id in ids {
+                        if let frame = nodeLayouts[id] {
+                            nodeLayouts[id] = frame.offsetBy(dx: shift, dy: 0)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Align descendants under their parents (process from center outward)
+        let descendantGens = genKeys.filter { $0 > 0 }.sorted()
+        for parentGen in descendantGens {
+            let childGen = parentGen + 1
+            guard childGen <= (genKeys.max() ?? 0) else { continue }
+
+            for (parentID, childIDs) in data.parentToChild {
+                guard let parentEntry = data.entries[parentID],
+                      parentEntry.generation == parentGen,
+                      !childIDs.isEmpty else { continue }
+
+                let parentFigIDs = [parentEntry.primary.persistentModelID] + (parentEntry.partner.map { [$0.persistentModelID] } ?? [])
+                let parentFrames = parentFigIDs.compactMap { nodeLayouts[$0] }
+                guard !parentFrames.isEmpty else { continue }
+                let trunkX = parentFrames.map(\.midX).reduce(0, +) / CGFloat(parentFrames.count)
+
+                let childFrames = childIDs.compactMap { cid -> CGRect? in
+                    guard let ce = data.entries[cid] else { return nil }
+                    return nodeLayouts[ce.primary.persistentModelID]
+                }
+                guard !childFrames.isEmpty else { continue }
+                let childGroupMidX = childFrames.map(\.midX).reduce(0, +) / CGFloat(childFrames.count)
+
+                let shift = trunkX - childGroupMidX
+                guard abs(shift) > 2 else { continue }
+
+                for childID in childIDs {
+                    shiftSubtree(from: childID, dx: shift, data: data, nodeLayouts: &nodeLayouts)
+                }
+            }
+        }
+
+        // Recalculate canvas width after shifts
+        let allFrames = Array(nodeLayouts.values)
+        let contentMinX = allFrames.map(\.minX).min() ?? 0
+        let contentMaxX = allFrames.map(\.maxX).max() ?? 0
+        let contentWidth = contentMaxX - contentMinX
+        let adjustedWidth = max(600, contentWidth + canvasPadding * 2)
+        let recenterShift = (adjustedWidth - contentWidth) / 2 - contentMinX
+        if abs(recenterShift) > 2 {
+            for (id, frame) in nodeLayouts {
+                nodeLayouts[id] = frame.offsetBy(dx: recenterShift, dy: 0)
+            }
+        }
+
+        return LayoutResult(nodeLayouts: nodeLayouts, figureAltCounts: figureAltCounts, canvasWidth: adjustedWidth, canvasHeight: max(400, totalH))
     }
 
-    private func siblingsExcludingCoParents(of figure: Figure) -> [Figure] {
-        let coParentIDs = Set(coParents(of: figure).map(\.persistentModelID))
-        return siblings(of: figure).filter { !coParentIDs.contains($0.persistentModelID) }
+    private func shiftSubtree(from entryID: String, dx: CGFloat, data: TreeData, nodeLayouts: inout [PersistentIdentifier: CGRect]) {
+        guard let entry = data.entries[entryID] else { return }
+        let ids = [entry.primary.persistentModelID] + (entry.partner.map { [$0.persistentModelID] } ?? [])
+        for id in ids {
+            if let frame = nodeLayouts[id] {
+                nodeLayouts[id] = frame.offsetBy(dx: dx, dy: 0)
+            }
+        }
+        for childID in data.parentToChild[entryID] ?? [] {
+            shiftSubtree(from: childID, dx: dx, data: data, nodeLayouts: &nodeLayouts)
+        }
     }
 
-    private func commanders(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Commander" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.toFigure }
+    // MARK: - Bracket Drawing
+
+    private func drawBrackets(context: inout GraphicsContext, data: TreeData, layout: LayoutResult) {
+        for (parentID, childIDs) in data.parentToChild {
+            guard let parentEntry = data.entries[parentID], !childIDs.isEmpty else { continue }
+
+            let parentFigIDs = [parentEntry.primary.persistentModelID] + (parentEntry.partner.map { [$0.persistentModelID] } ?? [])
+            let parentFrames = parentFigIDs.compactMap { layout.nodeLayouts[$0] }
+            guard !parentFrames.isEmpty else { continue }
+
+            let childFrames = childIDs.compactMap { cid -> CGRect? in
+                guard let ce = data.entries[cid] else { return nil }
+                return layout.nodeLayouts[ce.primary.persistentModelID]
+            }
+            guard !childFrames.isEmpty else { continue }
+
+            drawSingleBracket(context: &context, parentFrames: parentFrames, childFrames: childFrames)
+        }
     }
 
-    private func commandedBy(_ figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Commander" && $0.toFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.fromFigure }
+    private func drawSingleBracket(context: inout GraphicsContext, parentFrames: [CGRect], childFrames: [CGRect]) {
+        let lineColor = Color.secondary.opacity(0.35)
+        let lineWidth: CGFloat = 1.5
+
+        let marriageY = (parentFrames.map(\.maxY).max() ?? 0) + 14
+        if parentFrames.count > 1 {
+            let lx = parentFrames.map(\.midX).min()!
+            let rx = parentFrames.map(\.midX).max()!
+            for pf in parentFrames {
+                var stub = Path()
+                stub.move(to: CGPoint(x: pf.midX, y: pf.maxY))
+                stub.addLine(to: CGPoint(x: pf.midX, y: marriageY))
+                context.stroke(stub, with: .color(lineColor), lineWidth: lineWidth)
+            }
+            var p = Path()
+            p.move(to: CGPoint(x: lx, y: marriageY))
+            p.addLine(to: CGPoint(x: rx, y: marriageY))
+            context.stroke(p, with: .color(lineColor), lineWidth: lineWidth)
+        }
+
+        let trunkX = parentFrames.map(\.midX).reduce(0, +) / CGFloat(parentFrames.count)
+        let childTopY = childFrames.map(\.minY).min() ?? 0
+        let branchBarY = childTopY - branchBarOffset
+        guard branchBarY > marriageY + 4 else { return }
+
+        var t = Path()
+        t.move(to: CGPoint(x: trunkX, y: marriageY))
+        t.addLine(to: CGPoint(x: trunkX, y: branchBarY))
+        context.stroke(t, with: .color(lineColor), lineWidth: lineWidth)
+
+        let allX = childFrames.map(\.midX) + [trunkX]
+        let minX = allX.min()!
+        let maxX = allX.max()!
+        if maxX - minX > 2 {
+            var b = Path()
+            b.move(to: CGPoint(x: minX, y: branchBarY))
+            b.addLine(to: CGPoint(x: maxX, y: branchBarY))
+            context.stroke(b, with: .color(lineColor), lineWidth: lineWidth)
+        }
+
+        for cf in childFrames {
+            var d = Path()
+            d.move(to: CGPoint(x: cf.midX, y: branchBarY))
+            d.addLine(to: CGPoint(x: cf.midX, y: cf.minY))
+            context.stroke(d, with: .color(lineColor), lineWidth: lineWidth)
+        }
     }
 
-    private func servants(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Servant" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.toFigure }
+    // MARK: - Node Drawing
+
+    private func drawNodes(context: inout GraphicsContext, data: TreeData, layout: LayoutResult, centerID: PersistentIdentifier) {
+        for (figID, frame) in layout.nodeLayouts {
+            let figure: Figure?
+            if let dbFig = figures.first(where: { $0.persistentModelID == figID }) {
+                figure = dbFig
+            } else if let placeholder = data.entries.values.first(where: { $0.primary.persistentModelID == figID })?.primary {
+                figure = placeholder
+            } else if let partnerFig = data.entries.values.compactMap({ $0.partner }).first(where: { $0.persistentModelID == figID }) {
+                figure = partnerFig
+            } else {
+                continue
+            }
+            guard let figure else { continue }
+            let isCenter = figID == centerID
+            let alt = layout.figureAltCounts[figID] ?? 0
+            drawCard(context: &context, figure: figure, frame: frame, isCenter: isCenter, altCount: alt)
+        }
     }
 
-    private func masters(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Servant" && $0.toFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.fromFigure }
+    private func drawCard(context: inout GraphicsContext, figure: Figure, frame: CGRect, isCenter: Bool, altCount: Int) {
+        let isUnknown = isUnknownParent(figure)
+        let color = isUnknown ? Color.gray : (figure.figureType?.color ?? .gray)
+        let radius: CGFloat = 6
+
+        let bgPath = Path(roundedRect: frame, cornerRadius: radius)
+        context.fill(bgPath, with: .color(color.opacity(isUnknown ? 0.12 : 0.12)))
+
+        let borderColor = isCenter ? Color.accentColor : (isUnknown ? Color.secondary : color.opacity(0.3))
+        let borderStyle = StrokeStyle(lineWidth: isCenter ? 1.5 : (isUnknown ? 1.0 : 0.5), dash: isUnknown ? [4, 3] : [])
+        context.stroke(bgPath, with: .color(borderColor), style: borderStyle)
+
+        if isUnknown {
+            context.draw(
+                Text("?")
+                    .font(.title3.weight(.bold))
+                    .foregroundColor(.secondary),
+                at: CGPoint(x: frame.midX, y: frame.midY - 6),
+                anchor: .center
+            )
+            context.draw(
+                Text(figure.name.uppercased())
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundColor(.secondary),
+                at: CGPoint(x: frame.midX, y: frame.midY + 14),
+                anchor: .center
+            )
+            return
+        }
+
+        let dotRect = CGRect(x: frame.minX + 8, y: frame.minY + 10, width: 6, height: 6)
+        context.fill(Path(ellipseIn: dotRect), with: .color(color))
+
+        let maxNameLen: Int = 11
+        let displayName = figure.name.count > maxNameLen ? String(figure.name.prefix(maxNameLen - 1)) + "…" : figure.name
+        let nameText = Text(displayName).font(.caption.weight(.medium)).foregroundColor(.primary)
+        let nameRect = CGRect(x: frame.minX + 18, y: frame.minY + 8, width: frame.width - 22, height: 14)
+        context.draw(nameText, in: nameRect)
+
+        let typeText: Text
+        if figure.gender != .unknown {
+            typeText = Text(figure.gender.symbol + " ") + Text(figure.figureType?.name ?? "").font(.caption2).foregroundColor(.secondary)
+        } else {
+            typeText = Text(figure.figureType?.name ?? "").font(.caption2).foregroundColor(.secondary)
+        }
+        context.draw(
+            typeText,
+            at: CGPoint(x: frame.midX, y: frame.minY + 28),
+            anchor: .top
+        )
+
+        if altCount > 0 {
+            let badge = Text("+\(altCount)").font(.system(size: 8, weight: .bold)).foregroundColor(.white)
+            let bw: CGFloat = altCount > 9 ? 24 : 18
+            let badgeRect = CGRect(x: frame.maxX - bw - 2, y: frame.minY - 5, width: bw, height: 14)
+            context.fill(Path(roundedRect: badgeRect, cornerRadius: 7), with: .color(Color.accentColor))
+            context.draw(badge, at: CGPoint(x: badgeRect.midX, y: badgeRect.midY), anchor: .center)
+        }
     }
 
-    private func worshippers(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Worshipper" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.toFigure }
+    // MARK: - Interaction
+
+    private func recenterTree(to figID: PersistentIdentifier) {
+        guard figID != centerFigure?.persistentModelID,
+              let fig = figures.first(where: { $0.persistentModelID == figID }) else { return }
+        if let current = centerFigure {
+            centerHistory.append(current)
+        }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            centerFigure = fig
+            collapsedIDs.removeAll()
+        }
     }
 
-    private func worshippedBy(_ figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Worshipper" && $0.toFigure?.persistentModelID == figure.persistentModelID }
-            .compactMap { $0.fromFigure }
+    private func goBack() {
+        guard let previous = centerHistory.popLast() else { return }
+        centerFigure = previous
+        collapsedIDs.removeAll()
     }
 
-    private func allies(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Ally" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
-            .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
+    private func handleTap(at location: CGPoint, layout: LayoutResult) {
+        let badgeW: CGFloat = 18
+        let badgeH: CGFloat = 14
+        for (figID, frame) in layout.nodeLayouts {
+            let alt = layout.figureAltCounts[figID] ?? 0
+            if alt > 0 {
+                let bw: CGFloat = alt > 9 ? 24 : badgeW
+                let badgeRect = CGRect(x: frame.maxX - bw - 2, y: frame.minY - 5, width: bw, height: badgeH)
+                if badgeRect.contains(location) {
+                    altForFigure = figures.first(where: { $0.persistentModelID == figID })
+                    return
+                }
+            }
+        }
+        for (figID, frame) in layout.nodeLayouts {
+            if frame.contains(location) {
+                recenterTree(to: figID)
+                return
+            }
+        }
     }
 
-    private func enemies(of figure: Figure) -> [Figure] {
-        relationships
-            .filter { $0.relationshipType?.name == "Enemy" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
-            .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
+    private func figureAt(location: CGPoint, in layout: LayoutResult) -> PersistentIdentifier? {
+        for (figID, frame) in layout.nodeLayouts where frame.contains(location) {
+            return figID
+        }
+        return nil
+    }
+
+// MARK: - Sheet Views
+
+private struct AlternativePartnersSheet: View {
+    let figure: Figure
+    let partners: [Figure]
+    let onClose: () -> Void
+    let onRecenter: (PersistentIdentifier) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Alternative partners of \(figure.name)")
+                    .font(.headline)
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Close")
+            }
+            .padding()
+            Divider()
+            if partners.isEmpty {
+                Text("No alternative partners found.").foregroundStyle(.secondary).padding()
+                Spacer()
+            } else {
+                List(partners, id: \.persistentModelID) { partner in
+                    HStack(spacing: 8) {
+                        Circle().fill(partner.figureType?.color ?? .gray).frame(width: 8, height: 8)
+                        Text(partner.name).font(.body)
+                        Text(partner.figureType?.name ?? "").font(.caption).foregroundStyle(.secondary)
+                        Spacer()
+                        Button("Recenter") {
+                            onRecenter(partner.persistentModelID)
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.accentColor)
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+        .frame(width: 360, height: 300)
     }
 }
 
-// MARK: - Figure Card
-
-struct FigureCardView: View {
+private struct FigureDetailSheet: View {
     let figure: Figure
-    var isSelected: Bool = false
-    var alternatives: [Figure] = []
-    var onSelectAlt: ((Figure) -> Void)?
-
-    @State private var showingAlts = false
+    let onClose: () -> Void
+    let onRecenter: (PersistentIdentifier) -> Void
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text(figure.name)
-                .font(.headline)
-                .lineLimit(1)
-            Text(figure.figureType?.name ?? "Unknown")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if !figure.domain.isEmpty {
-                Text(figure.domain)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(figure.figureType?.color.opacity(0.15) ?? .gray.opacity(0.15))
-                .shadow(color: .black.opacity(0.1), radius: 3, y: 1)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(isSelected ? Color.accentColor : figure.figureType?.color.opacity(0.4) ?? .gray.opacity(0.4), lineWidth: isSelected ? 2 : 1)
-        )
-        .overlay(alignment: .topTrailing) {
-            if !alternatives.isEmpty {
-                Button(action: { showingAlts = true }) {
-                    Text("+\(alternatives.count)")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.accentColor))
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Circle().fill(figure.figureType?.color ?? .gray).frame(width: 14, height: 14)
+                Text(figure.name).font(.title2.bold())
+                Spacer()
+                Button(action: onClose) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
-                .offset(x: 4, y: -4)
-                .popover(isPresented: $showingAlts) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Alternatives")
-                            .font(.caption.bold())
-                        ForEach(alternatives) { alt in
-                            Button(action: {
-                                showingAlts = false
-                                onSelectAlt?(alt)
-                            }) {
-                                HStack(spacing: 6) {
-                                    Circle().fill(alt.figureType?.color ?? .gray).frame(width: 6, height: 6)
-                                    Text(alt.name)
-                                        .font(.caption)
-                                }
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 4)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .background(alt.figureType?.color.opacity(0.08) ?? .gray.opacity(0.08))
-                            .cornerRadius(4)
-                        }
-                    }
-                    .padding(8)
-                    .frame(width: 180)
+                .help("Close")
+            }
+            .padding([.top, .horizontal])
+
+            HStack {
+                Text("Type").foregroundStyle(.secondary)
+                Spacer()
+                Text(figure.figureType?.name ?? "-").foregroundStyle(.primary)
+            }
+            .padding(.horizontal)
+
+            if !figure.domain.isEmpty {
+                HStack {
+                    Text("Domain").foregroundStyle(.secondary)
+                    Spacer()
+                    Text(figure.domain).foregroundStyle(.primary)
                 }
+                .padding(.horizontal)
+            }
+            if !figure.figureDescription.isEmpty {
+                Divider()
+                Text(figure.figureDescription).font(.body).foregroundStyle(.secondary).padding(.horizontal)
+            }
+
+            Spacer()
+
+            HStack {
+                Spacer()
+                Button("Recenter Tree") {
+                    onRecenter(figure.persistentModelID)
+                }
+                .buttonStyle(.borderedProminent)
+                Spacer()
             }
         }
+        .padding()
+        .frame(width: 360, height: 280)
+    }
+}
+
+    private func alternativePartners(of figure: Figure) -> [Figure] {
+        let preferred = preferredPartner(of: figure)
+        let rels = relationships.filter {
+            ($0.relationshipType?.name == "Spouse" || $0.relationshipType?.name == "Consort") &&
+            ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID)
+        }
+        var partners: [Figure] = []
+        var seen = Set<PersistentIdentifier>()
+        for rel in rels {
+            let p = rel.fromFigure?.persistentModelID == figure.persistentModelID ? rel.toFigure : rel.fromFigure
+            if let fig = p, seen.insert(fig.persistentModelID).inserted {
+                partners.append(fig)
+            }
+        }
+        if let pref = preferred {
+            partners.removeAll { $0.persistentModelID == pref.persistentModelID }
+        }
+        return partners
     }
 }

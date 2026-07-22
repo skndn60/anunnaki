@@ -152,9 +152,11 @@ struct EraSwimlaneRow: View {
             Text(era.name)
                 .font(.caption)
                 .fontWeight(.medium)
-            Text(dateRangeLabel)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            if !dateRangeLabel.isEmpty {
+                Text(dateRangeLabel)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.leading, 4)
     }
@@ -174,19 +176,43 @@ struct EraSwimlaneRow: View {
     private func historicalSwimlane(containerWidth: CGFloat) -> some View {
         let minYear = mode.minYear
         let ppy = mode.pointsPerYear
-        guard let startYear = era.startDate.startYear, let endYear = era.endDate.endYear, startYear < endYear else {
-            return AnyView(emptySwimlane(containerWidth: containerWidth))
-        }
-        let startX = CGFloat(startYear - minYear) * ppy
-        let endX = CGFloat(endYear - minYear) * ppy
 
         let chipWidth = FigureSwimlaneChip.chipWidth
-        let minSpacing: CGFloat = 8
-        var chipLayouts: [(figure: Figure, x: CGFloat, level: Int)] = figures.compactMap { figure in
-            guard let year = figure.birthDate.startYear else { return nil }
-            let x = CGFloat(year - minYear) * ppy + chipWidth / 2
-            return (figure, x, 0)
-        }.sorted { $0.x < $1.x }
+        let minSpacing: CGFloat = 16
+        var chipLayouts: [(figure: Figure, x: CGFloat, level: Int)] = []
+        var exactCount = 0
+
+        for figure in figures {
+            if let year = figure.birthDate.startYear {
+                let x = CGFloat(year - minYear) * ppy + chipWidth / 2
+                chipLayouts.append((figure, x, 0))
+                exactCount += 1
+            }
+        }
+
+        let estimatedCount = figures.count - exactCount
+        if estimatedCount > 0 {
+            let eraStart = era.startDate.startYear ?? minYear
+            let eraEnd: Int
+            if let rawEnd = era.endDate.startYear ?? era.endDate.endYear, rawEnd > eraStart {
+                eraEnd = rawEnd
+            } else {
+                eraEnd = eraStart + 200
+            }
+            let span = max(1, eraEnd - eraStart)
+            let step = CGFloat(span) / CGFloat(estimatedCount + 1)
+            var estIdx = 0
+            for figure in figures {
+                if figure.birthDate.startYear == nil {
+                    let estYear = eraStart + Int(step * CGFloat(estIdx + 1))
+                    let x = CGFloat(estYear - minYear) * ppy + chipWidth / 2
+                    chipLayouts.append((figure, x, 0))
+                    estIdx += 1
+                }
+            }
+        }
+
+        chipLayouts.sort { $0.x < $1.x }
 
         if chipLayouts.count > 1 {
             var groupStart = 0
@@ -205,26 +231,31 @@ struct EraSwimlaneRow: View {
             }
         }
 
-        return AnyView(ZStack(alignment: .leading) {
-            ForEach(figures) { figure in
-                if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
-                    let birthX = CGFloat(birthYear - minYear) * ppy
-                    let deathX = CGFloat(deathYear - minYear) * ppy
-                    let barWidth = max(4, deathX - birthX)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill((figure.figureType?.color ?? .gray).opacity(0.2))
-                        .frame(width: barWidth, height: 4)
-                        .position(x: birthX + barWidth / 2, y: swimlaneHeight / 2 + 12)
-                }
-            }
+        let minLevel = chipLayouts.map(\.level).min() ?? 0
 
-            eraBar(startX: startX, endX: endX)
+        return AnyView(ZStack(alignment: .leading) {
+            if let startYear = era.startDate.startYear, let endYear = era.endDate.endYear, startYear < endYear {
+                let startX = CGFloat(startYear - minYear) * ppy
+                let endX = CGFloat(endYear - minYear) * ppy
+                ForEach(figures) { figure in
+                    if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
+                        let birthX = CGFloat(birthYear - minYear) * ppy
+                        let deathX = CGFloat(deathYear - minYear) * ppy
+                        let barWidth = max(4, deathX - birthX)
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill((figure.figureType?.color ?? .gray).opacity(0.2))
+                            .frame(width: barWidth, height: 4)
+                            .position(x: birthX + barWidth / 2, y: swimlaneHeight / 2 + 12)
+                    }
+                }
+                eraBar(startX: startX, endX: endX)
+            }
 
             ForEach(chipLayouts, id: \.figure.id) { layout in
                 FigureSwimlaneChip(figure: layout.figure)
                     .position(
                         x: layout.x,
-                        y: swimlaneHeight / 2 - 5 + CGFloat(layout.level) * 18
+                        y: 18 + CGFloat(layout.level - minLevel) * 28 + 14
                     )
             }
         }
@@ -232,9 +263,7 @@ struct EraSwimlaneRow: View {
         )
     }
 
-    private func emptySwimlane(containerWidth: CGFloat) -> some View {
-        Rectangle().fill(.clear).frame(width: containerWidth, height: swimlaneHeight)
-    }
+
 
     private var mythologicalSwimlane: some View {
         HStack(spacing: 0) {
@@ -244,7 +273,7 @@ struct EraSwimlaneRow: View {
                     .foregroundStyle(.tertiary)
             } else {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: 10) {
                     ForEach(figures) { figure in
                         FigureSwimlaneChip(figure: figure)
                     }
@@ -253,7 +282,7 @@ struct EraSwimlaneRow: View {
             }
         }
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 4)
                 .fill(eraColor.opacity(0.08))
@@ -277,6 +306,14 @@ struct EraSwimlaneRow: View {
     }
 
     private var dateRangeLabel: String {
-        "\(era.startDate.displayLabel) → \(era.endDate.displayLabel)"
+        let start = era.startDate
+        let end = era.endDate
+        if start.startYear == nil && start.endYear == nil && end.startYear == nil && end.endYear == nil {
+            return ""
+        }
+        let startLabel = start.displayLabel
+        let endLabel = end.displayLabel
+        if startLabel == endLabel { return startLabel }
+        return "\(startLabel) → \(endLabel)"
     }
 }

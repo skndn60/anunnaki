@@ -15,6 +15,7 @@ struct DashboardView: View {
     @Query private var figureTypes: [FigureType]
     @Query private var citations: [Citation]
     @Query private var things: [Thing]
+    @Query private var entries: [DictionaryEntry]
     private var recentEdits: [RecentEdit] { RecentEditStore.items }
 
     @State private var showingAddFigure = false
@@ -77,6 +78,7 @@ struct DashboardView: View {
             StatCard(title: "Sources", count: sources.count, icon: "books.vertical", color: .red, action: { onNavigateTo?(.sources) })
             StatCard(title: "Relationships", count: relationships.count, icon: "link", color: .teal, action: { onNavigateTo?(.relationships) })
             StatCard(title: "Things", count: things.count, icon: "cube.box", color: .cyan, action: { onNavigateTo?(.things) })
+            StatCard(title: "Dictionary", count: entries.count, icon: "character.book.closed", color: .purple, action: { onNavigateTo?(.dictionary) })
         }
     }
 
@@ -205,13 +207,14 @@ struct DashboardView: View {
                             case "Place": onNavigateTo?(.places)
                             case "Event": onNavigateTo?(.events)
                             case "Thing": onNavigateTo?(.things)
+                            case "DictionaryEntry": onNavigateTo?(.dictionary)
                             default: break
                             }
                         } label: {
                             HStack(spacing: 8) {
-                                Image(systemName: edit.entityType == "Figure" ? "person.fill" : edit.entityType == "Place" ? "building.columns" : edit.entityType == "Event" ? "bolt.fill" : "cube.box")
+                                Image(systemName: edit.entityType == "Figure" ? "person.fill" : edit.entityType == "Place" ? "building.columns" : edit.entityType == "Event" ? "bolt.fill" : edit.entityType == "DictionaryEntry" ? "character.book.closed" : "cube.box")
                                     .font(.caption)
-                                    .foregroundStyle(edit.entityType == "Figure" ? .blue : edit.entityType == "Place" ? .green : edit.entityType == "Event" ? .orange : .cyan)
+                                    .foregroundStyle(edit.entityType == "Figure" ? .blue : edit.entityType == "Place" ? .green : edit.entityType == "Event" ? .orange : edit.entityType == "DictionaryEntry" ? .purple : .cyan)
                                     .frame(width: 16)
                                 Text(edit.entityName)
                                     .font(.subheadline)

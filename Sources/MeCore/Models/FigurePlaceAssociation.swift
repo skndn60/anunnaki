@@ -9,16 +9,19 @@ package final class FigurePlaceAssociation {
     package var place: Place?
     package var roleType: FigurePlaceRoleType?
     package var source: String
+    package var comments: String?
 
     package init(
         figure: Figure? = nil,
         place: Place? = nil,
         roleType: FigurePlaceRoleType? = nil,
-        source: String = ""
+        source: String = "",
+        comments: String? = nil
     ) {
         self.figure = figure
         self.place = place
         self.roleType = roleType
         self.source = source
+        self.comments = comments
     }
 }

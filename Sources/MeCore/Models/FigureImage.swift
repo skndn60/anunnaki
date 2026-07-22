@@ -10,6 +10,7 @@ package final class ImageAsset {
     package var filename: String
     package var caption: String
     package var source: String
+    package var imageDescription: String = ""
 
     @Relationship(deleteRule: .nullify, inverse: \Tag.images)
     package var tags: [Tag] = []
@@ -21,7 +22,8 @@ package final class ImageAsset {
         things: [Thing] = [],
         filename: String = "",
         caption: String = "",
-        source: String = ""
+        source: String = "",
+        imageDescription: String = ""
     ) {
         self.figures = figures
         self.places = places
@@ -30,6 +32,7 @@ package final class ImageAsset {
         self.filename = filename
         self.caption = caption
         self.source = source
+        self.imageDescription = imageDescription
         self.tags = []
     }
 

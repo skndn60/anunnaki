@@ -290,6 +290,7 @@ struct AddFigurePlaceAssociationForm: View {
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var source = ""
+    @State private var comments = ""
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
 
@@ -449,6 +450,10 @@ struct AddFigurePlaceAssociationForm: View {
                 Section("Source") {
                     TextField("Source", text: $source)
                 }
+
+                Section("Comments") {
+                    TextField("e.g. first antediluvian king", text: $comments)
+                }
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -458,11 +463,11 @@ struct AddFigurePlaceAssociationForm: View {
                 Button("Add") { save() }.keyboardShortcut(.defaultAction).disabled(selectedFigure == nil || selectedPlace == nil)
             }.padding()
         }
-        .frame(width: 450, height: 520)
+        .frame(width: 450, height: 540)
     }
 
     private func save() {
-        let assoc = FigurePlaceAssociation(figure: selectedFigure, place: selectedPlace, roleType: selectedRoleType, source: source)
+        let assoc = FigurePlaceAssociation(figure: selectedFigure, place: selectedPlace, roleType: selectedRoleType, source: source, comments: comments.isEmpty ? nil : comments)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -690,6 +695,7 @@ struct EditFigurePlaceAssociationForm: View {
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var source = ""
+    @State private var comments = ""
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
 
@@ -845,9 +851,12 @@ struct EditFigurePlaceAssociationForm: View {
                         }
                     }
                 }
-
                 Section("Source") {
                     TextField("Source", text: $source)
+                }
+
+                Section("Comments") {
+                    TextField("e.g. first antediluvian king", text: $comments)
                 }
             }
             .formStyle(.grouped)
@@ -857,13 +866,15 @@ struct EditFigurePlaceAssociationForm: View {
                 Spacer()
                 Button("Save") { save() }.keyboardShortcut(.defaultAction)
             }.padding()
+
         }
-        .frame(width: 450, height: 520)
+        .frame(width: 450, height: 560)
         .onAppear {
             selectedFigure = assoc.figure
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
             source = assoc.source
+            comments = assoc.comments ?? ""
         }
     }
 
@@ -872,6 +883,7 @@ struct EditFigurePlaceAssociationForm: View {
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
         assoc.source = source
+        assoc.comments = comments.isEmpty ? nil : comments
         dismiss()
     }
 }

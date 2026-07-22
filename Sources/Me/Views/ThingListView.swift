@@ -43,24 +43,14 @@ struct ThingListView: View {
     }
 
     private var groupedThings: [(key: String, things: [Thing])] {
-        let sorted = filteredThings
-        if sorted.isEmpty { return [] }
-        var groups: [(key: String, things: [Thing])] = []
-        var currentKey: String?
-        for thing in sorted {
-            let key: String = {
-                switch sortOrder {
-                case .name: return String(sortName(for: thing.name).uppercased().prefix(1))
-                case .source: return thing.source.isEmpty ? "?" : thing.source
-                }
-            }()
-            if key != currentKey {
-                groups.append((key: key, things: []))
-                currentKey = key
+        Dictionary(grouping: filteredThings) { thing in
+            switch sortOrder {
+            case .name: String(sortName(for: thing.name).uppercased().prefix(1))
+            case .source: thing.source.isEmpty ? "?" : thing.source
             }
-            groups[groups.count - 1].things.append(thing)
         }
-        return groups
+        .sorted { $0.key < $1.key }
+        .map { (key: $0.key, things: $0.value) }
     }
 
     private var selectedThing: Thing? {
@@ -154,7 +144,7 @@ struct ThingListView: View {
 
             Group {
                 if let thing = selectedThing {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
                             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
@@ -187,6 +177,7 @@ struct ThingListView: View {
                         )
                     }
                     .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
                 }
             }
@@ -308,7 +299,7 @@ struct ThingDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 20) {
                 HStack(spacing: 8) {
                     if let type = thing.thingType {
                         Image(systemName: type.icon)
@@ -442,7 +433,8 @@ struct ThingDetailView: View {
 
                 Spacer()
             }
-            .padding()
+            .padding(20)
+            .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }

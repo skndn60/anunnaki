@@ -399,7 +399,7 @@ package struct VersionManager {
             let evtIds = image.events.compactMap { eventIds[$0.persistentModelID.hashValue.description] }
             let thgIds = image.things.compactMap { thingIds[$0.persistentModelID.hashValue.description] }
             root.imageAssets = (root.imageAssets ?? []) + [
-                SeedImageAsset(id: id, filename: image.filename, caption: image.caption, source: image.source, figureIds: figIds, placeIds: plcIds, eventIds: evtIds, thingIds: thgIds)
+                SeedImageAsset(id: id, filename: image.filename, caption: image.caption, source: image.source, imageDescription: image.imageDescription, figureIds: figIds, placeIds: plcIds, eventIds: evtIds, thingIds: thgIds)
             ]
         }
 

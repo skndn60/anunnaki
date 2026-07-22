@@ -14,6 +14,7 @@ final class NavigationCoordinator {
     var pendingPlaceID: PersistentIdentifier?
     var pendingEventID: PersistentIdentifier?
     var pendingThingID: PersistentIdentifier?
+    var pendingLineageFigureID: PersistentIdentifier?
     var history: [NavigationBreadcrumb] = []
 
     func navigateToFigure(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
@@ -40,6 +41,17 @@ final class NavigationCoordinator {
         selectedItem = .things
     }
 
+    func navigateToLineageFigure(_ id: PersistentIdentifier) {
+        pendingLineageFigureID = id
+        selectedItem = .lineage
+    }
+
+    func consumePendingLineageFigureID() -> PersistentIdentifier? {
+        let id = pendingLineageFigureID
+        pendingLineageFigureID = nil
+        return id
+    }
+
     func navigateToHistory(at index: Int) {
         guard index < history.count else { return }
         let entry = history[index]
@@ -49,6 +61,7 @@ final class NavigationCoordinator {
         case .places: navigateToPlace(entry.id, recordHistory: false)
         case .events: navigateToEvent(entry.id, recordHistory: false)
         case .things: navigateToThing(entry.id, recordHistory: false)
+        case .lineage: navigateToLineageFigure(entry.id)
         default: break
         }
     }

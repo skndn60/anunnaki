@@ -41,9 +41,10 @@ struct SumerianKingEventListView: View {
 
             Group {
                 if let event = selectedEvent {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     detailPanel(event: event)
                     .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
                 }
             }

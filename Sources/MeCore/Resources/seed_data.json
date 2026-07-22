@@ -20,8 +20,8 @@
     },
     {
       "name": "Age of the First Gods",
-      "orderIndex": 1,
-      "eraDescription": "The great gods emerged — Anu took the heavens, Enlil the earth, Enki the waters.",
+      "orderIndex": 2,
+      "eraDescription": "The great gods emerged \u2014 Anu took the heavens, Enlil the earth, Enki the waters.",
       "startDate": {
         "era": "Age of the First Gods",
         "isApproximate": true,
@@ -38,7 +38,7 @@
     },
     {
       "name": "Anunnaki on Earth",
-      "orderIndex": 2,
+      "orderIndex": 3,
       "eraDescription": "The Anunnaki descended to Earth, established cities, and began mining operations according to Sumerian texts.",
       "startDate": {
         "era": "Anunnaki on Earth",
@@ -56,7 +56,7 @@
     },
     {
       "name": "Creation of Mankind",
-      "orderIndex": 3,
+      "orderIndex": 4,
       "eraDescription": "Humans were created to relieve the gods of labor. Enki and Ninhursag fashioned mankind from clay.",
       "startDate": {
         "era": "Creation of Mankind",
@@ -74,7 +74,7 @@
     },
     {
       "name": "Antediluvian Period",
-      "orderIndex": 4,
+      "orderIndex": 5,
       "eraDescription": "The age of the antediluvian kings with impossibly long reigns, as recorded in the Sumerian King List.",
       "startDate": {
         "era": "Antediluvian Period",
@@ -92,7 +92,7 @@
     },
     {
       "name": "The Great Flood",
-      "orderIndex": 5,
+      "orderIndex": 7,
       "eraDescription": "Enlil sent the deluge to destroy mankind. Ziusudra survived by building an ark on Enki's warning.",
       "startDate": {
         "era": "The Great Flood",
@@ -110,7 +110,7 @@
     },
     {
       "name": "Post-Flood Kingdoms",
-      "orderIndex": 6,
+      "orderIndex": 8,
       "eraDescription": "Kingship descended from heaven again. The dynasties of Kish, Uruk, and Ur arose.",
       "startDate": {
         "era": "Post-Flood Kingdoms",
@@ -128,7 +128,7 @@
     },
     {
       "name": "Early Dynastic Period",
-      "orderIndex": 7,
+      "orderIndex": 9,
       "eraDescription": "Historical kings emerge alongside legendary ones. Gilgamesh rules Uruk. The gods still intervene directly.",
       "startDate": {
         "era": "Early Dynastic Period",
@@ -146,8 +146,8 @@
     },
     {
       "id": "fc73cd4a-328c-523f-ab3d-e87e447e59e5",
-      "name": "Antediluvian",
-      "orderIndex": 8,
+      "name": "SKL Antediluvian",
+      "orderIndex": 6,
       "eraDescription": "The mythical kings who ruled before the Great Flood, with reigns lasting tens of thousands of years.",
       "startDate": {
         "era": "Antediluvian",
@@ -165,7 +165,7 @@
     {
       "id": "4c31f203-aeb7-5c8d-85d8-857047eac817",
       "name": "First dynasty of Kish",
-      "orderIndex": 9,
+      "orderIndex": 11,
       "eraDescription": "The first dynasty to receive kingship after the Flood according to the Sumerian King List.",
       "startDate": {
         "era": "First dynasty of Kish",
@@ -183,7 +183,7 @@
     {
       "id": "4d57c8a6-3a33-53ce-8529-f59a42c19120",
       "name": "First rulers of Uruk",
-      "orderIndex": 10,
+      "orderIndex": 12,
       "eraDescription": "The early rulers of Uruk, including the legendary Mesh-ki-ang-gasher, Enmerkar, and Lugalbanda.",
       "startDate": {
         "era": "First rulers of Uruk",
@@ -201,7 +201,7 @@
     {
       "id": "04410cbf-c08f-5eba-bf18-aa1a54e83af7",
       "name": "First dynasty of Ur",
-      "orderIndex": 11,
+      "orderIndex": 13,
       "eraDescription": "The first dynasty of the city of Ur, including Mesh-Ane-pada.",
       "startDate": {
         "era": "First dynasty of Ur",
@@ -219,7 +219,7 @@
     {
       "id": "35aae4f0-b1ab-5867-8e91-8d293a0bc4d1",
       "name": "Dynasty of Awan",
-      "orderIndex": 12,
+      "orderIndex": 14,
       "eraDescription": "An Elamite dynasty from the region of Awan that briefly held kingship.",
       "startDate": {
         "era": "Dynasty of Awan",
@@ -237,7 +237,7 @@
     {
       "id": "a4c5f7da-3227-50f9-967e-6113903dc378",
       "name": "Second dynasty of Kish",
-      "orderIndex": 13,
+      "orderIndex": 15,
       "eraDescription": "The second dynasty of Kish, including rulers with epithets like 'the fuller' and 'the boatman'.",
       "startDate": {
         "era": "Second dynasty of Kish",
@@ -255,7 +255,7 @@
     {
       "id": "b938535b-f2af-50c0-9edc-5fd5e536097e",
       "name": "Dynasty of Hamazi",
-      "orderIndex": 14,
+      "orderIndex": 16,
       "eraDescription": "A dynasty from the city of Hamazi in the Zagros region.",
       "startDate": {
         "era": "Dynasty of Hamazi",
@@ -273,7 +273,7 @@
     {
       "id": "11c6593d-8c9d-5496-a304-4dda7a247d3d",
       "name": "Second dynasty of Uruk",
-      "orderIndex": 15,
+      "orderIndex": 17,
       "eraDescription": "The second dynasty of Uruk, including En-shag-kush-ana.",
       "startDate": {
         "era": "Second dynasty of Uruk",
@@ -291,7 +291,7 @@
     {
       "id": "fc7021ca-bbd5-52a7-91c0-7f98bef94df8",
       "name": "Second dynasty of Ur",
-      "orderIndex": 16,
+      "orderIndex": 18,
       "eraDescription": "The second dynasty of Ur, including Nanni and his son Mesh-ki-ang-Nanna.",
       "startDate": {
         "era": "Second dynasty of Ur",
@@ -309,7 +309,7 @@
     {
       "id": "5f5c11e5-4891-57c6-9e0e-eae386d96f4d",
       "name": "Dynasty of Adab",
-      "orderIndex": 17,
+      "orderIndex": 19,
       "eraDescription": "The dynasty of the city of Adab, including Lugal-Ane-mundu.",
       "startDate": {
         "era": "Dynasty of Adab",
@@ -327,7 +327,7 @@
     {
       "id": "71b1658a-4f36-5af6-b112-d61d09e13651",
       "name": "Dynasty of Mari",
-      "orderIndex": 18,
+      "orderIndex": 20,
       "eraDescription": "The dynasty of the city of Mari, including Anbu, Anba, Bazi, and others.",
       "startDate": {
         "era": "Dynasty of Mari",
@@ -345,7 +345,7 @@
     {
       "id": "14e0dd0a-49ac-50d1-b8cd-832107a41ad2",
       "name": "Third dynasty of Kish",
-      "orderIndex": 19,
+      "orderIndex": 21,
       "eraDescription": "The third dynasty of Kish, including the only woman on the King List: Kug-Bau.",
       "startDate": {
         "era": "Third dynasty of Kish",
@@ -363,7 +363,7 @@
     {
       "id": "1080065d-0c35-5c87-9771-de6f73e5ddec",
       "name": "Dynasty of Akshak",
-      "orderIndex": 20,
+      "orderIndex": 22,
       "eraDescription": "The dynasty of the city of Akshak, including Puzur-Nirah and Shu-Suen.",
       "startDate": {
         "era": "Dynasty of Akshak",
@@ -381,7 +381,7 @@
     {
       "id": "cb24fb74-33f8-523e-9c2d-46bdebc0dd56",
       "name": "Fourth dynasty of Kish",
-      "orderIndex": 21,
+      "orderIndex": 23,
       "eraDescription": "The fourth dynasty of Kish, including Puzur-Suen and Ur-Zababa. Sargon was Ur-Zababa's cup-bearer.",
       "startDate": {
         "era": "Fourth dynasty of Kish",
@@ -399,7 +399,7 @@
     {
       "id": "c1e06b3f-a52a-53e9-aead-582bf3fca112",
       "name": "Third dynasty of Uruk",
-      "orderIndex": 22,
+      "orderIndex": 24,
       "eraDescription": "The third dynasty of Uruk, including Lugal-zage-si who ruled all of Sumer.",
       "startDate": {
         "era": "Third dynasty of Uruk",
@@ -417,7 +417,7 @@
     {
       "id": "32451bbc-b416-56e9-95cc-4698c3a46873",
       "name": "Dynasty of Akkad",
-      "orderIndex": 23,
+      "orderIndex": 25,
       "eraDescription": "The Akkadian Empire founded by Sargon, the first empire in history.",
       "startDate": {
         "era": "Dynasty of Akkad",
@@ -435,7 +435,7 @@
     {
       "id": "362d6672-b513-56fb-a749-3f5c93093b4d",
       "name": "Fourth dynasty of Uruk",
-      "orderIndex": 24,
+      "orderIndex": 26,
       "eraDescription": "The fourth dynasty of Uruk, including Ur-nigin, Ur-gigir, and Ur-Utu.",
       "startDate": {
         "era": "Fourth dynasty of Uruk",
@@ -453,7 +453,7 @@
     {
       "id": "6a0c3e6d-3335-5a4a-ad8b-98e320c5dbc2",
       "name": "Gutian rule",
-      "orderIndex": 25,
+      "orderIndex": 27,
       "eraDescription": "The rule of Gutian kings from the Zagros mountains over Mesopotamia.",
       "startDate": {
         "era": "Gutian rule",
@@ -471,7 +471,7 @@
     {
       "id": "40cb5f62-312e-5ec2-a5e3-485bd5fec711",
       "name": "Fifth dynasty of Uruk",
-      "orderIndex": 26,
+      "orderIndex": 28,
       "eraDescription": "The fifth dynasty of Uruk, including Utu-hengal who drove out the Gutians.",
       "startDate": {
         "era": "Fifth dynasty of Uruk",
@@ -489,7 +489,7 @@
     {
       "id": "9404d81f-0343-5dc5-8e58-b3e2e60ccbd6",
       "name": "Third dynasty of Ur",
-      "orderIndex": 27,
+      "orderIndex": 29,
       "eraDescription": "The Neo-Sumerian Ur III empire, including Ur-Namma, Shulgi, and Shu-Suen.",
       "startDate": {
         "era": "Third dynasty of Ur",
@@ -507,7 +507,7 @@
     {
       "id": "e49f705a-13a6-54ad-8afe-a876dc4f4728",
       "name": "Dynasty of Isin",
-      "orderIndex": 28,
+      "orderIndex": 30,
       "eraDescription": "The Isin dynasty that ruled after the fall of Ur, including Ishbi-Erra and Lipit-Eshtar.",
       "startDate": {
         "era": "Dynasty of Isin",
@@ -525,7 +525,7 @@
     {
       "id": "11a99bd9-8446-48ed-a72b-8c18dc4ded7d",
       "name": "Age of the Watchers",
-      "orderIndex": 0,
+      "orderIndex": 1,
       "eraDescription": "The antediluvian age when 200 Watcher angels descended on Mount Hermon, took human wives, fathered the Nephilim, and taught humanity forbidden knowledge. Ended with the Great Flood as divine judgment.",
       "startDate": {
         "era": "Before the Flood",
@@ -3009,7 +3009,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Uruk. Reigned 25 years. c. 2296–2271 BC (short)",
+      "figureDescription": "Ruler from the Third dynasty of Uruk. Reigned 25 years. c. 2296\u20132271 BC (short)",
       "birthDate": {
         "era": "Third dynasty of Uruk",
         "isApproximate": true,
@@ -3032,7 +3032,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2270–2215 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2270\u20132215 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3055,7 +3055,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 9 years. c. 2214–2206 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 9 years. c. 2214\u20132206 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3078,7 +3078,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2205–2191 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2205\u20132191 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3101,7 +3101,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2190–2154 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2190\u20132154 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3124,7 +3124,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 24 years. c. 2153–2129 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 24 years. c. 2153\u20132129 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3147,7 +3147,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 21 years. c. 2125–2104 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 21 years. c. 2125\u20132104 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3170,7 +3170,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2104–2083 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2104\u20132083 BC (short)",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3745,7 +3745,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Fifth dynasty of Uruk. c. 2055–2048 BC (short)",
+      "figureDescription": "Ruler from the Fifth dynasty of Uruk. c. 2055\u20132048 BC (short)",
       "birthDate": {
         "era": "Fifth dynasty of Uruk",
         "isApproximate": true,
@@ -3768,7 +3768,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 18 years. c. 2047–2030 BC (short)",
+      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 18 years. c. 2047\u20132030 BC (short)",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3791,7 +3791,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 48 years. c. 2029–1982 BC (short)",
+      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 48 years. c. 2029\u20131982 BC (short)",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3814,7 +3814,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1981–1973 BC (short)",
+      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1981\u20131973 BC (short)",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3837,7 +3837,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1972–1964 BC (short)",
+      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1972\u20131964 BC (short)",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3860,7 +3860,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 24 years. c. 1963–1940 BC (short)",
+      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 24 years. c. 1963\u20131940 BC (short)",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3883,7 +3883,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 33 years. c. 1953–1920 BC (short)",
+      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 33 years. c. 1953\u20131920 BC (short)",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4436,7 +4436,7 @@
       "figureType": "Commander",
       "gender": "Male",
       "domain": "Astrology, Lightning Omens",
-      "figureDescription": "Taught the signs of lightning and astrology — fate-reading from the stars. Also known as Baraqijal, Barakel. Name means 'Lightning of God'.",
+      "figureDescription": "Taught the signs of lightning and astrology \u2014 fate-reading from the stars. Also known as Baraqijal, Barakel. Name means 'Lightning of God'.",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -4459,7 +4459,7 @@
       "figureType": "Commander",
       "gender": "Male",
       "domain": "Resolving Enchantments",
-      "figureDescription": "Taught the resolving of enchantments and the loosing of spells — counter-magic. Also known as Armers, Armumahel.",
+      "figureDescription": "Taught the resolving of enchantments and the loosing of spells \u2014 counter-magic. Also known as Armers, Armumahel.",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -4643,7 +4643,7 @@
       "figureType": "Commander",
       "gender": "Male",
       "domain": "Course of the Moon",
-      "figureDescription": "Taught the course of the moon — lunar calendrics and reading of lunar phases for omen purposes. Also known as Suriel, Sahriel, Saraquel.",
+      "figureDescription": "Taught the course of the moon \u2014 lunar calendrics and reading of lunar phases for omen purposes. Also known as Suriel, Sahriel, Saraquel.",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -4666,7 +4666,7 @@
       "figureType": "Commander",
       "gender": "Male",
       "domain": "Signs of the Sun",
-      "figureDescription": "Taught the signs of the sun — solar omens and solar calendrics. Once a guardian of Eden; serves as an aide to Archangel Uriel. Also known as Samshiel.",
+      "figureDescription": "Taught the signs of the sun \u2014 solar omens and solar calendrics. Once a guardian of Eden; serves as an aide to Archangel Uriel. Also known as Samshiel.",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -4689,7 +4689,7 @@
       "figureType": "Igigi",
       "gender": "Male",
       "domain": "Writing, Ink and Paper",
-      "figureDescription": "Taught mankind the art of writing with ink and paper, and the secrets of wisdom — the bitter and the sweet. His teaching transmitted literacy itself. (1 Enoch 69:8)",
+      "figureDescription": "Taught mankind the art of writing with ink and paper, and the secrets of wisdom \u2014 the bitter and the sweet. His teaching transmitted literacy itself. (1 Enoch 69:8)",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -4712,7 +4712,7 @@
       "figureType": "Igigi",
       "gender": "Male",
       "domain": "Weapons of Death",
-      "figureDescription": "Taught humanity all the blows of death — the full apparatus of warfare, expanding on Azazel's metallurgical teaching. (1 Enoch 69:6-7)",
+      "figureDescription": "Taught humanity all the blows of death \u2014 the full apparatus of warfare, expanding on Azazel's metallurgical teaching. (1 Enoch 69:6-7)",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -4735,7 +4735,7 @@
       "figureType": "Igigi",
       "gender": "Male",
       "domain": "Geomancy, Signs of the Earth",
-      "figureDescription": "Taught the signs of the earth — geomancy, the reading of terrestrial omens. Also known as Arakiel, Arkas, Sarquael.",
+      "figureDescription": "Taught the signs of the earth \u2014 geomancy, the reading of terrestrial omens. Also known as Arakiel, Arkas, Sarquael.",
       "birthDate": {
         "era": "Age of the Watchers",
         "isApproximate": true,
@@ -5560,7 +5560,12 @@
       "latitude": 30.816,
       "longitude": 45.996,
       "id": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
-      "foundedDate": {"startYear": -5500, "endYear": -5000, "era": "Pre-Sumerian", "isApproximate": true}
+      "foundedDate": {
+        "startYear": -5500,
+        "endYear": -5000,
+        "era": "Pre-Sumerian",
+        "isApproximate": true
+      }
     },
     {
       "name": "Uruk",
@@ -5571,7 +5576,12 @@
       "latitude": 31.322,
       "longitude": 45.637,
       "id": "81476542-a174-55cf-a47e-4032687cd00e",
-      "foundedDate": {"startYear": -4000, "endYear": -3100, "era": "Late Uruk", "isApproximate": true}
+      "foundedDate": {
+        "startYear": -4000,
+        "endYear": -3100,
+        "era": "Late Uruk",
+        "isApproximate": true
+      }
     },
     {
       "name": "Ur",
@@ -5582,7 +5592,11 @@
       "latitude": 30.963,
       "longitude": 46.103,
       "id": "3b898611-9e5b-563e-83e4-f2f430c225a4",
-      "foundedDate": {"startYear": -3800, "era": "Ubaid", "isApproximate": true}
+      "foundedDate": {
+        "startYear": -3800,
+        "era": "Ubaid",
+        "isApproximate": true
+      }
     },
     {
       "name": "Nippur",
@@ -5593,7 +5607,12 @@
       "latitude": 32.126,
       "longitude": 45.233,
       "id": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
-      "foundedDate": {"startYear": -5000, "endYear": -4500, "era": "Ubaid", "isApproximate": true}
+      "foundedDate": {
+        "startYear": -5000,
+        "endYear": -4500,
+        "era": "Ubaid",
+        "isApproximate": true
+      }
     },
     {
       "name": "Babylon",
@@ -5604,7 +5623,11 @@
       "latitude": 32.536,
       "longitude": 44.421,
       "id": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
-      "foundedDate": {"startYear": -2300, "era": "Old Babylonian", "isApproximate": true}
+      "foundedDate": {
+        "startYear": -2300,
+        "era": "Old Babylonian",
+        "isApproximate": true
+      }
     },
     {
       "name": "Kish",
@@ -5620,7 +5643,7 @@
       "name": "E-kur",
       "placeType": "Temple",
       "modernLocation": "Nippur, Iraq",
-      "placeDescription": "Temple of Enlil in Nippur. 'Mountain House' — the most important temple in Sumer.",
+      "placeDescription": "Temple of Enlil in Nippur. 'Mountain House' \u2014 the most important temple in Sumer.",
       "source": "Sumerian hymns",
       "latitude": 32.126,
       "longitude": 45.233,
@@ -6212,8 +6235,8 @@
       "sourceType": "Ancient Text",
       "author": "Unknown (attributed to Enoch; Second Temple period Jewish scribes)",
       "language": "Ge'ez (Ethiopic); original Aramaic fragments from Qumran",
-      "period": "3rd–1st century BCE (Book of the Watchers: ~300–200 BCE)",
-      "sourceDescription": "An ancient Jewish apocryphal work, fully preserved only in the Ethiopic Ge'ez canon of the Orthodox Tewahedo Church. The Book of the Watchers (chapters 1–36) describes the descent of 200 angelic Watchers to Mount Hermon, their taking of human wives, the birth of the Nephilim giants, and the forbidden knowledge they taught humanity. Aramaic fragments from Qumran Cave 4 confirm a pre-Christian origin.",
+      "period": "3rd\u20131st century BCE (Book of the Watchers: ~300\u2013200 BCE)",
+      "sourceDescription": "An ancient Jewish apocryphal work, fully preserved only in the Ethiopic Ge'ez canon of the Orthodox Tewahedo Church. The Book of the Watchers (chapters 1\u201336) describes the descent of 200 angelic Watchers to Mount Hermon, their taking of human wives, the birth of the Nephilim giants, and the forbidden knowledge they taught humanity. Aramaic fragments from Qumran Cave 4 confirm a pre-Christian origin.",
       "publicationInfo": "Multiple manuscripts: Ethiopic Ge'ez tradition; Aramaic fragments 4QEn ar (4Q201, 4Q202, 4Q204, 4Q206) from Qumran; Greek excerpts by George Syncellus",
       "url": "https://en.wikipedia.org/wiki/Book_of_Enoch"
     },
@@ -6241,11 +6264,11 @@
       "title": "Weld-Blundell Prism (Ashmolean Museum)",
       "url": "https://www.ashmolean.org/collections/weld-blundell-prism",
       "attachmentType": "Image/Photo",
-      "note": "Photo of the physical artifact — most complete copy",
+      "note": "Photo of the physical artifact \u2014 most complete copy",
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70"
     },
     {
-      "title": "The Epic of Gilgamesh — Full Text (Academy for Ancient Texts)",
+      "title": "The Epic of Gilgamesh \u2014 Full Text (Academy for Ancient Texts)",
       "url": "https://www.ancienttexts.org/library/mesopotamian/gilgamesh/",
       "attachmentType": "Online Text",
       "note": "Complete English translation of all twelve tablets",
@@ -6255,18 +6278,18 @@
       "title": "British Museum: Flood Tablet",
       "url": "https://www.britishmuseum.org/collection/object/W_1882-0918-1878",
       "attachmentType": "Database Entry",
-      "note": "Tablet XI — the flood narrative, BM K.3375",
+      "note": "Tablet XI \u2014 the flood narrative, BM K.3375",
       "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad"
     },
     {
-      "title": "Enuma Elish — Full Text (Sacred Texts)",
+      "title": "Enuma Elish \u2014 Full Text (Sacred Texts)",
       "url": "https://www.sacred-texts.com/ane/enuma.htm",
       "attachmentType": "Online Text",
       "note": "L.W. King translation of all seven tablets",
       "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba"
     },
     {
-      "title": "Atra-Hasis — Lambert & Millard Translation",
+      "title": "Atra-Hasis \u2014 Lambert & Millard Translation",
       "url": "https://www.ancienttexts.org/library/mesopotamian/atrahasis/",
       "attachmentType": "Online Text",
       "note": "Standard scholarly translation",
@@ -6297,14 +6320,14 @@
       "title": "ETCSL Home Page",
       "url": "https://etcsl.orinst.ox.ac.uk",
       "attachmentType": "Database Entry",
-      "note": "Main portal — searchable corpus of Sumerian literature",
+      "note": "Main portal \u2014 searchable corpus of Sumerian literature",
       "sourceId": "1cefe9d0-0f3a-5004-9c66-215403e328a8"
     },
     {
       "title": "Myths from Mesopotamia (Oxford World's Classics)",
       "url": "https://global.oup.com/academic/product/myths-from-mesopotamia-9780199538362",
       "attachmentType": "Article",
-      "note": "Publisher page — authoritative modern translations",
+      "note": "Publisher page \u2014 authoritative modern translations",
       "sourceId": "582d6b87-cead-5031-ba60-24307bac1201"
     }
   ],
@@ -7068,56 +7091,56 @@
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Third dynasty of Uruk. Reigned 25 years. c. 2296–2271 BC (short)",
+      "note": "Ruler from the Third dynasty of Uruk. Reigned 25 years. c. 2296\u20132271 BC (short)",
       "entityType": "Figure",
       "entityId": "Lugal-zage-si"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2270–2215 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2270\u20132215 BC (short)",
       "entityType": "Figure",
       "entityId": "Sargon of Akkad"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 9 years. c. 2214–2206 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 9 years. c. 2214\u20132206 BC (short)",
       "entityType": "Figure",
       "entityId": "Rimush"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2205–2191 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2205\u20132191 BC (short)",
       "entityType": "Figure",
       "entityId": "Manishtushu"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2190–2154 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2190\u20132154 BC (short)",
       "entityType": "Figure",
       "entityId": "Naram-Sin of Akkad"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 24 years. c. 2153–2129 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 24 years. c. 2153\u20132129 BC (short)",
       "entityType": "Figure",
       "entityId": "Shar-Kali-Sharri"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 21 years. c. 2125–2104 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 21 years. c. 2125\u20132104 BC (short)",
       "entityType": "Figure",
       "entityId": "Dudu of Akkad"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2104–2083 BC (short)",
+      "note": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2104\u20132083 BC (short)",
       "entityType": "Figure",
       "entityId": "Shu-Durul"
     },
@@ -7292,49 +7315,49 @@
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Fifth dynasty of Uruk. c. 2055–2048 BC (short)",
+      "note": "Ruler from the Fifth dynasty of Uruk. c. 2055\u20132048 BC (short)",
       "entityType": "Figure",
       "entityId": "Utu-hengal"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Third dynasty of Ur. Reigned 18 years. c. 2047–2030 BC (short)",
+      "note": "Ruler from the Third dynasty of Ur. Reigned 18 years. c. 2047\u20132030 BC (short)",
       "entityType": "Figure",
       "entityId": "Ur-Namma"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Third dynasty of Ur. Reigned 48 years. c. 2029–1982 BC (short)",
+      "note": "Ruler from the Third dynasty of Ur. Reigned 48 years. c. 2029\u20131982 BC (short)",
       "entityType": "Figure",
       "entityId": "Shulgi"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1981–1973 BC (short)",
+      "note": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1981\u20131973 BC (short)",
       "entityType": "Figure",
       "entityId": "Amar-Suena"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1972–1964 BC (short)",
+      "note": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1972\u20131964 BC (short)",
       "entityType": "Figure",
       "entityId": "Shu-Suen (Third dynasty of Ur)"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Third dynasty of Ur. Reigned 24 years. c. 1963–1940 BC (short)",
+      "note": "Ruler from the Third dynasty of Ur. Reigned 24 years. c. 1963\u20131940 BC (short)",
       "entityType": "Figure",
       "entityId": "Ibbi-Suen"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
-      "note": "Ruler from the Dynasty of Isin. Reigned 33 years. c. 1953–1920 BC (short)",
+      "note": "Ruler from the Dynasty of Isin. Reigned 33 years. c. 1953\u20131920 BC (short)",
       "entityType": "Figure",
       "entityId": "Ishbi-Erra"
     },
@@ -7523,7 +7546,7 @@
     {
       "sourceId": "6a8d0d4c-37e0-4962-b707-2e8249d0f7bc",
       "location": "1 Enoch 69:6-7",
-      "note": "Taught all blows of death — weapons of warfare",
+      "note": "Taught all blows of death \u2014 weapons of warfare",
       "entityType": "Figure",
       "entityId": "926930a5-1c43-4d2d-a224-99a77af5efbc"
     },
@@ -7561,7 +7584,7 @@
       "name": "Ptah",
       "tradition": "Egyptian",
       "nameType": "Syncretism",
-      "note": "Egyptian equivalent — god of craftsmen and creation",
+      "note": "Egyptian equivalent \u2014 god of craftsmen and creation",
       "figureId": "7d81b568-becf-5fab-a418-67f65640db59"
     },
     {
@@ -7589,7 +7612,7 @@
       "name": "An",
       "tradition": "Sumerian",
       "nameType": "Translation",
-      "note": "Sumerian form — literally 'heaven'",
+      "note": "Sumerian form \u2014 literally 'heaven'",
       "figureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982"
     },
     {
@@ -7603,7 +7626,7 @@
       "name": "Ishtar",
       "tradition": "Akkadian",
       "nameType": "Translation",
-      "note": "Akkadian equivalent — same goddess",
+      "note": "Akkadian equivalent \u2014 same goddess",
       "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574"
     },
     {
@@ -7666,7 +7689,7 @@
       "name": "Bel",
       "tradition": "Babylonian",
       "nameType": "Epithet",
-      "note": "Title meaning 'Lord' — became his primary name",
+      "note": "Title meaning 'Lord' \u2014 became his primary name",
       "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5"
     },
     {
@@ -7729,7 +7752,7 @@
       "name": "Adonis",
       "tradition": "Greek",
       "nameType": "Syncretism",
-      "note": "Greek equivalent — dying and rising god",
+      "note": "Greek equivalent \u2014 dying and rising god",
       "figureId": "846ba80d-6244-5db9-9f78-116574ad1203"
     },
     {
@@ -7771,7 +7794,7 @@
       "name": "Noah",
       "tradition": "Hebrew",
       "nameType": "Syncretism",
-      "note": "Hebrew flood survivor — parallel figure",
+      "note": "Hebrew flood survivor \u2014 parallel figure",
       "figureId": "e414973f-b10a-574c-a971-7016ab72e014"
     },
     {
@@ -7785,7 +7808,7 @@
       "name": "Tehom",
       "tradition": "Hebrew",
       "nameType": "Syncretism",
-      "note": "Hebrew 'deep' — cognate word in Genesis",
+      "note": "Hebrew 'deep' \u2014 cognate word in Genesis",
       "figureId": "32219e8f-af76-52f2-8d0e-abcef2c7ee4a"
     },
     {
@@ -7799,7 +7822,7 @@
       "name": "Thoth",
       "tradition": "Egyptian",
       "nameType": "Syncretism",
-      "note": "Egyptian god of writing — functional equivalent",
+      "note": "Egyptian god of writing \u2014 functional equivalent",
       "figureId": "436defeb-eb9d-5098-b520-33a9162892e1"
     },
     {
@@ -7820,7 +7843,7 @@
       "name": "Zarpanitu",
       "tradition": "Akkadian",
       "nameType": "Alternate Spelling",
-      "note": "Full Akkadian form — 'she of the shining city'",
+      "note": "Full Akkadian form \u2014 'she of the shining city'",
       "figureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f"
     },
     {

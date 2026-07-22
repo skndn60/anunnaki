@@ -70,7 +70,7 @@ package final class WikiClient {
     private let dataBase = "https://www.wikidata.org/wiki/Special:EntityData"
     private let wikidataAPI = URLComponents(string: "https://www.wikidata.org/w/api.php")!
 
-    package func search(query: String) async throws -> [WikiSearchResult] {
+    package func search(query: String, offset: Int = 0) async throws -> (results: [WikiSearchResult], nextOffset: Int?) {
         var components = wikiBase
         components.queryItems = [
             .init(name: "action", value: "query"),
@@ -81,9 +81,13 @@ package final class WikiClient {
             .init(name: "format", value: "json"),
             .init(name: "origin", value: "*"),
         ]
+        if offset > 0 {
+            components.queryItems!.append(.init(name: "sroffset", value: String(offset)))
+        }
         let (data, _) = try await session.data(from: components.url!)
         let envelope = try JSONDecoder().decode(SearchEnvelope.self, from: data)
-        return envelope.query.search
+        let nextOffset = envelope.continue?.sroffset
+        return (envelope.query.search, nextOffset)
     }
 
     package func fetchExtract(title: String) async throws -> String {
@@ -148,7 +152,9 @@ package final class WikiClient {
 
 private struct SearchEnvelope: Decodable {
     package struct Query: Decodable { let search: [WikiSearchResult] }
+    package struct Continue: Decodable { let sroffset: Int? }
     package let query: Query
+    package let `continue`: Continue?
 }
 
 private struct ExtractEnvelope: Decodable {

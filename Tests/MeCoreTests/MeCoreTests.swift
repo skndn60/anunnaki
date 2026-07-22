@@ -9,11 +9,18 @@ final class MeCoreTests: XCTestCase {
             Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self,
             Place.self, PlaceType.self, Event.self, EventType.self,
             Source.self, Citation.self, AlternateName.self, Attachment.self,
-             ImageAsset.self, FigurePlaceAssociation.self, FigurePlaceRoleType.self,
-             PlacePlaceAssociation.self, PlacePlaceRoleType.self,
-             EventEventAssociation.self, EventEventRoleType.self,
-             EventPlaceAssociation.self, EventPlaceRoleType.self,
-             DataVersion.self, Tag.self
+            ImageAsset.self, Tag.self, DataVersion.self,
+            FigurePlaceAssociation.self, FigurePlaceRoleType.self,
+            PlacePlaceAssociation.self, PlacePlaceRoleType.self,
+            EventEventAssociation.self, EventEventRoleType.self,
+            EventPlaceAssociation.self, EventPlaceRoleType.self,
+            StickyNote.self,
+            Thing.self, ThingType.self,
+            ThingFigureAssociation.self, ThingFigureRoleType.self,
+            ThingPlaceAssociation.self, ThingPlaceRoleType.self,
+            ThingEventAssociation.self, ThingEventRoleType.self,
+            Agent.self, CollectedDatum.self, BlindSpot.self,
+            BlockedSource.self, DictionaryEntry.self
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         do {
@@ -798,5 +805,238 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(sourcesAfter.count, sourceCountBefore)
         XCTAssertEqual(placesAfter.count, 4)
         XCTAssertEqual(eventsAfter.count, 5)
+    }
+
+    // MARK: - Test Fixture: Seeded Mini-Database
+
+    private struct TestFixture {
+        let container: ModelContainer
+        let context: ModelContext
+        let engine: QueryEngine
+
+        let enki: Figure
+        let enlil: Figure
+        let ninhursag: Figure
+        let marduk: Figure
+        let tiamat: Figure
+        let nabu: Figure
+
+        let fatherType: RelationshipType
+        let motherType: RelationshipType
+        let spouseType: RelationshipType
+        let siblingType: RelationshipType
+        let creatorType: RelationshipType
+
+        let uruk: Place
+        let eridu: Place
+
+        let creationEvent: Event
+    }
+
+    private func makeFixture() -> TestFixture {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let fatherType = RelationshipType(name: "Father", icon: "arrow.down", colorHex: "007AFF", category: "parent")
+        let motherType = RelationshipType(name: "Mother", icon: "arrow.down", colorHex: "FF2D55", category: "parent")
+        let spouseType = RelationshipType(name: "Spouse", icon: "heart", colorHex: "FF3B30", category: "partner")
+        let siblingType = RelationshipType(name: "Sibling", icon: "arrow.left.arrow.right", colorHex: "FF9500", category: "sibling")
+        let creatorType = RelationshipType(name: "Creator", icon: "wand.and.stars", colorHex: "AF52DE", category: "creator")
+        for t in [fatherType, motherType, spouseType, siblingType, creatorType] { context.insert(t) }
+
+        let enki = Figure(name: "Enki", gender: .male, domain: "Wisdom", figureDescription: "God of freshwater and wisdom")
+        let enlil = Figure(name: "Enlil", gender: .male, domain: "Air", figureDescription: "God of wind and storms")
+        let ninhursag = Figure(name: "Ninhursag", gender: .female, domain: "Earth", figureDescription: "Mother goddess")
+        let marduk = Figure(name: "Marduk", gender: .male, domain: "Order", figureDescription: "King of the gods")
+        let tiamat = Figure(name: "Tiamat", gender: .female, domain: "Salt water", figureDescription: "Primordial goddess of the sea")
+        let nabu = Figure(name: "Nabu", gender: .male, domain: "Writing", figureDescription: "God of writing and scribes")
+        for f in [enki, enlil, ninhursag, marduk, tiamat, nabu] { context.insert(f) }
+
+        let altName = AlternateName(figure: enki, name: "Nudimmud", tradition: .akkadian, nameType: .epithet)
+        context.insert(altName)
+
+        let uruk = Place(name: "Uruk", modernLocation: "Iraq")
+        let eridu = Place(name: "Eridu", modernLocation: "Iraq")
+        for p in [uruk, eridu] { context.insert(p) }
+
+        let creationEvent = Event(name: "Creation of Humanity", era: "Primordial", involvedFigures: [enki, tiamat])
+        context.insert(creationEvent)
+
+        // Relationships
+        let r1 = Relationship(fromFigure: enlil, toFigure: enki, relationshipType: fatherType, source: "test")
+        let r2 = Relationship(fromFigure: ninhursag, toFigure: enki, relationshipType: motherType, source: "test")
+        let r3 = Relationship(fromFigure: enlil, toFigure: ninhursag, relationshipType: spouseType, source: "test")
+        let r4 = Relationship(fromFigure: enki, toFigure: marduk, relationshipType: fatherType, source: "test")
+        let r5 = Relationship(fromFigure: tiamat, toFigure: marduk, relationshipType: motherType, source: "test")
+        let r6 = Relationship(fromFigure: marduk, toFigure: nabu, relationshipType: siblingType, source: "test")
+        let r7 = Relationship(fromFigure: tiamat, toFigure: marduk, relationshipType: creatorType, source: "test")
+        for r in [r1, r2, r3, r4, r5, r6, r7] { context.insert(r) }
+
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+
+        return TestFixture(
+            container: container, context: context, engine: engine,
+            enki: enki, enlil: enlil, ninhursag: ninhursag,
+            marduk: marduk, tiamat: tiamat, nabu: nabu,
+            fatherType: fatherType, motherType: motherType,
+            spouseType: spouseType, siblingType: siblingType, creatorType: creatorType,
+            uruk: uruk, eridu: eridu,
+            creationEvent: creationEvent
+        )
+    }
+
+    // MARK: - resolve* Tests
+
+    func testResolveFigureExact() {
+        let f = makeFixture()
+        let result = f.engine.query("Enki")
+        guard case .figure(let dossier) = result else {
+            return XCTFail("Expected .figure, got \(result)")
+        }
+        XCTAssertEqual(dossier.figure.name, "Enki")
+    }
+
+    func testResolveFigureCaseInsensitive() {
+        let f = makeFixture()
+        let result = f.engine.query("enki")
+        guard case .figure(let dossier) = result else {
+            return XCTFail("Expected .figure, got \(result)")
+        }
+        XCTAssertEqual(dossier.figure.name, "Enki")
+    }
+
+    func testResolveFigurePartial() {
+        let f = makeFixture()
+        let result = f.engine.query("enk")
+        guard case .figure(let dossier) = result else {
+            return XCTFail("Expected .figure, got \(result)")
+        }
+        XCTAssertEqual(dossier.figure.name, "Enki")
+    }
+
+    func testResolveFigureNoMatch() {
+        let f = makeFixture()
+        let result = f.engine.query("zzznonexistent")
+        guard case .noMatch = result else {
+            return XCTFail("Expected .noMatch, got \(result)")
+        }
+    }
+
+    func testResolveFigureAlternateName() {
+        let f = makeFixture()
+        let result = f.engine.query("Nudimmud")
+        guard case .figure(let dossier) = result else {
+            return XCTFail("Expected .figure, got \(result)")
+        }
+        XCTAssertEqual(dossier.figure.name, "Enki")
+    }
+
+    func testResolvePlaceExact() {
+        let f = makeFixture()
+        let result = f.engine.query("Uruk")
+        guard case .place(let dossier) = result else {
+            return XCTFail("Expected .place, got \(result)")
+        }
+        XCTAssertEqual(dossier.place.name, "Uruk")
+    }
+
+    func testResolvePlaceNoMatch() {
+        let f = makeFixture()
+        let result = f.engine.query("Atlantis")
+        guard case .noMatch = result else {
+            return XCTFail("Expected .noMatch, got \(result)")
+        }
+    }
+
+    func testResolveEventExact() {
+        let f = makeFixture()
+        let result = f.engine.query("Creation of Humanity")
+        guard case .event(let dossier) = result else {
+            return XCTFail("Expected .event, got \(result)")
+        }
+        XCTAssertEqual(dossier.event.name, "Creation of Humanity")
+    }
+
+    // MARK: - find* Tests
+
+    func testFindChildren() {
+        let f = makeFixture()
+        let result = f.engine.query("Enlil's children")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        let names = figures.map(\.name)
+        XCTAssertTrue(names.contains("Enki"), "Enlil should be father of Enki")
+    }
+
+    func testFindChildrenNone() {
+        let f = makeFixture()
+        let result = f.engine.query("Nabu's children")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        XCTAssertTrue(figures.isEmpty, "Nabu has no children")
+    }
+
+    func testFindParents() {
+        let f = makeFixture()
+        let result = f.engine.query("Enki's parents")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        let names = figures.map(\.name)
+        XCTAssertTrue(names.contains("Enlil"), "Enki's father should be Enlil")
+        XCTAssertTrue(names.contains("Ninhursag"), "Enki's mother should be Ninhursag")
+    }
+
+    func testFindParentsNone() {
+        let f = makeFixture()
+        let result = f.engine.query("Enlil's parents")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        XCTAssertTrue(figures.isEmpty, "Enlil has no parents in test data")
+    }
+
+    func testFindSpouses() {
+        let f = makeFixture()
+        let result = f.engine.query("Enlil's spouse")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        let names = figures.map(\.name)
+        XCTAssertTrue(names.contains("Ninhursag"), "Enlil's spouse should be Ninhursag")
+    }
+
+    func testFindSiblings() {
+        let f = makeFixture()
+        let result = f.engine.query("Marduk's siblings")
+        guard case .figureListAnnotated(_, let annotated) = result else {
+            return XCTFail("Expected .figureListAnnotated, got \(result)")
+        }
+        let names = annotated.map { $0.0.name }
+        XCTAssertTrue(names.contains("Nabu"), "Marduk's sibling should be Nabu")
+    }
+
+    func testFindCreators() {
+        let f = makeFixture()
+        let result = f.engine.query("creators of Marduk")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        let names = figures.map(\.name)
+        XCTAssertTrue(names.contains("Tiamat"), "Tiamat created Marduk")
+    }
+
+    func testFindCreations() {
+        let f = makeFixture()
+        let result = f.engine.query("creations of Tiamat")
+        guard case .figureList(_, let figures) = result else {
+            return XCTFail("Expected .figureList, got \(result)")
+        }
+        let names = figures.map(\.name)
+        XCTAssertTrue(names.contains("Marduk"), "Tiamat created Marduk")
     }
 }

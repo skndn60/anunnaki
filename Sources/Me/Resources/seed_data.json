@@ -5072,6 +5072,52 @@
       "source": "Book of Enoch (1 Enoch)",
       "id": "B3F7A9CB-C830-4F7A-B90E-CDDD746C9634",
       "disambiguation": ""
+    },
+    {
+      "name": "Duttur",
+      "title": "Ewe Goddess, Mother of Dumuzi",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Sheep, Motherhood",
+      "figureDescription": "Ewe goddess, mother of Dumuzi and Geshtinanna.",
+      "birthDate": {
+        "era": "Age of the First Gods",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Sumerian mythology",
+      "id": "4ECA13D2-5FE6-42CB-A59C-0E0CDAA09E38",
+      "disambiguation": ""
+    },
+    {
+      "name": "Geshtinanna",
+      "title": "Divine Scribe, Sister of Dumuzi",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Vegetation, Dreams, Scribes",
+      "figureDescription": "Goddess of vegetation and dreams. Sister of Dumuzi who searched for him when he was taken to the underworld.",
+      "birthDate": {
+        "era": "Age of the First Gods",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Inanna's Descent, Dumuzi's Dream",
+      "id": "00FB57EE-5263-470B-901A-385FE70633A6",
+      "disambiguation": ""
     }
   ],
   "relationships": [

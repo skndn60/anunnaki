@@ -140,6 +140,7 @@ struct NetworkGraphView: View {
     @Query private var figurePlaceAssociations: [FigurePlaceAssociation]
     @Query private var eventPlaceAssociations: [EventPlaceAssociation]
     @Query private var eventEventAssociations: [EventEventAssociation]
+    @Query private var figureTypes: [FigureType]
 
     @State private var nodes: [GraphNode] = []
     @State private var edges: [GraphEdge] = []
@@ -405,16 +406,11 @@ struct NetworkGraphView: View {
 
     private var legend: some View {
         HStack(spacing: 16) {
-            ForEach(GraphNode.NodeType.allCases, id: \.self) { type in
-                HStack(spacing: 4) {
-                    Circle()
-                        .fill(type.color)
-                        .frame(width: 8, height: 8)
-                    Text(type.rawValue)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            legendItem(color: figureTypeColor("Deity") ?? .blue, label: "Deity")
+            legendItem(color: figureTypeColor("Human") ?? .green, label: "Human")
+            legendItem(color: figureTypeColor("Igigi") ?? .purple, label: "Igigi/Watchers")
+            legendItem(color: GraphNode.NodeType.place.color, label: "Places")
+            legendItem(color: GraphNode.NodeType.event.color, label: "Events")
             Spacer()
             Text("\(filteredNodes.count) nodes \u{00B7} \(filteredEdgesCount) edges")
                 .font(.caption)
@@ -422,6 +418,21 @@ struct NetworkGraphView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+    }
+
+    private func legendItem(color: Color, label: String) -> some View {
+        HStack(spacing: 4) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func figureTypeColor(_ name: String) -> Color? {
+        figureTypes.first { $0.name == name }?.color
     }
 
     // MARK: - Side Panel

@@ -40,9 +40,10 @@ struct SumerianKingPlaceListView: View {
 
             Group {
                 if let place = selectedPlace {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     detailPanel(place: place)
                     .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
                 }
             }

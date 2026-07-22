@@ -12,6 +12,7 @@ struct ResizableDivider: View {
         Rectangle()
             .fill(Color.secondary.opacity(0.15))
             .frame(width: 4)
+            .onAppear { dragStartWidth = width }
             .onHover { hovering in
                 if hovering { NSCursor.resizeLeftRight.push() }
                 else { NSCursor.pop() }
@@ -19,7 +20,8 @@ struct ResizableDivider: View {
             .gesture(
                 DragGesture(minimumDistance: 5)
                     .onChanged { value in
-                        width = min(max(range.lowerBound, dragStartWidth - value.translation.width), range.upperBound)
+                        let newWidth = min(max(range.lowerBound, dragStartWidth - value.translation.width), range.upperBound)
+                        withAnimation(.none) { width = newWidth }
                     }
                     .onEnded { _ in
                         dragStartWidth = width

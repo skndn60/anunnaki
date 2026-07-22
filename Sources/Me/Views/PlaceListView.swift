@@ -45,23 +45,14 @@ struct PlaceListView: View {
     }
 
     private var groupedPlaces: [(key: String, places: [Place])] {
-        let sorted = sortedPlaces
-        var groups: [(key: String, places: [Place])] = []
-        var currentKey: String?
-        for place in sorted {
-            let key: String = {
-                switch sortOrder {
-                case .name: return String(sortName(for: place.name).uppercased().prefix(1))
-                case .type: return place.placeType?.name ?? "?"
-                }
-            }()
-            if key != currentKey {
-                groups.append((key: key, places: []))
-                currentKey = key
+        Dictionary(grouping: sortedPlaces) { place in
+            switch sortOrder {
+            case .name: String(sortName(for: place.name).uppercased().prefix(1))
+            case .type: place.placeType?.name ?? "?"
             }
-            groups[groups.count - 1].places.append(place)
         }
-        return groups
+        .sorted { $0.key < $1.key }
+        .map { (key: $0.key, places: $0.value) }
     }
 
     private func selectPlace(_ id: PersistentIdentifier) {
@@ -136,7 +127,7 @@ struct PlaceListView: View {
 
             Group {
                 if let place = selectedPlace {
-                    ResizableDivider(width: $detailWidth, range: 200...800)
+                    // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
                         HStack(spacing: 8) {
                             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
@@ -174,6 +165,7 @@ struct PlaceListView: View {
                         )
                     }
                     .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
                 }
             }

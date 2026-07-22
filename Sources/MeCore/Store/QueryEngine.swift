@@ -8,6 +8,7 @@ package enum QueryResult {
     case place(PlaceDossier)
     case event(EventDossier)
     case figureList(String, [Figure])
+    case figureListAnnotated(String, [(Figure, String?)])
     case eventList(String, [Event])
     case placeList(String, [Place])
     case thing(Thing)
@@ -27,6 +28,21 @@ package class QueryEngine {
         case thing(Thing)
     }
     private let context: ModelContext
+
+    private struct QueryCache {
+        let figures: [Figure]
+        let places: [Place]
+        let events: [Event]
+        let things: [Thing]
+        let relationships: [Relationship]
+        let alternateNames: [AlternateName]
+        let sources: [Source]
+        let eras: [Era]
+        let figureTypes: [FigureType]
+        let images: [ImageAsset]
+    }
+
+    private var cache: QueryCache?
 
     package init(context: ModelContext) {
         self.context = context
@@ -129,6 +145,22 @@ package class QueryEngine {
     package func query(_ input: String) -> QueryResult {
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
+        cache = QueryCache(
+            figures: context.fetchAll() as [Figure],
+            places: context.fetchAll() as [Place],
+            events: context.fetchAll() as [Event],
+            things: context.fetchAll() as [Thing],
+            relationships: context.fetchAll() as [Relationship],
+            alternateNames: context.fetchAll() as [AlternateName],
+            sources: context.fetchAll() as [Source],
+            eras: context.fetchAll() as [Era],
+            figureTypes: context.fetchAll() as [FigureType],
+            images: context.fetchAll() as [ImageAsset]
+        )
+
+        defer { cache = nil }
+
+        if let result = matchYesNoQuery(text) { return result }
         if let result = matchFigureRelationPossessive(text) { return result }
         if let result = matchPlacePossessive(text) { return result }
         if let result = matchEventPossessive(text) { return result }
@@ -201,9 +233,6 @@ package class QueryEngine {
         // "how many [type]" — count entities by type
         if let result = matchHowManyTypeQuery(text) { return result }
 
-        // Yes/no and choice questions: "was X a Y", "is X a Y or a Z"
-        if let result = matchYesNoQuery(text) { return result }
-
         // Image search: "images of X", "pictures of X"
         if let result = matchImageQuery(text) { return result }
 
@@ -257,11 +286,22 @@ package class QueryEngine {
 
     // MARK: - Pattern Matching Steps
 
+    private func siblingGenderFilter(_ text: String) -> Figure.Gender? {
+        let lower = text.lowercased()
+        if lower.contains("sister") { return .female }
+        if lower.contains("brother") { return .male }
+        return nil
+    }
+
     private func matchFigureRelationPossessive(_ text: String) -> QueryResult? {
         for pattern in figureRelationPatterns {
             if let name = extractPossessivePattern(text, suffixes: pattern.possessiveSuffixes) {
                 if let figure = resolveFigure(name) {
                     let results = pattern.finder(figure)
+                    if pattern.possessiveSuffixes.contains("siblings") {
+                        let annotated = findSiblingsAnnotated(of: figure, genderFilter: siblingGenderFilter(text))
+                        return .figureListAnnotated(pattern.label(figure.name), annotated)
+                    }
                     return .figureList(pattern.label(figure.name), results)
                 }
             }
@@ -274,6 +314,10 @@ package class QueryEngine {
             if let name = extractPattern(text, patterns: pattern.prepositionalPrefixes) {
                 if let figure = resolveFigure(name) {
                     let results = pattern.finder(figure)
+                    if pattern.possessiveSuffixes.contains("siblings") {
+                        let annotated = findSiblingsAnnotated(of: figure, genderFilter: siblingGenderFilter(text))
+                        return .figureListAnnotated(pattern.label(figure.name), annotated)
+                    }
                     return .figureList(pattern.label(figure.name), results)
                 }
             }
@@ -335,7 +379,7 @@ package class QueryEngine {
         guard let name = entityName else { return nil }
 
         // Try as an Era
-        let eras: [Era] = context.fetchAll()
+        let eras = cache!.eras
         if let era = eras.first(where: { $0.name.lowercased() == name.lowercased() }) ?? eras.first(where: { $0.name.lowercased().contains(name.lowercased()) || name.lowercased().contains($0.name.lowercased()) }) {
             return formatEraDuration(era)
         }
@@ -409,7 +453,7 @@ package class QueryEngine {
                 }
                 // Group fallback: "the early sumerian kings"
                 let stopWords = Set(["the", "a", "an", "of", "and", "in", "to", "for"])
-                let figures: [Figure] = context.fetchAll()
+                let figures = cache!.figures
                 let queryTerms = name.lowercased().split(separator: " ").filter { !stopWords.contains(String($0)) }.map(String.init)
                 guard !queryTerms.isEmpty else { return nil }
                 let matched = figures.filter { fig in
@@ -442,41 +486,41 @@ package class QueryEngine {
     }
 
     private func exactFigure(_ name: String) -> Figure? {
-        let figures: [Figure] = context.fetchAll()
+        let figures = cache!.figures
         return figures.first(where: { $0.name.lowercased() == name.lowercased() })
     }
 
     private func resolveEraByName(_ name: String) -> Era? {
-        let eras: [Era] = context.fetchAll()
+        let eras = cache!.eras
         let q = name.lowercased()
         if let match = eras.first(where: { $0.name.lowercased() == q }) { return match }
         return eras.first(where: { $0.name.lowercased().contains(q) || q.contains($0.name.lowercased()) })
     }
 
     private func matchListingPatterns(_ text: String) -> QueryResult? {
-        let allFigures = { self.context.fetchAll() as [Figure] }
-        let allPlaces = { self.context.fetchAll() as [Place] }
-        let allEvents = { self.context.fetchAll() as [Event] }
+        let c = cache!
 
         switch text {
         case "list all figures", "show all figures", "all figures", "list figures", "show figures":
-            return .figureList("All Figures", allFigures())
+            return .figureList("All Figures", c.figures)
         case "list all places", "show all places", "all places", "list places", "show places":
-            return .placeList("All Places", allPlaces())
+            return .placeList("All Places", c.places)
         case "list all events", "show all events", "all events", "list events", "show events":
-            return .eventList("All Events", allEvents())
+            return .eventList("All Events", c.events)
         case "list all things", "show all things", "all things", "list things", "show things":
-            let things = context.fetchAll() as [Thing]
-            return .thingList("All Things", things)
+            return .thingList("All Things", c.things)
         case "list all sources", "show all sources", "all sources", "list sources", "show sources":
-            let sources = (context.fetchAll() as [Source])
-            return .figureList("All Sources", sources.compactMap { $0.name.isEmpty ? nil : nil })
+            let names = c.sources.filter { !$0.name.isEmpty }.map { $0.name }
+            if names.isEmpty {
+                return .answer("No sources in the database.")
+            }
+            return .answer("Sources:\n" + names.joined(separator: "\n"))
         default:
             break
         }
 
         // "all deities", "all gods", "all humans", etc.
-        let figureTypes = context.fetchAll() as [FigureType]
+        let figureTypes = cache!.figureTypes
         for ft in figureTypes {
             let ftLower = ft.name.lowercased()
             let prefixes = ["all \(ftLower)s", "all \(ftLower)", "list \(ftLower)s", "list \(ftLower)"]
@@ -493,7 +537,7 @@ package class QueryEngine {
     }
 
     private func matchDomainQuery(_ text: String) -> QueryResult? {
-        let figures: [Figure] = context.fetchAll()
+        let figures = cache!.figures
 
         // "X gods", "gods of X", "deities of X", "X deities"
         let domainPatterns = [
@@ -537,7 +581,7 @@ package class QueryEngine {
     }
 
     private func matchGenderQuery(_ text: String) -> QueryResult? {
-        let figures: [Figure] = context.fetchAll()
+        let figures = cache!.figures
 
         let isFemale = text.hasPrefix("female ") || text.hasPrefix("woman ") || text.hasPrefix("women ")
         let isMale = text.hasPrefix("male ") || text.hasPrefix("man ") || text.hasPrefix("men ")
@@ -580,7 +624,7 @@ package class QueryEngine {
             let q = eraName.lowercased()
 
             if text.contains("figures") || text.contains("kings") {
-                let figures: [Figure] = context.fetchAll()
+                let figures = cache!.figures
                 let matched = figures.filter {
                     $0.birthDate.era.lowercased().contains(q) ||
                     $0.deathDate.era.lowercased().contains(q) ||
@@ -593,7 +637,7 @@ package class QueryEngine {
             }
 
             if text.contains("events") {
-                let events: [Event] = context.fetchAll()
+                let events = cache!.events
                 let matched = events.filter {
                     $0.date.era.lowercased().contains(q) ||
                     $0.eventDescription.lowercased().contains(q) ||
@@ -659,7 +703,7 @@ package class QueryEngine {
         let firstWord = cleaned.components(separatedBy: .whitespaces).first ?? cleaned
         let sing = singularize(firstWord)
 
-        let figureTypes: [FigureType] = context.fetchAll()
+        let figureTypes = cache!.figureTypes
         for ft in figureTypes {
             let name = ft.name.lowercased()
             if firstWord == name || sing == name {
@@ -679,23 +723,23 @@ package class QueryEngine {
 
         let singClean = singularize(cleaned)
         if singClean == "figure" || sing == "figure" {
-            let all: [Figure] = context.fetchAll()
+            let all = cache!.figures
             return .answer("There are \(all.count) figures in the database.")
         }
         if singClean == "place" || sing == "place" {
-            let all: [Place] = context.fetchAll()
+            let all = cache!.places
             return .answer("There are \(all.count) places in the database.")
         }
         if singClean == "event" || sing == "event" {
-            let all: [Event] = context.fetchAll()
+            let all = cache!.events
             return .answer("There are \(all.count) events in the database.")
         }
         if singClean == "source" || sing == "source" {
-            let all: [Source] = context.fetchAll()
+            let all = cache!.sources
             return .answer("There are \(all.count) sources in the database.")
         }
         if singClean == "thing" || sing == "thing" {
-            let all: [Thing] = context.fetchAll()
+            let all = cache!.things
             return .answer("There are \(all.count) things in the database.")
         }
 
@@ -728,16 +772,13 @@ package class QueryEngine {
 
     private func extractEntity(from text: String, lemText: String) -> (EntityRef, String)? {
         let tokens = tokenize(lemText)
-        let figures: [Figure] = context.fetchAll()
-        let places: [Place] = context.fetchAll()
-        let events: [Event] = context.fetchAll()
-        let things: [Thing] = context.fetchAll()
+        let c = cache!
 
         var candidates: [(EntityRef, String, String)] = []
-        for figure in figures { candidates.append((.figure(figure), figure.name, figure.name.lowercased())) }
-        for place in places { candidates.append((.place(place), place.name, place.name.lowercased())) }
-        for event in events { candidates.append((.event(event), event.name, event.name.lowercased())) }
-        for thing in things { candidates.append((.thing(thing), thing.name, thing.name.lowercased())) }
+        for figure in c.figures { candidates.append((.figure(figure), figure.name, figure.name.lowercased())) }
+        for place in c.places { candidates.append((.place(place), place.name, place.name.lowercased())) }
+        for event in c.events { candidates.append((.event(event), event.name, event.name.lowercased())) }
+        for thing in c.things { candidates.append((.thing(thing), thing.name, thing.name.lowercased())) }
 
         candidates.sort { $0.2.count > $1.2.count }
 
@@ -813,7 +854,7 @@ package class QueryEngine {
         let lemSuffix = lemmatize(suffix)
         if let typeName = specificRelationshipTypes[lemSuffix] {
             let allResults = pattern.finder(figure)
-            let rels: [Relationship] = context.fetchAll()
+            let rels = cache!.relationships
             let filtered = allResults.filter { fig in
                 rels.contains { rel in
                     rel.relationshipType?.name == typeName &&
@@ -927,20 +968,28 @@ package class QueryEngine {
     // MARK: - Entity Resolution
 
     private func resolveFigure(_ name: String) -> Figure? {
-        let figures = context.fetchAll() as [Figure]
+        let figures = cache!.figures
         let query = name.lowercased()
 
         if let match = figures.first(where: { $0.name.lowercased() == query }) {
             return match
         }
-        if let match = figures.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) }) {
+        if let match = resolveFigureByAlternateName(name) {
             return match
         }
-        return resolveFigureByAlternateName(name)
+        if let match = figures.first(where: { $0.name.lowercased().contains(query) }) {
+            return match
+        }
+        let queryWords = query.split(whereSeparator: { !$0.isLetter }).map(String.init)
+        if queryWords.count > 1,
+           let match = figures.first(where: { queryWords.contains($0.name.lowercased()) }) {
+            return match
+        }
+        return nil
     }
 
     private func resolveFigureByFallback(_ name: String) -> Figure? {
-        let figures = context.fetchAll() as [Figure]
+        let figures = cache!.figures
         let query = name.lowercased()
 
         if let match = figures.first(where: { $0.title.lowercased().contains(query) || query.contains($0.title.lowercased()) }) {
@@ -956,7 +1005,7 @@ package class QueryEngine {
     }
 
     private func resolveFigureByAlternateName(_ name: String) -> Figure? {
-        let altNames = context.fetchAll() as [AlternateName]
+        let altNames = cache!.alternateNames
         let query = name.lowercased()
         if let match = altNames.first(where: { $0.name.lowercased() == query || $0.name.lowercased().contains(query) }) {
             return match.figure
@@ -964,8 +1013,28 @@ package class QueryEngine {
         return nil
     }
 
+    private func resolveFigureFromTokens(_ text: String) -> Figure? {
+        let figures = cache!.figures
+        let tokens = tokenize(text.lowercased())
+        for token in tokens {
+            for figure in figures {
+                if figure.name.lowercased() == token {
+                    return figure
+                }
+            }
+        }
+        for token in tokens {
+            for figure in figures {
+                if figure.name.lowercased().contains(token) || token.contains(figure.name.lowercased()) {
+                    return figure
+                }
+            }
+        }
+        return nil
+    }
+
     private func resolvePlace(_ name: String) -> Place? {
-        let places = context.fetchAll() as [Place]
+        let places = cache!.places
         let query = name.lowercased()
         if let match = places.first(where: { $0.name.lowercased() == query }) {
             return match
@@ -974,7 +1043,7 @@ package class QueryEngine {
     }
 
     private func resolveEvent(_ name: String) -> Event? {
-        let events = context.fetchAll() as [Event]
+        let events = cache!.events
         let query = name.lowercased()
         if let match = events.first(where: { $0.name.lowercased() == query }) {
             return match
@@ -983,7 +1052,7 @@ package class QueryEngine {
     }
 
     private func resolveThing(_ name: String) -> Thing? {
-        let things = context.fetchAll() as [Thing]
+        let things = cache!.things
         let query = name.lowercased()
         if let match = things.first(where: { $0.name.lowercased() == query }) {
             return match
@@ -994,98 +1063,140 @@ package class QueryEngine {
     // MARK: - Relationship Finders
 
     private func findChildren(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func findParents(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findSpouses(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.category == "partner" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findSiblings(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
-        return relationships
-            .filter { $0.relationshipType?.category == "sibling" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
-            .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
+        findSiblingsAnnotated(of: figure, genderFilter: nil).map { $0.0 }
+    }
+
+    private func findSiblingsAnnotated(of figure: Figure, genderFilter: Figure.Gender? = nil) -> [(Figure, String?)] {
+        let relationships = cache!.relationships
+        var seenIDs = Set<PersistentIdentifier>()
+        var full: [Figure] = []
+        var half: [Figure] = []
+
+        func matchesGender(_ f: Figure) -> Bool {
+            genderFilter == nil || f.gender == genderFilter
+        }
+
+        for rel in relationships {
+            guard rel.relationshipType?.category == "sibling" else { continue }
+            if rel.fromFigure?.persistentModelID == figure.persistentModelID,
+               let s = rel.toFigure, !seenIDs.contains(s.persistentModelID), matchesGender(s) {
+                seenIDs.insert(s.persistentModelID)
+                full.append(s)
+            } else if rel.toFigure?.persistentModelID == figure.persistentModelID,
+                      let s = rel.fromFigure, !seenIDs.contains(s.persistentModelID), matchesGender(s) {
+                seenIDs.insert(s.persistentModelID)
+                full.append(s)
+            }
+        }
+
+        let figureParentIDs = Set(findParents(of: figure).map(\.persistentModelID))
+        guard !figureParentIDs.isEmpty else { return full.map { ($0, nil) } + half.map { ($0, "half sibling") } }
+
+        let allFigures = Set(cache!.figures)
+        for candidate in allFigures {
+            guard candidate.persistentModelID != figure.persistentModelID,
+                  !seenIDs.contains(candidate.persistentModelID),
+                  matchesGender(candidate) else { continue }
+            let candidateParentIDs = Set(findParents(of: candidate).map(\.persistentModelID))
+            guard !candidateParentIDs.isEmpty else { continue }
+            if figureParentIDs == candidateParentIDs {
+                seenIDs.insert(candidate.persistentModelID)
+                full.append(candidate)
+            } else if !figureParentIDs.isDisjoint(with: candidateParentIDs) {
+                seenIDs.insert(candidate.persistentModelID)
+                half.append(candidate)
+            }
+        }
+
+        return full.map { ($0, nil) } + half.map { ($0, "half sibling") }
     }
 
     private func findCreators(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.category == "creator" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findCreations(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.category == "creator" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private func findUncles(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Uncle" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findAunts(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Aunt" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findCommanders(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Commander" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findServants(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Servant" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findAllies(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Ally" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findEnemies(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Enemy" && ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID) }
             .compactMap { $0.fromFigure?.persistentModelID == figure.persistentModelID ? $0.toFigure : $0.fromFigure }
     }
 
     private func findWorshippers(of figure: Figure) -> [Figure] {
-        let relationships = context.fetchAll() as [Relationship]
+        let relationships = cache!.relationships
         return relationships
             .filter { $0.relationshipType?.name == "Worshipper" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private func findEvents(byPlaceName placeName: String) -> [Event] {
-        let places = context.fetchAll() as [Place]
+        let places = cache!.places
         guard let place = places.first(where: { $0.name.lowercased() == placeName.lowercased() }) else { return [] }
         return place.eventAssociations.compactMap { $0.event }
     }
@@ -1109,13 +1220,16 @@ package class QueryEngine {
             .joined(separator: " ")
         let lemText = lemmatize(stripped)
 
+        if let result = matchRelationshipYesNo(text: text, lemText: lemText) {
+            return result
+        }
+
         guard let (entityRef, entityName) = extractEntity(from: text, lemText: lemText) else { return nil }
 
         var remaining = lemText
         if let range = remaining.range(of: entityName.lowercased()) {
             remaining.removeSubrange(range)
         }
-
         let clean = cleanQueryText(remaining)
         guard !clean.isEmpty else { return nil }
 
@@ -1166,6 +1280,167 @@ package class QueryEngine {
         case .thing:
             return nil
         }
+    }
+
+    private func matchRelationshipYesNo(text: String, lemText: String) -> QueryResult? {
+        let relationshipWords = [
+            "sibling", "brother", "sister",
+            "father", "mother",
+            "son", "daughter", "child",
+            "creator",
+            "spouse", "consort",
+            "servant", "commander", "worshipper",
+            "ally", "enemy"
+        ]
+
+        let lowerLem = lemText.lowercased()
+        for word in relationshipWords {
+            let pattern = "\(word) of "
+            guard let patternRange = lowerLem.range(of: pattern) else { continue }
+
+            let beforeRange = lowerLem.startIndex..<patternRange.lowerBound
+            let after = String(lowerLem[patternRange.upperBound...]).trimmingCharacters(in: .whitespaces)
+            guard !after.isEmpty else { continue }
+
+            let before = String(lowerLem[beforeRange]).trimmingCharacters(in: .whitespaces)
+            let subject = resolveFigureFromTokens(before)
+            guard let subject else { continue }
+            guard let target = resolveFigure(after) else { continue }
+
+            switch word {
+            case "father":
+                let isRel = isFatherOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) is the father of \(target.name)." : "No, \(subject.name) is not the father of \(target.name).")
+
+            case "mother":
+                let isRel = isMotherOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) is the mother of \(target.name)." : "No, \(subject.name) is not the mother of \(target.name).")
+
+            case "son":
+                if subject.gender != .male {
+                    return .answer("No, \(subject.name) is not a son. \(subject.name) is a daughter.")
+                }
+                let isRel = isChildOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) is a son of \(target.name)." : "No, \(subject.name) is not a son of \(target.name).")
+
+            case "daughter":
+                if subject.gender != .female {
+                    return .answer("No, \(subject.name) is not a daughter. \(subject.name) is a son.")
+                }
+                let isRel = isChildOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) is a daughter of \(target.name)." : "No, \(subject.name) is not a daughter of \(target.name).")
+
+            case "child":
+                let isRel = isChildOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) is a child of \(target.name)." : "No, \(subject.name) is not a child of \(target.name).")
+
+            case "creator":
+                let isRel = isCreatorOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) created \(target.name)." : "No, \(subject.name) did not create \(target.name).")
+
+            case "spouse", "consort":
+                let isRel = isSpouseOf(subject, target)
+                return .answer(isRel ? "Yes, \(subject.name) is a spouse of \(target.name)." : "No, \(subject.name) is not a spouse of \(target.name).")
+
+            case "sibling", "brother", "sister":
+                let isSibling = isSiblingOf(subject, target)
+                if word == "brother" && subject.gender != .male {
+                    return .answer("No, \(subject.name) is not a brother. \(subject.name) is a sister.")
+                }
+                if word == "sister" && subject.gender != .female {
+                    return .answer("No, \(subject.name) is not a sister. \(subject.name) is a brother.")
+                }
+                let label = (word == "sibling" || word == "sister" || word == "brother") ? word : "sibling"
+                return .answer(isSibling ? "Yes, \(subject.name) is a \(label) of \(target.name)." : "No, \(subject.name) is not a \(label) of \(target.name).")
+
+            default:
+                return nil
+            }
+        }
+
+        return nil
+    }
+
+    private func isFatherOf(_ figure: Figure, _ target: Figure) -> Bool {
+        let sid = figure.persistentModelID
+        for rel in target.incomingRelationships {
+            if rel.fromFigure?.persistentModelID == sid && rel.relationshipType?.name == "Father" {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func isMotherOf(_ figure: Figure, _ target: Figure) -> Bool {
+        let sid = figure.persistentModelID
+        for rel in target.incomingRelationships {
+            if rel.fromFigure?.persistentModelID == sid && rel.relationshipType?.name == "Mother" {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func isChildOf(_ figure: Figure, _ target: Figure) -> Bool {
+        let tid = target.persistentModelID
+        for rel in figure.incomingRelationships {
+            if rel.fromFigure?.persistentModelID == tid {
+                if rel.relationshipType?.name == "Father" || rel.relationshipType?.name == "Mother" {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private func isCreatorOf(_ figure: Figure, _ target: Figure) -> Bool {
+        let sid = figure.persistentModelID
+        for rel in target.incomingRelationships {
+            if rel.fromFigure?.persistentModelID == sid && rel.relationshipType?.name == "Creator" {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func isSpouseOf(_ figure: Figure, _ target: Figure) -> Bool {
+        let tid = target.persistentModelID
+        for rel in figure.outgoingRelationships {
+            if rel.toFigure?.persistentModelID == tid {
+                if rel.relationshipType?.name == "Spouse" || rel.relationshipType?.name == "Consort" {
+                    return true
+                }
+            }
+        }
+        for rel in figure.incomingRelationships {
+            if rel.fromFigure?.persistentModelID == tid {
+                if rel.relationshipType?.name == "Spouse" || rel.relationshipType?.name == "Consort" {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
+    private func isSiblingOf(_ figure: Figure, _ target: Figure) -> Bool {
+        let figureParents = Set(findParents(of: figure).map(\.persistentModelID))
+        let targetParents = Set(findParents(of: target).map(\.persistentModelID))
+        if !figureParents.isDisjoint(with: targetParents) {
+            return true
+        }
+        let relationships = cache!.relationships
+        for rel in relationships {
+            guard rel.relationshipType?.category == "sibling" else { continue }
+            if rel.fromFigure?.persistentModelID == figure.persistentModelID,
+               rel.toFigure?.persistentModelID == target.persistentModelID {
+                return true
+            }
+            if rel.toFigure?.persistentModelID == figure.persistentModelID,
+               rel.fromFigure?.persistentModelID == target.persistentModelID {
+                return true
+            }
+        }
+        return false
     }
 
     private func handleEntityTypeCheck(_ clean: String, entityName: String, typeName: String, isChoice: Bool) -> QueryResult? {
@@ -1253,7 +1528,7 @@ package class QueryEngine {
         let patterns = ["images of ", "pictures of ", "show images of ", "show pictures of ", "image of ", "picture of "]
         guard let name = extractPattern(text, patterns: patterns) else { return nil }
 
-        let allImages: [ImageAsset] = context.fetchAll()
+        let allImages = cache!.images
 
         if let figure = resolveFigure(name) {
             if !figure.images.isEmpty {

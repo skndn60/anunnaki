@@ -3,7 +3,7 @@ import SwiftUI
 import SwiftData
 
 @Model
-package final class EventEventRoleType {
+package final class EventEventRoleType: Equatable {
     package var name: String
     package var icon: String
     package var colorHex: String
@@ -19,5 +19,9 @@ package final class EventEventRoleType {
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
+    }
+
+    package static func == (lhs: EventEventRoleType, rhs: EventEventRoleType) -> Bool {
+        lhs.persistentModelID == rhs.persistentModelID
     }
 }

@@ -312,10 +312,12 @@ struct RelationshipFormView: View {
         }
         let relationship = Relationship(
             fromFigure: from, toFigure: to,
-            relationshipType: selectedType, source: source,
+            source: source,
             isPreferred: isPreferred
         )
         modelContext.insert(relationship)
+        type.relationships.append(relationship)
+        try? modelContext.save()
         dismiss()
     }
 
@@ -336,10 +338,12 @@ struct RelationshipFormView: View {
         if existing.isEmpty {
             let relationship = Relationship(
                 fromFigure: from, toFigure: to,
-                relationshipType: selectedType, source: source,
+                source: source,
                 isPreferred: false
             )
             modelContext.insert(relationship)
+            type.relationships.append(relationship)
+            try? modelContext.save()
             dismiss()
         } else if type.category == "parent" {
             duplicateMessage = "\(from.name) already has a \(type.name) relationship (\(existing.first?.toFigure?.name ?? "?")). Adding another will create conflicting lineages."

@@ -389,6 +389,7 @@ struct ImageDetailContent: View {
     @State private var previewImage: NSImage?
     @State private var caption: String = ""
     @State private var source: String = ""
+    @State private var imageDescription: String = ""
     @State private var searchText: String = ""
     @State private var tagInputText: String = ""
 
@@ -409,9 +410,11 @@ struct ImageDetailContent: View {
         .onAppear {
             caption = image.caption
             source = image.source
+            imageDescription = image.imageDescription
         }
         .onChange(of: caption) { _, newValue in image.caption = newValue }
         .onChange(of: source) { _, newValue in image.source = newValue }
+        .onChange(of: imageDescription) { _, newValue in image.imageDescription = newValue }
     }
 
     private var imagePanel: some View {
@@ -419,6 +422,12 @@ struct ImageDetailContent: View {
             if !caption.isEmpty {
                 Text(caption)
                     .font(.headline)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if !imageDescription.isEmpty {
+                Text(imageDescription)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
@@ -444,6 +453,8 @@ struct ImageDetailContent: View {
 
                 Group {
                     TextField("Caption", text: $caption)
+                        .textFieldStyle(.roundedBorder)
+                    TextField("Description", text: $imageDescription)
                         .textFieldStyle(.roundedBorder)
                     TextField("Source", text: $source)
                         .textFieldStyle(.roundedBorder)

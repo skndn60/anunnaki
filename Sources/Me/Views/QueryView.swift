@@ -164,6 +164,8 @@ struct QueryView: View {
         case .event(let dossier):
             EventDossierView(dossier: dossier)
         case .figureList(let title, let figures):
+            FigureListDossierView(title: title, figures: figures.map { ($0, nil) })
+        case .figureListAnnotated(let title, let figures):
             FigureListDossierView(title: title, figures: figures)
         case .eventList(let title, let events):
             EventListDossierView(title: title, events: events)
@@ -652,20 +654,66 @@ struct EventDossierView: View {
 
 struct FigureListDossierView: View {
     let title: String
-    let figures: [Figure]
+    let figures: [(Figure, String?)]
+
+    private var hasAnnotations: Bool {
+        figures.contains(where: { $0.1 != nil })
+    }
+
+    private var sourceName: String {
+        if let range = title.range(of: " of ") {
+            String(title[range.upperBound...])
+        } else {
+            title
+        }
+    }
+
+    private var summary: String? {
+        guard hasAnnotations, !figures.isEmpty else { return nil }
+        let total = figures.count
+        let males = figures.filter { $0.0.gender == .male }.count
+        let females = figures.filter { $0.0.gender == .female }.count
+        let fullCount = figures.filter { $0.1 == nil }.count
+        let halfCount = figures.filter { $0.1 == "half sibling" }.count
+        let name = sourceName
+        var parts: [String] = ["I found \(total) \(total == 1 ? "person" : "persons") sharing a parent with \(name)"]
+        if males > 0, females > 0 {
+            parts.append("\(males) \(males == 1 ? "male" : "males") and \(females) \(females == 1 ? "female" : "females")")
+        }
+        if fullCount > 0 {
+            parts.append("\(fullCount) \(fullCount == 1 ? "is" : "are") full \(fullCount == 1 ? "sibling" : "siblings")")
+        }
+        if halfCount > 0 {
+            parts.append("\(halfCount) \(halfCount == 1 ? "is" : "are") half \(halfCount == 1 ? "sibling" : "siblings")")
+        }
+        return parts.joined(separator: ". ") + "."
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).font(.title2.bold())
+            if let summary {
+                Text(summary)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .padding(.bottom, 4)
+            }
             if figures.isEmpty {
                 Text("None found").font(.callout).foregroundStyle(.secondary)
             } else {
-                ForEach(figures) { figure in
+                ForEach(figures.indices, id: \.self) { i in
+                    let figure = figures[i].0
+                    let annotation = figures[i].1
                     HStack(spacing: 8) {
                         Circle().fill(figure.figureType?.color ?? .gray).frame(width: 8, height: 8)
                         Text(figure.gender.symbol).font(.caption).foregroundStyle(.secondary)
                         EntityLink(name: figure.name, kind: .figure).font(.callout)
                         Text("— \(figure.title)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        if let annotation {
+                            Text("(\(annotation))")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
             }

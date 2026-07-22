@@ -13,6 +13,7 @@ struct FigureDetailView: View {
     var onBack: (() -> Void)?
     @Environment(\.modelContext) private var modelContext
     @Query private var matchingRelationships: [Relationship]
+    @Query private var figureBlindSpots: [BlindSpot]
     @State private var droppedFigureName: String?
     @State private var showDropConfirmation = false
     @State private var selectedRelationTypeName: String = "Father"
@@ -24,12 +25,14 @@ struct FigureDetailView: View {
     @State private var showAddAltSheet = false
     @State private var showParentSearch = false
     @State private var parentSearchTypeName = ""
-    @State private var parentSearchText = ""
     @State private var showPlaceLinkPopover = false
     @State private var placeSearchText = ""
     @State private var selectedPlaceForLink: Place?
     @State private var selectedPlaceRole: FigurePlaceRoleType?
-
+    @State private var showAddCitation = false
+    @State private var editingCommentsID: PersistentIdentifier?
+    @State private var editingCommentsText: String = ""
+    @State private var filterText = ""
     init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil, backLabel: String? = nil, onBack: (() -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
@@ -42,6 +45,16 @@ struct FigureDetailView: View {
         _matchingRelationships = Query(filter: #Predicate<Relationship> { rel in
             rel.fromFigure?.name == name || rel.toFigure?.name == name
         })
+        _figureBlindSpots = Query(filter: #Predicate<BlindSpot> { $0.figureName == name })
+    }
+
+    private func isParentGap(typeName: String) -> Bool {
+        figureBlindSpots.contains {
+            $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
+            $0.isResolved &&
+            $0.categoryEnum == .knownGap &&
+            ($0.parentType == nil || $0.parentType == typeName)
+        }
     }
 
     private var figureCitations: [Citation] {
@@ -56,6 +69,24 @@ struct FigureDetailView: View {
             let alts = rels.filter { $0.persistentModelID != preferred.persistentModelID }
             return (type, preferred, alts)
         }.sorted { $0.type < $1.type }
+    }
+
+    private func matchesFilter(_ text: String) -> Bool {
+        guard !filterText.isEmpty else { return true }
+        return text.localizedCaseInsensitiveContains(filterText)
+    }
+
+    private var filteredGroupedRelationships: [(type: String, preferred: Relationship, alternatives: [Relationship])] {
+        groupedRelationships.compactMap { group in
+            let matchingAlts = group.alternatives.filter {
+                matchesFilter($0.fromFigure?.name ?? "") || matchesFilter($0.relationshipType?.name ?? "")
+            }
+            let preferredMatches = matchesFilter(group.preferred.fromFigure?.name ?? "") || matchesFilter(group.type)
+            if preferredMatches || !matchingAlts.isEmpty {
+                return (group.type, group.preferred, matchingAlts.isEmpty ? group.alternatives : matchingAlts)
+            }
+            return nil
+        }
     }
 
     @ViewBuilder
@@ -127,6 +158,12 @@ struct FigureDetailView: View {
         }
     }
 
+    private var filteredAlternateNames: [AlternateName] {
+        filterText.isEmpty ? figure.alternateNames : figure.alternateNames.filter {
+            matchesFilter($0.name) || matchesFilter($0.tradition.rawValue) || matchesFilter($0.nameType.rawValue) || matchesFilter($0.note)
+        }
+    }
+
     @ViewBuilder
     private var alternateNamesView: some View {
         Divider()
@@ -152,7 +189,7 @@ struct FigureDetailView: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
-                ForEach(figure.alternateNames) { altName in
+                ForEach(filteredAlternateNames) { altName in
                     HStack(spacing: 8) {
                         Text(altName.name)
                             .font(.callout)
@@ -191,16 +228,16 @@ struct FigureDetailView: View {
         }
     }
 
-    @ViewBuilder
+    @ViewBuilder 
     private var relationshipsView: some View {
-        if !matchingRelationships.isEmpty {
+        if !filteredGroupedRelationships.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Relationships")
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textCase(.uppercase)
 
-                ForEach(groupedRelationships, id: \.type) { group in
+                ForEach(filteredGroupedRelationships, id: \.type) { group in
                     RelationshipGroupRow(
                         relationship: group.preferred,
                         alternatives: group.alternatives,
@@ -214,8 +251,11 @@ struct FigureDetailView: View {
 
     @ViewBuilder
     private var eventsView: some View {
-        let figureEvents: [Event] = modelContext.fetchAll().filter {
+        let allFigureEvents: [Event] = modelContext.fetchAll().filter {
             $0.involvedFigures.contains(where: { $0.persistentModelID == figure.persistentModelID })
+        }
+        let figureEvents = filterText.isEmpty ? allFigureEvents : allFigureEvents.filter {
+            matchesFilter($0.name) || matchesFilter($0.eventType?.name ?? "") || matchesFilter($0.date.displayLabel)
         }
         if !figureEvents.isEmpty {
             Divider()
@@ -280,21 +320,36 @@ struct FigureDetailView: View {
         }
     }
 
+    private var filteredCitations: [Citation] {
+        filterText.isEmpty ? figureCitations : figureCitations.filter {
+            matchesFilter($0.source?.name ?? "") || matchesFilter($0.safeLocation) || matchesFilter($0.safeNote)
+        }
+    }
+
     @ViewBuilder
     private var citationsView: some View {
         Divider()
         VStack(alignment: .leading, spacing: 8) {
-            Text("Sources & Citations")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
-            if figureCitations.isEmpty {
-                Text("No matching citations found.")
+            HStack {
+                Text("Sources & Citations")
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
-            } else {
-                ForEach(figureCitations) { citation in
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Button(action: { showAddCitation = true }) {
+                    Image(systemName: "plus")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .help("Add citation")
+            }
+
+            if filteredCitations.isEmpty {
+                    Text("No matching citations found.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                } else {
+                    ForEach(filteredCitations) { citation in
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "doc.text")
                             .font(.caption)
@@ -319,6 +374,27 @@ struct FigureDetailView: View {
             VStack(alignment: .leading, spacing: 20) {
                 headerView
 
+                // Filter
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                    TextField("Filter relationships, places, events, names\u{2026}", text: $filterText)
+                        .textFieldStyle(.plain)
+                        .font(.caption)
+                    if !filterText.isEmpty {
+                        Button(action: { filterText = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(8)
+                .background(Color(.textBackgroundColor))
+                .cornerRadius(8)
+
                 // Stickies
                 StickyNoteSection(stickies: figure.stickies) { text in
                     let note = StickyNote(text: text, figure: figure)
@@ -336,10 +412,47 @@ struct FigureDetailView: View {
                 }
 
                 // Mini Lineage Tree
-                MiniLineageView(figure: figure, relationships: matchingRelationships, onSelectFigure: onSelectFigure, onTapUnknownParent: { typeName in
+                MiniLineageView(figure: figure, relationships: matchingRelationships, isParentGap: { [weak figure] typeName in
+                    guard figure != nil else { return false }
+                    return isParentGap(typeName: typeName)
+                }, onSelectFigure: onSelectFigure, onTapUnknownParent: { typeName in
                     parentSearchTypeName = typeName
-                    parentSearchText = ""
                     showParentSearch = true
+                }, onMarkKnownUnavailable: { typeName in
+                    let hasExistingSpot = figureBlindSpots.contains {
+                        $0.figureName == figure.name &&
+                        $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
+                        ($0.parentType == nil || $0.parentType == typeName)
+                    }
+                    if !hasExistingSpot {
+                        let spot = BlindSpot(
+                            figureName: figure.name,
+                            blindSpotType: .missingParent,
+                            category: .knownGap,
+                            spotDescription: "No recorded \(typeName.lowercased()) for \(figure.name)",
+                            suggestedQuery: "Who are the parents of \(figure.name)?",
+                            isResolved: true,
+                            parentType: typeName
+                        )
+                        modelContext.insert(spot)
+                    }
+                    if let sticky = figure.stickies.first(where: {
+                        $0.text.hasPrefix("Missing \(typeName.lowercased())")
+                    }) {
+                        modelContext.delete(sticky)
+                    }
+                    try? modelContext.save()
+                }, onRevertKnownUnavailable: { typeName in
+                    if let spot = figureBlindSpots.first(where: {
+                        $0.figureName == figure.name &&
+                        $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
+                        $0.isResolved &&
+                        $0.categoryEnum == .knownGap &&
+                        ($0.parentType == nil || $0.parentType == typeName)
+                    }) {
+                        modelContext.delete(spot)
+                    }
+                    try? modelContext.save()
                 })
 
                 // Description
@@ -395,31 +508,99 @@ struct FigureDetailView: View {
                             .foregroundStyle(.tertiary)
                             .padding(.vertical, 4)
                     } else {
-                        ForEach(figure.placeAssociations) { assoc in
-                            HStack(spacing: 8) {
-                                Image(systemName: assoc.place?.placeType?.icon ?? "mappin")
-                                    .font(.caption)
-                                    .foregroundStyle(.teal)
-                                    .frame(width: 14)
-                                Text(assoc.roleType?.name ?? "—")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Button(action: {
-                                    if let place = assoc.place { onSelectPlace?(place) }
-                                }) {
-                                    Text(assoc.place?.name ?? "?")
-                                        .font(.callout)
-                                        .fontWeight(.medium)
-                                        .foregroundStyle(Color.accentColor)
-                                        .underline()
+                        let filteredPlaces = filterText.isEmpty ? figure.placeAssociations : figure.placeAssociations.filter {
+                            matchesFilter($0.place?.name ?? "") || matchesFilter($0.roleType?.name ?? "") || matchesFilter($0.source)
+                        }
+                        ForEach(filteredPlaces) { assoc in
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 8) {
+                                    Image(systemName: assoc.place?.placeType?.icon ?? "mappin")
+                                        .font(.caption)
+                                        .foregroundStyle(.teal)
+                                        .frame(width: 14)
+                                    Text(assoc.roleType?.name ?? "—")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Button(action: {
+                                        if let place = assoc.place { onSelectPlace?(place) }
+                                    }) {
+                                        Text(assoc.place?.name ?? "?")
+                                            .font(.callout)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(Color.accentColor)
+                                            .underline()
+                                    }
+                                    .buttonStyle(.plain)
+                                    .pointingHand()
+                                    Spacer()
+                                    if !assoc.source.isEmpty {
+                                        Text(assoc.source)
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
                                 }
-                                .buttonStyle(.plain)
-                                .pointingHand()
-                                Spacer()
-                                if !assoc.source.isEmpty {
-                                    Text(assoc.source)
-                                        .font(.caption2)
-                                        .foregroundStyle(.tertiary)
+                                if editingCommentsID == assoc.persistentModelID {
+                                    HStack(spacing: 4) {
+                                        TextField("Comments", text: $editingCommentsText)
+                                            .textFieldStyle(.plain)
+                                            .font(.caption)
+                                            .onSubmit {
+                                                assoc.comments = editingCommentsText.isEmpty ? nil : editingCommentsText
+                                                editingCommentsID = nil
+                                                try? modelContext.save()
+                                            }
+                                        Button(action: {
+                                            assoc.comments = editingCommentsText.isEmpty ? nil : editingCommentsText
+                                            editingCommentsID = nil
+                                            try? modelContext.save()
+                                        }) {
+                                            Image(systemName: "checkmark")
+                                                .font(.caption2)
+                                                .foregroundStyle(.green)
+                                        }
+                                        .buttonStyle(.plain)
+                                        Button(action: {
+                                            editingCommentsID = nil
+                                        }) {
+                                            Image(systemName: "xmark")
+                                                .font(.caption2)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                    .padding(.leading, 22)
+                                } else if let comments = assoc.comments, !comments.isEmpty {
+                                    Button(action: {
+                                        editingCommentsText = comments
+                                        editingCommentsID = assoc.persistentModelID
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Text(comments)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                            Image(systemName: "pencil")
+                                                .font(.caption2)
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.leading, 22)
+                                } else {
+                                    Button(action: {
+                                        editingCommentsText = ""
+                                        editingCommentsID = assoc.persistentModelID
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Text("Add comment…")
+                                                .font(.caption)
+                                                .foregroundStyle(.tertiary)
+                                            Image(systemName: "plus")
+                                                .font(.caption2)
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .padding(.leading, 22)
                                 }
                             }
                         }
@@ -500,7 +681,7 @@ struct FigureDetailView: View {
                 Text("Create Relationship")
                     .font(.title3.bold())
 
-                Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationTypeName.lowercased())** of **\(figure.name)**?")
+                Text("Do you want **\(sourceName)** to be registered as the **\(selectedRelationTypeName.lowercased())** of **\(self.figure.name)**?")
                     .multilineTextAlignment(.center)
 
                 Picker("Type", selection: $selectedRelationTypeName) {
@@ -522,11 +703,14 @@ struct FigureDetailView: View {
                         if let sourceFigure = allFigures.first(where: { $0.name == sourceName }) {
                     let rel = Relationship(
                         fromFigure: sourceFigure,
-                        toFigure: figure,
-                        relationshipType: allRelationTypes.first(where: { $0.name == selectedRelationTypeName }),
+                        toFigure: self.figure,
                         source: dropSource
                     )
                             modelContext.insert(rel)
+                            if let type = allRelationTypes.first(where: { $0.name == selectedRelationTypeName }) {
+                                type.relationships.append(rel)
+                            }
+                            try? modelContext.save()
                         }
                         showDropConfirmation = false
                     }
@@ -546,15 +730,17 @@ struct FigureDetailView: View {
             Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(altName.figure?.name ?? "?")?")
         }
         .sheet(isPresented: $showAddAltSheet) {
-            AlternateNameFormView(alternateName: nil, preSelectedFigure: figure)
+            AlternateNameFormView(alternateName: nil, preSelectedFigure: self.figure)
         }
         .sheet(isPresented: $showParentSearch) {
-            ParentSearchSheet(
-                typeName: parentSearchTypeName,
-                childFigure: figure,
-                isPresented: $showParentSearch,
-                searchText: $parentSearchText
+            ParentCoupleSheet(
+                childFigure: self.figure,
+                preferredTypeName: self.parentSearchTypeName,
+                isPresented: self.$showParentSearch
             )
+        }
+        .sheet(isPresented: $showAddCitation) {
+            AddCitationSheet(figure: self.figure)
         }
     }
 
@@ -706,7 +892,7 @@ struct RelationshipGroupRow: View {
         case "Worshipper":
             return isFrom ? "Worshipper of" : "Worshipped by"
         default:
-            return "Related to"
+            return isFrom ? "\(name) of" : "Has \(name)"
         }
     }
 
@@ -757,84 +943,188 @@ struct PropertyRow: View {
     }
 }
 
-// MARK: - Parent Search Sheet
+// MARK: - Parent Couple Sheet
 
-private struct ParentSearchSheet: View {
-    let typeName: String
+private struct ParentCoupleSheet: View {
     let childFigure: Figure
+    let preferredTypeName: String
     @Binding var isPresented: Bool
-    @Binding var searchText: String
 
     @Environment(\.modelContext) private var modelContext
+
+    @State private var fatherSearchText = ""
+    @State private var motherSearchText = ""
+    @State private var selectedFather: Figure?
+    @State private var selectedMother: Figure?
 
     private var allFigures: [Figure] {
         (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
     }
 
-    private var filtered: [Figure] {
-        searchText.isEmpty ? allFigures : allFigures.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    private var filteredFathers: [Figure] {
+        let figs = allFigures.filter { $0.persistentModelID != selectedMother?.persistentModelID }
+        return fatherSearchText.isEmpty ? figs : figs.filter { $0.name.localizedCaseInsensitiveContains(fatherSearchText) }
     }
+
+    private var filteredMothers: [Figure] {
+        let figs = allFigures.filter { $0.persistentModelID != selectedFather?.persistentModelID }
+        return motherSearchText.isEmpty ? figs : figs.filter { $0.name.localizedCaseInsensitiveContains(motherSearchText) }
+    }
+
+    private var canAdd: Bool { selectedFather != nil || selectedMother != nil }
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    TextField("Search for a \(typeName.lowercased())...", text: $searchText)
-                        .textFieldStyle(.plain)
+                HStack(spacing: 16) {
+                    searchColumn(
+                        label: "Father",
+                        searchText: $fatherSearchText,
+                        selected: $selectedFather,
+                        filtered: filteredFathers
+                    )
+                    Divider()
+                    searchColumn(
+                        label: "Mother",
+                        searchText: $motherSearchText,
+                        selected: $selectedMother,
+                        filtered: filteredMothers
+                    )
                 }
-                .padding(12)
+                .frame(maxHeight: .infinity)
 
                 Divider()
 
-                if filtered.isEmpty {
+                HStack {
+                    Text("Both parents are optional. Added parents form a couple.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     Spacer()
-                    Text("No figures found")
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                } else {
-                    List(filtered, id: \.persistentModelID) { fig in
-                        Button {
-                            selectParent(fig)
-                        } label: {
-                            HStack(spacing: 10) {
-                                Text(fig.gender.symbol)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 14)
-                                Text(fig.name)
-                                    .font(.body)
-                                Spacer()
-                            }
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .listStyle(.plain)
+                    Button("Cancel") { isPresented = false }
+                        .buttonStyle(.bordered)
+                    Button("Add") { addCouple() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(!canAdd)
                 }
+                .padding(12)
             }
-            .navigationTitle("Select \(typeName)")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        isPresented = false
-                    }
-                }
+            .navigationTitle("Select Parent Couple")
+            .frame(width: 580, height: 460)
+        }
+        .onAppear {
+            if preferredTypeName == "Father" {
+                fatherSearchText = ""
+            } else {
+                motherSearchText = ""
             }
-            .frame(width: 340, height: 420)
         }
     }
 
-    private func selectParent(_ parent: Figure) {
+    private func searchColumn(label: String, searchText: Binding<String>, selected: Binding<Figure?>, filtered: [Figure]) -> some View {
+        VStack(spacing: 0) {
+            Text(label)
+                .font(.caption.bold())
+                .foregroundStyle(.secondary)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
+
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                TextField("Search \(label.lowercased())…", text: searchText)
+                    .textFieldStyle(.plain)
+            }
+            .padding(8)
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(6)
+            .padding(.horizontal, 8)
+
+            if let fig = selected.wrappedValue {
+                HStack(spacing: 4) {
+                    Text(fig.gender.symbol)
+                        .font(.caption)
+                    Text(fig.name)
+                        .font(.callout)
+                    Button { selected.wrappedValue = nil } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(6)
+                .background(fig.figureType?.color.opacity(0.12) ?? Color.gray.opacity(0.12))
+                .cornerRadius(6)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+            } else {
+                List(filtered, id: \.persistentModelID) { fig in
+                    Button {
+                        selected.wrappedValue = fig
+                        searchText.wrappedValue = ""
+                    } label: {
+                        HStack(spacing: 10) {
+                            Text(fig.gender.symbol)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14)
+                            Text(fig.name)
+                                .font(.body)
+                            Spacer()
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+            }
+        }
+    }
+
+    private func addCouple() {
+        let existingParentRels = childFigure.incomingRelationships.filter {
+            ($0.relationshipType?.name == "Father" || $0.relationshipType?.name == "Mother") &&
+            !$0.groupID.isEmpty
+        }
+        let groupID: String
+        if let existingGID = existingParentRels.first(where: { gid in
+            let rels = existingParentRels.filter { $0.groupID == gid.groupID }
+            let hasFather = rels.contains { $0.relationshipType?.name == "Father" }
+            let hasMother = rels.contains { $0.relationshipType?.name == "Mother" }
+            return !(hasFather && hasMother)
+        }).map(\.groupID) {
+            groupID = existingGID
+        } else {
+            groupID = UUID().uuidString
+        }
+
+        if let father = selectedFather {
+            upsertParent(parent: father, typeName: "Father", groupID: groupID)
+        }
+        if let mother = selectedMother {
+            upsertParent(parent: mother, typeName: "Mother", groupID: groupID)
+        }
+        try? modelContext.save()
+        isPresented = false
+    }
+
+    private func upsertParent(parent: Figure, typeName: String, groupID: String) {
         let type = fetchOrCreateType(name: typeName)
-        if let type {
-            let rel = Relationship(fromFigure: parent, toFigure: childFigure)
+        guard let type else { return }
+
+        let existingRels = childFigure.incomingRelationships.filter {
+            $0.relationshipType?.name == typeName
+        }
+
+        if let existingRel = existingRels.first {
+            existingRel.groupID = groupID
+            existingRel.fromFigure = parent
+        } else {
+            let rel = Relationship(fromFigure: parent, toFigure: childFigure, groupID: groupID)
             modelContext.insert(rel)
             type.relationships.append(rel)
-            try? modelContext.save()
         }
-        isPresented = false
     }
 
     private func fetchOrCreateType(name: String) -> RelationshipType? {
@@ -857,6 +1147,7 @@ private struct PlaceLinkPopover: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var allRoles: [FigurePlaceRoleType] = []
+    @State private var comments: String = ""
 
     private var allPlaces: [Place] {
         (try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []
@@ -933,6 +1224,17 @@ private struct PlaceLinkPopover: View {
                     .frame(maxWidth: .infinity)
                 }
 
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Comments:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("e.g. first antediluvian king", text: $comments)
+                        .textFieldStyle(.plain)
+                        .padding(8)
+                        .background(Color(.textBackgroundColor))
+                        .cornerRadius(6)
+                }
+
                 HStack {
                     Spacer()
                     Button("Cancel") { isPresented = false }
@@ -954,12 +1256,70 @@ private struct PlaceLinkPopover: View {
 
     private func createAssociation() {
         guard let place = selectedPlace, let role = selectedRole else { return }
-        let assoc = FigurePlaceAssociation()
+        let assoc = FigurePlaceAssociation(comments: comments.isEmpty ? nil : comments)
         modelContext.insert(assoc)
         figure.placeAssociations.append(assoc)
         place.figureAssociations.append(assoc)
         role.associations.append(assoc)
         try? modelContext.save()
+    }
+}
+
+private struct AddCitationSheet: View {
+    let figure: Figure
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query private var sources: [Source]
+
+    @State private var selectedSource: Source?
+    @State private var location = ""
+    @State private var note = ""
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text("Add Citation")
+                .font(.title3.bold())
+                .padding()
+
+            Form {
+                Section("Source") {
+                    Picker("Source", selection: $selectedSource) {
+                        Text("Select a source").tag(nil as Source?)
+                        ForEach(sources, id: \.persistentModelID) { source in
+                            Text(source.name).tag(source as Source?)
+                        }
+                    }
+                }
+
+                TextField("Location", text: $location, prompt: Text("e.g. Tablet I, line 15"))
+
+                TextField("Note", text: $note, prompt: Text("Optional note"))
+            }
+            .formStyle(.grouped)
+            .padding(.horizontal)
+
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Spacer()
+                Button("Add") {
+                    let citation = Citation(
+                        source: selectedSource,
+                        location: location,
+                        note: note,
+                        entityType: .figure,
+                        linkedEntityName: figure.name
+                    )
+                    modelContext.insert(citation)
+                    try? modelContext.save()
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+                .disabled(selectedSource == nil)
+            }
+            .padding()
+        }
+        .frame(width: 400, height: 280)
     }
 }
 

@@ -1,17 +1,116 @@
 import SwiftUI
 import SwiftData
 
-/// A compact lineage clip showing paternal grandparents → father/mother → figure,
-/// with red "unknown" chips for missing parents.
+struct ParentCouple: Identifiable {
+    let id: String
+    let father: Figure?
+    let mother: Figure?
+    let fatherRel: Relationship?
+    let motherRel: Relationship?
+    var isPreferred: Bool { fatherRel?.isPreferred == true || motherRel?.isPreferred == true }
+}
+
+func buildCouples(for figure: Figure, from relationships: [Relationship]) -> [ParentCouple] {
+    let parentRels = relationships.filter {
+        ($0.relationshipType?.name == "Father" || $0.relationshipType?.name == "Mother") &&
+        $0.toFigure?.persistentModelID == figure.persistentModelID
+    }
+
+    let groupIDs = parentRels.filter { !$0.groupID.isEmpty }
+    let legacy = parentRels.filter { $0.groupID.isEmpty }
+
+    var couples: [ParentCouple] = []
+
+    let grouped = Dictionary(grouping: groupIDs) { $0.groupID }
+    for (gid, rels) in grouped {
+        couples.append(makeCouple(id: gid, rels: rels))
+    }
+
+    let legacyFathers = legacy.filter { $0.relationshipType?.name == "Father" }
+    let legacyMothers = legacy.filter { $0.relationshipType?.name == "Mother" }
+    let pairCount = max(legacyFathers.count, legacyMothers.count)
+    for i in 0..<pairCount {
+        var pairRels: [Relationship] = []
+        if i < legacyFathers.count {
+            pairRels.append(legacyFathers[i])
+        } else if !legacyFathers.isEmpty {
+            pairRels.append(legacyFathers[0])
+        }
+        if i < legacyMothers.count {
+            pairRels.append(legacyMothers[i])
+        } else if !legacyMothers.isEmpty {
+            pairRels.append(legacyMothers[0])
+        }
+        couples.append(makeCouple(id: "legacy_\(i)", rels: pairRels))
+    }
+
+    // Fill missing parents from other couples (e.g., a Mother-only group gets the Father from another group)
+    for i in couples.indices {
+        if couples[i].father == nil, let fatherFig = couples.lazy.filter({ $0.id != couples[i].id }).compactMap(\.father).first {
+            couples[i] = ParentCouple(id: couples[i].id, father: fatherFig, mother: couples[i].mother, fatherRel: nil, motherRel: couples[i].motherRel)
+        }
+        if couples[i].mother == nil, let motherFig = couples.lazy.filter({ $0.id != couples[i].id }).compactMap(\.mother).first {
+            couples[i] = ParentCouple(id: couples[i].id, father: couples[i].father, mother: motherFig, fatherRel: couples[i].fatherRel, motherRel: nil)
+        }
+    }
+
+    // Deduplicate: after fill-in, two couples may end up with identical (father, mother) pairs.
+    // Keep the one with isPreferred set; if neither is preferred, keep the first occurrence.
+    var seen: Set<String> = []
+    couples = couples.filter { couple in
+        let fID = couple.father?.persistentModelID.hashValue ?? Int.min
+        let mID = couple.mother?.persistentModelID.hashValue ?? Int.min
+        let key = "\(fID)-\(mID)"
+        return seen.insert(key).inserted
+    }
+
+    return couples.sorted { $0.isPreferred && !$1.isPreferred }
+}
+
+private func makeCouple(id: String, rels: [Relationship]) -> ParentCouple {
+    let fatherRel = rels.first(where: { $0.relationshipType?.name == "Father" })
+    let motherRel = rels.first(where: { $0.relationshipType?.name == "Mother" })
+    return ParentCouple(
+        id: id,
+        father: fatherRel?.fromFigure,
+        mother: motherRel?.fromFigure,
+        fatherRel: fatherRel,
+        motherRel: motherRel
+    )
+}
+
 struct MiniLineageView: View {
     let figure: Figure
     let relationships: [Relationship]
+    var isParentGap: ((String) -> Bool)? = nil
     var onSelectFigure: ((Figure) -> Void)?
     var onTapUnknownParent: ((String) -> Void)?
+    var onMarkKnownUnavailable: ((String) -> Void)?
+    var onRevertKnownUnavailable: ((String) -> Void)?
     var showGrandparents: Bool = true
+
+    @State private var showUnknownDialog: String? = nil
+    @State private var showRevertDialog: String? = nil
+    @State private var immediateGaps: [String: Bool] = [:]
+
+    private func effectiveIsGap(typeName: String) -> Bool {
+        (isParentGap?(typeName) ?? false) || (immediateGaps[typeName] ?? false)
+    }
 
     @Query private var allRelationships: [Relationship]
     @Environment(\.modelContext) private var modelContext
+
+    private var couples: [ParentCouple] {
+        buildCouples(for: figure, from: relationships)
+    }
+
+    private var preferredCouple: ParentCouple? {
+        couples.first(where: { $0.isPreferred }) ?? couples.first
+    }
+
+    private var altCouples: [ParentCouple] {
+        couples.filter { $0.id != preferredCouple?.id }
+    }
 
     private func parents(typeName: String, of figure: Figure, from pool: [Relationship]) -> (preferred: Figure?, alternatives: [Figure]) {
         let matching = pool.filter {
@@ -24,29 +123,13 @@ struct MiniLineageView: View {
         return (preferredRel.fromFigure, alts.compactMap { $0.fromFigure })
     }
 
-    private var father: Figure? {
-        parents(typeName: "Father", of: figure, from: relationships).preferred
-    }
-
-    private var fatherAlternatives: [Figure] {
-        parents(typeName: "Father", of: figure, from: relationships).alternatives
-    }
-
-    private var mother: Figure? {
-        parents(typeName: "Mother", of: figure, from: relationships).preferred
-    }
-
-    private var motherAlternatives: [Figure] {
-        parents(typeName: "Mother", of: figure, from: relationships).alternatives
-    }
-
     private var paternalGrandfather: Figure? {
-        guard let father else { return nil }
+        guard let father = preferredCouple?.father else { return nil }
         return parents(typeName: "Father", of: father, from: allRelationships).preferred
     }
 
     private var paternalGrandmother: Figure? {
-        guard let father else { return nil }
+        guard let father = preferredCouple?.father else { return nil }
         return parents(typeName: "Mother", of: father, from: allRelationships).preferred
     }
 
@@ -60,43 +143,46 @@ struct MiniLineageView: View {
                 .padding(.bottom, 12)
 
             VStack(spacing: 10) {
-                HStack(alignment: .top, spacing: 16) {
-                    VStack(spacing: 6) {
-                        if showGrandparents, hasGrandparents {
-                            HStack(spacing: 6) {
-                                if let pgf = paternalGrandfather {
-                                    MiniChip(name: pgf.name, symbol: pgf.gender.symbol, color: chipColor(pgf), isClickable: true) {
-                                        onSelectFigure?(pgf)
-                                    }
-                                }
-                                if let pgm = paternalGrandmother {
-                                    MiniChip(name: pgm.name, symbol: pgm.gender.symbol, color: chipColor(pgm), isClickable: true) {
-                                        onSelectFigure?(pgm)
-                                    }
-                                }
+
+                // Grandparents (from preferred couple's father)
+                if showGrandparents, hasGrandparents {
+                    HStack(spacing: 6) {
+                        if let pgf = paternalGrandfather {
+                            MiniChip(name: pgf.name, symbol: pgf.gender.symbol, color: chipColor(pgf), isClickable: true) {
+                                onSelectFigure?(pgf)
                             }
-                            connectorPiece
                         }
-                        if let father {
-                            parentChip(name: father.name, symbol: father.gender.symbol, color: chipColor(father), alternatives: fatherAlternatives) {
-                                onSelectFigure?(father)
+                        if let pgm = paternalGrandmother {
+                            MiniChip(name: pgm.name, symbol: pgm.gender.symbol, color: chipColor(pgm), isClickable: true) {
+                                onSelectFigure?(pgm)
                             }
-                        } else {
-                            unknownChip(typeName: "Father")
                         }
                     }
+                    connectorPiece
+                }
 
-                    VStack(spacing: 6) {
-                        if showGrandparents, hasGrandparents {
-                            Color.clear.frame(height: chipRowHeight + connectorHeight)
-                        }
-                        if let mother {
-                            parentChip(name: mother.name, symbol: mother.gender.symbol, color: chipColor(mother), alternatives: motherAlternatives) {
-                                onSelectFigure?(mother)
+                // Parent row
+                if let couple = preferredCouple {
+                    HStack(spacing: 8) {
+                        coupleChip(figure: couple.father, typeName: "Father")
+                        Text("—")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        coupleChip(figure: couple.mother, typeName: "Mother")
+
+                        if !altCouples.isEmpty {
+                            AltCouplesButton(couples: altCouples, figureTypeColor: figure.figureType?.color ?? .gray) { altCouple in
+                                setPreferredCouple(altCouple)
                             }
-                        } else {
-                            unknownChip(typeName: "Mother")
                         }
+                    }
+                } else {
+                    HStack(spacing: 8) {
+                        parentSlotChip(typeName: "Father")
+                        Text("—")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        parentSlotChip(typeName: "Mother")
                     }
                 }
 
@@ -108,17 +194,108 @@ struct MiniLineageView: View {
         }
     }
 
-    private func unknownChip(typeName: String) -> some View {
-        Button(action: {
-            onTapUnknownParent?(typeName)
-        }) {
-            MiniChip(name: "unknown \(typeName.lowercased())", symbol: "?", color: .red)
+    @ViewBuilder
+    private func parentSlotChip(typeName: String) -> some View {
+        if effectiveIsGap(typeName: typeName) {
+            permanentUnknownChip(typeName: typeName)
+        } else {
+            unknownChip(typeName: typeName)
         }
-        .buttonStyle(.plain)
     }
 
-    private func parentChip(name: String, symbol: String, color: Color, alternatives: [Figure], onSelect: @escaping () -> Void) -> some View {
-        ParentChipView(name: name, symbol: symbol, color: color, alternatives: alternatives, figureTypeColor: figure.figureType?.color ?? .gray, onSelect: onSelect, onSelectAlt: onSelectFigure)
+    @ViewBuilder
+    private func coupleChip(figure: Figure?, typeName: String) -> some View {
+        if let fig = figure {
+            ParentChipView(name: fig.name, symbol: fig.gender.symbol, color: chipColor(fig), alternatives: [], figureTypeColor: fig.figureType?.color ?? .gray, onSelect: { onSelectFigure?(fig) }, onSelectAlt: nil)
+        } else if effectiveIsGap(typeName: typeName) {
+            permanentUnknownChip(typeName: typeName)
+        } else {
+            unknownChip(typeName: typeName)
+        }
+    }
+
+    private func unknownChip(typeName: String) -> some View {
+        Button(action: { showUnknownDialog = typeName }) {
+            HStack(spacing: 4) {
+                Text("?")
+                    .font(.caption)
+                Text("unknown \(typeName.lowercased())")
+                    .font(.caption)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .frame(minHeight: 34)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.red.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                            .foregroundColor(.red.opacity(0.4))
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.push() }
+            else { NSCursor.pop() }
+        }
+        .confirmationDialog(
+            "Unknown \(typeName)",
+            isPresented: .init(
+                get: { showUnknownDialog == typeName },
+                set: { if !$0 { showUnknownDialog = nil } }
+            )
+        ) {
+            Button("Add \(typeName.lowercased())") {
+                showUnknownDialog = nil
+                onTapUnknownParent?(typeName)
+            }
+                Button("Mark as known-unavailable", role: .destructive) {
+                    showUnknownDialog = nil
+                    onMarkKnownUnavailable?(typeName)
+                    immediateGaps[typeName] = true
+                }
+            Button("Cancel", role: .cancel) { showUnknownDialog = nil }
+        }
+    }
+
+    private func permanentUnknownChip(typeName: String) -> some View {
+        Button(action: { showRevertDialog = typeName }) {
+            MiniChip(name: "\(typeName.lowercased()) — no record", symbol: "—", color: .secondary, isClickable: false)
+                .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.push() }
+            else { NSCursor.pop() }
+        }
+        .confirmationDialog(
+            "Known-unavailable \(typeName.lowercased())",
+            isPresented: .init(
+                get: { showRevertDialog == typeName },
+                set: { if !$0 { showRevertDialog = nil } }
+            )
+        ) {
+            Button("Revert to unresearched", role: .destructive) {
+                showRevertDialog = nil
+                onRevertKnownUnavailable?(typeName)
+                immediateGaps[typeName] = false
+            }
+            Button("Cancel", role: .cancel) { showRevertDialog = nil }
+        }
+    }
+
+    private func setPreferredCouple(_ couple: ParentCouple) {
+        for rel in relationships where rel.persistentModelID == couple.fatherRel?.persistentModelID || rel.persistentModelID == couple.motherRel?.persistentModelID {
+            rel.isPreferred = true
+        }
+        for rel in relationships where (rel.relationshipType?.name == "Father" || rel.relationshipType?.name == "Mother") && rel.toFigure?.persistentModelID == figure.persistentModelID {
+            if rel.persistentModelID != couple.fatherRel?.persistentModelID && rel.persistentModelID != couple.motherRel?.persistentModelID {
+                rel.isPreferred = false
+            }
+        }
+        try? modelContext.save()
     }
 
     private var chipRowHeight: CGFloat { 24 }
@@ -136,6 +313,77 @@ struct MiniLineageView: View {
     }
 
     private func chipColor(_ fig: Figure) -> Color { fig.figureType?.color ?? .gray }
+}
+
+// MARK: - Alternative Couples Button
+
+private struct AltCouplesButton: View {
+    let couples: [ParentCouple]
+    let figureTypeColor: Color
+    let onSelect: (ParentCouple) -> Void
+
+    @State private var showingPopover = false
+
+    var body: some View {
+        Button(action: { showingPopover = true }) {
+            Text("+\(couples.count)")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.accentColor))
+        }
+        .buttonStyle(.plain)
+        .help("\(couples.count) alternative couple\(couples.count == 1 ? "" : "s")")
+        .popover(isPresented: $showingPopover) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Alternative Couples")
+                    .font(.caption.bold())
+                    .padding(.bottom, 2)
+                ForEach(couples) { couple in
+                    Button(action: {
+                        showingPopover = false
+                        onSelect(couple)
+                    }) {
+                        HStack(spacing: 6) {
+                            if let father = couple.father {
+                                Text(father.gender.symbol)
+                                    .font(.caption)
+                                Text(father.name)
+                                    .font(.caption)
+                            } else {
+                                Text("?")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            Text("—")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            if let mother = couple.mother {
+                                Text(mother.gender.symbol)
+                                    .font(.caption)
+                                Text(mother.name)
+                                    .font(.caption)
+                            } else {
+                                Text("?")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .background(figureTypeColor.opacity(0.08))
+                    .cornerRadius(4)
+                }
+            }
+            .padding(10)
+            .frame(minWidth: 160, minHeight: 40)
+        }
+    }
 }
 
 // MARK: - Parent Chip (with alternative popover)
@@ -239,7 +487,6 @@ struct MiniChip: View {
         if isClickable {
             chipContent
                 .onTapGesture {
-                    print("[MiniChip] tap on \(name)")
                     onTap?()
                 }
                 .help("View \(name)")
