@@ -233,23 +233,35 @@ struct EraSwimlaneRow: View {
 
         let minLevel = chipLayouts.map(\.level).min() ?? 0
 
+        let eraStartX: CGFloat
+        let eraEndX: CGFloat
+        let hasValidDates: Bool
+        if let startYear = era.startDate.startYear, let endYear = era.endDate.endYear, startYear < endYear {
+            eraStartX = CGFloat(startYear - minYear) * ppy
+            eraEndX = CGFloat(endYear - minYear) * ppy
+            hasValidDates = true
+        } else {
+            eraStartX = 0
+            eraEndX = 0
+            hasValidDates = false
+        }
+
         return AnyView(ZStack(alignment: .leading) {
-            if let startYear = era.startDate.startYear, let endYear = era.endDate.endYear, startYear < endYear {
-                let startX = CGFloat(startYear - minYear) * ppy
-                let endX = CGFloat(endYear - minYear) * ppy
-                ForEach(figures) { figure in
-                    if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
-                        let birthX = CGFloat(birthYear - minYear) * ppy
-                        let deathX = CGFloat(deathYear - minYear) * ppy
-                        let barWidth = max(4, deathX - birthX)
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .fill((figure.figureType?.color ?? .gray).opacity(0.2))
-                            .frame(width: barWidth, height: 4)
-                            .position(x: birthX + barWidth / 2, y: swimlaneHeight / 2 + 12)
-                    }
+            ForEach(figures) { figure in
+                if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
+                    let birthX = CGFloat(birthYear - minYear) * ppy
+                    let deathX = CGFloat(deathYear - minYear) * ppy
+                    let barWidth = max(4, deathX - birthX)
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill((figure.figureType?.color ?? .gray).opacity(0.2))
+                        .frame(width: barWidth, height: 4)
+                        .position(x: birthX + barWidth / 2, y: swimlaneHeight / 2 + 12)
                 }
-                eraBar(startX: startX, endX: endX)
             }
+            .opacity(hasValidDates ? 1 : 0)
+
+            eraBar(startX: eraStartX, endX: eraEndX)
+                .opacity(hasValidDates ? 1 : 0)
 
             ForEach(chipLayouts, id: \.figure.id) { layout in
                 FigureSwimlaneChip(figure: layout.figure)
