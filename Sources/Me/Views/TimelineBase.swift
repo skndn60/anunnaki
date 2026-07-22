@@ -232,6 +232,9 @@ struct EraSwimlaneRow: View {
         }
 
         let minLevel = chipLayouts.map(\.level).min() ?? 0
+        let maxLevel = chipLayouts.map(\.level).max() ?? 0
+        let totalLevels = maxLevel - minLevel + 1
+        let contentHeight = max(swimlaneHeight, CGFloat(totalLevels) * 18 + 24)
 
         let eraStartX: CGFloat
         let eraEndX: CGFloat
@@ -254,21 +257,21 @@ struct EraSwimlaneRow: View {
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill((figure.figureType?.color ?? .gray).opacity(0.2))
                         .frame(width: barWidth, height: 4)
-                        .position(x: birthX + barWidth / 2, y: swimlaneHeight / 2 + 12)
+                        .position(x: birthX + barWidth / 2, y: contentHeight / 2 + 12)
                 }
             }
 
-            eraBar(startX: eraStartX, endX: eraEndX)
+            eraBar(startX: eraStartX, endX: eraEndX, height: contentHeight)
 
             ForEach(chipLayouts, id: \.figure.id) { layout in
                 FigureSwimlaneChip(figure: layout.figure)
                     .position(
                         x: layout.x,
-                        y: swimlaneHeight / 2 - 5 + CGFloat(layout.level) * 18
+                        y: contentHeight / 2 - 5 + CGFloat(layout.level) * 18
                     )
             }
         }
-        .frame(width: containerWidth, height: swimlaneHeight)
+        .frame(width: containerWidth, height: contentHeight)
         .background(
             RoundedRectangle(cornerRadius: 4)
                 .fill(eraColor.opacity(0.15))
@@ -313,15 +316,15 @@ struct EraSwimlaneRow: View {
         )
     }
 
-    private func eraBar(startX: CGFloat, endX: CGFloat) -> some View {
+    private func eraBar(startX: CGFloat, endX: CGFloat, height: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: 4)
             .fill(eraColor.opacity(0.25))
             .overlay(
                 RoundedRectangle(cornerRadius: 4)
                     .stroke(eraColor.opacity(0.35), lineWidth: 0.5)
             )
-            .frame(width: max(20, endX - startX), height: swimlaneHeight - 8)
-            .position(x: (startX + endX) / 2, y: swimlaneHeight / 2)
+            .frame(width: max(20, endX - startX), height: height - 8)
+            .position(x: (startX + endX) / 2, y: height / 2)
     }
 
     private var dateRangeLabel: String {
