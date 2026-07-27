@@ -53,8 +53,12 @@ struct AppKitTextField: NSViewRepresentable {
 /// Natural language query interface — ask questions about the data.
 struct QueryView: View {
     @Environment(\.modelContext) private var modelContext
+    var coordinator: NavigationCoordinator?
     @State private var queryText = ""
     @State private var result: QueryResult?
+    @State private var ollamaReachable = false
+    @State private var forceLLM = false
+    @State private var isProcessing = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -70,9 +74,27 @@ struct QueryView: View {
                 Image(systemName: "questionmark.circle")
                     .foregroundStyle(.secondary)
                 AppKitTextField(text: $queryText, placeholder: "Ask a question... e.g. \"what do we know about Enki?\"", onCommit: { runQuery() })
-                Button("Ask") { runQuery() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(queryText.isEmpty)
+                Circle()
+                    .fill(ollamaReachable ? Color.green : Color.red)
+                    .frame(width: 8, height: 8)
+                    .help(ollamaReachable ? "Ollama connected" : "Ollama not reachable")
+                if isProcessing {
+                    ProgressView()
+                        .scaleEffect(0.65)
+                        .help("Ollama is processing...")
+                } else {
+                    Button("Ask") { runQuery() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(queryText.isEmpty)
+                }
+                if ollamaReachable {
+                    Button(action: { forceLLM.toggle() }) {
+                        Image(systemName: forceLLM ? "brain" : "brain.head.profile")
+                            .foregroundStyle(forceLLM ? Color.green : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(forceLLM ? "Skip regex, use local AI" : "Use local AI for all queries")
+                }
                 if result != nil {
                     Button("Clear") { clearQuery() }
                         .buttonStyle(.plain)
@@ -82,6 +104,12 @@ struct QueryView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 12)
+            .task {
+                let reachable = await Task.detached {
+                    OllamaResolver().isReachable()
+                }.value
+                ollamaReachable = reachable
+            }
 
             Divider()
 
@@ -128,7 +156,10 @@ struct QueryView: View {
                 }
             }
             .textSelection(.enabled)
-
+            .onAppear {
+                queryText = coordinator?.recentQueryText ?? ""
+                if result == nil { result = coordinator?.recentQueryResult }
+            }
         }
     }
 
@@ -138,8 +169,23 @@ struct QueryView: View {
     }
 
     private func runQuery() {
-        let engine = QueryEngine(context: modelContext)
-        result = engine.query(queryText)
+        if forceLLM {
+            isProcessing = true
+            Task {
+                let resolver = OllamaResolver()
+                let modelName = resolver.modelName
+                if let answer = await resolver.resolveAsync(query: queryText, modelContext: modelContext) {
+                    result = answer
+                } else {
+                    result = .answer("Ollama (\(modelName)) returned no response. Check that the model is downloaded and Ollama is serving on localhost:11434.")
+                }
+                isProcessing = false
+            }
+        } else {
+            let engine = QueryEngine(context: modelContext)
+            engine.fallbackResolver = OllamaResolver()
+            result = engine.query(queryText)
+        }
     }
 
     private func queryExample(_ text: String) -> some View {
@@ -154,23 +200,28 @@ struct QueryView: View {
         .buttonStyle(.plain)
     }
 
+    private func saveQueryState() {
+        coordinator?.recentQueryText = queryText
+        coordinator?.recentQueryResult = result
+    }
+
     @ViewBuilder
     private func resultView(_ result: QueryResult) -> some View {
         switch result {
         case .figure(let dossier):
-            FigureDossierView(dossier: dossier)
+            FigureDossierView(dossier: dossier, coordinator: coordinator, queryText: queryText)
         case .place(let dossier):
-            PlaceDossierView(dossier: dossier)
+            PlaceDossierView(dossier: dossier, coordinator: coordinator, queryText: queryText)
         case .event(let dossier):
-            EventDossierView(dossier: dossier)
+            EventDossierView(dossier: dossier, coordinator: coordinator, queryText: queryText)
         case .figureList(let title, let figures):
-            FigureListDossierView(title: title, figures: figures.map { ($0, nil) })
+            FigureListDossierView(title: title, figures: figures.map { ($0, nil) }, coordinator: coordinator, queryText: queryText)
         case .figureListAnnotated(let title, let figures):
-            FigureListDossierView(title: title, figures: figures)
+            FigureListDossierView(title: title, figures: figures, coordinator: coordinator, queryText: queryText)
         case .eventList(let title, let events):
-            EventListDossierView(title: title, events: events)
+            EventListDossierView(title: title, events: events, coordinator: coordinator, queryText: queryText)
         case .placeList(let title, let places):
-            PlaceListDossierView(title: title, places: places)
+            PlaceListDossierView(title: title, places: places, coordinator: coordinator, queryText: queryText)
         case .thing(let thing):
             ThingDossierView(thing: thing)
         case .thingList(let title, let things):
@@ -217,50 +268,39 @@ private struct ImageListResultView: View {
 
 struct FigureDossierView: View {
     let dossier: FigureDossier
+    var coordinator: NavigationCoordinator?
+    var queryText: String = ""
+
+    private func pushQueryBreadcrumbAndNavigate() {
+        coordinator?.pushQueryBreadcrumb(queryText: queryText)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(dossier.figure.figureType?.color.opacity(0.2) ?? .gray.opacity(0.2))
-                    .frame(width: 48, height: 48)
-                    .overlay(
-                        Image(systemName: dossier.figure.figureType?.icon ?? "questionmark")
-                            .font(.title3)
-                            .foregroundStyle(dossier.figure.figureType?.color ?? .gray)
-                    )
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 6) {
-                        Text(dossier.figure.name)
-                            .font(.title.bold())
-                        Text(dossier.figure.gender.symbol)
-                            .font(.title2)
-                            .foregroundStyle(.secondary)
-                    }
-                    if let disambiguation = dossier.figure.disambiguation, !disambiguation.isEmpty {
-                        Text(disambiguation)
-                            .font(.subheadline)
-                            .foregroundStyle(.tertiary)
-                    }
-                    if !dossier.figure.title.isEmpty {
-                        Text(dossier.figure.title)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+            FigureHeaderView(figure: dossier.figure, showBirthDate: true)
+
+            // Action buttons
+            HStack(spacing: 8) {
+                Button(action: {
+                    pushQueryBreadcrumbAndNavigate()
+                    coordinator?.navigateToFigure(dossier.figure.persistentModelID, name: dossier.figure.name)
+                }) {
+                    Label("Open in Sidebar", systemImage: "sidebar.left")
                 }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(dossier.figure.figureType?.name ?? "Unknown")
-                        .font(.caption)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(dossier.figure.figureType?.color.opacity(0.12) ?? .gray.opacity(0.12)))
-                    Text(dossier.figure.birthDate.displayLabel)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+                Button(action: {
+                    pushQueryBreadcrumbAndNavigate()
+                    coordinator?.navigateToLineageFigure(dossier.figure.persistentModelID)
+                }) {
+                    Label("Show Lineage", systemImage: "tree")
                 }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
             }
+            .padding(.bottom, 4)
 
             // Found via alias
             if let alias = dossier.matchedAliasName {
@@ -309,51 +349,18 @@ struct FigureDossierView: View {
             }
 
             // Description
-            if !dossier.figure.figureDescription.isEmpty {
-                Text(dossier.figure.figureDescription)
-                    .font(.body)
-            }
+            FigureDescriptionView(text: dossier.figure.figureDescription)
 
             Divider()
 
             // Family
             if !dossier.parents.isEmpty || !dossier.children.isEmpty || !dossier.spouses.isEmpty || !dossier.createdBy.isEmpty || !dossier.created.isEmpty {
                 dossierSection("Family") {
-                    if !dossier.parents.isEmpty {
-                        entityLine(label: "Parents") {
-                            ForEach(dossier.parents, id: \.persistentModelID) { parent in
-                                EntityLink(name: parent.name, kind: .figure)
-                            }
-                        }
-                    }
-                    if !dossier.spouses.isEmpty {
-                        entityLine(label: "Spouse") {
-                            ForEach(dossier.spouses, id: \.persistentModelID) { spouse in
-                                EntityLink(name: spouse.name, kind: .figure)
-                            }
-                        }
-                    }
-                    if !dossier.children.isEmpty {
-                        entityLine(label: "Children") {
-                            ForEach(dossier.children, id: \.persistentModelID) { child in
-                                EntityLink(name: child.name, kind: .figure)
-                            }
-                        }
-                    }
-                    if !dossier.createdBy.isEmpty {
-                        entityLine(label: "Created by") {
-                            ForEach(dossier.createdBy, id: \.persistentModelID) { fig in
-                                EntityLink(name: fig.name, kind: .figure)
-                            }
-                        }
-                    }
-                    if !dossier.created.isEmpty {
-                        entityLine(label: "Creator of") {
-                            ForEach(dossier.created, id: \.persistentModelID) { fig in
-                                EntityLink(name: fig.name, kind: .figure)
-                            }
-                        }
-                    }
+                    FigureDossierRelationshipList(label: "Parents", figures: dossier.parents)
+                    FigureDossierRelationshipList(label: "Spouse", figures: dossier.spouses)
+                    FigureDossierRelationshipList(label: "Children", figures: dossier.children)
+                    FigureDossierRelationshipList(label: "Created by", figures: dossier.createdBy)
+                    FigureDossierRelationshipList(label: "Creator of", figures: dossier.created)
                 }
             }
 
@@ -361,32 +368,7 @@ struct FigureDossierView: View {
             if !dossier.placeAssociations.isEmpty {
                 dossierSection("Associated Places") {
                     ForEach(dossier.placeAssociations) { assoc in
-                        HStack(spacing: 8) {
-                            Image(systemName: assoc.place?.placeType?.icon ?? "mappin")
-                                .font(.caption)
-                                .foregroundStyle(.teal)
-                                .frame(width: 14)
-                            Text(assoc.roleType?.name ?? "—")
-                                .font(.caption)
-                                .padding(.horizontal, 5)
-                                .padding(.vertical, 2)
-                                .background(RoundedRectangle(cornerRadius: 3).fill(Color.teal.opacity(0.1)))
-                            if let place = assoc.place {
-                                EntityLink(name: place.name, kind: .place)
-                                    .font(.callout)
-                            } else {
-                                Text("?")
-                                    .font(.callout)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if !assoc.source.isEmpty {
-                                Text(assoc.source)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .italic()
-                            }
-                        }
+                        FigurePlaceAssociationDossierRow(association: assoc)
                     }
                 }
             }
@@ -449,20 +431,7 @@ struct FigureDossierView: View {
             if !dossier.citations.isEmpty {
                 dossierSection("Sources & Citations") {
                     ForEach(dossier.citations) { citation in
-                        HStack(alignment: .top, spacing: 8) {
-                            Image(systemName: "doc.text")
-                                .font(.caption)
-                                .foregroundStyle(.brown)
-                                .frame(width: 14)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("\(citation.source?.name ?? "Unknown"), \(citation.safeLocation)")
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                Text(citation.safeNote)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
+                        FigureCitationsRow(citation: citation)
                     }
                 }
             }
@@ -492,24 +461,14 @@ struct FigureDossierView: View {
         }
     }
 
-    private func entityLine<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Text(label + ":")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .frame(width: 80, alignment: .trailing)
-            HStack(spacing: 4) {
-                content()
-            }
-            .font(.callout)
-        }
-    }
 }
 
 // MARK: - Place Dossier
 
 struct PlaceDossierView: View {
     let dossier: PlaceDossier
+    var coordinator: NavigationCoordinator?
+    var queryText: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -523,6 +482,14 @@ struct PlaceDossierView: View {
                     Text(dossier.place.placeType?.name ?? "City").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button(action: {
+                    coordinator?.pushQueryBreadcrumb(queryText: queryText)
+                    coordinator?.navigateToPlace(dossier.place.persistentModelID, name: dossier.place.name)
+                }) {
+                    Label("Open", systemImage: "sidebar.left")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 MapPreviewButton(place: dossier.place)
             }
 
@@ -578,6 +545,8 @@ struct PlaceDossierView: View {
 
 struct EventDossierView: View {
     let dossier: EventDossier
+    var coordinator: NavigationCoordinator?
+    var queryText: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -591,6 +560,14 @@ struct EventDossierView: View {
                     Text(dossier.event.eventType?.name ?? "Other").font(.subheadline).foregroundStyle(.secondary)
                 }
                 Spacer()
+                Button(action: {
+                    coordinator?.pushQueryBreadcrumb(queryText: queryText)
+                    coordinator?.navigateToEvent(dossier.event.persistentModelID, name: dossier.event.name)
+                }) {
+                    Label("Open", systemImage: "sidebar.left")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
                 Text(dossier.event.date.displayLabel).font(.caption).foregroundStyle(.secondary)
             }
 
@@ -655,6 +632,9 @@ struct EventDossierView: View {
 struct FigureListDossierView: View {
     let title: String
     let figures: [(Figure, String?)]
+    var coordinator: NavigationCoordinator?
+    var queryText: String = ""
+    @State private var copied = false
 
     private var hasAnnotations: Bool {
         figures.contains(where: { $0.1 != nil })
@@ -689,9 +669,29 @@ struct FigureListDossierView: View {
         return parts.joined(separator: ". ") + "."
     }
 
+    private var listText: String {
+        figures.map { "\($0.0.name) — \($0.0.title)" }.joined(separator: "\n")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.title2.bold())
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.title2.bold())
+                Spacer()
+                Button(action: {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(listText, forType: .string)
+                    copied = true
+                    Task { try? await Task.sleep(nanoseconds: 1_500_000_000); copied = false }
+                }) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .font(.caption)
+                        .foregroundStyle(copied ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Copy list")
+            }
             if let summary {
                 Text(summary)
                     .font(.callout)
@@ -714,6 +714,16 @@ struct FigureListDossierView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.tertiary)
                         }
+                        Spacer()
+                        Button(action: {
+                            coordinator?.pushQueryBreadcrumb(queryText: queryText)
+                            coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
+                        }) {
+                            Label("Open", systemImage: "sidebar.left")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in sidebar")
                     }
                 }
             }
@@ -726,10 +736,33 @@ struct FigureListDossierView: View {
 struct EventListDossierView: View {
     let title: String
     let events: [Event]
+    var coordinator: NavigationCoordinator?
+    var queryText: String = ""
+    @State private var copied = false
+
+    private var listText: String {
+        events.map { "\($0.name) (\($0.date.displayLabel))" }.joined(separator: "\n")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.title2.bold())
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.title2.bold())
+                Spacer()
+                Button(action: {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(listText, forType: .string)
+                    copied = true
+                    Task { try? await Task.sleep(nanoseconds: 1_500_000_000); copied = false }
+                }) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .font(.caption)
+                        .foregroundStyle(copied ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Copy list")
+            }
             if events.isEmpty {
                 Text("None found").font(.callout).foregroundStyle(.secondary)
             } else {
@@ -740,6 +773,16 @@ struct EventListDossierView: View {
                             .foregroundStyle(event.eventType?.color ?? .gray)
                         EntityLink(name: event.name, kind: .event).font(.callout)
                         Text(event.date.displayLabel).font(.caption).foregroundStyle(.tertiary)
+                        Spacer()
+                        Button(action: {
+                            coordinator?.pushQueryBreadcrumb(queryText: queryText)
+                            coordinator?.navigateToEvent(event.persistentModelID, name: event.name)
+                        }) {
+                            Label("Open", systemImage: "sidebar.left")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in sidebar")
                     }
                 }
             }
@@ -752,10 +795,33 @@ struct EventListDossierView: View {
 struct PlaceListDossierView: View {
     let title: String
     let places: [Place]
+    var coordinator: NavigationCoordinator?
+    var queryText: String = ""
+    @State private var copied = false
+
+    private var listText: String {
+        places.map { "\($0.name) (\($0.placeType?.name ?? "City"))" }.joined(separator: "\n")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(title).font(.title2.bold())
+            HStack(alignment: .firstTextBaseline) {
+                Text(title).font(.title2.bold())
+                Spacer()
+                Button(action: {
+                    let pb = NSPasteboard.general
+                    pb.clearContents()
+                    pb.setString(listText, forType: .string)
+                    copied = true
+                    Task { try? await Task.sleep(nanoseconds: 1_500_000_000); copied = false }
+                }) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .font(.caption)
+                        .foregroundStyle(copied ? .green : .secondary)
+                }
+                .buttonStyle(.plain)
+                .help("Copy list")
+            }
             if places.isEmpty {
                 Text("None found").font(.callout).foregroundStyle(.secondary)
             } else {
@@ -766,6 +832,16 @@ struct PlaceListDossierView: View {
                             .foregroundStyle(.teal)
                         EntityLink(name: place.name, kind: .place).font(.callout)
                         Text(place.placeType?.name ?? "City").font(.caption).foregroundStyle(.tertiary)
+                        Spacer()
+                        Button(action: {
+                            coordinator?.pushQueryBreadcrumb(queryText: queryText)
+                            coordinator?.navigateToPlace(place.persistentModelID, name: place.name)
+                        }) {
+                            Label("Open", systemImage: "sidebar.left")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Open in sidebar")
                     }
                 }
             }
@@ -779,23 +855,57 @@ struct PlaceListDossierView: View {
 
 struct AnswerView: View {
     let text: String
+    @State private var copied = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Image(systemName: "text.alignleft")
+            Image(systemName: "brain")
                 .font(.title3)
                 .foregroundColor(.accentColor)
                 .frame(width: 24)
-            Text(text)
-                .font(.body)
-                .foregroundColor(.primary)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Text("Ollama")
+                        .font(.caption2.bold())
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.accentColor.opacity(0.1))
+                        )
+                    Spacer()
+                    Button(action: {
+                        let pb = NSPasteboard.general
+                        pb.clearContents()
+                        pb.setString(text, forType: .string)
+                        copied = true
+                        Task { try? await Task.sleep(nanoseconds: 1_500_000_000); copied = false }
+                    }) {
+                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                            .font(.caption)
+                            .foregroundStyle(copied ? .green : .secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Copy answer")
+                }
+                Text(text)
+                    .font(.system(size: 15))
+                    .foregroundColor(.primary)
+                    .lineSpacing(4)
+            }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 8)
+            RoundedRectangle(cornerRadius: 10)
                 .fill(Color.accentColor.opacity(0.06))
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.accentColor.opacity(0.12), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.04), radius: 4, y: 2)
         .padding(.top, 20)
     }
 }

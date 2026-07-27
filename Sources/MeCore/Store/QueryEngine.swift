@@ -28,6 +28,7 @@ package class QueryEngine {
         case thing(Thing)
     }
     private let context: ModelContext
+    package var fallbackResolver: QueryResolver?
 
     private struct QueryCache {
         let figures: [Figure]
@@ -239,6 +240,9 @@ package class QueryEngine {
         // Structured pipeline: extract entity + classify intent from remaining text
         if let result = matchStructuredQuery(text) { return result }
 
+        // Fallback intent-based queries (before entity match to catch multi-word queries)
+        if let result = matchFallbackQuery(text) { return result }
+
         // Direct entity match
         if let figure = resolveFigure(text) {
             let alias = matchedAliasName(for: figure, query: text)
@@ -279,6 +283,10 @@ package class QueryEngine {
             if let thing = resolveThing(cleaned) {
                 return .thing(thing)
             }
+        }
+
+        if let resolver = fallbackResolver, let result = resolver.resolve(query: input, modelContext: context) {
+            return result
         }
 
         return .noMatch(input)
@@ -1559,5 +1567,154 @@ package class QueryEngine {
         }
 
         return nil
+    }
+
+    // MARK: - Declarative Query Templates
+
+    private enum TemplateIntent { case count, list }
+    private enum AnchorType { case place, era }
+
+    private struct QueryTemplate {
+        let regex: NSRegularExpression
+        let intent: TemplateIntent
+        let anchorType: AnchorType
+        let measureGroup: Int
+        let anchorGroup: Int
+    }
+
+    private lazy var queryTemplates: [QueryTemplate] = {
+        [
+            // Place-anchored: count
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) did (.+?) have\\??$"),
+                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) in (.+?)\\??$"),
+                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) at (.+?)\\??$"),
+                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) ruled in (.+?)\\??$"),
+                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) ruled (.+?)\\??$"),
+                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+
+            // Place-anchored: list
+            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) ruled in (.+?)\\??$"),
+                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) ruled (.+?)\\??$"),
+                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^which (\\S+) ruled (.+?)\\??$"),
+                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) are in (.+?)\\??$"),
+                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^who ruled (.+?)\\??$"),
+                  intent: .list, anchorType: .place, measureGroup: 0, anchorGroup: 1),
+
+            // Era-anchored: list
+            .init(regex: try! NSRegularExpression(pattern: "^which (\\S+) belonged to (.+?)\\??$"),
+                  intent: .list, anchorType: .era, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) belonged to (.+?)\\??$"),
+                  intent: .list, anchorType: .era, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^(\\S+) of the (.+?)\\??$"),
+                  intent: .list, anchorType: .era, measureGroup: 1, anchorGroup: 2),
+
+            // Era-anchored: count
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) belonged to (.+?)\\??$"),
+                  intent: .count, anchorType: .era, measureGroup: 1, anchorGroup: 2),
+            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) in the (.+?)\\??$"),
+                  intent: .count, anchorType: .era, measureGroup: 1, anchorGroup: 2),
+        ]
+    }()
+
+    private func matchFallbackQuery(_ text: String) -> QueryResult? {
+        for tmpl in queryTemplates {
+            let nsRange = NSRange(text.startIndex..., in: text)
+            guard let match = tmpl.regex.firstMatch(in: text, range: nsRange) else { continue }
+
+            let measureRaw: String
+            if tmpl.measureGroup > 0 {
+                let range = Range(match.range(at: tmpl.measureGroup), in: text)!
+                measureRaw = String(text[range]).lowercased()
+            } else {
+                measureRaw = "ruler"
+            }
+
+            let anchorRange = Range(match.range(at: tmpl.anchorGroup), in: text)!
+            let anchorName = String(text[anchorRange])
+                .trimmingCharacters(in: .punctuationCharacters)
+                .trimmingCharacters(in: .whitespaces)
+
+            switch tmpl.anchorType {
+            case .place:
+                guard let place = resolvePlace(anchorName) else { continue }
+                let figures = place.figureAssociations.compactMap { $0.figure }
+                return executeMeasure(figures, measureRaw: measureRaw, intent: tmpl.intent, anchorDisplayName: place.name)
+            case .era:
+                let figures = figuresInEra(anchorName)
+                let displayName = anchorName
+                    .replacingOccurrences(of: "^the\\s+", with: "", options: .regularExpression)
+                    .trimmingCharacters(in: .whitespaces)
+                return executeMeasure(figures, measureRaw: measureRaw, intent: tmpl.intent, anchorDisplayName: displayName)
+            }
+        }
+        return nil
+    }
+
+    private func executeMeasure(_ figures: [Figure], measureRaw: String, intent: TemplateIntent, anchorDisplayName: String) -> QueryResult? {
+        let singular = singularize(measureRaw)
+        let displayPlural = pluralize(singular)
+        switch singular {
+        case "dynasty":
+            let eras = distinctEras(figures)
+            if eras.isEmpty {
+                return .answer("No dynasties recorded for \(anchorDisplayName).")
+            }
+            let list = eras.joined(separator: ", ")
+            return .answer("\(anchorDisplayName) had \(eras.count) \(displayPlural): \(list).")
+
+        case "king", "ruler":
+            let kings = figures.filter {
+                $0.title.lowercased().contains("king") ||
+                $0.figureDescription.lowercased().contains("king")
+            }
+            if intent == .count {
+                return .answer("\(anchorDisplayName) had \(kings.count) \(displayPlural).")
+            }
+            if kings.isEmpty {
+                return .answer("No known \(displayPlural) of \(anchorDisplayName).")
+            }
+            return .figureList("\(displayPlural.capitalized) of \(anchorDisplayName)", kings)
+
+        default:
+            guard let ft = cache?.figureTypes.first(where: { $0.name.lowercased() == singular }) else { return nil }
+            let matching = figures.filter { $0.figureType?.persistentModelID == ft.persistentModelID }
+            if intent == .count {
+                return .answer("\(anchorDisplayName) had \(matching.count) \(displayPlural).")
+            }
+            if matching.isEmpty {
+                return .answer("No \(displayPlural) found at \(anchorDisplayName).")
+            }
+            return .figureList("\(displayPlural.capitalized) of \(anchorDisplayName)", matching)
+        }
+    }
+
+    private func pluralize(_ word: String) -> String {
+        let lower = word.lowercased()
+        if lower.hasSuffix("y") && !lower.hasSuffix("ey") { return String(lower.dropLast()) + "ies" }
+        if lower.hasSuffix("s") || lower.hasSuffix("sh") || lower.hasSuffix("ch") { return lower + "es" }
+        return lower + "s"
+    }
+
+    private func figuresInEra(_ eraName: String) -> [Figure] {
+        let q = eraName.lowercased()
+            .replacingOccurrences(of: "^the\\s+", with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespaces)
+        return cache!.figures.filter { fig in
+            let era = fig.birthDate.era.lowercased()
+            return era == q || era.contains(q) || q.contains(era)
+        }
+    }
+
+    private func distinctEras(_ figures: [Figure]) -> [String] {
+        let eras = figures.map { $0.birthDate.era }.filter { !$0.isEmpty }
+        return Array(Set(eras)).sorted()
     }
 }

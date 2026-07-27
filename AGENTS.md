@@ -192,6 +192,34 @@ When investigating SwiftUI layout bugs (unexpected padding, misalignment, sizing
 
 This is faster and more reliable than reading code to simulate the layout engine.
 
+### 2026-07-24 — Figure detail shared components + declarative query templates
+
+**Changes made:**
+
+- `Sources/Me/Views/FigureDetailInfoView.swift` — New file: 8 reusable atomic components extracted from FigureDetailView and FigureDossierView:
+  - `FigureTypeBadge` — colored pill with type name
+  - `FigureIconCircle` — colored circle with type icon (parameterized size)
+  - `FigureNameWithGender` — name + gender symbol + optional disambiguation
+  - `FigureTitleRow` — subtitle line
+  - `FigureHeaderView` — composite header (icon + name + type + optional birth date)
+  - `FigureDescriptionView` — body text block
+  - `FigurePlaceAssociationRow` — place assoc with callback navigation (used in FigureDetailView)
+  - `FigurePlaceAssociationDossierRow` — place assoc with EntityLink (used in FigureDossierView)
+  - `FigureCitationsRow` — single citation row (identical in both views)
+  - `FigureRelationshipRow` — generic relationship line with callback
+  - `FigureDossierRelationshipList` — labeled list of entity links for family section
+- `Sources/MeCore/Store/QueryEngine.swift` — Replaced 110 lines of hardcoded pattern-matching in `matchCountAtPlaceQuery`/`matchListAtPlaceQuery` with a declarative template array (`queryTemplates: [QueryTemplate]`). 15 regex-based templates defined as data, executed by a generic `matchFallbackQuery` + `executeMeasure` pipeline. Added era-anchored patterns ("which X belonged to Y", "X of the Y"). All existing behavior preserved.
+- `Sources/Me/Views/FigureDetailView.swift` — Replaced inline icon circle, type badge, citation rows, and place association rows with shared components from FigureDetailInfoView.
+- `Sources/Me/Views/QueryView.swift` — Refactored `FigureDossierView` to use shared components (FigureHeaderView, FigureDescriptionView, FigureDossierRelationshipList, FigurePlaceAssociationDossierRow, FigureCitationsRow). Removed unused `entityLine` helper.
+- `Tests/MeCoreTests/MeCoreTests.swift` — Added 4 tests for declarative query templates (`testCountDynastiesAtPlace`, `testCountKingsAtPlace`, `testListDynastiesAtPlace`, `testWhoRuledPlace`) and 2 tests for era-anchored queries (`testWhichRulersBelongedToEra`, `testKingsOfTheEra`).
+
+**New query patterns (declarative data, not code):**
+- Place-anchored: "how many [measure] did [place] have", "how many [measure] in/at [place]", "what [measure] ruled [place]", "who ruled [place]"
+- Era-anchored: "which/ [measure] belonged to [era]", " [measure] of the [era]", "how many [measure] in the [era]"
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/FigureDetailInfoView.swift` — Added
+
 ### 2026-06-23 — Enoch Archangels backfill
 
 **Problem:** Archangels section missing in EnochView for existing databases. `ensureTypesExist` gates FigureType creation on `figureTypeCount == 0`, so types added later (Archangel, Igigi, Commander) are never backfilled. `ensureEnochDataExists` early-returns if Mount Hermon exists, preventing any archangel creation.
@@ -312,6 +340,24 @@ This is faster and more reliable than reading code to simulate the layout engine
 - [ ] Lineage source discriminator: Add source discrimination to QueryEngine/natural language queries
 - [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
 - [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
+- [ ] **Backfill descriptions for Buzi & Haziana:** Imported SKL-era figures from interrupted batch — Buzi (has Wikipedia page, father of Ezekiel) and Haziana (no Wikipedia page, needs manual description) have empty `figureDescription`. Low priority.
+
+### 2026-07-26 — Query results actionable: sidebar nav, lineage button, copy
+
+**Changes made:**
+- `Sources/Me/Views/QueryView.swift` — Added `coordinator: NavigationCoordinator?` to `QueryView`, `FigureDossierView`, `PlaceDossierView`, `EventDossierView`, `FigureListDossierView`, `EventListDossierView`, `PlaceListDossierView`. All dossier views now pass coordinator through from QueryView.
+- `FigureDossierView` — Added "Open in Sidebar" and "Show Lineage" action buttons below header, navigating via `coordinator.navigateToFigure()` / `navigateToLineageFigure()`.
+- `PlaceDossierView` — Added "Open" button in header row, navigating to sidebar place detail.
+- `EventDossierView` — Added "Open" button in header row, navigating to sidebar event detail.
+- `FigureListDossierView` — Added sidebar-navigation icon per row + "Copy list" button with NSPasteboard export.
+- `EventListDossierView` — Same copy + per-row sidebar navigation.
+- `PlaceListDossierView` — Same copy + per-row sidebar navigation.
+- `Sources/Me/Views/ContentView.swift` — Added `.query` branch in the detail `if/else if` chain passing `coordinator` to `QueryView(coordinator:)`. Removed `.query` from the enum's `destination` fallback to avoid duplicate handling.
+
+**Key design decisions:**
+- `EntityLink` (opens separate report window) preserved as-is for quick lookups. Sidebar navigation added as an additional `sidebar.left` icon button per row, preserving both interaction patterns.
+- Copy-to-clipboard uses `NSPasteboard.general` with temporary checkmark feedback, matching the existing `AnswerView` pattern.
+- The `destination` computed property on `NavigationItem` keeps `.query` as a bare `QueryView()` (no coordinator) to satisfy exhaustive switch. The explicit coordinator-aware branch in the detail chain takes priority at runtime.
 
 ## Hard Constraints
 
@@ -383,3 +429,43 @@ This is faster and more reliable than reading code to simulate the layout engine
 **Fix:** Compute coordinates at function level (outside the ZStack). Always render `eraBar` and life bars unconditionally — no `if`, no `if let`, no `.opacity()`. Each figure's per-element `if let` inside `ForEach` is safe since it operates on individual data, not the entire rendering block.
 
 **Lesson:** Never use `.opacity()` with local computed Bool variables or `if` conditionals on entire sub-views when using `.position()` inside a `ZStack` + `AnyView` combo. Always render views unconditionally and let per-element checks control visibility.
+
+### 2026-07-25 — Code reuse analysis: MiniLineageView vs LineageTreeView
+
+**Task:** Determine whether `MiniLineageView` could be optimized by sharing code from `LineageTreeView`.
+
+**Analysis findings:**
+- **Rendering backends are incompatible**: MiniLineageView uses SwiftUI (`HStack`/`VStack`/`MiniChip`/`ParentChipView`), LineageTreeView uses Canvas (`graphicsContext.drawCard()`).
+- **Data models differ**: MiniLineageView groups parents into `ParentCouple` (Father+Mother paired by `groupID`). LineageTreeView renders each `relationshipType` as an independent entry with Spouse/Consort as partner column — no couple concept.
+- **Interaction models differ**: MiniLineageView uses popovers and confirmation dialogs for alternatives and unknown parents. LineageTreeView uses Canvas hit-testing with `AlternativePartnersSheet` and `FigureDetailSheet`.
+- **What's duplicated**: String constants (`"Father"`, `"Mother"`, `"Spouse"`, `"Consort"`), and trivial 8-line `parents(typeName:of:from:)` helper. Neither is worth extracting.
+
+**Decision:** Leave as-is. The two views evolved different architectures for different contexts (inline panel vs full-screen tree) and the duplication is natural.
+
+**Relevant files:**
+- `Sources/Me/Views/MiniLineageView.swift` — 497-line SwiftUI mini lineage view
+- `Sources/Me/Views/LineageTreeView.swift` — 933-line Canvas-based full lineage tree
+- `Sources/Me/Views/FigureCardView.swift` — Shared card component (used by FigureLineageExplorer, not LineageTreeView)
+
+### 2026-07-26 — SKL anchor dates: additive migration for 9 dynasties
+
+**Problem:** The SKLDatePropagator could only compute dates for 5 dynasties (Akkad, Ur III, Uruk III, Uruk V, Isin). The remaining 9 historically-plausible SKL dynasties (Ur I, Uruk II, Adab, Mari, Kish III, Akshak, Kish IV, Uruk IV, Gutian) had no anchor figures with explicit `c. XXXX–XXXX BC` dates, so the propagator returned nil for all ~92 figures in those dynasties.
+
+**Hard constraint:** No reseeding allowed. All work must be additive.
+
+**Solution (two parts):**
+
+1. **seed_data.json** — Added `c. XXXX–XXXX BC` date ranges to one strategic king per dynasty (anchor). Used short chronology throughout. Each anchor's range spans ~its reign length so the propagator's forward/backward propagation fills in the rest of the dynasty automatically.
+
+2. **Migration.ensureSKLAnchorDates** — Reads seed_data.json dynamically, finds each SKL anchor figure in the DB by name, and additively appends the date range to `figureDescription` only if no `c. XXXX–XXXX BC` pattern is already present. Also strips any legacy `c. Xth century BC` pattern before appending. Called at every app launch after `removeAutoGeneratedStickies`.
+
+**Key decisions:**
+- One anchor per dynasty placed strategically (first king for forward-prop dynasties, last king for backward-prop, middle for balanced). Exception: Fourth dynasty of Kish uses Nanniya (last king) because Ur-Zababa has no reign length.
+- Mythological dynasties (Antediluvian, Kish I, Awan, Kish II, Hamazi) left untouched — reign lengths of 600–43,200 years make dates meaningless.
+- Century-style dates ("c. 27th century BC") replaced with specific year ranges for propagator compatibility.
+- The `Second dynasty of Ur` (2 kings, one reign=120) and `First rulers of Uruk` (12 kings, mix of mythological and plausible) skipped — not enough confidence in dates.
+
+**Relevant files:**
+- `Sources/MeCore/Resources/seed_data.json` — 9 anchor date ranges added
+- `Sources/MeCore/Store/Migration.swift` — `ensureSKLAnchorDates` method
+- `Sources/Me/Views/ContentView.swift` — Migration call added to launch sequence

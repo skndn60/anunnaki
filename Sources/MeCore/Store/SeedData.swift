@@ -155,10 +155,11 @@ package struct SeedEvent: Codable {
     package let date: SeedDate
     package let era: String
     package let source: String
+    package let sortName: String?
     package let involvedFigureIds: [String]
     package let placeId: String?
 
-    package init(id: String = "", name: String = "", eventType: String = "", eventDescription: String = "", date: SeedDate = .init(), era: String = "", source: String = "", involvedFigureIds: [String] = [], placeId: String? = nil) {
+    package init(id: String = "", name: String = "", eventType: String = "", eventDescription: String = "", date: SeedDate = .init(), era: String = "", source: String = "", sortName: String? = nil, involvedFigureIds: [String] = [], placeId: String? = nil) {
         self.id = id
         self.name = name
         self.eventType = eventType
@@ -166,6 +167,7 @@ package struct SeedEvent: Codable {
         self.date = date
         self.era = era
         self.source = source
+        self.sortName = sortName
         self.involvedFigureIds = involvedFigureIds
         self.placeId = placeId
     }
@@ -615,6 +617,7 @@ package struct SeedData {
                 date: seedEvent.date.toMythologicalDate(),
                 era: seedEvent.era,
                 source: seedEvent.source,
+                sortName: seedEvent.sortName,
                 involvedFigures: figures
             )
             context.insert(event)
@@ -929,6 +932,8 @@ package struct SeedData {
                 ("Death", "cross.circle", "8B8B8B"),
                 ("Ascension", "arrow.up.to.line", "FF9500"),
                 ("City Founding", "building.2", "007AFF"),
+                ("Foundation", "building.columns.fill", "F59E0B"),
+                ("Destruction", "flame.fill", "FF3B30"),
             ]
             for config in eventTypeConfig {
                 let type = EventType(name: config.name, icon: config.icon, colorHex: config.colorHex)
@@ -1023,26 +1028,26 @@ package struct SeedData {
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
         let figuresByName = Dictionary(grouping: allFigures, by: { $0.name }).compactMapValues(\.first)
 
-        let eventConfigs: [(name: String, typeName: String, description: String, era: String, source: String, figureNames: [String])] = [
+        let eventConfigs: [(name: String, typeName: String, description: String, era: String, source: String, sortName: String?, figureNames: [String])] = [
             ("The Fall of the Watchers", "Descent",
              "Two hundred Watcher angels under the leadership of Samyaza descended on Mount Hermon, swore an oath to bind themselves together, and took human wives. They fathered the Nephilim, giants who consumed the labor of mankind. The Watchers also taught humanity forbidden knowledge: sorcery, weapon-making, cosmetics, astrology, and divination.",
-             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 6-8",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 6-8", nil,
              ["Samyaza", "Azazel"]),
             ("The Binding of Azazel", "Battle",
              "God commanded Raphael to bind Azazel hand and foot, cast him into the darkness of Dudael, and cover him with rugged and sharp rocks. Azazel was to remain there until the great day of judgment, when he would be cast into the fire.",
-             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:4-8",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:4-8", nil,
              ["Azazel", "Raphael"]),
             ("The Binding of the Watchers", "Battle",
              "God commanded Michael to bind Samyaza and his associates under the hills of the earth for seventy generations until the day of judgment. The Watchers were to be cast into the abyss of fire for eternity. Their sons, the Nephilim, were destroyed by being set against each other with the sword.",
-             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:11-12",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:11-12", nil,
              ["Samyaza", "Michael"]),
             ("Enoch's Heavenly Journeys", "Ascension",
              "Enoch was taken by the angels and shown the mysteries of heaven and earth. He visited the heavenly temple and saw God's throne of glory, the dwelling places of the righteous, the places of punishment for the wicked, the tree of life, the seven mountains, and the storehouses of the winds and luminaries. The archangel Uriel revealed to him the movements of the sun, moon, and stars.",
-             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 17-36",
+             "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 17-36", nil,
              ["Enoch", "Uriel"]),
             ("The Deluge Judgment", "Flood",
              "God decreed the destruction of all flesh by the Great Flood as judgment for the corruption brought by the Watchers and the Nephilim. Uriel was sent to warn Noah to build an ark. The Flood cleansed the earth, preserving only Noah and his family. The Watchers were already bound and awaiting final judgment.",
-             "The Great Flood", "Book of Enoch (1 Enoch), ch. 10:1-3, 106-107",
+             "The Great Flood", "Book of Enoch (1 Enoch), ch. 10:1-3, 106-107", "Flood",
              ["Noah", "Uriel"]),
         ]
         for config in eventConfigs {
@@ -1054,6 +1059,7 @@ package struct SeedData {
                 date: MythologicalDate(year: nil, era: config.era, isApproximate: true),
                 era: config.era,
                 source: config.source,
+                sortName: config.sortName,
                 involvedFigures: figures
             )
             context.insert(event)

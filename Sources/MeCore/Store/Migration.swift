@@ -519,4 +519,424 @@ package struct Migration {
         }
         try? context.save()
     }
+
+    /// Backfill BCE anchor dates for SKL figures that lack them.
+    /// Reads from seed_data.json and adds `c. XXXX–XXXX BC` date ranges to
+    /// one strategic figure per dynasty. The SKLDatePropagator then fills in
+    /// dates for all other figures in the same dynasty via reign-length propagation.
+    package static func ensureSKLAnchorDates(context: ModelContext) {
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "seed_data", withExtension: "json")
+        }()
+        guard let u = url, let data = try? Data(contentsOf: u),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else { return }
+
+        let bcRegex = try! NSRegularExpression(pattern: "c\\.\\s*\\d{3,4}[–-]\\d{3,4}\\s*BC")
+        let centuryRegex = try! NSRegularExpression(pattern: "c\\.\\s*\\d{1,2}(st|nd|rd|th)\\s+century\\s+BC")
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+
+        for seedFig in root.figures {
+            guard seedFig.source.contains("Sumerian King List") else { continue }
+            let seedDesc = seedFig.figureDescription
+            guard bcRegex.firstMatch(in: seedDesc, range: NSRange(seedDesc.startIndex..., in: seedDesc)) != nil else { continue }
+
+            guard let dbFig = allFigures.first(where: { $0.name == seedFig.name }) else { continue }
+            let dbDesc = dbFig.figureDescription
+            guard bcRegex.firstMatch(in: dbDesc, range: NSRange(dbDesc.startIndex..., in: dbDesc)) == nil else { continue }
+
+            var updated = dbDesc
+            if let centuryMatch = centuryRegex.firstMatch(in: updated, range: NSRange(updated.startIndex..., in: updated)) {
+                guard let r = Range(centuryMatch.range, in: updated) else { continue }
+                updated.removeSubrange(r)
+                updated = updated.trimmingCharacters(in: .whitespaces)
+            }
+
+            guard let bcMatch = bcRegex.firstMatch(in: seedDesc, range: NSRange(seedDesc.startIndex..., in: seedDesc)),
+                  let r = Range(bcMatch.range, in: seedDesc) else { continue }
+            let bcStr = String(seedDesc[r])
+            if bcStr.isEmpty { continue }
+
+            if !updated.isEmpty && !updated.hasSuffix(".") && !updated.hasSuffix(" ") { updated += " " }
+            updated += bcStr
+            if !updated.hasSuffix(".") { updated += "." }
+
+            dbFig.figureDescription = updated
+        }
+        try? context.save()
+    }
+
+    /// Backfill citations for events that lack them.
+    /// Matches event.source free-text to known Source entities by substring.
+    package static func ensureEventCitations(context: ModelContext) {
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let sourceByKeyword: [(keyword: String, source: Source)] = allSources.compactMap { s in
+            let keywords: [String] = [
+                "Sumerian King List", "Epic of Gilgamesh", "Enuma Elish",
+                "Atra-Hasis", "Inanna's Descent", "Etana Myth",
+                "Book of Enoch (1 Enoch)", "Book of Jubilees"
+            ]
+            guard let match = keywords.first(where: { s.name.contains($0) }) else { return nil }
+            return (keyword: match, source: s)
+        }
+
+        let allEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        let allCits = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        let hasCit: (Event) -> Bool = { event in
+            allCits.contains(where: { $0.safeEntityName == event.name && $0.safeEntityType == .event })
+        }
+
+        for event in allEvents where !hasCit(event) {
+            let src = sourceByKeyword.first(where: { event.source.contains($0.keyword) })?.source
+            ?? allSources.first(where: { $0.name == "ETCSL (Electronic Text Corpus of Sumerian Literature)" })
+
+            let cit = Citation(
+                source: src,
+                location: event.source,
+                note: event.eventDescription,
+                entityType: .event,
+                linkedEntityName: event.name
+            )
+            context.insert(cit)
+        }
+        try? context.save()
+    }
+
+    package static func ensureParentRelationshipsExist(context: ModelContext) {
+        let fatherType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Father" })).first
+        let motherType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Mother" })).first
+        let creatorType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Creator" })).first
+        let deityType = try? context.fetch(FetchDescriptor<FigureType>(predicate: #Predicate { $0.name == "Deity" })).first
+        let godDate = MythologicalDate(year: nil, era: "Age of the First Gods", isApproximate: true)
+        let unknownDate = MythologicalDate(year: nil, era: "", isApproximate: true)
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let existingNames = Set(allFigures.map(\.name))
+
+        let figureById: [PersistentIdentifier: Figure] = allFigures.reduce(into: [:]) { $0[$1.persistentModelID] = $1 }
+        let figureByName: [String: Figure] = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
+
+        // Look up or create a figure by name
+        func getOrCreateFigure(name: String, title: String, domain: String, description: String) -> Figure? {
+            if let existing = figureByName[name] { return existing }
+            let fig = Figure(
+                name: name,
+                title: title,
+                figureType: deityType,
+                gender: name == "Haia" ? .male : .female,
+                domain: domain,
+                figureDescription: description,
+                birthDate: godDate,
+                deathDate: unknownDate,
+                source: "Sumerian mythology"
+            )
+            context.insert(fig)
+            try? context.save()
+            return fig
+        }
+
+        let existingRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let hasRel: (Figure, Figure) -> Bool = { from, to in
+            existingRels.contains(where: {
+                $0.fromFigure?.persistentModelID == from.persistentModelID &&
+                $0.toFigure?.persistentModelID == to.persistentModelID
+            })
+        }
+
+        // Create new figures if missing (Duttur and Geshtinanna may already exist via ensureDumuziFamilyExists)
+        let _ = getOrCreateFigure(name: "Haia", title: "God of Stores, Father of Ninlil", domain: "Stores, Seals, Doorways", description: "God of stores and husband of Nisaba. Father of Ninlil (also known as Sud). Sometimes called Haya.")
+        let _ = getOrCreateFigure(name: "Nisaba", title: "Goddess of Writing and Grain", domain: "Writing, Grain, Surveying, Accounting", description: "Goddess of writing, grain, and surveying. Mother of Ninlil (also called Sud). Also known as Nunbarshegunu.")
+        let _ = getOrCreateFigure(name: "Ningikuga", title: "Lady of the Pure Reed", domain: "Reeds, Marshes, Purity", description: "Goddess of reeds and marshes, a consort of Enki. Mother of Ningal.")
+        let _ = getOrCreateFigure(name: "Duttur", title: "Ewe Goddess, Mother of Dumuzi", domain: "Sheep, Motherhood, Mourning", description: "Ewe goddess, mother of Dumuzi and Geshtinanna. Also known as Sirtur.")
+        let _ = getOrCreateFigure(name: "Geshtinanna", title: "Goddess of Agriculture and Dream Interpretation", domain: "Agriculture, Fertility, Dreams", description: "Sister of Dumuzi, goddess of agriculture and dream interpretation. Daughter of Enki and Duttur.")
+
+        // Re-fetch figures after creating new ones
+        let allFigures2 = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figureByName2: [String: Figure] = allFigures2.reduce(into: [:]) { $0[$1.name] = $1 }
+
+        let relDefs: [(from: String, to: String, type: RelationshipType?, source: String)] = [
+            // Mythological
+            ("Haia", "Ninlil", fatherType, "Sumerian mythology"),
+            ("Nisaba", "Ninlil", motherType, "Sumerian mythology"),
+            ("Enki", "Ningikuga", fatherType, "Sumerian mythology"),
+            ("Enki", "Ningal", fatherType, "Sumerian mythology"),
+            ("Ningikuga", "Ningal", motherType, "Sumerian mythology"),
+            ("Enlil", "Nergal", fatherType, "Enlil and Ninlil"),
+            ("Ninlil", "Nergal", motherType, "Enlil and Ninlil"),
+            ("Enki", "Dumuzi", fatherType, "Sumerian mythology"),
+            ("Duttur", "Dumuzi", motherType, "Sumerian mythology"),
+            ("Enki", "Geshtinanna", fatherType, "Sumerian mythology"),
+            ("Duttur", "Geshtinanna", motherType, "Sumerian mythology"),
+            ("Ubara-Tutu", "Ziusudra", fatherType, "Sumerian King List"),
+            ("Ninhursag", "Enkidu", creatorType, "Epic of Gilgamesh"),
+
+            // SKL filiations
+            ("Atab", "Mashda", fatherType, "Sumerian King List"),
+            ("Mashda", "Arwium", fatherType, "Sumerian King List"),
+            ("Etana", "Balih", fatherType, "Sumerian King List"),
+            ("En-me-nuna", "Melem-Kish", fatherType, "Sumerian King List"),
+            ("En-me-nuna", "Barsal-nuna", fatherType, "Sumerian King List"),
+            ("Barsal-nuna", "Zamug", fatherType, "Sumerian King List"),
+            ("Zamug", "Tizqar", fatherType, "Sumerian King List"),
+            ("Enmebaragesi", "Aga of Kish", fatherType, "Sumerian King List"),
+            ("Mesh-ki-ang-gasher", "Enmerkar", fatherType, "Sumerian King List"),
+            ("Gilgamesh", "Ur-Nungal", fatherType, "Sumerian King List"),
+            ("Ur-Nungal", "Udul-kalama", fatherType, "Sumerian King List"),
+            ("Ur-nigin", "Ur-gigir", fatherType, "Sumerian King List"),
+            ("Ur-Namma", "Shulgi", fatherType, "Sumerian King List"),
+            ("Shulgi", "Amar-Suena", fatherType, "Sumerian King List"),
+            ("Amar-Suena", "Shu-Suen", fatherType, "Sumerian King List"),
+            ("Shu-Suen", "Ibbi-Suen", fatherType, "Sumerian King List"),
+            ("Ishbi-Erra", "Shu-Ilishu", fatherType, "Sumerian King List"),
+            ("Shu-Ilishu", "Iddin-Dagan", fatherType, "Sumerian King List"),
+            ("Iddin-Dagan", "Ishme-Dagan", fatherType, "Sumerian King List"),
+            ("Ishme-Dagan", "Lipit-Eshtar", fatherType, "Sumerian King List"),
+            ("Ur-Ninurta", "Bur-Suen", fatherType, "Sumerian King List"),
+            ("Bur-Suen", "Lipit-Enlil", fatherType, "Sumerian King List"),
+        ]
+
+        for (fromName, toName, type, source) in relDefs {
+            guard let type else { continue }
+            guard let from = figureByName2[fromName],
+                  let to = figureByName2[toName] else { continue }
+            guard !hasRel(from, to) else { continue }
+            let rel = Relationship(fromFigure: from, toFigure: to, relationshipType: type, source: source)
+            context.insert(rel)
+        }
+
+        try? context.save()
+    }
+
+    package static func ensureCoverageExemptFlags(context: ModelContext) {
+        let exemptTypeNames = ["Primordial", "Archangel", "Igigi", "Commander", "Deity", "Semi-Divine"]
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for fig in figures where fig.coverageExempt != true {
+            guard let typeName = fig.figureType?.name else { continue }
+            if exemptTypeNames.contains(typeName) {
+                fig.coverageExempt = true
+            }
+        }
+        try? context.save()
+    }
+
+    package static func ensureSKLDomain(context: ModelContext) {
+        let domainByTitle: [String: String] = [
+            "King of Sumerian King List": "Antediluvian Kingship",
+            "King of First dynasty of Kish": "Kingship of Kish",
+            "King of First dynasty of Ur": "Kingship of Ur",
+            "King of First rulers of Uruk": "Kingship of Uruk",
+            "King of Dynasty of Awan": "Kingship of Awan",
+            "King of Second dynasty of Kish": "Kingship of Kish",
+            "King of Dynasty of Hamazi": "Kingship of Hamazi",
+            "King of Second dynasty of Uruk": "Kingship of Uruk",
+            "King of Second dynasty of Ur": "Kingship of Ur",
+            "King of Dynasty of Adab": "Kingship of Adab",
+            "King of Dynasty of Mari": "Kingship of Mari",
+            "King of Third dynasty of Kish": "Kingship of Kish",
+            "King of Dynasty of Akshak": "Kingship of Akshak",
+            "King of Fourth dynasty of Kish": "Kingship of Kish",
+            "King of Third dynasty of Uruk": "Kingship of Uruk",
+            "King of Dynasty of Akkad": "Kingship of Akkad",
+            "King of Fourth dynasty of Uruk": "Kingship of Uruk",
+            "King of Gutian rule": "Kingship of Gutium",
+            "King of Fifth dynasty of Uruk": "Kingship of Uruk",
+            "King of Third dynasty of Ur": "Kingship of Ur",
+            "King of Dynasty of Isin": "Kingship of Isin",
+        ]
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for fig in figures where fig.domain.isEmpty {
+            guard let domain = domainByTitle[fig.title] else { continue }
+            fig.domain = domain
+        }
+        try? context.save()
+    }
+
+    package static func enrichSKLData(context: ModelContext) {
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let allEras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let eraByName = allEras.reduce(into: [:]) { $0[$1.name] = $1 }
+
+        // 1. Propagate reign years via SKLDatePropagator
+        let eraOrder = allEras.reduce(into: [:]) { $0[$1.name] = $1.orderIndex }
+        let timelines = SKLDatePropagator.compute(figures: allFigures, eraOrder: eraOrder)
+        for timeline in timelines {
+            for reign in timeline.reigns {
+                reign.figure.reignStartYear = reign.startBCE
+                reign.figure.reignEndYear = reign.endBCE
+            }
+        }
+
+        // 2. Link figures to eras by birthDate.era
+        let eraMap: [String: String] = [
+            "Before the Flood": "Age of the Watchers",
+        ]
+        for fig in allFigures where fig.era == nil {
+            let eraName = fig.birthDate.era
+            guard !eraName.isEmpty else { continue }
+            let mappedName = eraMap[eraName] ?? eraName
+            fig.era = eraByName[mappedName]
+        }
+
+        // 3. Fix citation entityIds for renamed figures
+        let citationRenameMap: [String: String] = [
+            "Shu-Suen (Dynasty of Akshak)": "Shu-Suen (Akshak)",
+            "Puzur-Suen (Fourth dynasty of Kish)": "Puzur-Suen (Kish)",
+        ]
+        let allCitations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        for cit in allCitations {
+            if let newName = citationRenameMap[cit.linkedEntityName] {
+                cit.linkedEntityName = newName
+            }
+        }
+
+        // 4. Backfill SKL citations
+        let sklSource = allEras.isEmpty ? nil : (try? context.fetch(FetchDescriptor<Source>(
+            predicate: #Predicate { $0.name == "Sumerian King List" }
+        ))).flatMap { $0.first }
+        if let sklSource {
+            let sklSourceID = sklSource.persistentModelID
+            let allCits = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+            let citedNames = Set(allCits.compactMap { $0.source?.persistentModelID == sklSourceID ? $0.linkedEntityName : nil })
+            let humanType = try? context.fetch(FetchDescriptor<FigureType>(
+                predicate: #Predicate { $0.name == "Human" }
+            )).first
+            let sklFigures = allFigures.filter { $0.figureType?.persistentModelID == humanType?.persistentModelID }
+            for fig in sklFigures where !citedNames.contains(fig.name) {
+                let citation = Citation(
+                    source: sklSource,
+                    location: "Sumerian King List entry",
+                    note: fig.figureDescription,
+                    entityType: .figure,
+                    linkedEntityName: fig.name
+                )
+                context.insert(citation)
+            }
+        }
+
+        try? context.save()
+    }
+
+    package static func ensureSKLEventTypesExist(context: ModelContext) {
+        let foundationPredicate = #Predicate<EventType> { $0.name == "Foundation" }
+        let foundationExists = (try? context.fetch(FetchDescriptor<EventType>(predicate: foundationPredicate)).first) != nil
+        if !foundationExists {
+            context.insert(EventType(name: "Foundation", icon: "building.columns.fill", colorHex: "F59E0B"))
+        }
+        let destructionPredicate = #Predicate<EventType> { $0.name == "Destruction" }
+        let destructionExists = (try? context.fetch(FetchDescriptor<EventType>(predicate: destructionPredicate)).first) != nil
+        if !destructionExists {
+            context.insert(EventType(name: "Destruction", icon: "flame.fill", colorHex: "FF3B30"))
+        }
+        try? context.save()
+    }
+
+    package static func ensureMissingCitiesAndAssociations(context: ModelContext) {
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "seed_data", withExtension: "json")
+        }()
+        guard let u = url, let data = try? Data(contentsOf: u),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else { return }
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let allPlaces = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let existingPlaceNames = Set(allPlaces.map(\.name))
+        let figureByName = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
+        var placeByName = allPlaces.reduce(into: [:]) { $0[$1.name] = $1 }
+
+        let seedFigureNameById = root.figures.reduce(into: [:]) { $0[$1.id] = $1.name }
+        let seedPlaceNameById = root.places.reduce(into: [:]) { $0[$1.id] = $1.name }
+        let allPlaceTypes: [PlaceType] = (try? context.fetch(FetchDescriptor<PlaceType>())) ?? []
+        let placeTypeByName = allPlaceTypes.reduce(into: [:]) { $0[$1.name] = $1 }
+
+        // 1. Create missing places
+        for seedPlace in root.places {
+            guard !existingPlaceNames.contains(seedPlace.name) else { continue }
+            let placeType = placeTypeByName[seedPlace.placeType]
+            let place = Place(
+                name: seedPlace.name,
+                placeType: placeType,
+                modernLocation: seedPlace.modernLocation,
+                placeDescription: seedPlace.placeDescription,
+                source: seedPlace.source,
+                latitude: seedPlace.latitude,
+                longitude: seedPlace.longitude
+            )
+            context.insert(place)
+            placeByName[seedPlace.name] = place
+        }
+
+        // 2. Create missing figure-place associations
+        let allRoleTypes: [FigurePlaceRoleType] = (try? context.fetch(FetchDescriptor<FigurePlaceRoleType>())) ?? []
+        let existingAssocs = (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? []
+
+        for seedAssoc in root.figurePlaceAssociations ?? [] {
+            guard let figName = seedFigureNameById[seedAssoc.figureId],
+                  let placeName = seedPlaceNameById[seedAssoc.placeId],
+                  let figure = figureByName[figName],
+                  let place = placeByName[placeName] else { continue }
+
+            let alreadyExists = existingAssocs.contains { assoc in
+                assoc.figure?.persistentModelID == figure.persistentModelID &&
+                assoc.place?.persistentModelID == place.persistentModelID &&
+                assoc.roleType?.name == seedAssoc.role
+            }
+            guard !alreadyExists else { continue }
+
+            let roleType = allRoleTypes.first(where: { $0.name == seedAssoc.role })
+            let assoc = FigurePlaceAssociation(
+                figure: figure,
+                place: place,
+                roleType: roleType,
+                source: seedAssoc.source
+            )
+            context.insert(assoc)
+        }
+
+        try? context.save()
+    }
+
+    package static func ensureImportedDeityRelationships(context: ModelContext) {
+        let relationships: [(from: String, to: String, type: String, source: String)] = [
+            ("Gugalanna", "Ereshkigal", "Spouse", "Sumerian mythology"),
+            ("Inanna", "Shara", "Mother", "Sumerian texts"),
+            ("Isimud", "Enki", "Servant", "Sumerian texts"),
+            ("Ninshubur", "Inanna", "Servant", "Sumerian texts"),
+            ("Papsukkal", "Anu", "Servant", "Akkadian texts"),
+            ("Ereshkigal", "Ninazu", "Mother", "Sumerian texts"),
+            ("Gugalanna", "Ninazu", "Father", "Sumerian texts"),
+            ("Enki", "Kulla", "Creator", "Sumerian texts"),
+            ("Enki", "Mushdamma", "Creator", "Sumerian texts"),
+            ("Anu", "Ishkur", "Father", "Akkadian texts"),
+        ]
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figureByName = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
+
+        let allRelTypes = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
+        let existingRelationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+
+        for rel in relationships {
+            guard let fromFigure = figureByName[rel.from],
+                  let toFigure = figureByName[rel.to],
+                  let relType = allRelTypes.first(where: { $0.name == rel.type }) else { continue }
+
+            let alreadyExists = existingRelationships.contains { existing in
+                existing.fromFigure?.persistentModelID == fromFigure.persistentModelID &&
+                existing.toFigure?.persistentModelID == toFigure.persistentModelID &&
+                existing.relationshipType?.persistentModelID == relType.persistentModelID
+            }
+            guard !alreadyExists else { continue }
+
+            let relationship = Relationship(
+                fromFigure: fromFigure,
+                toFigure: toFigure,
+                relationshipType: relType,
+                source: rel.source
+            )
+            context.insert(relationship)
+        }
+        try? context.save()
+    }
 }
