@@ -401,31 +401,40 @@ private struct CoverageBlock: View {
     let onMarkAll: (() -> Void)?
     let onMarkFigure: ((Figure) -> Void)?
 
+    @State private var isExpanded = false
+
     private var count: Int { items.count }
     private var fraction: Double { total > 0 ? Double(count) / Double(total) : 0 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.subheadline)
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Spacer()
-                if !items.isEmpty, let onMarkAll {
-                    Button("Dismiss All") {
-                        onMarkAll()
+            Button(action: { withAnimation(.easeInOut(duration: 0.15)) { isExpanded.toggle() } }) {
+                HStack(spacing: 8) {
+                    Image(systemName: icon)
+                        .font(.subheadline)
+                        .foregroundStyle(color)
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if !items.isEmpty, let onMarkAll {
+                        Button("Dismiss All") {
+                            onMarkAll()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .tint(.blue)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.small)
-                    .tint(.blue)
+                    Text("\(count)/\(total)")
+                        .font(.subheadline.monospacedDigit().bold())
+                        .foregroundStyle(fraction > 0.5 ? .red : fraction > 0.2 ? .orange : .secondary)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
-                Text("\(count)/\(total)")
-                    .font(.subheadline.monospacedDigit().bold())
-                    .foregroundStyle(fraction > 0.5 ? .red : fraction > 0.2 ? .orange : .secondary)
             }
+            .buttonStyle(.plain)
 
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
@@ -439,7 +448,7 @@ private struct CoverageBlock: View {
             }
             .frame(height: 6)
 
-            if !items.isEmpty {
+            if isExpanded && !items.isEmpty {
                 let displayItems = items.prefix(10)
                 let remainder = count - displayItems.count
                 VStack(alignment: .leading, spacing: 1) {
@@ -466,6 +475,7 @@ private struct CoverageBlock: View {
                     }
                 }
                 .padding(.top, 2)
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
         .padding(12)

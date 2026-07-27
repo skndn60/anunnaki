@@ -341,6 +341,14 @@ This is faster and more reliable than reading code to simulate the layout engine
 - [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
 - [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
 - [ ] **Backfill descriptions for Buzi & Haziana:** Imported SKL-era figures from interrupted batch — Buzi (has Wikipedia page, father of Ezekiel) and Haziana (no Wikipedia page, needs manual description) have empty `figureDescription`. Low priority.
+- [ ] **Write tests for Migration.swift:** 15% coverage, 368 lines, runs on every launch — highest risk for subtle bugs.
+- [ ] **Write tests for SKLDatePropagator.swift:** 0% coverage, 53 lines, BCE year math with edge cases (mythological reigns, negative years).
+
+### 2026-07-27 — Coverage dashboard collapsible sections, NSTableView reentrant warning fix
+
+**Changes made:**
+- `Sources/Me/Views/DashboardView.swift` — Made each `CoverageBlock` collapsible with `@State isExpanded`, chevron rotation, tap-to-toggle, transition animation. Default collapsed.
+- `Sources/Me/Views/FigureListView.swift` — Wrapped `proxy.scrollTo` in `Task { @MainActor in }` to defer NSTableView mutation past the current delegate cycle, silencing the "reentrant operation in NSTableView delegate" warning.
 
 ### 2026-07-26 — Query results actionable: sidebar nav, lineage button, copy
 

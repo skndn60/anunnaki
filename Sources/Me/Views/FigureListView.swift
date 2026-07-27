@@ -165,7 +165,9 @@ struct FigureListView: View {
                         .onChange(of: selectedFigureID) { _, newValue in
                             if let id = newValue {
                                 selectFigure(id)
-                                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                                Task { @MainActor in
+                                    withAnimation { proxy.scrollTo(id, anchor: .center) }
+                                }
                             }
                         }
                     }
