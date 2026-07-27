@@ -11,6 +11,8 @@ package final class Event {
     package var era: String
     package var source: String
     package var isConcept: Bool
+    /// Override for alphabetical sorting (e.g. "The Great Flood" → "Flood")
+    package var sortName: String?
 
     /// Figures involved in this event
     @Relationship
@@ -44,6 +46,7 @@ package final class Event {
         era: String = "",
         source: String = "",
         isConcept: Bool = false,
+        sortName: String? = nil,
         involvedFigures: [Figure] = [],
         placeAssociations: [EventPlaceAssociation] = []
     ) {
@@ -54,6 +57,7 @@ package final class Event {
         self.era = era
         self.source = source
         self.isConcept = isConcept
+        self.sortName = sortName
         self.involvedFigures = involvedFigures
         self.placeAssociations = placeAssociations
     }

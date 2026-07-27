@@ -85,7 +85,7 @@ final class MeCoreTests: XCTestCase {
         SeedData.ensureTypesExist(context: context)
 
         let eventTypes = (try? context.fetch(FetchDescriptor<EventType>(sortBy: [SortDescriptor(\.name)]))) ?? []
-        XCTAssertEqual(eventTypes.count, 8)
+        XCTAssertEqual(eventTypes.count, 10)
     }
 
     func testEnsureTypesExistIsIdempotent() {
@@ -101,7 +101,7 @@ final class MeCoreTests: XCTestCase {
 
         XCTAssertEqual(figureTypes, 7)
         XCTAssertEqual(placeTypes, 6)
-        XCTAssertEqual(eventTypes, 8)
+        XCTAssertEqual(eventTypes, 10)
     }
 
     func testQueryEngineFindsFigureByName() {
@@ -1038,5 +1038,188 @@ final class MeCoreTests: XCTestCase {
         }
         let names = figures.map(\.name)
         XCTAssertTrue(names.contains("Marduk"), "Tiamat created Marduk")
+    }
+
+    // MARK: - Fallback Intent-Based Queries
+
+    func testCountDynastiesAtPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let kish = Place(name: "Kish", placeDescription: "Ancient Sumerian city")
+        context.insert(kish)
+
+        let humanType = FigureType(name: "Human", icon: "person", colorHex: "#FFFFFF")
+        context.insert(humanType)
+
+        let era1Figure = Figure(name: "Etana", title: "King of Kish", gender: .male, figureDescription: "Reigned 1500 years", birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish", isApproximate: true))
+        let era2Figure = Figure(name: "Enmebaragesi", title: "King of Kish", gender: .male, figureDescription: "Reigned 900 years", birthDate: MythologicalDate(year: nil, era: "Second Dynasty of Kish", isApproximate: true))
+        let era3Figure = Figure(name: "Agga", title: "King of Kish", gender: .male, figureDescription: "Reigned 625 years", birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish", isApproximate: true))
+        for f in [era1Figure, era2Figure, era3Figure] { context.insert(f) }
+
+        let roleType = FigurePlaceRoleType(name: "Ruler", icon: "crown.fill", colorHex: "FFCC00")
+        context.insert(roleType)
+
+        for f in [era1Figure, era2Figure, era3Figure] {
+            let assoc = FigurePlaceAssociation(figure: f, place: kish, roleType: roleType, source: "SKL")
+            context.insert(assoc)
+        }
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("how many dynasties did Kish have")
+
+        guard case .answer(let text) = result else {
+            XCTFail("Expected answer, got \(result)")
+            return
+        }
+        XCTAssertTrue(text.contains("2"), "Expected 2 dynasties, got: \(text)")
+        XCTAssertTrue(text.contains("Kish"))
+        XCTAssertTrue(text.contains("First Dynasty of Kish"))
+        XCTAssertTrue(text.contains("Second Dynasty of Kish"))
+    }
+
+    func testCountKingsAtPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let uruk = Place(name: "Uruk", placeDescription: "City of Gilgamesh")
+        context.insert(uruk)
+
+        let gilgamesh = Figure(name: "Gilgamesh", title: "King of Uruk", gender: .male, figureDescription: "King of Uruk")
+        let lugalbanda = Figure(name: "Lugalbanda", title: "King of Uruk", gender: .male, figureDescription: "A king of Uruk")
+        let enmerkar = Figure(name: "Enmerkar", title: "King of Uruk", gender: .male, figureDescription: "King of Uruk")
+        for f in [gilgamesh, lugalbanda, enmerkar] { context.insert(f) }
+
+        for f in [gilgamesh, lugalbanda, enmerkar] {
+            let assoc = FigurePlaceAssociation(figure: f, place: uruk, source: "SKL")
+            context.insert(assoc)
+        }
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("how many kings ruled in Uruk")
+
+        guard case .answer(let text) = result else {
+            XCTFail("Expected answer, got \(result)")
+            return
+        }
+        XCTAssertTrue(text.contains("3"), "Expected 3 kings, got: \(text)")
+    }
+
+    func testListDynastiesAtPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let kish = Place(name: "Kish")
+        context.insert(kish)
+
+        let d1 = Figure(name: "Etana", gender: .male, birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish"))
+        let d2 = Figure(name: "Enmebaragesi", gender: .male, birthDate: MythologicalDate(year: nil, era: "Second Dynasty of Kish"))
+        let d1b = Figure(name: "Agga", gender: .male, birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish"))
+        for f in [d1, d2, d1b] { context.insert(f) }
+
+        for f in [d1, d2, d1b] {
+            context.insert(FigurePlaceAssociation(figure: f, place: kish, source: "SKL"))
+        }
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("what dynasties ruled Kish")
+
+        guard case .answer(let text) = result else {
+            XCTFail("Expected answer, got \(result)")
+            return
+        }
+        XCTAssertTrue(text.contains("First Dynasty of Kish"))
+        XCTAssertTrue(text.contains("Second Dynasty of Kish"))
+    }
+
+    func testWhoRuledPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let uruk = Place(name: "Uruk")
+        context.insert(uruk)
+
+        let gilgamesh = Figure(name: "Gilgamesh", title: "King of Uruk", gender: .male)
+        let enmerkar = Figure(name: "Enmerkar", title: "King of Uruk", gender: .male)
+        let inanna = Figure(name: "Inanna", gender: .female, domain: "Love and War")
+        context.insert(gilgamesh)
+        context.insert(enmerkar)
+        context.insert(inanna)
+
+        for f in [gilgamesh, enmerkar] {
+            context.insert(FigurePlaceAssociation(figure: f, place: uruk, source: "SKL"))
+        }
+        context.insert(FigurePlaceAssociation(figure: inanna, place: uruk, source: "Mythology"))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("who ruled Uruk")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figureList, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Rulers of Uruk")
+        XCTAssertEqual(figures.count, 2)
+        XCTAssertTrue(figures.contains(where: { $0.name == "Gilgamesh" }))
+        XCTAssertTrue(figures.contains(where: { $0.name == "Enmerkar" }))
+        XCTAssertFalse(figures.contains(where: { $0.name == "Inanna" }))
+    }
+
+    func testWhichRulersBelongedToEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let kish1 = Figure(name: "Etana", title: "King of Kish", gender: .male, figureDescription: "Reigned 1500 years", birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish", isApproximate: true))
+        let kish2 = Figure(name: "Enmebaragesi", title: "King of Kish", gender: .male, figureDescription: "Reigned 900 years", birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish", isApproximate: true))
+        let kish3 = Figure(name: "Agga", title: "King of Kish", gender: .male, figureDescription: "Reigned 625 years", birthDate: MythologicalDate(year: nil, era: "First Dynasty of Kish", isApproximate: true))
+        let otherEra = Figure(name: "Gilgamesh", title: "King of Uruk", gender: .male, figureDescription: "King of Uruk", birthDate: MythologicalDate(year: nil, era: "Early Dynastic Period", isApproximate: true))
+        for f in [kish1, kish2, kish3, otherEra] { context.insert(f) }
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("which rulers belonged to the first dynasty of kish")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figureList, got \(result)")
+            return
+        }
+        XCTAssertEqual(figures.count, 3)
+        XCTAssertTrue(figures.allSatisfy { $0.name != "Gilgamesh" })
+        XCTAssertTrue(figures.contains(where: { $0.name == "Etana" }))
+    }
+
+    func testKingsOfTheEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        let etana = Figure(name: "Etana", title: "King of Kish", gender: .male, figureDescription: "Reigned 1500 years", birthDate: MythologicalDate(year: nil, era: "Early Dynastic Period", isApproximate: true))
+        let enmerkar = Figure(name: "Enmerkar", title: "King of Uruk", gender: .male, figureDescription: "Reigned 420 years", birthDate: MythologicalDate(year: nil, era: "Early Dynastic Period", isApproximate: true))
+        let lugalbanda = Figure(name: "Lugalbanda", title: "King of Uruk", gender: .male, figureDescription: "Reigned 1200 years", birthDate: MythologicalDate(year: nil, era: "Early Dynastic Period", isApproximate: true))
+        for f in [etana, enmerkar, lugalbanda] { context.insert(f) }
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("kings of the early dynastic period")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figureList, got \(result)")
+            return
+        }
+        XCTAssertEqual(figures.count, 3)
+    }
+
+    func testFallbackNoMatchForUnrelatedQuery() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let engine = QueryEngine(context: context)
+        let result = engine.query("what is the meaning of life")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch, got \(result)")
+            return
+        }
     }
 }

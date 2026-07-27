@@ -62,25 +62,14 @@ struct SourceListView: View {
                 if let source = selectedSource {
                     // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
-                        HStack(spacing: 8) {
-                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
-                                editingSource = source
-                            }
-                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
+                        DetailToolbar(
+                            onEdit: { editingSource = source },
+                            onDelete: {
                                 selectedSourceID = nil
                                 modelContext.delete(source)
-                            }
-                            Spacer()
-                            Button(action: { selectedSourceID = nil }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 22, height: 22)
-                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                            }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.vertical, 8)
+                            },
+                            onClose: { selectedSourceID = nil }
+                        )
                     SourceDetailView(source: source)
                     }
                 .frame(width: detailWidth)

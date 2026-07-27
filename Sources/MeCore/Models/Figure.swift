@@ -14,8 +14,16 @@ package final class Figure {
     package var birthDate: MythologicalDate
     package var deathDate: MythologicalDate
     package var source: String
+    package var causeOfDeath: String?
     package var isConcept: Bool
     package var orderIndex: Int
+    package var coverageExempt: Bool?
+    package var coverageReviewedAt: Date?
+    package var reignStartYear: Int?
+    package var reignEndYear: Int?
+
+    @Relationship
+    package var era: Era?
 
     /// Relationships where this figure is the parent/source
     @Relationship(deleteRule: .cascade, inverse: \Relationship.fromFigure)
@@ -80,6 +88,7 @@ package final class Figure {
         birthDate: MythologicalDate = .unknown,
         deathDate: MythologicalDate = .unknown,
         source: String = "",
+        causeOfDeath: String? = nil,
         isConcept: Bool = false,
         orderIndex: Int = 0
     ) {
@@ -93,6 +102,7 @@ package final class Figure {
         self.birthDate = birthDate
         self.deathDate = deathDate
         self.source = source
+        self.causeOfDeath = causeOfDeath
         self.isConcept = isConcept
         self.orderIndex = orderIndex
     }

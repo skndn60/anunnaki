@@ -37,9 +37,13 @@ struct PlaceListView: View {
         return { self.coordinator?.navigateToHistory(at: index) }
     }
 
+    private func effectiveSortName(_ place: Place) -> String {
+        place.sortName.map { sortName(for: $0) } ?? sortName(for: place.name)
+    }
+
     private var sortedPlaces: [Place] {
         switch sortOrder {
-        case .name: return places.sorted { sortName(for: $0.name) < sortName(for: $1.name) }
+        case .name: return places.sorted { effectiveSortName($0) < effectiveSortName($1) }
         case .type: return places.sorted { $0.placeType?.name ?? "" < $1.placeType?.name ?? "" }
         }
     }
@@ -47,7 +51,7 @@ struct PlaceListView: View {
     private var groupedPlaces: [(key: String, places: [Place])] {
         Dictionary(grouping: sortedPlaces) { place in
             switch sortOrder {
-            case .name: String(sortName(for: place.name).uppercased().prefix(1))
+            case .name: String(effectiveSortName(place).uppercased().prefix(1))
             case .type: place.placeType?.name ?? "?"
             }
         }
@@ -112,14 +116,19 @@ struct PlaceListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(selection: $selectedPlaceID) {
-                        ForEach(groupedPlaces, id: \.key) { group in
-                            placeGroupSection(group)
+                    ScrollViewReader { proxy in
+                        List(selection: $selectedPlaceID) {
+                            ForEach(groupedPlaces, id: \.key) { group in
+                                placeGroupSection(group)
+                            }
                         }
-                    }
-                    .listStyle(.inset(alternatesRowBackgrounds: true))
-                    .onChange(of: selectedPlaceID) { _, newValue in
-                        if let id = newValue { selectPlace(id) }
+                        .listStyle(.inset(alternatesRowBackgrounds: true))
+                        .onChange(of: selectedPlaceID) { _, newValue in
+                            if let id = newValue {
+                                selectPlace(id)
+                                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                            }
+                        }
                     }
                 }
             }
@@ -129,24 +138,11 @@ struct PlaceListView: View {
                 if let place = selectedPlace {
                     // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
-                        HStack(spacing: 8) {
-                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
-                                editingPlace = place
-                            }
-                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
-                                showDeleteConfirm = true
-                            }
-                            Spacer()
-                            Button(action: { selectedPlaceID = nil }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 22, height: 22)
-                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                            }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.vertical, 8)
+                        DetailToolbar(
+                            onEdit: { editingPlace = place },
+                            onDelete: { showDeleteConfirm = true },
+                            onClose: { selectedPlaceID = nil }
+                        )
                     PlaceDetailView(
                             place: place,
                             onSelectFigure: { figure in
@@ -211,6 +207,7 @@ struct PlaceListView: View {
             ForEach(group.places) { place in
                 PlaceRow(place: place)
                     .tag(place.persistentModelID)
+                    .id(place.persistentModelID)
             }
         }
     }
@@ -269,6 +266,7 @@ struct PlaceFormView: View {
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
 
     @State private var name = ""
+    @State private var sortName = ""
     @State private var placeType: PlaceType? = nil
     @State private var modernLocation = ""
     @State private var placeDescription = ""
@@ -289,6 +287,7 @@ struct PlaceFormView: View {
             Form {
                 Section("Place Details") {
                     TextField("Name", text: $name, prompt: Text("e.g. Uruk, Eridu, Kur"))
+                    TextField("Sort Name", text: $sortName, prompt: Text("Leave blank to auto-derive from name"))
                     Picker("Type", selection: $placeType) {
                         ForEach(placeTypes, id: \.persistentModelID) { type in
                             Text(type.name).tag(type as PlaceType?)
@@ -333,6 +332,7 @@ struct PlaceFormView: View {
     private func loadIfEditing() {
         guard let place else { return }
         name = place.name
+        sortName = place.sortName ?? ""
         placeType = place.placeType
         modernLocation = place.modernLocation
         placeDescription = place.placeDescription
@@ -346,6 +346,7 @@ struct PlaceFormView: View {
     private func save() {
         if let place {
             place.name = name
+            place.sortName = sortName.isEmpty ? nil : sortName
             place.placeType = placeType
             place.modernLocation = modernLocation
             place.placeDescription = placeDescription
@@ -364,6 +365,7 @@ struct PlaceFormView: View {
                 latitude: Double(latitudeStr),
                 longitude: Double(longitudeStr)
             )
+            newPlace.sortName = sortName.isEmpty ? nil : sortName
             newPlace.tags = selectedTags
             newPlace.foundedDate = foundedDate
             modelContext.insert(newPlace)

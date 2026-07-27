@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct Breadcrumb: Identifiable {
-    let id: PersistentIdentifier
+    let id: UUID
     let name: String
     let icon: String
 }

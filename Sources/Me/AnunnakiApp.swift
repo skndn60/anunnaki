@@ -279,7 +279,7 @@ struct FigureDetailWindow: View {
     var body: some View {
         Group {
             if let figure {
-                FigureDetailView(figure: figure)
+                FigureQuicklookView(figure: figure)
             } else {
                 Text("Figure not found")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

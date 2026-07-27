@@ -15,6 +15,27 @@ package struct MythologicalDate: Codable, Hashable {
     /// Whether the date is approximate (most ancient dates are)
     package var isApproximate: Bool
 
+    /// Qualifier for single-year dates
+    package var qualifier: DateQualifier
+
+    private enum CodingKeys: String, CodingKey {
+        case startYear, endYear, era, isApproximate, qualifier
+    }
+
+    package enum DateQualifier: String, Codable, CaseIterable {
+        case exact
+        case after
+        case before
+
+        package var label: String {
+            switch self {
+            case .exact: return "Exact"
+            case .after: return "After"
+            case .before: return "Before"
+            }
+        }
+    }
+
     /// Human-readable display label (e.g. "~445,000 BCE", "~1,240–1,230 BCE", "Mythological")
     package var displayLabel: String {
         let prefix = isApproximate ? "~" : ""
@@ -26,19 +47,10 @@ package struct MythologicalDate: Codable, Hashable {
             return "\(prefix)\(startStr) \u{2013} \(endStr)\(suffix)"
         }
 
-        if startYear == nil, let end = endYear {
-            let suffix = end < 0 ? " BCE" : " CE"
-            return "\(prefix)before \(formatYearAbs(end))\(suffix)"
-        }
-
-        if let start = startYear, endYear == nil {
-            let suffix = start < 0 ? " BCE" : " CE"
-            return "\(prefix)after \(formatYearAbs(start))\(suffix)"
-        }
-
         if let year = startYear ?? endYear {
             let suffix = year < 0 ? " BCE" : " CE"
-            return "\(prefix)\(formatYearAbs(year))\(suffix)"
+            let qual = qualifier == .exact ? "" : qualifier.rawValue + " "
+            return "\(prefix)\(qual)\(formatYearAbs(year))\(suffix)"
         }
 
         return era.isEmpty ? "Unknown" : era
@@ -49,6 +61,24 @@ package struct MythologicalDate: Codable, Hashable {
         startYear ?? endYear ?? Int.min
     }
 
+    package init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        startYear = try container.decodeIfPresent(Int.self, forKey: .startYear)
+        endYear = try container.decodeIfPresent(Int.self, forKey: .endYear)
+        era = try container.decodeIfPresent(String.self, forKey: .era) ?? ""
+        isApproximate = try container.decodeIfPresent(Bool.self, forKey: .isApproximate) ?? false
+        qualifier = try container.decodeIfPresent(DateQualifier.self, forKey: .qualifier) ?? .exact
+    }
+
+    package func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encodeIfPresent(startYear, forKey: .startYear)
+        try container.encodeIfPresent(endYear, forKey: .endYear)
+        try container.encode(era, forKey: .era)
+        try container.encode(isApproximate, forKey: .isApproximate)
+        try container.encode(qualifier, forKey: .qualifier)
+    }
+
     package static let unknown = MythologicalDate(startYear: nil, endYear: nil, era: "", isApproximate: true)
 
     /// Convenience initializer for a single-year date (backward-compatible).
@@ -57,9 +87,10 @@ package struct MythologicalDate: Codable, Hashable {
         self.endYear = year
         self.era = era
         self.isApproximate = isApproximate
+        self.qualifier = .exact
     }
 
-    package init(startYear: Int? = nil, endYear: Int? = nil, era: String = "", isApproximate: Bool = false) {
+    package init(startYear: Int? = nil, endYear: Int? = nil, era: String = "", isApproximate: Bool = false, qualifier: DateQualifier = .exact) {
         if let s = startYear, let e = endYear, s > e {
             self.startYear = e
             self.endYear = s
@@ -69,6 +100,7 @@ package struct MythologicalDate: Codable, Hashable {
         }
         self.era = era
         self.isApproximate = isApproximate
+        self.qualifier = qualifier
     }
 
     private func formatYearAbs(_ year: Int) -> String {

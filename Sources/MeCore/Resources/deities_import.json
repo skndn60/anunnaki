@@ -493,7 +493,68 @@
     }
   ],
   "eras": [],
-  "relationships": [],
+  "relationships": [
+    {
+      "fromFigureId": "7046d42c-6e1b-5959-a60f-cc4e7dedc14a",
+      "toFigureId": "1dd59913-8226-5e6b-8719-c348e69609d5",
+      "relationshipType": "Spouse",
+      "source": "Sumerian mythology"
+    },
+    {
+      "fromFigureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+      "toFigureId": "81b23391-6760-532b-bef5-ffa1da4c9925",
+      "relationshipType": "Mother",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "bc29b3e5-652b-5605-a06b-41a26b0b36b6",
+      "toFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "relationshipType": "Servant",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "c6f0cbc7-c394-558c-b093-788820ff1bfc",
+      "toFigureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+      "relationshipType": "Servant",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "d282ac73-73ba-58c9-8b1d-f86b1d754e39",
+      "toFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "relationshipType": "Servant",
+      "source": "Akkadian texts"
+    },
+    {
+      "fromFigureId": "1dd59913-8226-5e6b-8719-c348e69609d5",
+      "toFigureId": "04ad4d19-3d92-5712-8f5a-b8e532f26e8a",
+      "relationshipType": "Mother",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "7046d42c-6e1b-5959-a60f-cc4e7dedc14a",
+      "toFigureId": "04ad4d19-3d92-5712-8f5a-b8e532f26e8a",
+      "relationshipType": "Father",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "1708a1d5-fce9-50b8-b789-71bd8037a61a",
+      "relationshipType": "Creator",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "ee8efa38-df53-5917-9626-d3ed52fa845f",
+      "relationshipType": "Creator",
+      "source": "Sumerian texts"
+    },
+    {
+      "fromFigureId": "6e1085ac-04c0-5b6a-8854-62b4ee1a9982",
+      "toFigureId": "88f5a117-77bb-51c5-9357-a75cfe9737bb",
+      "relationshipType": "Father",
+      "source": "Akkadian texts"
+    }
+  ],
   "places": [],
   "events": [],
   "sources": [],

@@ -66,24 +66,11 @@ struct EraListView: View {
                 if let era = selectedEra {
                     // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
-                        HStack(spacing: 8) {
-                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
-                                editingEra = era
-                            }
-                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
-                                showDeleteConfirm = true
-                            }
-                            Spacer()
-                            Button(action: { selectedEraID = nil }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 22, height: 22)
-                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                            }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.vertical, 8)
+                        DetailToolbar(
+                            onEdit: { editingEra = era },
+                            onDelete: { showDeleteConfirm = true },
+                            onClose: { selectedEraID = nil }
+                        )
                     EraDetailView(era: era)
                     }
                 .frame(width: detailWidth)

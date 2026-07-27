@@ -44,13 +44,13 @@ struct LineageTreeView: View {
     @State private var rightClickFigureID: PersistentIdentifier?
     @State private var centerHistory: [Figure] = []
 
-    private let cardWidth: CGFloat = 100
-    private let cardHeight: CGFloat = 44
-    private let coupleSpacing: CGFloat = 40
-    private let partnerSpacing: CGFloat = 12
-    private let verticalSpacing: CGFloat = 120
+    private let cardWidth: CGFloat = 120
+    private let cardHeight: CGFloat = 52
+    private let coupleSpacing: CGFloat = 36
+    private let partnerSpacing: CGFloat = 14
+    private let verticalSpacing: CGFloat = 130
     private let canvasPadding: CGFloat = 60
-    private let branchBarOffset: CGFloat = 12
+    private let branchBarOffset: CGFloat = 16
 
     var body: some View {
         VStack(spacing: 0) {
@@ -183,6 +183,12 @@ struct LineageTreeView: View {
 
         return ScrollView([.horizontal, .vertical], showsIndicators: true) {
             ZStack(alignment: .topLeading) {
+                Canvas { context, _ in
+                    drawGenerationBackground(context: &context, data: data, layout: layout)
+                }
+                .allowsHitTesting(false)
+                .frame(width: layout.canvasWidth, height: layout.canvasHeight)
+
                 Canvas { context, _ in
                     drawBrackets(context: &context, data: data, layout: layout)
                 }
@@ -404,6 +410,25 @@ struct LineageTreeView: View {
         "\(figure.name)@\(gen)"
     }
 
+    // MARK: - Generation Colors
+
+    private func generationColor(for gen: Int) -> Color {
+        let palette: [Color] = [
+            Color(red: 0.75, green: 0.35, blue: 0.20),
+            Color(red: 0.20, green: 0.50, blue: 0.70),
+            Color(red: 0.45, green: 0.45, blue: 0.45),
+            Color(red: 0.25, green: 0.60, blue: 0.40),
+            Color(red: 0.60, green: 0.28, blue: 0.52),
+        ]
+        let idx = gen + 2
+        return palette[max(0, min(idx, palette.count - 1))]
+    }
+
+    private func generationTint(for gen: Int) -> Color {
+        let base = generationColor(for: gen)
+        return base.opacity(0.04)
+    }
+
     // MARK: - Partner Helpers
 
     private func preferredPartner(of figure: Figure) -> Figure? {
@@ -596,6 +621,21 @@ struct LineageTreeView: View {
         }
     }
 
+    // MARK: - Generation Background
+
+    private func drawGenerationBackground(context: inout GraphicsContext, data: TreeData, layout: LayoutResult) {
+        let levels = data.levels.sorted(by: { $0.first?.generation ?? 0 < $1.first?.generation ?? 0 })
+        for level in levels {
+            guard let gen = level.first?.generation,
+                  let firstEntry = level.first,
+                  let firstFrame = layout.nodeLayouts[firstEntry.primary.persistentModelID] else { continue }
+            let rowY = firstFrame.minY - 6
+            let rowH = cardHeight + 12
+            let genRect = CGRect(x: 0, y: rowY, width: layout.canvasWidth, height: rowH)
+            context.fill(Path(genRect), with: .color(generationTint(for: gen)))
+        }
+    }
+
     // MARK: - Bracket Drawing
 
     private func drawBrackets(context: inout GraphicsContext, data: TreeData, layout: LayoutResult) {
@@ -617,8 +657,9 @@ struct LineageTreeView: View {
     }
 
     private func drawSingleBracket(context: inout GraphicsContext, parentFrames: [CGRect], childFrames: [CGRect]) {
-        let lineColor = Color.secondary.opacity(0.35)
-        let lineWidth: CGFloat = 1.5
+        let lineColor = Color.secondary.opacity(0.45)
+        let lineWidth: CGFloat = 2.0
+        let style = StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round)
 
         let marriageY = (parentFrames.map(\.maxY).max() ?? 0) + 14
         if parentFrames.count > 1 {
@@ -628,12 +669,12 @@ struct LineageTreeView: View {
                 var stub = Path()
                 stub.move(to: CGPoint(x: pf.midX, y: pf.maxY))
                 stub.addLine(to: CGPoint(x: pf.midX, y: marriageY))
-                context.stroke(stub, with: .color(lineColor), lineWidth: lineWidth)
+                context.stroke(stub, with: .color(lineColor), style: style)
             }
             var p = Path()
             p.move(to: CGPoint(x: lx, y: marriageY))
             p.addLine(to: CGPoint(x: rx, y: marriageY))
-            context.stroke(p, with: .color(lineColor), lineWidth: lineWidth)
+            context.stroke(p, with: .color(lineColor), style: style)
         }
 
         let trunkX = parentFrames.map(\.midX).reduce(0, +) / CGFloat(parentFrames.count)
@@ -644,7 +685,7 @@ struct LineageTreeView: View {
         var t = Path()
         t.move(to: CGPoint(x: trunkX, y: marriageY))
         t.addLine(to: CGPoint(x: trunkX, y: branchBarY))
-        context.stroke(t, with: .color(lineColor), lineWidth: lineWidth)
+        context.stroke(t, with: .color(lineColor), style: style)
 
         let allX = childFrames.map(\.midX) + [trunkX]
         let minX = allX.min()!
@@ -653,14 +694,14 @@ struct LineageTreeView: View {
             var b = Path()
             b.move(to: CGPoint(x: minX, y: branchBarY))
             b.addLine(to: CGPoint(x: maxX, y: branchBarY))
-            context.stroke(b, with: .color(lineColor), lineWidth: lineWidth)
+            context.stroke(b, with: .color(lineColor), style: style)
         }
 
         for cf in childFrames {
             var d = Path()
             d.move(to: CGPoint(x: cf.midX, y: branchBarY))
             d.addLine(to: CGPoint(x: cf.midX, y: cf.minY))
-            context.stroke(d, with: .color(lineColor), lineWidth: lineWidth)
+            context.stroke(d, with: .color(lineColor), style: style)
         }
     }
 
@@ -669,71 +710,76 @@ struct LineageTreeView: View {
     private func drawNodes(context: inout GraphicsContext, data: TreeData, layout: LayoutResult, centerID: PersistentIdentifier) {
         for (figID, frame) in layout.nodeLayouts {
             let figure: Figure?
+            let generation: Int
             if let dbFig = figures.first(where: { $0.persistentModelID == figID }) {
                 figure = dbFig
+                generation = data.entries.values.first(where: { $0.primary.persistentModelID == figID })?.generation ?? 0
             } else if let placeholder = data.entries.values.first(where: { $0.primary.persistentModelID == figID })?.primary {
                 figure = placeholder
+                generation = data.entries.values.first(where: { $0.primary.persistentModelID == figID })?.generation ?? 0
             } else if let partnerFig = data.entries.values.compactMap({ $0.partner }).first(where: { $0.persistentModelID == figID }) {
                 figure = partnerFig
+                generation = data.entries.values.first(where: { $0.partner?.persistentModelID == figID })?.generation ?? 0
             } else {
                 continue
             }
             guard let figure else { continue }
             let isCenter = figID == centerID
             let alt = layout.figureAltCounts[figID] ?? 0
-            drawCard(context: &context, figure: figure, frame: frame, isCenter: isCenter, altCount: alt)
+            drawCard(context: &context, figure: figure, frame: frame, generation: generation, isCenter: isCenter, altCount: alt)
         }
     }
 
-    private func drawCard(context: inout GraphicsContext, figure: Figure, frame: CGRect, isCenter: Bool, altCount: Int) {
+    private func drawCard(context: inout GraphicsContext, figure: Figure, frame: CGRect, generation: Int, isCenter: Bool, altCount: Int) {
         let isUnknown = isUnknownParent(figure)
         let color = isUnknown ? Color.gray : (figure.figureType?.color ?? .gray)
-        let radius: CGFloat = 6
-
+        let radius: CGFloat = 7
         let bgPath = Path(roundedRect: frame, cornerRadius: radius)
-        context.fill(bgPath, with: .color(color.opacity(isUnknown ? 0.12 : 0.12)))
+        context.fill(bgPath, with: .color(isUnknown ? Color.gray.opacity(0.06) : color.opacity(0.10)))
 
-        let borderColor = isCenter ? Color.accentColor : (isUnknown ? Color.secondary : color.opacity(0.3))
-        let borderStyle = StrokeStyle(lineWidth: isCenter ? 1.5 : (isUnknown ? 1.0 : 0.5), dash: isUnknown ? [4, 3] : [])
-        context.stroke(bgPath, with: .color(borderColor), style: borderStyle)
+        if isCenter {
+            context.fill(bgPath, with: .color(Color.accentColor.opacity(0.06)))
+        }
+
+        let borderColor = isCenter ? Color.accentColor : (isUnknown ? Color.secondary.opacity(0.35) : color.opacity(0.3))
+        let borderWidth: CGFloat = isCenter ? 2 : (isUnknown ? 1 : 0.5)
+        let borderDash: [CGFloat] = isUnknown ? [4, 3] : []
+        context.stroke(bgPath, with: .color(borderColor), style: StrokeStyle(lineWidth: borderWidth, lineCap: .round, dash: borderDash))
 
         if isUnknown {
+            let ghostPath = Path(ellipseIn: CGRect(x: frame.minX + 24, y: frame.minY + 10, width: 12, height: 12))
+            context.stroke(ghostPath, with: .color(.secondary.opacity(0.4)), style: StrokeStyle(lineWidth: 1, dash: [3, 2]))
             context.draw(
-                Text("?")
-                    .font(.title3.weight(.bold))
-                    .foregroundColor(.secondary),
-                at: CGPoint(x: frame.midX, y: frame.midY - 6),
+                Text("?").font(.system(size: 9, weight: .bold)).foregroundColor(.secondary.opacity(0.5)),
+                at: CGPoint(x: frame.minX + 30, y: frame.minY + 16),
                 anchor: .center
             )
+            let shortName = figure.name.replacingOccurrences(of: "Unknown ", with: "")
             context.draw(
-                Text(figure.name.uppercased())
+                Text(shortName.uppercased())
                     .font(.system(size: 7, weight: .bold))
-                    .foregroundColor(.secondary),
-                at: CGPoint(x: frame.midX, y: frame.midY + 14),
-                anchor: .center
+                    .foregroundColor(.secondary.opacity(0.6)),
+                at: CGPoint(x: frame.midX + 8, y: frame.midY - 1),
+                anchor: .leading
             )
             return
         }
 
-        let dotRect = CGRect(x: frame.minX + 8, y: frame.minY + 10, width: 6, height: 6)
+        let dotRect = CGRect(x: frame.minX + 12, y: frame.minY + 12, width: 7, height: 7)
         context.fill(Path(ellipseIn: dotRect), with: .color(color))
 
-        let maxNameLen: Int = 11
+        let maxNameLen: Int = 14
         let displayName = figure.name.count > maxNameLen ? String(figure.name.prefix(maxNameLen - 1)) + "…" : figure.name
-        let nameText = Text(displayName).font(.caption.weight(.medium)).foregroundColor(.primary)
-        let nameRect = CGRect(x: frame.minX + 18, y: frame.minY + 8, width: frame.width - 22, height: 14)
-        context.draw(nameText, in: nameRect)
+        let nameText = Text(displayName).font(.system(size: 11, weight: .semibold)).foregroundColor(.primary)
+        context.draw(nameText, at: CGPoint(x: frame.minX + 26, y: frame.minY + 11), anchor: .topLeading)
 
-        let typeText: Text
-        if figure.gender != .unknown {
-            typeText = Text(figure.gender.symbol + " ") + Text(figure.figureType?.name ?? "").font(.caption2).foregroundColor(.secondary)
-        } else {
-            typeText = Text(figure.figureType?.name ?? "").font(.caption2).foregroundColor(.secondary)
-        }
+        let typeText = figure.gender != .unknown
+            ? Text(figure.gender.symbol + " ").font(.system(size: 9)) + Text(figure.figureType?.name ?? "").font(.system(size: 9)).foregroundColor(.secondary)
+            : Text(figure.figureType?.name ?? "").font(.system(size: 9)).foregroundColor(.secondary)
         context.draw(
             typeText,
-            at: CGPoint(x: frame.midX, y: frame.minY + 28),
-            anchor: .top
+            at: CGPoint(x: frame.minX + 26, y: frame.minY + 32),
+            anchor: .topLeading
         )
 
         if altCount > 0 {
@@ -847,53 +893,21 @@ private struct FigureDetailSheet: View {
     let onRecenter: (PersistentIdentifier) -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 10) {
-                Circle().fill(figure.figureType?.color ?? .gray).frame(width: 14, height: 14)
-                Text(figure.name).font(.title2.bold())
-                Spacer()
-                Button(action: onClose) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+        NavigationStack {
+            FigureQuicklookView(figure: figure)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close", action: onClose)
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        Button("Recenter Tree") {
+                            onRecenter(figure.persistentModelID)
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
                 }
-                .buttonStyle(.plain)
-                .help("Close")
-            }
-            .padding([.top, .horizontal])
-
-            HStack {
-                Text("Type").foregroundStyle(.secondary)
-                Spacer()
-                Text(figure.figureType?.name ?? "-").foregroundStyle(.primary)
-            }
-            .padding(.horizontal)
-
-            if !figure.domain.isEmpty {
-                HStack {
-                    Text("Domain").foregroundStyle(.secondary)
-                    Spacer()
-                    Text(figure.domain).foregroundStyle(.primary)
-                }
-                .padding(.horizontal)
-            }
-            if !figure.figureDescription.isEmpty {
-                Divider()
-                Text(figure.figureDescription).font(.body).foregroundStyle(.secondary).padding(.horizontal)
-            }
-
-            Spacer()
-
-            HStack {
-                Spacer()
-                Button("Recenter Tree") {
-                    onRecenter(figure.persistentModelID)
-                }
-                .buttonStyle(.borderedProminent)
-                Spacer()
-            }
         }
-        .padding()
-        .frame(width: 360, height: 280)
+        .frame(minWidth: 500, minHeight: 400)
     }
 }
 

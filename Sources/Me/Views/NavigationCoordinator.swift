@@ -1,10 +1,27 @@
+import Foundation
 import SwiftUI
 import SwiftData
 
 struct NavigationBreadcrumb: Identifiable {
-    let id: PersistentIdentifier
+    let id: UUID
     let name: String
     let item: NavigationItem
+    let entityID: PersistentIdentifier?
+
+    init(id: PersistentIdentifier, name: String, item: NavigationItem) {
+        self.id = UUID()
+        self.name = name
+        self.item = item
+        self.entityID = id
+    }
+
+    init?(queryText: String) {
+        guard !queryText.isEmpty else { return nil }
+        self.id = UUID()
+        self.name = "Query: \"\(queryText)\""
+        self.item = .query
+        self.entityID = nil
+    }
 }
 
 @Observable
@@ -16,6 +33,8 @@ final class NavigationCoordinator {
     var pendingThingID: PersistentIdentifier?
     var pendingLineageFigureID: PersistentIdentifier?
     var history: [NavigationBreadcrumb] = []
+    var recentQueryText = ""
+    var recentQueryResult: QueryResult?
 
     func navigateToFigure(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
         if recordHistory { pushHistory(id: id, name: name, item: .figures) }
@@ -46,6 +65,14 @@ final class NavigationCoordinator {
         selectedItem = .lineage
     }
 
+    func pushQueryBreadcrumb(queryText: String) {
+        guard let crumb = NavigationBreadcrumb(queryText: queryText) else { return }
+        if history.last?.id != crumb.id {
+            history.append(crumb)
+            if history.count > 24 { history.removeFirst() }
+        }
+    }
+
     func consumePendingLineageFigureID() -> PersistentIdentifier? {
         let id = pendingLineageFigureID
         pendingLineageFigureID = nil
@@ -57,11 +84,16 @@ final class NavigationCoordinator {
         let entry = history[index]
         history = Array(history.prefix(index + 1))
         switch entry.item {
-        case .figures: navigateToFigure(entry.id, recordHistory: false)
-        case .places: navigateToPlace(entry.id, recordHistory: false)
-        case .events: navigateToEvent(entry.id, recordHistory: false)
-        case .things: navigateToThing(entry.id, recordHistory: false)
-        case .lineage: navigateToLineageFigure(entry.id)
+        case .figures:
+            if let id = entry.entityID { navigateToFigure(id, recordHistory: false) }
+        case .places:
+            if let id = entry.entityID { navigateToPlace(id, recordHistory: false) }
+        case .events:
+            if let id = entry.entityID { navigateToEvent(id, recordHistory: false) }
+        case .things:
+            if let id = entry.entityID { navigateToThing(id, recordHistory: false) }
+        case .lineage: selectedItem = .lineage
+        case .query: selectedItem = .query
         default: break
         }
     }
@@ -91,7 +123,7 @@ final class NavigationCoordinator {
     }
 
     func pushHistory(id: PersistentIdentifier, name: String, item: NavigationItem) {
-        if history.last?.id != id {
+        if history.last?.name != name || history.last?.entityID != id {
             history.append(NavigationBreadcrumb(id: id, name: name, item: item))
             if history.count > 24 { history.removeFirst() }
         }

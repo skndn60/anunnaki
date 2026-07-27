@@ -9,6 +9,7 @@ package final class DictionaryEntry {
     package var cuneiform: String?
     package var partOfSpeech: String?
     package var pronunciation: String?
+    package var alternateEnglish: [String]?
 
     package init(
         english: String = "",
@@ -16,7 +17,8 @@ package final class DictionaryEntry {
         entryDescription: String = "",
         cuneiform: String? = nil,
         partOfSpeech: String? = nil,
-        pronunciation: String? = nil
+        pronunciation: String? = nil,
+        alternateEnglish: [String]? = nil
     ) {
         self.english = english
         self.sumerian = sumerian
@@ -24,5 +26,6 @@ package final class DictionaryEntry {
         self.cuneiform = cuneiform
         self.partOfSpeech = partOfSpeech
         self.pronunciation = pronunciation
+        self.alternateEnglish = alternateEnglish
     }
 }

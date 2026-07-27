@@ -23,6 +23,15 @@ struct MythologicalDateEditor: View {
             .pickerStyle(.segmented)
             .onChange(of: isBCE) { _, _ in applyYears() }
 
+            if endYearString.isEmpty {
+                Picker("Qualifier", selection: $date.qualifier) {
+                    ForEach(MythologicalDate.DateQualifier.allCases, id: \.self) { q in
+                        Text(q.label).tag(q)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
             if rangeInvalid {
                 Label("Year must be earlier than To", systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)

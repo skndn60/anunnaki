@@ -106,13 +106,7 @@ struct FigureDetailView: View {
         }
 
         HStack(spacing: 12) {
-            Circle()
-                .fill(figure.figureType?.color.opacity(0.2) ?? .gray.opacity(0.2))
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Image(systemName: figure.figureType?.icon ?? "questionmark")
-                        .foregroundStyle(figure.figureType?.color ?? .gray)
-                )
+            FigureIconCircle(figureType: figure.figureType, size: 44)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -136,14 +130,7 @@ struct FigureDetailView: View {
 
             Spacer()
 
-            Text(figure.figureType?.name ?? "Unknown")
-                .font(.caption)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 5)
-                        .fill(figure.figureType?.color.opacity(0.12) ?? .gray.opacity(0.12))
-                )
+            FigureTypeBadge(figureType: figure.figureType)
             if figure.isConcept {
                 Text("Concept")
                     .font(.caption2)
@@ -350,21 +337,8 @@ struct FigureDetailView: View {
                         .foregroundStyle(.tertiary)
                 } else {
                     ForEach(filteredCitations) { citation in
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "doc.text")
-                            .font(.caption)
-                            .foregroundStyle(.brown)
-                            .frame(width: 14)
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("\(citation.source?.name ?? "Unknown"), \(citation.safeLocation)")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                            Text(citation.safeNote)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
+                        FigureCitationsRow(citation: citation)
                     }
-                }
             }
         }
     }
@@ -408,7 +382,19 @@ struct FigureDetailView: View {
                     PropertyRow(label: "Domain", value: figure.domain)
                     PropertyRow(label: "Birth", value: figure.birthDate.displayLabel)
                     PropertyRow(label: "Death", value: figure.deathDate.displayLabel)
+                    PropertyRow(label: "Cause of Death", value: figure.causeOfDeath ?? "Unknown")
                     PropertyRow(label: "Source", value: figure.source)
+                    if figure.reignStartYear != nil || figure.reignEndYear != nil {
+                        let reignStr: String = {
+                            switch (figure.reignStartYear, figure.reignEndYear) {
+                            case let (s?, e?): return "\(abs(s))\u{2013}\(abs(e)) BC"
+                            case let (s?, nil): return "From \(abs(s)) BC"
+                            case let (nil, e?): return "To \(abs(e)) BC"
+                            default: return ""
+                            }
+                        }()
+                        PropertyRow(label: "Reign", value: reignStr)
+                    }
                 }
 
                 // Mini Lineage Tree
@@ -513,32 +499,7 @@ struct FigureDetailView: View {
                         }
                         ForEach(filteredPlaces) { assoc in
                             VStack(alignment: .leading, spacing: 2) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: assoc.place?.placeType?.icon ?? "mappin")
-                                        .font(.caption)
-                                        .foregroundStyle(.teal)
-                                        .frame(width: 14)
-                                    Text(assoc.roleType?.name ?? "—")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Button(action: {
-                                        if let place = assoc.place { onSelectPlace?(place) }
-                                    }) {
-                                        Text(assoc.place?.name ?? "?")
-                                            .font(.callout)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(Color.accentColor)
-                                            .underline()
-                                    }
-                                    .buttonStyle(.plain)
-                                    .pointingHand()
-                                    Spacer()
-                                    if !assoc.source.isEmpty {
-                                        Text(assoc.source)
-                                            .font(.caption2)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                }
+                                FigurePlaceAssociationRow(association: assoc, onSelectPlace: onSelectPlace)
                                 if editingCommentsID == assoc.persistentModelID {
                                     HStack(spacing: 4) {
                                         TextField("Comments", text: $editingCommentsText)

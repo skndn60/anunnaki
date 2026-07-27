@@ -25,7 +25,8 @@ struct DictionaryListView: View {
             result = result.filter {
                 $0.english.lowercased().contains(query) ||
                 $0.sumerian.lowercased().contains(query) ||
-                $0.entryDescription.lowercased().contains(query)
+                $0.entryDescription.lowercased().contains(query) ||
+                ($0.alternateEnglish?.contains { $0.lowercased().contains(query) } ?? false)
             }
         }
         if sortOrder == .sumerian {
@@ -118,13 +119,15 @@ struct DictionaryListView: View {
             }
             .frame(minWidth: 450, maxWidth: .infinity)
 
-            if let entry = selectedEntry {
-                ResizableDivider(width: $detailWidth, range: 200...600)
-                detailPanel(entry: entry, showSumerian: sortOrder == .sumerian)
-                    .frame(width: detailWidth)
-                    .background(.thinMaterial)
-                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            Group {
+                if let entry = selectedEntry {
+                    detailPanel(entry: entry, showSumerian: sortOrder == .sumerian)
+                        .frame(width: detailWidth)
+                        .frame(maxHeight: .infinity)
+                        .background(.thinMaterial)
+                }
             }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
         }
         .animation(.easeInOut(duration: 0.25), value: selectedEntryID)
         .sheet(isPresented: $showingAddSheet) {
@@ -148,24 +151,11 @@ struct DictionaryListView: View {
 
     private func detailPanel(entry: DictionaryEntry, showSumerian: Bool) -> some View {
         VStack(spacing: 0) {
-            HStack(spacing: 8) {
-                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
-                    editingEntry = entry
-                }
-                IconActionButton(icon: "trash", color: .red, help: "Delete") {
-                    showDeleteConfirm = true
-                }
-                Spacer()
-                Button(action: { selectedEntryID = nil }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.vertical, 8)
+            DetailToolbar(
+                onEdit: { editingEntry = entry },
+                onDelete: { showDeleteConfirm = true },
+                onClose: { selectedEntryID = nil }
+            )
 
             DictionaryDetailView(entry: entry, showSumerian: showSumerian)
         }
@@ -211,15 +201,26 @@ private struct DictionaryRow: View {
                             .foregroundStyle(.tertiary)
                     }
                 }
-                Text(showSumerian ? entry.english : entry.sumerian)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if showSumerian {
+                    Text(entry.english)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(entry.sumerian)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                if let alt = entry.alternateEnglish, !alt.isEmpty {
+                    Text(alt.joined(separator: ", "))
+                        .font(.caption2)
+                        .foregroundStyle(.purple.opacity(0.7))
+                }
             }
             Spacer()
             if let cuneiform = entry.cuneiform, !cuneiform.isEmpty {
                 Text(cuneiform)
-                    .font(.system(size: 14))
-                    .foregroundStyle(.tertiary)
+                    .font(.custom("NotoSansCuneiform-Regular", size: 20))
+                    .foregroundStyle(.primary)
             }
         }
         .padding(.vertical, 2)
@@ -252,6 +253,21 @@ struct DictionaryDetailView: View {
                         Text(showSumerian ? entry.english : entry.sumerian)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                        if let alt = entry.alternateEnglish, !alt.isEmpty {
+                            HStack(spacing: 4) {
+                                ForEach(alt, id: \.self) { translation in
+                                    Text(translation)
+                                        .font(.caption)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(Color.purple.opacity(0.1))
+                                        )
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
                     }
 
                     Spacer()
@@ -274,7 +290,7 @@ struct DictionaryDetailView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         Text(cuneiform)
-                            .font(.system(size: 28, design: .serif))
+                            .font(.custom("NotoSansCuneiform-Regular", size: 34))
                     }
                 }
 
@@ -321,8 +337,24 @@ private struct DictionaryFormView: View {
     @State private var cuneiform = ""
     @State private var partOfSpeech = ""
     @State private var pronunciation = ""
+    @State private var alternateEnglishText = ""
 
     private var isEditing: Bool { entry != nil }
+
+    private var nonCuneiformScalars: [UInt32] {
+        var result: [UInt32] = []
+        for scalar in cuneiform.unicodeScalars {
+            let v = scalar.value
+            let isCuneiform = (v >= 0x12000 && v <= 0x123FF) ||
+                              (v >= 0x12400 && v <= 0x1247F) ||
+                              (v >= 0x12480 && v <= 0x1254F)
+            let isWhitespace = v == 0x20 || v == 0x9 || v == 0xA || v == 0xD
+            if !isCuneiform && !isWhitespace {
+                result.append(v)
+            }
+        }
+        return result
+    }
 
     init(entry: DictionaryEntry?, onSave: @escaping (DictionaryEntry) -> Void) {
         self.entry = entry
@@ -334,6 +366,7 @@ private struct DictionaryFormView: View {
             _cuneiform = State(initialValue: entry.cuneiform ?? "")
             _partOfSpeech = State(initialValue: entry.partOfSpeech ?? "")
             _pronunciation = State(initialValue: entry.pronunciation ?? "")
+            _alternateEnglishText = State(initialValue: entry.alternateEnglish?.joined(separator: ", ") ?? "")
         }
     }
 
@@ -345,13 +378,26 @@ private struct DictionaryFormView: View {
 
             Form {
                 Section("Translation") {
-                    TextField("English", text: $english, prompt: Text("e.g. God, Heaven"))
-                    TextField("Sumerian", text: $sumerian, prompt: Text("e.g. dingir, an"))
+                    TextField("English (primary)", text: $english, prompt: Text("e.g. spouse"))
+                    TextField("Alternate English", text: $alternateEnglishText, prompt: Text("e.g. wife, husband"))
+                    TextField("Sumerian", text: $sumerian, prompt: Text("e.g. dam"))
                     TextField("Part of Speech", text: $partOfSpeech, prompt: Text("e.g. noun, verb"))
                     TextField("Pronunciation", text: $pronunciation, prompt: Text("e.g. shoe"))
                 }
                 Section("Cuneiform") {
                     TextField("Cuneiform", text: $cuneiform, prompt: Text("e.g. \u{12000}\u{1229A}"))
+                    if !nonCuneiformScalars.isEmpty {
+                        Label {
+                            Text("Contains \(nonCuneiformScalars.count) non-cuneiform character(s): ")
+                            + Text(nonCuneiformScalars.map { String(format: "U+%04X", $0) }.joined(separator: ", "))
+                                .font(.caption2)
+                                .foregroundStyle(.red)
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
+                        .font(.caption)
+                    }
                 }
                 Section("Description") {
                     TextEditor(text: $entryDescription)
@@ -372,6 +418,8 @@ private struct DictionaryFormView: View {
                     target.cuneiform = cuneiform.isEmpty ? nil : cuneiform
                     target.partOfSpeech = partOfSpeech.isEmpty ? nil : partOfSpeech
                     target.pronunciation = pronunciation.isEmpty ? nil : pronunciation
+                    let trimmed = alternateEnglishText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                    target.alternateEnglish = trimmed.isEmpty ? nil : trimmed
                     onSave(target)
                     dismiss()
                 }
@@ -380,6 +428,6 @@ private struct DictionaryFormView: View {
             }
             .padding()
         }
-        .frame(width: 480, height: 500)
+        .frame(width: 480)
     }
 }

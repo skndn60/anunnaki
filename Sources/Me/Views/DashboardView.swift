@@ -12,8 +12,6 @@ struct DashboardView: View {
     @Query(sort: \Era.orderIndex) private var eras: [Era]
     @Query private var sources: [Source]
     @Query private var relationships: [Relationship]
-    @Query private var figureTypes: [FigureType]
-    @Query private var citations: [Citation]
     @Query private var things: [Thing]
     @Query private var entries: [DictionaryEntry]
     private var recentEdits: [RecentEdit] { RecentEditStore.items }
@@ -24,25 +22,35 @@ struct DashboardView: View {
     @State private var showingAddThing = false
     @State private var showingReseedAlert = false
     @State private var isReseeding = false
-    private var mostConnectedFigure: (name: String, count: Int)? {
-        let counts = figures.map { figure -> (String, Int) in
-            let count = relationships.filter {
-                $0.fromFigure?.name == figure.name || $0.toFigure?.name == figure.name
-            }.count
-            return (figure.name, count)
-        }
-        return counts.max { $0.1 < $1.1 }
+    @State private var showingCoverage = false
+
+    private var coverageFigures: [Figure] {
+        figures.filter { $0.coverageExempt != true }
     }
 
-    private var femaleCount: Int { figures.filter { $0.gender == .female }.count }
-    private var maleCount: Int { figures.filter { $0.gender == .male }.count }
-    private var nonBinaryCount: Int { figures.filter { $0.gender == .nonBinary }.count }
+    private var coverage: (missingAncestry: [Figure], missingFather: [Figure], missingMother: [Figure], missingBirth: [Figure], missingDeath: [Figure], missingDescription: [Figure], missingDomain: [Figure]) {
+        let withFather = Set(relationships.filter { $0.relationshipType?.name == "Father" }.compactMap { $0.toFigure?.persistentModelID })
+        let withMother = Set(relationships.filter { $0.relationshipType?.name == "Mother" }.compactMap { $0.toFigure?.persistentModelID })
 
-    private var typeDistribution: [(name: String, count: Int, color: Color)] {
-        figureTypes.map { type in
-            let count = figures.filter { $0.figureType?.persistentModelID == type.persistentModelID }.count
-            return (type.name, count, type.color)
+        var mf: [Figure] = []
+        var mm: [Figure] = []
+        var mb: [Figure] = []
+        var md: [Figure] = []
+        var mdesc: [Figure] = []
+        var mdom: [Figure] = []
+
+        for fig in coverageFigures {
+            if !withFather.contains(fig.persistentModelID) { mf.append(fig) }
+            if !withMother.contains(fig.persistentModelID) { mm.append(fig) }
+            if fig.birthDate.startYear == nil && fig.birthDate.endYear == nil { mb.append(fig) }
+            if fig.deathDate.startYear == nil && fig.deathDate.endYear == nil { md.append(fig) }
+            if fig.figureDescription.isEmpty { mdesc.append(fig) }
+            if fig.domain.isEmpty { mdom.append(fig) }
         }
+
+        let missingAncestry = mf.filter { mm.contains($0) }
+
+        return (missingAncestry, mf, mm, mb, md, mdesc, mdom)
     }
 
     var body: some View {
@@ -51,8 +59,6 @@ struct DashboardView: View {
                 header
                 statsGrid
                 quickActions
-                insights
-                typeDistributionSection
                 recentEditsSection
             }
             .padding(24)
@@ -90,11 +96,26 @@ struct DashboardView: View {
                 QuickActionButton(title: "New Place", icon: "building.2", color: .green) { showingAddPlace = true }
                 QuickActionButton(title: "New Event", icon: "calendar.badge.plus", color: .orange) { showingAddEvent = true }
                 QuickActionButton(title: "New Thing", icon: "cube.box", color: .cyan) { showingAddThing = true }
+                QuickActionButton(title: "Coverage & Exemptions", icon: "chart.bar.fill", color: .purple) { showingCoverage = true }
                 QuickActionButton(title: "Go to Query", icon: "text.magnifyingglass", color: .indigo) { onNavigateTo?(.query) }
                 QuickActionButton(title: "Reseed Database", icon: "arrow.counterclockwise", color: .red) { showingReseedAlert = true }
                     .disabled(isReseeding)
                 QuickActionButton(title: "Versions", icon: "clock.arrow.circlepath", color: .teal) { onNavigateTo?(.versions) }
             }
+        }
+        .sheet(isPresented: $showingCoverage) {
+            NavigationStack {
+                ScrollView {
+                    dataCoverageSection
+                        .padding(20)
+                }
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Close") { showingCoverage = false }
+                    }
+                }
+            }
+            .frame(minWidth: 600, minHeight: 500)
         }
         .sheet(isPresented: $showingAddFigure) { FigureFormView(figure: nil) }
         .sheet(isPresented: $showingAddPlace) { PlaceFormView(place: nil) }
@@ -132,58 +153,113 @@ struct DashboardView: View {
         }
     }
 
-    private var insights: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Data Insights")
-            VStack(spacing: 6) {
-                if let (name, count) = mostConnectedFigure {
-                    InsightRow(label: "Most connected figure", value: "\(name) (\(count) relationships)")
-                }
-                InsightRow(label: "Female figures", value: "\(femaleCount)")
-                InsightRow(label: "Male figures", value: "\(maleCount)")
-                InsightRow(label: "Non-binary figures", value: "\(nonBinaryCount)")
-                InsightRow(label: "Total citations", value: "\(citations.count)")
-            }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.textBackgroundColor))
-            )
+    private var auditSummary: some View {
+        let autoExempted = figures.filter { $0.coverageExempt == true && $0.coverageReviewedAt == nil }.count
+        let reviewed = figures.filter { $0.coverageExempt == true && $0.coverageReviewedAt != nil }.count
+        return HStack(spacing: 8) {
+            Image(systemName: "checkmark.shield")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Text("\(autoExempted) auto-exempted by type")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Text("·")
+                .foregroundStyle(.quaternary)
+            Text("\(reviewed) manually reviewed")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+            Spacer()
         }
     }
 
-    private var typeDistributionSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            sectionHeader("Figure Types")
-            let maxCount = typeDistribution.map(\.count).max() ?? 1
-            VStack(spacing: 8) {
-                ForEach(typeDistribution, id: \.name) { type in
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(type.color)
-                            .frame(width: 10, height: 10)
-                        Text(type.name)
-                            .font(.callout)
-                            .frame(width: 80, alignment: .leading)
-                        GeometryReader { geo in
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(type.color.opacity(0.3))
-                                .frame(width: max(20, geo.size.width * CGFloat(type.count) / CGFloat(maxCount)), height: 16)
-                                .overlay(alignment: .trailing) {
-                                    Text("\(type.count)")
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                        .padding(.trailing, 4)
-                                }
-                        }
-                        .frame(height: 16)
-                    }
-                }
+    private var dataCoverageSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            sectionHeader("Data Coverage")
+            auditSummary
+
+            let c = coverage
+            let exemptAndReviewed: (Figure) -> Void = { fig in
+                fig.coverageExempt = true
+                fig.coverageReviewedAt = .now
+                try? modelContext.save()
             }
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(.textBackgroundColor))
+            let now = Date.now
+
+            CoverageBlock(
+                title: "Missing Ancestry",
+                icon: "person.fill.questionmark",
+                color: .red,
+                items: c.missingAncestry,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingAncestry.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
+            )
+
+            CoverageBlock(
+                title: "Missing Father",
+                icon: "figure.stand",
+                color: .orange,
+                items: c.missingFather,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingFather.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
+            )
+
+            CoverageBlock(
+                title: "Missing Mother",
+                icon: "figure.stand.dress",
+                color: .orange,
+                items: c.missingMother,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingMother.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
+            )
+
+            CoverageBlock(
+                title: "Missing Birth Date",
+                icon: "calendar.badge.exclamationmark",
+                color: .orange,
+                items: c.missingBirth,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingBirth.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
+            )
+
+            CoverageBlock(
+                title: "Missing Death Date",
+                icon: "calendar.badge.exclamationmark",
+                color: .orange,
+                items: c.missingDeath,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingDeath.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
+            )
+
+            CoverageBlock(
+                title: "Missing Description",
+                icon: "text.alignleft",
+                color: .yellow,
+                items: c.missingDescription,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingDescription.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
+            )
+
+            CoverageBlock(
+                title: "Missing Domain",
+                icon: "globe",
+                color: .yellow,
+                items: c.missingDomain,
+                total: coverageFigures.count,
+                totalLabel: "figures",
+                onMarkAll: { c.missingDomain.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                onMarkFigure: exemptAndReviewed
             )
         }
     }
@@ -315,18 +391,87 @@ private struct QuickActionButton: View {
     }
 }
 
-private struct InsightRow: View {
-    let label: String
-    let value: String
+private struct CoverageBlock: View {
+    let title: String
+    let icon: String
+    let color: Color
+    let items: [Figure]
+    let total: Int
+    let totalLabel: String
+    let onMarkAll: (() -> Void)?
+    let onMarkFigure: ((Figure) -> Void)?
+
+    private var count: Int { items.count }
+    private var fraction: Double { total > 0 ? Double(count) / Double(total) : 0 }
 
     var body: some View {
-        HStack {
-            Text(label)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Spacer()
-            Text(value)
-                .font(.subheadline.bold())
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.subheadline)
+                    .foregroundStyle(color)
+                Text(title)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if !items.isEmpty, let onMarkAll {
+                    Button("Dismiss All") {
+                        onMarkAll()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                    .tint(.blue)
+                }
+                Text("\(count)/\(total)")
+                    .font(.subheadline.monospacedDigit().bold())
+                    .foregroundStyle(fraction > 0.5 ? .red : fraction > 0.2 ? .orange : .secondary)
+            }
+
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(Color(.separatorColor).opacity(0.2))
+                        .frame(height: 6)
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(color)
+                        .frame(width: max(4, geo.size.width * fraction), height: 6)
+                }
+            }
+            .frame(height: 6)
+
+            if !items.isEmpty {
+                let displayItems = items.prefix(10)
+                let remainder = count - displayItems.count
+                VStack(alignment: .leading, spacing: 1) {
+                    ForEach(Array(displayItems), id: \.persistentModelID) { fig in
+                        HStack(spacing: 4) {
+                            Text(fig.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            if let onMarkFigure {
+                                Button("Dismiss") {
+                                    onMarkFigure(fig)
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.mini)
+                                .tint(.blue)
+                            }
+                        }
+                    }
+                    if remainder > 0 {
+                        Text("+ \(remainder) more")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.top, 2)
+            }
         }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.textBackgroundColor))
+        )
     }
 }

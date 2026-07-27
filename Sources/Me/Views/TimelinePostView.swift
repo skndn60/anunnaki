@@ -4,6 +4,10 @@ import SwiftData
 struct TimelinePostView: View {
     @Query(sort: \Era.orderIndex) private var eras: [Era]
     @Query private var figures: [Figure]
+    @Query private var events: [Event]
+    @Query(sort: \Place.name) private var places: [Place]
+    @State private var detailFigure: Figure?
+    @State private var selectedEvent: Event?
 
     private let pointsPerYear: CGFloat = 4
     private let swimlaneHeight: CGFloat = 120
@@ -45,6 +49,28 @@ struct TimelinePostView: View {
                 }
                 .padding(20)
             }
+            .sheet(item: $detailFigure) { figure in
+                NavigationStack {
+                    FigureQuicklookView(figure: figure)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close") { detailFigure = nil }
+                            }
+                        }
+                }
+                .frame(minWidth: 500, minHeight: 400)
+            }
+            .sheet(item: $selectedEvent) { event in
+                NavigationStack {
+                    TimelineEventDetailView(event: event)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close") { selectedEvent = nil }
+                            }
+                        }
+                }
+                .frame(minWidth: 400, minHeight: 300)
+            }
         }
     }
 
@@ -57,20 +83,20 @@ struct TimelinePostView: View {
                 let x = CGFloat(year - bceMinYear) * pointsPerYear
                 if x > 0 {
                     Text(NumberFormatter.localizedString(from: NSNumber(value: abs(year)), number: .decimal))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .position(x: x, y: 8)
+                        .font(.system(.callout, design: .serif))
+                        .foregroundStyle(.primary)
+                        .position(x: x, y: 12)
                 }
             }
         }
-        .frame(width: timelineWidth, height: 16)
+        .frame(width: timelineWidth, height: 24)
         .overlay(alignment: .topLeading) {
             Text("BCE")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .font(.system(.callout, design: .serif))
+                .foregroundStyle(.primary)
                 .padding(.leading, 2)
         }
-        .padding(.bottom, 4)
+        .padding(.bottom, 8)
     }
 
     private var historicalSection: some View {
@@ -78,18 +104,23 @@ struct TimelinePostView: View {
         let gridTicks = stride(from: bceMinYear, through: bceMaxYear, by: gridInterval)
 
         return ZStack(alignment: .topLeading) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 5) {
                 sectionHeader("Post-Flood")
+                let mapPlaces = places.filter { $0.latitude != nil && $0.longitude != nil }
                 ForEach(postFloodErasWithFigures) { era in
                     EraSwimlaneRow(
                         era: era,
                         figures: figuresInEra(era, from: figures),
+                        events: eventsInEra(era, from: events),
+                        places: mapPlaces,
                         swimlaneWidth: timelineWidth,
                         swimlaneHeight: swimlaneHeight,
                         mode: .historical(
                             minYear: bceMinYear,
                             pointsPerYear: pointsPerYear
-                        )
+                        ),
+                        onSelectFigure: { detailFigure = $0 },
+                        onSelectEvent: { selectedEvent = $0 }
                     )
                 }
             }
@@ -120,6 +151,12 @@ struct TimelinePostView: View {
             .padding(.vertical, 6)
     }
 
+    private func eventsInEra(_ era: Era, from events: [Event]) -> [Event] {
+        events
+            .filter { $0.era == era.name }
+            .sorted { ($0.date.startYear ?? Int.max) < ($1.date.startYear ?? Int.max) }
+    }
+
     private var emptyState: some View {
         VStack(spacing: 12) {
             Spacer()
@@ -130,6 +167,47 @@ struct TimelinePostView: View {
                 .font(.title3)
                 .foregroundStyle(.secondary)
             Spacer()
+        }
+    }
+}
+
+struct TimelineEventDetailView: View {
+    let event: Event
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    if let type = event.eventType {
+                        Image(systemName: type.icon)
+                            .foregroundStyle(type.color)
+                        Text(type.name)
+                            .font(.caption)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(type.color.opacity(0.15))
+                            .cornerRadius(4)
+                    }
+                    Text(event.name)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                }
+                if event.date.displayLabel != "Unknown" {
+                    Text(event.date.displayLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                if !event.eventDescription.isEmpty {
+                    Text(event.eventDescription)
+                        .font(.body)
+                }
+                if !event.source.isEmpty {
+                    Text("Source: \(event.source)")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+            .padding()
         }
     }
 }

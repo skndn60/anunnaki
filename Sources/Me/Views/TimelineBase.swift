@@ -58,10 +58,11 @@ struct LegendIcon: View {
 
 struct FigureSwimlaneChip: View {
     let figure: Figure
+    var onSelect: ((Figure) -> Void)?
 
     @State private var isHovered = false
 
-    static let chipWidth: CGFloat = 100
+    static let chipWidth: CGFloat = 110
 
     var body: some View {
         HStack(spacing: 4) {
@@ -75,8 +76,8 @@ struct FigureSwimlaneChip: View {
                     .frame(width: 6, height: 6)
             }
             Text(figure.name)
-                .font(.caption2)
-                .fontWeight(.medium)
+                .font(.system(.caption, design: .serif))
+                .fontWeight(.semibold)
                 .lineLimit(1)
         }
         .padding(.horizontal, 6)
@@ -87,7 +88,7 @@ struct FigureSwimlaneChip: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .stroke(chipColor.opacity(isHovered ? 0.5 : 0.3), lineWidth: 0.5)
+                .stroke(chipColor.opacity(isHovered ? 0.7 : 0.6), lineWidth: 1)
         )
         .frame(width: Self.chipWidth)
         .scaleEffect(isHovered ? 1.1 : 1)
@@ -96,6 +97,7 @@ struct FigureSwimlaneChip: View {
         .animation(.easeInOut(duration: 0.15), value: isHovered)
         .onHover { isHovered = $0 }
         .help(figureHelp)
+        .onTapGesture { onSelect?(figure) }
     }
 
     private var figureHelp: String {
@@ -113,9 +115,13 @@ struct FigureSwimlaneChip: View {
 struct EraSwimlaneRow: View {
     let era: Era
     let figures: [Figure]
+    let events: [Event]
+    let places: [Place]
     let swimlaneWidth: CGFloat?
     let swimlaneHeight: CGFloat
     let mode: SwimlaneMode
+    var onSelectFigure: ((Figure) -> Void)?
+    var onSelectEvent: ((Event) -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -127,16 +133,16 @@ struct EraSwimlaneRow: View {
 
     private var eraColor: Color {
         let palette: [Color] = [
-            Color(hex: "D4A574") ?? Color(red: 0.83, green: 0.65, blue: 0.45),
-            Color(hex: "8B7355") ?? Color(red: 0.55, green: 0.45, blue: 0.33),
-            Color(hex: "7B9E7B") ?? Color(red: 0.48, green: 0.62, blue: 0.48),
-            Color(hex: "A87B6B") ?? Color(red: 0.66, green: 0.48, blue: 0.42),
-            Color(hex: "7B6BA8") ?? Color(red: 0.48, green: 0.42, blue: 0.66),
-            Color(hex: "6BA89B") ?? Color(red: 0.42, green: 0.66, blue: 0.61),
-            Color(hex: "B88B4B") ?? Color(red: 0.72, green: 0.55, blue: 0.29),
-            Color(hex: "8B6B4B") ?? Color(red: 0.55, green: 0.42, blue: 0.29),
-            Color(hex: "6B7B8B") ?? Color(red: 0.42, green: 0.48, blue: 0.55),
-            Color(hex: "8B6B7B") ?? Color(red: 0.55, green: 0.42, blue: 0.48),
+            Color(hex: "C4895B") ?? Color(red: 0.77, green: 0.54, blue: 0.36), // Terracotta
+            Color(hex: "3A6B9F") ?? Color(red: 0.23, green: 0.42, blue: 0.62), // Lapis Lazuli
+            Color(hex: "C8943C") ?? Color(red: 0.78, green: 0.58, blue: 0.24), // Gold
+            Color(hex: "5A5A5A") ?? Color(red: 0.35, green: 0.35, blue: 0.35), // Obsidian
+            Color(hex: "8B6C4A") ?? Color(red: 0.55, green: 0.42, blue: 0.29), // Cedar
+            Color(hex: "5B7B6B") ?? Color(red: 0.36, green: 0.48, blue: 0.42), // Patina
+            Color(hex: "6B5B7B") ?? Color(red: 0.42, green: 0.36, blue: 0.48), // Amethyst
+            Color(hex: "8B4A4A") ?? Color(red: 0.55, green: 0.29, blue: 0.29), // Pomegranate
+            Color(hex: "B8A88A") ?? Color(red: 0.72, green: 0.66, blue: 0.54), // Alabaster
+            Color(hex: "4A6B6B") ?? Color(red: 0.29, green: 0.42, blue: 0.42), // Euphrates
         ]
         return palette[abs(era.orderIndex) % palette.count]
     }
@@ -147,15 +153,47 @@ struct EraSwimlaneRow: View {
         return CGFloat(sy - minYear) * ppy
     }
 
+    @State private var showCityMap = false
+
+    private var cityName: String? {
+        let words = era.name.split(separator: " ")
+        guard let last = words.last else { return nil }
+        let city = String(last).trimmingCharacters(in: .punctuationCharacters)
+        return places.contains(where: { $0.name == city }) ? city : nil
+    }
+
     private var titleLine: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(era.name)
-                .font(.caption)
-                .fontWeight(.medium)
+            HStack(spacing: 0) {
+                if let city = cityName, let r = era.name.range(of: city) {
+                    let prefix = String(era.name[era.name.startIndex..<r.lowerBound])
+                    let suffix = String(era.name[r.upperBound...])
+                    Text(prefix)
+                    Button(city) { showCityMap = true }
+                        .buttonStyle(.plain)
+                        .foregroundColor(.orange)
+                        .underline()
+                        .onHover { inside in
+                            if inside { NSCursor.pointingHand.push() }
+                            else { NSCursor.pop() }
+                        }
+                    Text(suffix)
+                } else {
+                    Text(era.name)
+                }
+            }
+            .font(.system(size: 16, design: .serif))
+            .fontWeight(.semibold)
+            .popover(isPresented: $showCityMap) {
+                if let city = cityName {
+                    CityMapView(cityName: city, places: places)
+                        .padding()
+                }
+            }
             if !dateRangeLabel.isEmpty {
                 Text(dateRangeLabel)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .font(.system(.caption, design: .serif))
+                    .foregroundStyle(.tertiary)
             }
         }
         .padding(.leading, 4)
@@ -179,13 +217,13 @@ struct EraSwimlaneRow: View {
 
         let chipWidth = FigureSwimlaneChip.chipWidth
         let minSpacing: CGFloat = 16
-        var chipLayouts: [(figure: Figure, x: CGFloat, level: Int)] = []
+        var chipLayouts: [(figure: Figure, x: CGFloat, level: Int, chipY: CGFloat)] = []
         var exactCount = 0
 
         for figure in figures {
             if let year = figure.birthDate.startYear {
                 let x = CGFloat(year - minYear) * ppy + chipWidth / 2
-                chipLayouts.append((figure, x, 0))
+                chipLayouts.append((figure, x, 0, 0))
                 exactCount += 1
             }
         }
@@ -206,7 +244,7 @@ struct EraSwimlaneRow: View {
                 if figure.birthDate.startYear == nil {
                     let estYear = eraStart + Int(step * CGFloat(estIdx + 1))
                     let x = CGFloat(estYear - minYear) * ppy + chipWidth / 2
-                    chipLayouts.append((figure, x, 0))
+                    chipLayouts.append((figure, x, 0, 0))
                     estIdx += 1
                 }
             }
@@ -215,39 +253,57 @@ struct EraSwimlaneRow: View {
         chipLayouts.sort { $0.x < $1.x }
 
         if chipLayouts.count > 1 {
-            var groupStart = 0
-            for i in 1..<chipLayouts.count {
-                if chipLayouts[i].x - chipLayouts[i-1].x >= chipWidth + minSpacing {
-                    for j in groupStart..<i {
-                        let idx = j - groupStart
-                        chipLayouts[j].level = idx % 2 == 0 ? idx / 2 : -(idx + 1) / 2
+            var levelRanges: [Int: [CGFloat]] = [:]
+            let levelOrder: [Int] = [0, -1, 1, -2, 2, -3, 3, -4, 4, -5, 5, -6, 6]
+
+            for i in 0..<chipLayouts.count {
+                let x = chipLayouts[i].x
+                var placed = false
+                for level in levelOrder {
+                    let existing = levelRanges[level] ?? []
+                    let overlaps = existing.contains { abs($0 - x) < chipWidth + minSpacing }
+                    if !overlaps {
+                        chipLayouts[i].level = level
+                        levelRanges[level, default: []].append(x)
+                        placed = true
+                        break
                     }
-                    groupStart = i
                 }
-            }
-            for j in groupStart..<chipLayouts.count {
-                let idx = j - groupStart
-                chipLayouts[j].level = idx % 2 == 0 ? idx / 2 : -(idx + 1) / 2
+                if !placed {
+                    let nextLevel = (levelRanges.keys.max() ?? 0) + 1
+                    chipLayouts[i].level = nextLevel
+                    levelRanges[nextLevel, default: []].append(x)
+                }
             }
         }
 
         let minLevel = chipLayouts.map(\.level).min() ?? 0
         let maxLevel = chipLayouts.map(\.level).max() ?? 0
         let totalLevels = maxLevel - minLevel + 1
-        let contentHeight = max(swimlaneHeight, CGFloat(totalLevels) * 18 + 24)
+        let contentHeight = max(swimlaneHeight, CGFloat(totalLevels) * 25 + 24)
+        let levelCenter = CGFloat(minLevel + maxLevel) / 2.0
+        for i in chipLayouts.indices {
+            chipLayouts[i].chipY = contentHeight / 2 + (CGFloat(chipLayouts[i].level) - levelCenter) * 25
+        }
 
         let eraStartX: CGFloat
         let eraEndX: CGFloat
-        let hasValidDates: Bool
         if let startYear = era.startDate.startYear, let endYear = era.endDate.endYear, startYear < endYear {
             eraStartX = CGFloat(startYear - minYear) * ppy
             eraEndX = CGFloat(endYear - minYear) * ppy
-            hasValidDates = true
         } else {
             eraStartX = 0
             eraEndX = 0
-            hasValidDates = false
         }
+
+        var eventLayouts: [(event: Event, x: CGFloat)] = []
+        for event in events {
+            if let year = event.date.startYear {
+                let x = CGFloat(year - minYear) * ppy
+                eventLayouts.append((event, x))
+            }
+        }
+
         return AnyView(ZStack(alignment: .leading) {
             ForEach(figures) { figure in
                 if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
@@ -264,17 +320,37 @@ struct EraSwimlaneRow: View {
             eraBar(startX: eraStartX, endX: eraEndX, height: contentHeight)
 
             ForEach(chipLayouts, id: \.figure.id) { layout in
-                FigureSwimlaneChip(figure: layout.figure)
-                    .position(
-                        x: layout.x,
-                        y: contentHeight / 2 - 5 + CGFloat(layout.level) * 18
-                    )
+                FigureSwimlaneChip(figure: layout.figure, onSelect: onSelectFigure)
+                    .position(x: layout.x, y: layout.chipY)
+            }
+
+            ForEach(eventLayouts, id: \.event.id) { layout in
+                let color = layout.event.eventType?.color ?? .gray
+                VStack(spacing: 1) {
+                    Image(systemName: layout.event.eventType?.icon ?? "flag.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(color)
+                    Text(layout.event.name)
+                        .font(.system(size: 8))
+                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(width: 60)
+                .position(x: layout.x, y: contentHeight - 10)
+                .help(layout.event.name)
+                .onTapGesture { onSelectEvent?(layout.event) }
             }
         }
         .frame(width: containerWidth, height: contentHeight)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(eraColor.opacity(0.15))
+                .fill(
+                    LinearGradient(
+                        colors: [eraColor.opacity(0.12), eraColor.opacity(0.18)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(eraColor.opacity(0.25), lineWidth: 0.5)
@@ -297,7 +373,7 @@ struct EraSwimlaneRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 10) {
                     ForEach(figures) { figure in
-                        FigureSwimlaneChip(figure: figure)
+                        FigureSwimlaneChip(figure: figure, onSelect: onSelectFigure)
                     }
                 }
                 .padding(.horizontal, 8)
@@ -307,7 +383,13 @@ struct EraSwimlaneRow: View {
     .padding(.vertical, 8)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(eraColor.opacity(0.15))
+                .fill(
+                    LinearGradient(
+                        colors: [eraColor.opacity(0.12), eraColor.opacity(0.18)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(eraColor.opacity(0.25), lineWidth: 0.5)

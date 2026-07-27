@@ -4,6 +4,8 @@ import SwiftData
 struct TimelinePreView: View {
     @Query(sort: \Era.orderIndex) private var eras: [Era]
     @Query private var figures: [Figure]
+    @Query(sort: \Place.name) private var places: [Place]
+    @State private var detailFigure: Figure?
 
     private let swimlaneHeight: CGFloat = 56
 
@@ -16,20 +18,34 @@ struct TimelinePreView: View {
             emptyState
         } else {
             ScrollView(.vertical) {
-                VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 5) {
                     sectionHeader("Pre-Flood")
                     ForEach(preFloodEras.filter { !figuresInEra($0, from: figures).isEmpty }) { era in
                         EraSwimlaneRow(
                             era: era,
                             figures: figuresInEra(era, from: figures),
+                            events: [],
+                            places: places.filter { $0.latitude != nil && $0.longitude != nil },
                             swimlaneWidth: nil,
                             swimlaneHeight: swimlaneHeight,
-                            mode: .mythological
+                            mode: .mythological,
+                            onSelectFigure: { detailFigure = $0 }
                         )
                     }
                 }
                 .padding(.horizontal, 20)
                 .padding(.bottom, 20)
+            }
+            .sheet(item: $detailFigure) { figure in
+                NavigationStack {
+                    FigureQuicklookView(figure: figure)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Close") { detailFigure = nil }
+                            }
+                        }
+                }
+                .frame(minWidth: 500, minHeight: 400)
             }
         }
     }

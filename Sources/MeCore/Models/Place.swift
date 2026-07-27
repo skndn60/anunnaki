@@ -13,6 +13,8 @@ package final class Place {
     package var latitude: Double? // nil for cosmic/mythological places
     package var longitude: Double?
 
+    package var sortName: String?
+
     package var foundedDate: MythologicalDate?
 
     /// Figures associated with this place

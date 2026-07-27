@@ -49,7 +49,7 @@ struct EventListView: View {
     private var groupedEvents: [(key: String, events: [Event])] {
         Dictionary(grouping: sortedEvents) { event in
             switch sortOrder {
-            case .name: String(sortName(for: event.name).uppercased().prefix(1))
+            case .name: String((event.sortName ?? sortName(for: event.name)).uppercased().prefix(1))
             case .type: event.eventType?.name ?? "?"
             case .date: event.date.era.isEmpty ? "Unknown" : event.date.era
             }
@@ -115,14 +115,19 @@ struct EventListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(selection: $selectedEventID) {
-                        ForEach(groupedEvents, id: \.key) { group in
-                            eventGroupSection(group)
+                    ScrollViewReader { proxy in
+                        List(selection: $selectedEventID) {
+                            ForEach(groupedEvents, id: \.key) { group in
+                                eventGroupSection(group)
+                            }
                         }
-                    }
-                    .listStyle(.inset(alternatesRowBackgrounds: true))
-                    .onChange(of: selectedEventID) { _, newValue in
-                        if let id = newValue { selectEvent(id) }
+                        .listStyle(.inset(alternatesRowBackgrounds: true))
+                        .onChange(of: selectedEventID) { _, newValue in
+                            if let id = newValue {
+                                selectEvent(id)
+                                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                            }
+                        }
                     }
                 }
             }
@@ -132,24 +137,11 @@ struct EventListView: View {
                 if let event = selectedEvent {
                     // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
-                        HStack(spacing: 8) {
-                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
-                                editingEvent = event
-                            }
-                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
-                                showDeleteConfirm = true
-                            }
-                            Spacer()
-                            Button(action: { selectedEventID = nil }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 22, height: 22)
-                                    .background(RoundedRectangle(cornerRadius: 5).fill(Color.secondary.opacity(0.1)))
-                            }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.vertical, 8)
+                        DetailToolbar(
+                            onEdit: { editingEvent = event },
+                            onDelete: { showDeleteConfirm = true },
+                            onClose: { selectedEventID = nil }
+                        )
                     EventDetailView(
                             event: event,
                             onSelectFigure: { figure in
@@ -210,6 +202,7 @@ struct EventListView: View {
             ForEach(group.events) { event in
                 EventRow(event: event)
                     .tag(event.persistentModelID)
+                    .id(event.persistentModelID)
             }
         }
     }
@@ -286,6 +279,7 @@ struct EventFormView: View {
     @State private var date: MythologicalDate = .unknown
     @State private var era = ""
     @State private var source = ""
+    @State private var sortName = ""
     @State private var selectedFigureIDs: Set<PersistentIdentifier> = []
     @State private var figureSearchText = ""
     @State private var placeSelections: [PlaceSelection] = []
@@ -342,6 +336,7 @@ struct EventFormView: View {
                         }
                     }
                     TextField("Source", text: $source, prompt: Text("e.g. Enuma Elish, Tablet IV"))
+                    TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
                 }
 
                 Section("Locations") {
@@ -560,6 +555,7 @@ struct EventFormView: View {
         date = event.date
         era = event.era
         source = event.source
+        sortName = event.sortName ?? ""
         selectedFigureIDs = Set(event.involvedFigures.map(\.persistentModelID))
         placeSelections = event.placeAssociations.compactMap { assoc in
             guard let place = assoc.place else { return nil }
@@ -577,6 +573,7 @@ struct EventFormView: View {
             event.date = date
             event.era = era
             event.source = source
+            event.sortName = sortName.isEmpty ? nil : sortName
             event.isConcept = false
             event.involvedFigures = selectedFigs
             for assoc in event.placeAssociations { modelContext.delete(assoc) }
@@ -592,6 +589,7 @@ struct EventFormView: View {
                 name: name, eventType: eventType,
                 eventDescription: eventDescription,
                 date: date, era: era, source: source,
+                sortName: sortName.isEmpty ? nil : sortName,
                 involvedFigures: selectedFigs
             )
             newEvent.tags = selectedTags

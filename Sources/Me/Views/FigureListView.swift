@@ -155,15 +155,18 @@ struct FigureListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(selection: $selectedFigureID) {
-                        ForEach(groupedFigures, id: \.key) { group in
-                            figureGroupSection(group)
+                    ScrollViewReader { proxy in
+                        List(selection: $selectedFigureID) {
+                            ForEach(groupedFigures, id: \.key) { group in
+                                figureGroupSection(group)
+                            }
                         }
-                    }
-                    .listStyle(.inset(alternatesRowBackgrounds: true))
-                    .onChange(of: selectedFigureID) { _, newValue in
-                        if let id = newValue {
-                            selectFigure(id)
+                        .listStyle(.inset(alternatesRowBackgrounds: true))
+                        .onChange(of: selectedFigureID) { _, newValue in
+                            if let id = newValue {
+                                selectFigure(id)
+                                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                            }
                         }
                     }
                 }
@@ -175,30 +178,16 @@ struct FigureListView: View {
                 if let figure = selectedFigure {
                     // ResizableDivider(width: $detailWidth, range: 200...800)
                     VStack(spacing: 0) {
-                        HStack(spacing: 8) {
-                            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") {
-                                editingFigure = figure
-                            }
-                            IconActionButton(icon: "trash", color: .red, help: "Delete") {
-                                showDeleteConfirm = true
-                            }
-                            IconActionButton(icon: "tree", color: .green, help: "Show in inline lineage tree") {
-                                coordinator?.navigateToLineageFigure(figure.persistentModelID)
-                            }
-                            Spacer()
-                            Button(action: { selectedFigureID = nil }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 22, height: 22)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 5)
-                                            .fill(Color.secondary.opacity(0.1))
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.vertical, 8)
+                        DetailToolbar(
+                            onEdit: { editingFigure = figure },
+                            onDelete: { showDeleteConfirm = true },
+                            onClose: { selectedFigureID = nil },
+                            leadingButtons: [
+                                ToolbarButton(icon: "tree", color: .green, help: "Show in inline lineage tree") {
+                                    coordinator?.navigateToLineageFigure(figure.persistentModelID)
+                                }
+                            ]
+                        )
                         FigureDetailView(
                             figure: figure,
                             onSelectFigure: { selected in
@@ -293,6 +282,7 @@ struct FigureListView: View {
             ForEach(group.figures) { figure in
                 FigureRow(figure: figure, searchText: searchText)
                     .tag(figure.persistentModelID)
+                    .id(figure.persistentModelID)
             }
         }
     }
@@ -413,6 +403,9 @@ struct FigureFormView: View {
     @State private var birthDate: MythologicalDate = .unknown
     @State private var deathDate: MythologicalDate = .unknown
     @State private var source = ""
+    @State private var causeOfDeath = ""
+    @State private var reignStartText = ""
+    @State private var reignEndText = ""
     @State private var selectedTags: [Tag] = []
 
     private var isEditing: Bool { figure != nil }
@@ -442,11 +435,21 @@ struct FigureFormView: View {
                     TextField("Domain", text: $domain, prompt: Text("e.g. Sky, Wisdom, War"))
                 }
 
+                Section("Reign (SKL)") {
+                    HStack {
+                        TextField("Start Year", text: $reignStartText, prompt: Text("e.g. -2047"))
+                            .help("Negative = BCE, positive = CE")
+                        TextField("End Year", text: $reignEndText, prompt: Text("e.g. -2030"))
+                            .help("Negative = BCE, positive = CE")
+                    }
+                }
+
                 MythologicalDateEditor(label: "Birth / Origin", date: $birthDate)
                 MythologicalDateEditor(label: "Death / End", date: $deathDate)
 
                 Section("Source & Notes") {
                     TextField("Source Text", text: $source, prompt: Text("e.g. Enuma Elish"))
+                    TextField("Cause of Death", text: $causeOfDeath, prompt: Text("e.g. Slain in battle"))
                     TextEditor(text: $figureDescription)
                         .frame(minHeight: 60)
                 }
@@ -483,6 +486,9 @@ struct FigureFormView: View {
         birthDate = figure.birthDate
         deathDate = figure.deathDate
         source = figure.source
+        causeOfDeath = figure.causeOfDeath ?? ""
+        reignStartText = figure.reignStartYear.map(String.init) ?? ""
+        reignEndText = figure.reignEndYear.map(String.init) ?? ""
         selectedTags = figure.tags
     }
 
@@ -498,15 +504,21 @@ struct FigureFormView: View {
             figure.birthDate = birthDate
             figure.deathDate = deathDate
             figure.source = source
+            figure.causeOfDeath = causeOfDeath.isEmpty ? nil : causeOfDeath
             figure.isConcept = false
+            figure.reignStartYear = Int(reignStartText)
+            figure.reignEndYear = Int(reignEndText)
             figure.tags = selectedTags
             RecentEditStore.trackEdit(entityType: "Figure", entityName: figure.name)
         } else {
             let newFigure = Figure(
                 name: name, disambiguation: disambiguation.isEmpty ? nil : disambiguation, title: title, figureType: selectedFigureType,
                 gender: gender, domain: domain, figureDescription: figureDescription,
-                birthDate: birthDate, deathDate: deathDate, source: source
+                birthDate: birthDate, deathDate: deathDate, source: source,
+                causeOfDeath: causeOfDeath.isEmpty ? nil : causeOfDeath
             )
+            newFigure.reignStartYear = Int(reignStartText)
+            newFigure.reignEndYear = Int(reignEndText)
             newFigure.tags = selectedTags
             modelContext.insert(newFigure)
             RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
