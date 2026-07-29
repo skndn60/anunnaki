@@ -172,8 +172,8 @@ private struct FigureQuicklookContent: View {
                 PropertyRow(label: "Death", value: figure.deathDate.displayLabel)
             }
 
-            if !figure.figureDescription.isEmpty {
-                Text(figure.figureDescription)
+            if !figure.figureDescription.isEmpty || figure.richDescription != nil {
+                RichTextDisplay(richData: figure.richDescription, fallback: figure.figureDescription)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .lineLimit(6)

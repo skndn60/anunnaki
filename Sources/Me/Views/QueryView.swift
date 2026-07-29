@@ -349,7 +349,7 @@ struct FigureDossierView: View {
             }
 
             // Description
-            FigureDescriptionView(text: dossier.figure.figureDescription)
+            FigureDescriptionView(text: dossier.figure.figureDescription, richData: dossier.figure.richDescription)
 
             Divider()
 
@@ -493,8 +493,9 @@ struct PlaceDossierView: View {
                 MapPreviewButton(place: dossier.place)
             }
 
-            if !dossier.place.placeDescription.isEmpty {
-                Text(dossier.place.placeDescription).font(.body)
+            if !dossier.place.placeDescription.isEmpty || dossier.place.richDescription != nil {
+                RichTextDisplay(richData: dossier.place.richDescription, fallback: dossier.place.placeDescription)
+                    .font(.body)
             }
 
             if !dossier.events.isEmpty {
@@ -571,8 +572,9 @@ struct EventDossierView: View {
                 Text(dossier.event.date.displayLabel).font(.caption).foregroundStyle(.secondary)
             }
 
-            if !dossier.event.eventDescription.isEmpty {
-                Text(dossier.event.eventDescription).font(.body)
+            if !dossier.event.eventDescription.isEmpty || dossier.event.richDescription != nil {
+                RichTextDisplay(richData: dossier.event.richDescription, fallback: dossier.event.eventDescription)
+                    .font(.body)
             }
 
             if !dossier.event.source.isEmpty {
@@ -973,12 +975,12 @@ private struct ThingDossierView: View {
                     .font(.title.bold())
             }
 
-            if !thing.thingDescription.isEmpty {
+            if !thing.thingDescription.isEmpty || thing.richDescription != nil {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Description")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    Text(thing.thingDescription)
+                    RichTextDisplay(richData: thing.richDescription, fallback: thing.thingDescription)
                         .font(.body)
                 }
             }

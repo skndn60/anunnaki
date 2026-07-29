@@ -11,6 +11,7 @@ package final class Figure {
     package var gender: Gender
     package var domain: String
     package var figureDescription: String
+    package var richDescription: Data?
     package var birthDate: MythologicalDate
     package var deathDate: MythologicalDate
     package var source: String
@@ -60,6 +61,10 @@ package final class Figure {
     /// Sticky notes attached to this figure
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.figure)
     package var stickies: [StickyNote] = []
+
+    /// Groups this figure belongs to
+    @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.figure)
+    package var groupAssociations: [FigureGroupAssociation] = []
 
     package enum Gender: String, Codable, CaseIterable, Hashable {
         case male = "Male"

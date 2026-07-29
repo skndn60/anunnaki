@@ -7,6 +7,7 @@ package final class Event {
     package var name: String
     package var eventType: EventType?
     package var eventDescription: String
+    package var richDescription: Data?
     package var date: MythologicalDate
     package var era: String
     package var source: String
@@ -17,6 +18,10 @@ package final class Event {
     /// Figures involved in this event
     @Relationship
     package var involvedFigures: [Figure] = []
+
+    /// Figure associations with optional display name override
+    @Relationship(deleteRule: .cascade, inverse: \EventFigureAssociation.event)
+    package var figureAssociations: [EventFigureAssociation]? = nil
 
     /// Places where the event occurred
     @Relationship(deleteRule: .cascade, inverse: \EventPlaceAssociation.event)

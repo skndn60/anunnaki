@@ -14,7 +14,11 @@ struct PlaceListView: View {
     @State private var imageDetailImage: ImageAsset?
     @AppStorage("placeDetailWidth") private var detailWidth: Double = 320
     @State private var showDeleteConfirm = false
+    @State private var selectedTypeFilters: Set<String> = []
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
 
     enum PlaceSortOrder: String, CaseIterable {
         case name = "Name"
@@ -23,7 +27,7 @@ struct PlaceListView: View {
 
     private var selectedPlace: Place? {
         guard let id = selectedPlaceID else { return nil }
-        return sortedPlaces.first { $0.persistentModelID == id }
+        return filteredPlaces.first { $0.persistentModelID == id }
     }
 
     private var backLabel: String? {
@@ -41,15 +45,19 @@ struct PlaceListView: View {
         place.sortName.map { sortName(for: $0) } ?? sortName(for: place.name)
     }
 
-    private var sortedPlaces: [Place] {
+    private var filteredPlaces: [Place] {
+        var result = places
+        if !selectedTypeFilters.isEmpty {
+            result = result.filter { selectedTypeFilters.contains($0.placeType?.name ?? "") }
+        }
         switch sortOrder {
-        case .name: return places.sorted { effectiveSortName($0) < effectiveSortName($1) }
-        case .type: return places.sorted { $0.placeType?.name ?? "" < $1.placeType?.name ?? "" }
+        case .name: return result.sorted { effectiveSortName($0) < effectiveSortName($1) }
+        case .type: return result.sorted { $0.placeType?.name ?? "" < $1.placeType?.name ?? "" }
         }
     }
 
     private var groupedPlaces: [(key: String, places: [Place])] {
-        Dictionary(grouping: sortedPlaces) { place in
+        Dictionary(grouping: filteredPlaces) { place in
             switch sortOrder {
             case .name: String(effectiveSortName(place).uppercased().prefix(1))
             case .type: place.placeType?.name ?? "?"
@@ -92,9 +100,23 @@ struct PlaceListView: View {
                         onClear: { coordinator?.history.removeAll() }
                     )
                 }
-                PlaceTypeLegend(types: placeTypes)
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
+                if !placeTypes.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(placeTypes) { type in
+                                typeFilterButton(type)
+                            }
+                            if !selectedTypeFilters.isEmpty {
+                                Button("Clear") { selectedTypeFilters.removeAll() }
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.leading, 4)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 4)
+                    }
+                }
 
                 Divider()
 
@@ -126,7 +148,7 @@ struct PlaceListView: View {
                         .onChange(of: selectedPlaceID) { _, newValue in
                             if let id = newValue {
                                 selectPlace(id)
-                                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                                withAnimation { Task { @MainActor in proxy.scrollTo(id, anchor: .center) } }
                             }
                         }
                     }
@@ -141,7 +163,12 @@ struct PlaceListView: View {
                         DetailToolbar(
                             onEdit: { editingPlace = place },
                             onDelete: { showDeleteConfirm = true },
-                            onClose: { selectedPlaceID = nil }
+                            onClose: { selectedPlaceID = nil },
+                            onEditDescription: {
+                                editRichDescription = place.richDescription
+                                editPlainDescription = place.placeDescription
+                                showDescriptionEditor = true
+                            }
                         )
                     PlaceDetailView(
                             place: place,
@@ -174,6 +201,20 @@ struct PlaceListView: View {
         .sheet(item: $editingPlace) { place in
             PlaceFormView(place: place)
         }
+        .sheet(isPresented: $showDescriptionEditor) {
+            if let place = selectedPlace {
+                DescriptionEditorSheet(
+                    entityName: place.name,
+                    richDescription: $editRichDescription,
+                    plainDescription: $editPlainDescription,
+                    onSave: {
+                        place.richDescription = editRichDescription
+                        place.placeDescription = editPlainDescription
+                        try? modelContext.save()
+                    }
+                )
+            }
+        }
 
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
@@ -200,6 +241,36 @@ struct PlaceListView: View {
         if places.contains(where: { $0.persistentModelID == id }) {
             selectPlace(id)
         }
+    }
+
+    private func typeFilterButton(_ type: PlaceType) -> some View {
+        Button(action: {
+            if selectedTypeFilters.contains(type.name) {
+                selectedTypeFilters.remove(type.name)
+            } else {
+                selectedTypeFilters.insert(type.name)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Circle().fill(type.color).frame(width: 7, height: 7)
+                Text(type.name).font(.caption)
+                if selectedTypeFilters.contains(type.name) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(selectedTypeFilters.contains(type.name) ? type.color.opacity(0.2) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(selectedTypeFilters.contains(type.name) ? type.color : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func placeGroupSection(_ group: (key: String, places: [Place])) -> some View {
@@ -253,124 +324,5 @@ struct PlaceRow: View {
             }
             Spacer()
         }
-    }
-}
-
-// MARK: - Place Form
-
-struct PlaceFormView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) var dismiss
-
-    let place: Place?
-    @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
-
-    @State private var name = ""
-    @State private var sortName = ""
-    @State private var placeType: PlaceType? = nil
-    @State private var modernLocation = ""
-    @State private var placeDescription = ""
-    @State private var source = ""
-    @State private var latitudeStr = ""
-    @State private var longitudeStr = ""
-    @State private var selectedTags: [Tag] = []
-    @State private var foundedDate: MythologicalDate = .unknown
-
-    private var isEditing: Bool { place != nil }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text(isEditing ? "Edit Place" : "Add Place")
-                .font(.title3.bold())
-                .padding()
-
-            Form {
-                Section("Place Details") {
-                    TextField("Name", text: $name, prompt: Text("e.g. Uruk, Eridu, Kur"))
-                    TextField("Sort Name", text: $sortName, prompt: Text("Leave blank to auto-derive from name"))
-                    Picker("Type", selection: $placeType) {
-                        ForEach(placeTypes, id: \.persistentModelID) { type in
-                            Text(type.name).tag(type as PlaceType?)
-                        }
-                    }
-                    TextField("Modern Location", text: $modernLocation, prompt: Text("e.g. Southern Iraq, Warka"))
-                    TextField("Source", text: $source, prompt: Text("e.g. Sumerian King List"))
-                }
-
-                Section("Coordinates") {
-                    TextField("Latitude", text: $latitudeStr, prompt: Text("e.g. 31.322"))
-                    TextField("Longitude", text: $longitudeStr, prompt: Text("e.g. 45.637"))
-                }
-
-                Section("Description") {
-                    TextEditor(text: $placeDescription)
-                        .frame(minHeight: 80)
-                }
-
-                MythologicalDateEditor(label: "Founded", date: $foundedDate)
-
-                Section("Tags") {
-                    TagEditorView(tags: $selectedTags)
-                }
-            }
-            .formStyle(.grouped)
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(isEditing ? "Save" : "Add") { save() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty)
-            }
-            .padding()
-        }
-        .frame(width: 480, height: 420)
-        .onAppear { loadIfEditing() }
-    }
-
-    private func loadIfEditing() {
-        guard let place else { return }
-        name = place.name
-        sortName = place.sortName ?? ""
-        placeType = place.placeType
-        modernLocation = place.modernLocation
-        placeDescription = place.placeDescription
-        source = place.source
-        latitudeStr = place.latitude.map { String($0) } ?? ""
-        longitudeStr = place.longitude.map { String($0) } ?? ""
-        selectedTags = place.tags
-        foundedDate = place.foundedDate ?? .unknown
-    }
-
-    private func save() {
-        if let place {
-            place.name = name
-            place.sortName = sortName.isEmpty ? nil : sortName
-            place.placeType = placeType
-            place.modernLocation = modernLocation
-            place.placeDescription = placeDescription
-            place.source = source
-            place.latitude = Double(latitudeStr)
-            place.longitude = Double(longitudeStr)
-            place.isConcept = false
-            place.tags = selectedTags
-            place.foundedDate = foundedDate
-            RecentEditStore.trackEdit(entityType: "Place", entityName: place.name)
-        } else {
-            let newPlace = Place(
-                name: name, placeType: placeType,
-                modernLocation: modernLocation,
-                placeDescription: placeDescription, source: source,
-                latitude: Double(latitudeStr),
-                longitude: Double(longitudeStr)
-            )
-            newPlace.sortName = sortName.isEmpty ? nil : sortName
-            newPlace.tags = selectedTags
-            newPlace.foundedDate = foundedDate
-            modelContext.insert(newPlace)
-            RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
-        }
-        dismiss()
     }
 }

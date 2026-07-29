@@ -398,11 +398,8 @@ struct FigureSearchSelector: View {
                 .foregroundStyle(.secondary)
                 .font(.caption)
             TextField(placeholder, text: $searchText)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
         }
-        .padding(8)
-        .background(.quaternary.opacity(0.15))
-        .cornerRadius(6)
         if !searchText.isEmpty {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {

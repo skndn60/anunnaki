@@ -8,6 +8,7 @@ package final class Place {
     package var placeType: PlaceType?
     package var modernLocation: String // e.g. "Southern Iraq", "Tell al-Muqayyar"
     package var placeDescription: String
+    package var richDescription: Data?
     package var source: String
     package var isConcept: Bool
     package var latitude: Double? // nil for cosmic/mythological places

@@ -112,10 +112,11 @@ struct FigureHeaderView: View {
 
 struct FigureDescriptionView: View {
     let text: String
+    var richData: Data? = nil
 
     var body: some View {
-        if !text.isEmpty {
-            Text(text)
+        if !text.isEmpty || richData != nil {
+            RichTextDisplay(richData: richData, fallback: text)
                 .font(.body)
         }
     }

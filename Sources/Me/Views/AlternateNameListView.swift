@@ -319,11 +319,8 @@ struct AlternateNameFormView: View {
                 .foregroundStyle(.secondary)
                 .font(.caption)
             TextField("Search figures\u{2026}", text: $entitySearchText)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
         }
-        .padding(8)
-        .background(.quaternary.opacity(0.15))
-        .cornerRadius(6)
         if !entitySearchText.isEmpty {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
@@ -386,11 +383,8 @@ struct AlternateNameFormView: View {
                 .foregroundStyle(.secondary)
                 .font(.caption)
             TextField("Search places\u{2026}", text: $entitySearchText)
-                .textFieldStyle(.plain)
+                .textFieldStyle(.roundedBorder)
         }
-        .padding(8)
-        .background(.quaternary.opacity(0.15))
-        .cornerRadius(6)
         if !entitySearchText.isEmpty {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {

@@ -340,11 +340,8 @@ struct AddFigurePlaceAssociationForm: View {
                             .foregroundStyle(.secondary)
                             .font(.caption)
                         TextField("Search figures\u{2026}", text: $figureSearchText)
-                            .textFieldStyle(.plain)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .padding(8)
-                    .background(.quaternary.opacity(0.15))
-                    .cornerRadius(6)
                     if !figureSearchText.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {
@@ -401,11 +398,8 @@ struct AddFigurePlaceAssociationForm: View {
                             .foregroundStyle(.secondary)
                             .font(.caption)
                         TextField("Search places\u{2026}", text: $placeSearchText)
-                            .textFieldStyle(.plain)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .padding(8)
-                    .background(.quaternary.opacity(0.15))
-                    .cornerRadius(6)
                     if !placeSearchText.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {
@@ -533,9 +527,8 @@ struct SearchSection<Entity: PersistentModel>: View {
             }
             HStack(spacing: 4) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary).font(.caption)
-                TextField("Search\u{2026}", text: $searchText).textFieldStyle(.plain)
+                TextField("Search\u{2026}", text: $searchText).textFieldStyle(.roundedBorder)
             }
-            .padding(8).background(.quaternary.opacity(0.15)).cornerRadius(6)
             if !searchText.isEmpty {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 2) {
@@ -745,11 +738,8 @@ struct EditFigurePlaceAssociationForm: View {
                             .foregroundStyle(.secondary)
                             .font(.caption)
                         TextField("Search figures\u{2026}", text: $figureSearchText)
-                            .textFieldStyle(.plain)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .padding(8)
-                    .background(.quaternary.opacity(0.15))
-                    .cornerRadius(6)
                     if !figureSearchText.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {
@@ -806,11 +796,8 @@ struct EditFigurePlaceAssociationForm: View {
                             .foregroundStyle(.secondary)
                             .font(.caption)
                         TextField("Search places\u{2026}", text: $placeSearchText)
-                            .textFieldStyle(.plain)
+                            .textFieldStyle(.roundedBorder)
                     }
-                    .padding(8)
-                    .background(.quaternary.opacity(0.15))
-                    .cornerRadius(6)
                     if !placeSearchText.isEmpty {
                         ScrollView {
                             VStack(alignment: .leading, spacing: 2) {

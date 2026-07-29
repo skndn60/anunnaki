@@ -42,7 +42,7 @@ struct FigureQuicklookView: View {
                 FigureHeaderView(figure: figure, showBirthDate: true)
 
                 if !figure.figureDescription.isEmpty {
-                    FigureDescriptionView(text: figure.figureDescription)
+                    FigureDescriptionView(text: figure.figureDescription, richData: figure.richDescription)
                 }
 
                 Divider()

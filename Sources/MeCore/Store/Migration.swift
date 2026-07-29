@@ -894,6 +894,172 @@ package struct Migration {
             context.insert(assoc)
         }
 
+        // 3. Create missing place-place associations
+        let placePlaceRoleTypes: [PlacePlaceRoleType] = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
+        let existingPlaceAssocs = (try? context.fetch(FetchDescriptor<PlacePlaceAssociation>())) ?? []
+
+        for seedAssoc in root.placePlaceAssociations ?? [] {
+            guard let fromPlace = placeByName[seedPlaceNameById[seedAssoc.fromPlaceId] ?? ""],
+                  let toPlace = placeByName[seedPlaceNameById[seedAssoc.toPlaceId] ?? ""] else { continue }
+
+            let alreadyExists = existingPlaceAssocs.contains { assoc in
+                assoc.fromPlace?.persistentModelID == fromPlace.persistentModelID &&
+                assoc.toPlace?.persistentModelID == toPlace.persistentModelID &&
+                assoc.roleType?.name == seedAssoc.role
+            }
+            guard !alreadyExists else { continue }
+
+            let roleType = placePlaceRoleTypes.first(where: { $0.name == seedAssoc.role })
+            let assoc = PlacePlaceAssociation(
+                fromPlace: fromPlace,
+                toPlace: toPlace,
+                roleType: roleType,
+                source: seedAssoc.source
+            )
+            context.insert(assoc)
+        }
+
+        try? context.save()
+    }
+
+    /// Backfill SKL historical figures and events from seed_data.json.
+    /// Creates figures (Eannatum, Entemena, Urukagina, Ukush, Mesilim),
+    /// places (Girsu, Gu-Edin, Aratta, Dabrum), and 40 events.
+    package static func ensureSKLEventsAndFigures(context: ModelContext) {
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "seed_data", withExtension: "json")
+        }()
+        guard let u = url, let data = try? Data(contentsOf: u),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else { return }
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let allPlaces = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let allEventTypes = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
+        let allEventPlaceRoles = (try? context.fetch(FetchDescriptor<EventPlaceRoleType>())) ?? []
+
+        var figureByName = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
+        var placeByName = allPlaces.reduce(into: [:]) { $0[$1.name] = $1 }
+        let eventTypeByName = allEventTypes.reduce(into: [:]) { $0[$1.name] = $1 }
+        let occuredAtRole = allEventPlaceRoles.first(where: { $0.name == "Occurred At" })
+
+        let existingEventNames = Set(allFigures.isEmpty ? [] : (try? context.fetch(FetchDescriptor<Event>()))?.map(\.name) ?? [])
+
+        let seedFigureNameById = root.figures.reduce(into: [:]) { $0[$1.id] = $1.name }
+        let seedPlaceNameById = root.places.reduce(into: [:]) { $0[$1.id] = $1.name }
+
+        // 1. Create missing figures
+        for seedFig in root.figures {
+            guard !figureByName.keys.contains(seedFig.name) else { continue }
+            let sklFigures = Set(["Eannatum", "Entemena", "Urukagina", "Ukush", "Mesilim"])
+            guard sklFigures.contains(seedFig.name) else { continue }
+            let humanType = try? context.fetch(FetchDescriptor<FigureType>(predicate: #Predicate { $0.name == "Human" })).first
+            let figure = Figure(
+                name: seedFig.name,
+                title: seedFig.title,
+                figureType: humanType,
+                gender: Figure.Gender(rawValue: seedFig.gender) ?? .male,
+                domain: seedFig.domain,
+                figureDescription: seedFig.figureDescription,
+                birthDate: seedFig.birthDate.toMythologicalDate(),
+                deathDate: seedFig.deathDate.toMythologicalDate(),
+                source: seedFig.source
+            )
+            context.insert(figure)
+            figureByName[seedFig.name] = figure
+        }
+
+        // 2. Create missing places
+        let sklPlaceNames = Set(["Girsu", "Gu-Edin", "Aratta", "Dabrum"])
+        for seedPlace in root.places {
+            guard !placeByName.keys.contains(seedPlace.name) else { continue }
+            guard sklPlaceNames.contains(seedPlace.name) else { continue }
+            let placeType = try? context.fetch(FetchDescriptor<PlaceType>(predicate: #Predicate { $0.name == seedPlace.placeType })).first
+            let place = Place(
+                name: seedPlace.name,
+                placeType: placeType,
+                modernLocation: seedPlace.modernLocation,
+                placeDescription: seedPlace.placeDescription,
+                source: seedPlace.source,
+                latitude: seedPlace.latitude,
+                longitude: seedPlace.longitude
+            )
+            context.insert(place)
+            placeByName[seedPlace.name] = place
+        }
+
+        try? context.save()
+
+        // 3. Create missing events
+        for seedEvent in root.events {
+            guard !existingEventNames.contains(seedEvent.name) else { continue }
+
+            let eventFigures = seedEvent.involvedFigureIds.compactMap { fid -> Figure? in
+                guard let figName = seedFigureNameById[fid] else { return nil }
+                return figureByName[figName]
+            }
+
+            let event = Event(
+                name: seedEvent.name,
+                eventType: eventTypeByName[seedEvent.eventType],
+                eventDescription: seedEvent.eventDescription,
+                date: seedEvent.date.toMythologicalDate(),
+                era: seedEvent.era,
+                source: seedEvent.source,
+                involvedFigures: eventFigures
+            )
+            context.insert(event)
+
+            // Create EventPlaceAssociation if placeId is specified
+            if let pid = seedEvent.placeId, let placeName = seedPlaceNameById[pid], let place = placeByName[placeName] {
+                let assoc = EventPlaceAssociation(
+                    event: event,
+                    place: place,
+                    roleType: occuredAtRole,
+                    source: seedEvent.source
+                )
+                context.insert(assoc)
+            }
+        }
+
+        try? context.save()
+    }
+
+    /// Create default figure groups if none exist.
+    package static func ensureDefaultFigureGroups(context: ModelContext) {
+        let count = (try? context.fetchCount(FetchDescriptor<FigureGroup>())) ?? 0
+        guard count == 0 else { return }
+
+        let defaults: [(name: String, description: String, icon: String, colorHex: String, filter: GroupMemberFilter?)] = [
+            ("Divine Council", "Gods who sit in council, including the Anunnaki and Igigi", "person.3.fill", "5856D6", nil),
+            ("Sumerian Pantheon", "Major gods and goddesses of the Sumerian pantheon", "star.fill", "FF9500",
+             GroupMemberFilter(figureTypeNames: ["Deity"], domainKeywords: ["Sumerian"])),
+            ("Akkadian/East Semitic", "Gods of the Akkadian, Assyrian, and Babylonian traditions", "star.circle.fill", "FF3B30",
+             GroupMemberFilter(domainKeywords: ["Akkadian", "Babylonian", "Assyrian"])),
+            ("Book of Enoch", "Figures from the Book of Enoch tradition", "book.fill", "FBBF24", nil),
+            ("Primordial Beings", "Primordial entities from before the gods", "sparkles", "8E8E93",
+             GroupMemberFilter(figureTypeNames: ["Primordial"])),
+            ("SKL Kings", "Kings of the Sumerian King List", "list.star", "007AFF",
+             GroupMemberFilter(domainKeywords: ["Kingship"])),
+        ]
+
+        for (idx, config) in defaults.enumerated() {
+            let filterJSON: String?
+            if let filter = config.filter, let data = try? JSONEncoder().encode(filter) {
+                filterJSON = String(data: data, encoding: .utf8)
+            } else {
+                filterJSON = nil
+            }
+            let group = FigureGroup(
+                name: config.name,
+                groupDescription: config.description,
+                icon: config.icon,
+                colorHex: config.colorHex,
+                orderIndex: idx,
+                memberFilter: filterJSON
+            )
+            context.insert(group)
+        }
         try? context.save()
     }
 

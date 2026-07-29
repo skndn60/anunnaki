@@ -22,6 +22,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case places = "Places"
     case events = "Events"
     case things = "Things"
+    case figureGroups = "Figure Groups"
     case dictionary = "Dictionary"
     case relationships = "Relationships"
     case associations = "Associations"
@@ -66,6 +67,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .flood: return "drop"
         case .theMes: return "rectangle.3.group"
         case .things: return "cube.box"
+        case .figureGroups: return "folder"
         case .dictionary: return "book"
         }
     }
@@ -75,7 +77,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .dashboard: return .overview
         case .missionControl, .importWiki, .versions: return .tools
         case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things, .dictionary: return .data
+        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary: return .data
         case .enoch, .sumerianKingList, .sklMap, .flood, .theMes: return .history
         }
     }
@@ -95,6 +97,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .places: PlaceListView()
         case .events: EventListView()
         case .things: ThingListView()
+        case .figureGroups: FigureGroupListView()
         case .dictionary: DictionaryListView()
         case .relationships: RelationshipListView()
         case .associations: AssociationsView()
@@ -146,6 +149,8 @@ struct ContentView: View {
                     Migration.ensureMissingCitiesAndAssociations(context: modelContext)
                     Migration.ensureImportedDeityRelationships(context: modelContext)
                     Migration.ensureEventCitations(context: modelContext)
+                    Migration.ensureSKLEventsAndFigures(context: modelContext)
+                    Migration.ensureDefaultFigureGroups(context: modelContext)
                     try? modelContext.save()
                 }
                 isSeeding = false
@@ -201,6 +206,8 @@ struct ContentView: View {
                         EventListView(coordinator: coordinator)
                     } else if selectedItem == .things {
                         ThingListView(coordinator: coordinator)
+                    } else if selectedItem == .figureGroups {
+                        FigureGroupListView(coordinator: coordinator)
                     } else if selectedItem == .dictionary {
                         DictionaryListView(coordinator: coordinator)
                     } else if selectedItem == .enoch {
@@ -220,6 +227,11 @@ struct ContentView: View {
                     Text("Select a view from the sidebar")
                         .font(.title2)
                         .foregroundStyle(.secondary)
+                }
+            }
+            .onAppear {
+                if let windowUM = NSApp.keyWindow?.undoManager {
+                    modelContext.undoManager = windowUM
                 }
             }
             .alert("Database Issue", isPresented: $showRecoveryAlert) {
@@ -242,7 +254,7 @@ struct ContentView: View {
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                         TextField("Search all entities\u{2026}", text: $globalSearchText)
-                            .textFieldStyle(.plain)
+                            .textFieldStyle(.roundedBorder)
                             .focused($searchFocused)
                             .frame(width: 180)
                             .onSubmit { searchFocused = true }
@@ -250,10 +262,6 @@ struct ContentView: View {
                     .padding(.leading, 4)
                     .padding(.trailing, 8)
                     .padding(.vertical, 2)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(Color(.textBackgroundColor))
-                    )
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
                             .stroke(.separator, lineWidth: 0.5)

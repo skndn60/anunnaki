@@ -13,9 +13,9 @@ struct IconActionButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .medium))
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(isHovered ? color : color.opacity(0.5))
-                .frame(width: 24, height: 24)
+                .frame(width: 30, height: 30)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
                         .fill(color.opacity(isHovered ? 0.12 : 0))

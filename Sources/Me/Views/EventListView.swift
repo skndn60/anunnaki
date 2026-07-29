@@ -14,7 +14,11 @@ struct EventListView: View {
     @State private var imageDetailImage: ImageAsset?
     @AppStorage("eventDetailWidth") private var detailWidth: Double = 320
     @State private var showDeleteConfirm = false
+    @State private var selectedTypeFilters: Set<String> = []
     @Query(sort: \EventType.name) private var eventTypes: [EventType]
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
 
     enum EventSortOrder: String, CaseIterable {
         case name = "Name"
@@ -24,7 +28,7 @@ struct EventListView: View {
 
     private var selectedEvent: Event? {
         guard let id = selectedEventID else { return nil }
-        return sortedEvents.first { $0.persistentModelID == id }
+        return filteredEvents.first { $0.persistentModelID == id }
     }
 
     private var backLabel: String? {
@@ -38,16 +42,20 @@ struct EventListView: View {
         return { self.coordinator?.navigateToHistory(at: index) }
     }
 
-    private var sortedEvents: [Event] {
+    private var filteredEvents: [Event] {
+        var result = events
+        if !selectedTypeFilters.isEmpty {
+            result = result.filter { selectedTypeFilters.contains($0.eventType?.name ?? "") }
+        }
         switch sortOrder {
-        case .name: return events.sorted { sortName(for: $0.name) < sortName(for: $1.name) }
-        case .type: return events.sorted { $0.eventType?.name ?? "" < $1.eventType?.name ?? "" }
-        case .date: return events.sorted { $0.date.sortValue < $1.date.sortValue }
+        case .name: return result.sorted { sortName(for: $0.name) < sortName(for: $1.name) }
+        case .type: return result.sorted { $0.eventType?.name ?? "" < $1.eventType?.name ?? "" }
+        case .date: return result.sorted { $0.date.sortValue < $1.date.sortValue }
         }
     }
 
     private var groupedEvents: [(key: String, events: [Event])] {
-        Dictionary(grouping: sortedEvents) { event in
+        Dictionary(grouping: filteredEvents) { event in
             switch sortOrder {
             case .name: String((event.sortName ?? sortName(for: event.name)).uppercased().prefix(1))
             case .type: event.eventType?.name ?? "?"
@@ -91,9 +99,23 @@ struct EventListView: View {
                         onClear: { coordinator?.history.removeAll() }
                     )
                 }
-                EventTypeLegend(types: eventTypes)
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
+                if !eventTypes.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(eventTypes) { type in
+                                typeFilterButton(type)
+                            }
+                            if !selectedTypeFilters.isEmpty {
+                                Button("Clear") { selectedTypeFilters.removeAll() }
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.leading, 4)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 4)
+                    }
+                }
 
                 Divider()
 
@@ -125,7 +147,7 @@ struct EventListView: View {
                         .onChange(of: selectedEventID) { _, newValue in
                             if let id = newValue {
                                 selectEvent(id)
-                                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                                withAnimation { Task { @MainActor in proxy.scrollTo(id, anchor: .center) } }
                             }
                         }
                     }
@@ -140,7 +162,12 @@ struct EventListView: View {
                         DetailToolbar(
                             onEdit: { editingEvent = event },
                             onDelete: { showDeleteConfirm = true },
-                            onClose: { selectedEventID = nil }
+                            onClose: { selectedEventID = nil },
+                            onEditDescription: {
+                                editRichDescription = event.richDescription
+                                editPlainDescription = event.eventDescription
+                                showDescriptionEditor = true
+                            }
                         )
                     EventDetailView(
                             event: event,
@@ -169,6 +196,20 @@ struct EventListView: View {
         .sheet(item: $editingEvent) { event in
             EventFormView(event: event)
         }
+        .sheet(isPresented: $showDescriptionEditor) {
+            if let event = selectedEvent {
+                DescriptionEditorSheet(
+                    entityName: event.name,
+                    richDescription: $editRichDescription,
+                    plainDescription: $editPlainDescription,
+                    onSave: {
+                        event.richDescription = editRichDescription
+                        event.eventDescription = editPlainDescription
+                        try? modelContext.save()
+                    }
+                )
+            }
+        }
 
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
@@ -195,6 +236,36 @@ struct EventListView: View {
         if events.contains(where: { $0.persistentModelID == id }) {
             selectEvent(id)
         }
+    }
+
+    private func typeFilterButton(_ type: EventType) -> some View {
+        Button(action: {
+            if selectedTypeFilters.contains(type.name) {
+                selectedTypeFilters.remove(type.name)
+            } else {
+                selectedTypeFilters.insert(type.name)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Circle().fill(type.color).frame(width: 7, height: 7)
+                Text(type.name).font(.caption)
+                if selectedTypeFilters.contains(type.name) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(selectedTypeFilters.contains(type.name) ? type.color.opacity(0.2) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(selectedTypeFilters.contains(type.name) ? type.color : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private func eventGroupSection(_ group: (key: String, events: [Event])) -> some View {
@@ -257,349 +328,5 @@ struct EventRow: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
-    }
-}
-
-// MARK: - Event Form
-
-struct EventFormView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) var dismiss
-    @Query private var figures: [Figure]
-    @Query private var places: [Place]
-    @Query(sort: \EventType.name) private var eventTypes: [EventType]
-    @Query(sort: \Era.orderIndex) private var eras: [Era]
-    @Query(sort: \EventPlaceRoleType.name) private var eventPlaceRoleTypes: [EventPlaceRoleType]
-
-    let event: Event?
-
-    @State private var name = ""
-    @State private var eventType: EventType? = nil
-    @State private var eventDescription = ""
-    @State private var date: MythologicalDate = .unknown
-    @State private var era = ""
-    @State private var source = ""
-    @State private var sortName = ""
-    @State private var selectedFigureIDs: Set<PersistentIdentifier> = []
-    @State private var figureSearchText = ""
-    @State private var placeSelections: [PlaceSelection] = []
-    @State private var placeSearchText = ""
-    @State private var selectedTags: [Tag] = []
-
-    private struct PlaceSelection: Identifiable {
-        let id = UUID()
-        var place: Place
-        var roleType: EventPlaceRoleType?
-    }
-
-    private var isEditing: Bool { event != nil }
-
-    private var selectedFigures: [Figure] {
-        figures.filter { selectedFigureIDs.contains($0.persistentModelID) }
-    }
-
-    private var filteredFigures: [Figure] {
-        guard !figureSearchText.isEmpty else { return [] }
-        return figures.filter {
-            !selectedFigureIDs.contains($0.persistentModelID) &&
-            $0.name.localizedCaseInsensitiveContains(figureSearchText)
-        }
-    }
-
-    private var filteredPlaces: [Place] {
-        guard !placeSearchText.isEmpty else { return [] }
-        let selectedIDs = Set(placeSelections.map(\.place.persistentModelID))
-        return places.filter {
-            !selectedIDs.contains($0.persistentModelID) &&
-            $0.name.localizedCaseInsensitiveContains(placeSearchText)
-        }
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text(isEditing ? "Edit Event" : "Add Event")
-                .font(.title3.bold())
-                .padding()
-
-            Form {
-                Section("Event Details") {
-                    TextField("Name", text: $name, prompt: Text("e.g. Slaying of Tiamat"))
-                    Picker("Type", selection: $eventType) {
-                        ForEach(eventTypes, id: \.persistentModelID) { type in
-                            Text(type.name).tag(type as EventType?)
-                        }
-                    }
-                    Picker("Era", selection: $era) {
-                        Text("None").tag("")
-                        ForEach(eras) { eraItem in
-                            Text(eraItem.name).tag(eraItem.name)
-                        }
-                    }
-                    TextField("Source", text: $source, prompt: Text("e.g. Enuma Elish, Tablet IV"))
-                    TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
-                }
-
-                Section("Locations") {
-                    if !placeSelections.isEmpty {
-                        VStack(spacing: 4) {
-                            ForEach(Array(placeSelections.enumerated()), id: \.element.id) { index, _ in
-                                HStack(spacing: 4) {
-                                    Text(placeSelections[index].place.name)
-                                        .font(.caption)
-                                    Picker("", selection: Binding(
-                                        get: { placeSelections[index].roleType },
-                                        set: { placeSelections[index].roleType = $0 }
-                                    )) {
-                                        Text("Select").tag(nil as EventPlaceRoleType?)
-                                        ForEach(eventPlaceRoleTypes) { rt in
-                                            Text(rt.name).tag(rt as EventPlaceRoleType?)
-                                        }
-                                    }
-                                    .pickerStyle(.menu)
-                                    .labelsHidden()
-                                    .frame(width: 120)
-                                    Button {
-                                        placeSelections.remove(at: index)
-                                    } label: {
-                                        Image(systemName: "xmark")
-                                            .font(.system(size: 9, weight: .bold))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .help("Remove place")
-                                }
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(.quaternary.opacity(0.3))
-                                .cornerRadius(4)
-                            }
-                        }
-                    }
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                        TextField("Search locations…", text: $placeSearchText)
-                            .textFieldStyle(.plain)
-                    }
-                    .padding(6)
-                    .background(.quaternary.opacity(0.15))
-                    .cornerRadius(6)
-
-                    if !placeSearchText.isEmpty {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 2) {
-                                if filteredPlaces.isEmpty {
-                                    Button {
-                                        let place = Place(name: placeSearchText, isConcept: true)
-                                        modelContext.insert(place)
-                                        placeSelections.append(PlaceSelection(place: place, roleType: nil))
-                                        placeSearchText = ""
-                                    } label: {
-                                        Label("Create \"\(placeSearchText)\" as new place", systemImage: "plus")
-                                            .font(.caption)
-                                            .foregroundStyle(.orange)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 6)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(.plain)
-                                } else {
-                                    ForEach(filteredPlaces) { place in
-                                        Button {
-                                            placeSelections.append(PlaceSelection(place: place, roleType: nil))
-                                            placeSearchText = ""
-                                        } label: {
-                                            Text(place.name)
-                                                .padding(.horizontal, 4)
-                                                .padding(.vertical, 2)
-                                                .frame(maxWidth: .infinity, alignment: .leading)
-                                                .contentShape(Rectangle())
-                                        }
-                                        .buttonStyle(.plain)
-                                        .background(Color.primary.opacity(0.05))
-                                        .cornerRadius(4)
-                                    }
-                                }
-                            }
-                        }
-                        .frame(maxHeight: 120)
-                    }
-                }
-
-                MythologicalDateEditor(label: "Date", date: $date)
-
-                Section("Involved Figures") {
-                    if !selectedFigureIDs.isEmpty {
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 4) {
-                                ForEach(selectedFigures) { figure in
-                                    HStack(spacing: 2) {
-                                        Text(figure.name)
-                                            .font(.caption)
-                                        if figure.isConcept {
-                                            Text("C")
-                                                .font(.system(size: 8, weight: .bold))
-                                                .foregroundStyle(.orange)
-                                                .padding(.horizontal, 2)
-                                        }
-                                        Button {
-                                            selectedFigureIDs.remove(figure.persistentModelID)
-                                        } label: {
-                                            Image(systemName: "xmark")
-                                                .font(.system(size: 9, weight: .bold))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .help("Remove figure")
-                                    }
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 3)
-                                    .background(.quaternary.opacity(0.3))
-                                    .cornerRadius(4)
-                                }
-                            }
-                        }
-                    }
-
-                    HStack(spacing: 4) {
-                        Image(systemName: "magnifyingglass")
-                            .foregroundStyle(.secondary)
-                            .font(.caption)
-                        TextField("Search figures…", text: $figureSearchText)
-                            .textFieldStyle(.plain)
-                    }
-                    .padding(6)
-                    .background(.quaternary.opacity(0.15))
-                    .cornerRadius(6)
-
-                    if !figureSearchText.isEmpty {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 2) {
-                                if filteredFigures.isEmpty {
-                                    Button {
-                                        let fig = Figure(name: figureSearchText, isConcept: true)
-                                        modelContext.insert(fig)
-                                        selectedFigureIDs.insert(fig.persistentModelID)
-                                        figureSearchText = ""
-                                    } label: {
-                                        Label("Create \"\(figureSearchText)\" as new figure", systemImage: "plus")
-                                            .font(.caption)
-                                            .foregroundStyle(.orange)
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 6)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .contentShape(Rectangle())
-                                    }
-                                    .buttonStyle(.plain)
-                                } else {
-                                    ForEach(filteredFigures) { figure in
-                                        Button {
-                                            selectedFigureIDs.insert(figure.persistentModelID)
-                                            figureSearchText = ""
-                                        } label: {
-                                            HStack(spacing: 6) {
-                                                Text(figure.gender.symbol)
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                                Text(figure.name)
-                                            }
-                                            .padding(.horizontal, 4)
-                                            .padding(.vertical, 2)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-                                            .contentShape(Rectangle())
-                                        }
-                                        .buttonStyle(.plain)
-                                        .background(Color.primary.opacity(0.05))
-                                        .cornerRadius(4)
-                                    }
-                                }
-                            }
-                        }
-                        .frame(maxHeight: 120)
-                    }
-                }
-
-                Section("Description") {
-                    TextEditor(text: $eventDescription)
-                        .frame(minHeight: 60)
-                }
-
-                Section("Tags") {
-                    TagEditorView(tags: $selectedTags)
-                }
-            }
-            .formStyle(.grouped)
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(isEditing ? "Save" : "Add") { save() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty)
-            }
-            .padding()
-        }
-        .frame(width: 540, height: 700)
-        .onAppear { loadIfEditing() }
-    }
-
-    private func loadIfEditing() {
-        guard let event else { return }
-        name = event.name
-        eventType = event.eventType
-        eventDescription = event.eventDescription
-        date = event.date
-        era = event.era
-        source = event.source
-        sortName = event.sortName ?? ""
-        selectedFigureIDs = Set(event.involvedFigures.map(\.persistentModelID))
-        placeSelections = event.placeAssociations.compactMap { assoc in
-            guard let place = assoc.place else { return nil }
-            return PlaceSelection(place: place, roleType: assoc.roleType)
-        }
-        selectedTags = event.tags
-    }
-
-    private func save() {
-        let selectedFigs = figures.filter { selectedFigureIDs.contains($0.persistentModelID) }
-        if let event {
-            event.name = name
-            event.eventType = eventType
-            event.eventDescription = eventDescription
-            event.date = date
-            event.era = era
-            event.source = source
-            event.sortName = sortName.isEmpty ? nil : sortName
-            event.isConcept = false
-            event.involvedFigures = selectedFigs
-            for assoc in event.placeAssociations { modelContext.delete(assoc) }
-            event.placeAssociations = placeSelections.map { sel in
-                let assoc = EventPlaceAssociation(event: event, place: sel.place, roleType: sel.roleType)
-                modelContext.insert(assoc)
-                return assoc
-            }
-            event.tags = selectedTags
-            RecentEditStore.trackEdit(entityType: "Event", entityName: event.name)
-        } else {
-            let newEvent = Event(
-                name: name, eventType: eventType,
-                eventDescription: eventDescription,
-                date: date, era: era, source: source,
-                sortName: sortName.isEmpty ? nil : sortName,
-                involvedFigures: selectedFigs
-            )
-            newEvent.tags = selectedTags
-            modelContext.insert(newEvent)
-            RecentEditStore.trackEdit(entityType: "Event", entityName: newEvent.name)
-            for sel in placeSelections {
-                let assoc = EventPlaceAssociation(event: newEvent, place: sel.place, roleType: sel.roleType)
-                modelContext.insert(assoc)
-            }
-        }
-        dismiss()
     }
 }

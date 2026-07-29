@@ -109,13 +109,13 @@ struct PlaceDetailView: View {
                 }
 
                 // Description
-                if !place.placeDescription.isEmpty {
+                if !place.placeDescription.isEmpty || place.richDescription != nil {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Description")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        Text(place.placeDescription)
+                        RichTextDisplay(richData: place.richDescription, fallback: place.placeDescription)
                             .font(.body)
                     }
                 }
@@ -515,15 +515,8 @@ private struct PlaceFigureLinkPopover: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search figures…", text: $searchText)
-                    .textFieldStyle(.plain)
-            }
-            .padding(10)
-            .background(Color(.textBackgroundColor))
-            .cornerRadius(6)
+            TextField("Search figures…", text: $searchText)
+                .textFieldStyle(.roundedBorder)
 
             if filteredFigures.isEmpty {
                 Text("No matching figures")
@@ -638,15 +631,8 @@ private struct PlaceEventLinkPopover: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search events…", text: $searchText)
-                    .textFieldStyle(.plain)
-            }
-            .padding(10)
-            .background(Color(.textBackgroundColor))
-            .cornerRadius(6)
+            TextField("Search events…", text: $searchText)
+                .textFieldStyle(.roundedBorder)
 
             if filteredEvents.isEmpty {
                 Text("No matching events")

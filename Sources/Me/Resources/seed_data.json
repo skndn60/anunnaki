@@ -20,7 +20,7 @@
     },
     {
       "name": "Age of the First Gods",
-      "orderIndex": 1,
+      "orderIndex": 2,
       "eraDescription": "The great gods emerged — Anu took the heavens, Enlil the earth, Enki the waters.",
       "startDate": {
         "era": "Age of the First Gods",
@@ -38,7 +38,7 @@
     },
     {
       "name": "Anunnaki on Earth",
-      "orderIndex": 2,
+      "orderIndex": 3,
       "eraDescription": "The Anunnaki descended to Earth, established cities, and began mining operations according to Sumerian texts.",
       "startDate": {
         "era": "Anunnaki on Earth",
@@ -56,7 +56,7 @@
     },
     {
       "name": "Creation of Mankind",
-      "orderIndex": 3,
+      "orderIndex": 4,
       "eraDescription": "Humans were created to relieve the gods of labor. Enki and Ninhursag fashioned mankind from clay.",
       "startDate": {
         "era": "Creation of Mankind",
@@ -74,7 +74,7 @@
     },
     {
       "name": "Antediluvian Period",
-      "orderIndex": 4,
+      "orderIndex": 5,
       "eraDescription": "The age of the antediluvian kings with impossibly long reigns, as recorded in the Sumerian King List.",
       "startDate": {
         "era": "Antediluvian Period",
@@ -92,7 +92,7 @@
     },
     {
       "name": "The Great Flood",
-      "orderIndex": 5,
+      "orderIndex": 7,
       "eraDescription": "Enlil sent the deluge to destroy mankind. Ziusudra survived by building an ark on Enki's warning.",
       "startDate": {
         "era": "The Great Flood",
@@ -110,7 +110,7 @@
     },
     {
       "name": "Post-Flood Kingdoms",
-      "orderIndex": 6,
+      "orderIndex": 8,
       "eraDescription": "Kingship descended from heaven again. The dynasties of Kish, Uruk, and Ur arose.",
       "startDate": {
         "era": "Post-Flood Kingdoms",
@@ -128,7 +128,7 @@
     },
     {
       "name": "Early Dynastic Period",
-      "orderIndex": 7,
+      "orderIndex": 9,
       "eraDescription": "Historical kings emerge alongside legendary ones. Gilgamesh rules Uruk. The gods still intervene directly.",
       "startDate": {
         "era": "Early Dynastic Period",
@@ -146,8 +146,8 @@
     },
     {
       "id": "fc73cd4a-328c-523f-ab3d-e87e447e59e5",
-      "name": "Antediluvian",
-      "orderIndex": 8,
+      "name": "SKL Antediluvian",
+      "orderIndex": 6,
       "eraDescription": "The mythical kings who ruled before the Great Flood, with reigns lasting tens of thousands of years.",
       "startDate": {
         "era": "Antediluvian",
@@ -165,7 +165,7 @@
     {
       "id": "4c31f203-aeb7-5c8d-85d8-857047eac817",
       "name": "First dynasty of Kish",
-      "orderIndex": 9,
+      "orderIndex": 11,
       "eraDescription": "The first dynasty to receive kingship after the Flood according to the Sumerian King List.",
       "startDate": {
         "era": "First dynasty of Kish",
@@ -183,7 +183,7 @@
     {
       "id": "4d57c8a6-3a33-53ce-8529-f59a42c19120",
       "name": "First rulers of Uruk",
-      "orderIndex": 10,
+      "orderIndex": 12,
       "eraDescription": "The early rulers of Uruk, including the legendary Mesh-ki-ang-gasher, Enmerkar, and Lugalbanda.",
       "startDate": {
         "era": "First rulers of Uruk",
@@ -201,7 +201,7 @@
     {
       "id": "04410cbf-c08f-5eba-bf18-aa1a54e83af7",
       "name": "First dynasty of Ur",
-      "orderIndex": 11,
+      "orderIndex": 13,
       "eraDescription": "The first dynasty of the city of Ur, including Mesh-Ane-pada.",
       "startDate": {
         "era": "First dynasty of Ur",
@@ -219,7 +219,7 @@
     {
       "id": "35aae4f0-b1ab-5867-8e91-8d293a0bc4d1",
       "name": "Dynasty of Awan",
-      "orderIndex": 12,
+      "orderIndex": 14,
       "eraDescription": "An Elamite dynasty from the region of Awan that briefly held kingship.",
       "startDate": {
         "era": "Dynasty of Awan",
@@ -237,7 +237,7 @@
     {
       "id": "a4c5f7da-3227-50f9-967e-6113903dc378",
       "name": "Second dynasty of Kish",
-      "orderIndex": 13,
+      "orderIndex": 15,
       "eraDescription": "The second dynasty of Kish, including rulers with epithets like 'the fuller' and 'the boatman'.",
       "startDate": {
         "era": "Second dynasty of Kish",
@@ -255,7 +255,7 @@
     {
       "id": "b938535b-f2af-50c0-9edc-5fd5e536097e",
       "name": "Dynasty of Hamazi",
-      "orderIndex": 14,
+      "orderIndex": 16,
       "eraDescription": "A dynasty from the city of Hamazi in the Zagros region.",
       "startDate": {
         "era": "Dynasty of Hamazi",
@@ -273,7 +273,7 @@
     {
       "id": "11c6593d-8c9d-5496-a304-4dda7a247d3d",
       "name": "Second dynasty of Uruk",
-      "orderIndex": 15,
+      "orderIndex": 17,
       "eraDescription": "The second dynasty of Uruk, including En-shag-kush-ana.",
       "startDate": {
         "era": "Second dynasty of Uruk",
@@ -291,7 +291,7 @@
     {
       "id": "fc7021ca-bbd5-52a7-91c0-7f98bef94df8",
       "name": "Second dynasty of Ur",
-      "orderIndex": 16,
+      "orderIndex": 18,
       "eraDescription": "The second dynasty of Ur, including Nanni and his son Mesh-ki-ang-Nanna.",
       "startDate": {
         "era": "Second dynasty of Ur",
@@ -309,7 +309,7 @@
     {
       "id": "5f5c11e5-4891-57c6-9e0e-eae386d96f4d",
       "name": "Dynasty of Adab",
-      "orderIndex": 17,
+      "orderIndex": 19,
       "eraDescription": "The dynasty of the city of Adab, including Lugal-Ane-mundu.",
       "startDate": {
         "era": "Dynasty of Adab",
@@ -327,7 +327,7 @@
     {
       "id": "71b1658a-4f36-5af6-b112-d61d09e13651",
       "name": "Dynasty of Mari",
-      "orderIndex": 18,
+      "orderIndex": 20,
       "eraDescription": "The dynasty of the city of Mari, including Anbu, Anba, Bazi, and others.",
       "startDate": {
         "era": "Dynasty of Mari",
@@ -345,7 +345,7 @@
     {
       "id": "14e0dd0a-49ac-50d1-b8cd-832107a41ad2",
       "name": "Third dynasty of Kish",
-      "orderIndex": 19,
+      "orderIndex": 21,
       "eraDescription": "The third dynasty of Kish, including the only woman on the King List: Kug-Bau.",
       "startDate": {
         "era": "Third dynasty of Kish",
@@ -363,8 +363,8 @@
     {
       "id": "1080065d-0c35-5c87-9771-de6f73e5ddec",
       "name": "Dynasty of Akshak",
-      "orderIndex": 20,
-      "eraDescription": "The dynasty of the city of Akshak, including Puzur-Nirah and Shu-Suen.",
+      "orderIndex": 22,
+      "eraDescription": "The dynasty of the city of Akshak, including Puzur-Nirah and Shu-Suen (Akshak).",
       "startDate": {
         "era": "Dynasty of Akshak",
         "isApproximate": true,
@@ -381,8 +381,8 @@
     {
       "id": "cb24fb74-33f8-523e-9c2d-46bdebc0dd56",
       "name": "Fourth dynasty of Kish",
-      "orderIndex": 21,
-      "eraDescription": "The fourth dynasty of Kish, including Puzur-Suen and Ur-Zababa. Sargon was Ur-Zababa's cup-bearer.",
+      "orderIndex": 23,
+      "eraDescription": "The fourth dynasty of Kish, including Puzur-Suen (Kish) and Ur-Zababa. Sargon was Ur-Zababa's cup-bearer.",
       "startDate": {
         "era": "Fourth dynasty of Kish",
         "isApproximate": true,
@@ -399,7 +399,7 @@
     {
       "id": "c1e06b3f-a52a-53e9-aead-582bf3fca112",
       "name": "Third dynasty of Uruk",
-      "orderIndex": 22,
+      "orderIndex": 24,
       "eraDescription": "The third dynasty of Uruk, including Lugal-zage-si who ruled all of Sumer.",
       "startDate": {
         "era": "Third dynasty of Uruk",
@@ -417,7 +417,7 @@
     {
       "id": "32451bbc-b416-56e9-95cc-4698c3a46873",
       "name": "Dynasty of Akkad",
-      "orderIndex": 23,
+      "orderIndex": 25,
       "eraDescription": "The Akkadian Empire founded by Sargon, the first empire in history.",
       "startDate": {
         "era": "Dynasty of Akkad",
@@ -435,7 +435,7 @@
     {
       "id": "362d6672-b513-56fb-a749-3f5c93093b4d",
       "name": "Fourth dynasty of Uruk",
-      "orderIndex": 24,
+      "orderIndex": 26,
       "eraDescription": "The fourth dynasty of Uruk, including Ur-nigin, Ur-gigir, and Ur-Utu.",
       "startDate": {
         "era": "Fourth dynasty of Uruk",
@@ -453,7 +453,7 @@
     {
       "id": "6a0c3e6d-3335-5a4a-ad8b-98e320c5dbc2",
       "name": "Gutian rule",
-      "orderIndex": 25,
+      "orderIndex": 27,
       "eraDescription": "The rule of Gutian kings from the Zagros mountains over Mesopotamia.",
       "startDate": {
         "era": "Gutian rule",
@@ -471,7 +471,7 @@
     {
       "id": "40cb5f62-312e-5ec2-a5e3-485bd5fec711",
       "name": "Fifth dynasty of Uruk",
-      "orderIndex": 26,
+      "orderIndex": 28,
       "eraDescription": "The fifth dynasty of Uruk, including Utu-hengal who drove out the Gutians.",
       "startDate": {
         "era": "Fifth dynasty of Uruk",
@@ -489,7 +489,7 @@
     {
       "id": "9404d81f-0343-5dc5-8e58-b3e2e60ccbd6",
       "name": "Third dynasty of Ur",
-      "orderIndex": 27,
+      "orderIndex": 29,
       "eraDescription": "The Neo-Sumerian Ur III empire, including Ur-Namma, Shulgi, and Shu-Suen.",
       "startDate": {
         "era": "Third dynasty of Ur",
@@ -507,7 +507,7 @@
     {
       "id": "e49f705a-13a6-54ad-8afe-a876dc4f4728",
       "name": "Dynasty of Isin",
-      "orderIndex": 28,
+      "orderIndex": 30,
       "eraDescription": "The Isin dynasty that ruled after the fall of Ur, including Ishbi-Erra and Lipit-Eshtar.",
       "startDate": {
         "era": "Dynasty of Isin",
@@ -525,7 +525,7 @@
     {
       "id": "11a99bd9-8446-48ed-a72b-8c18dc4ded7d",
       "name": "Age of the Watchers",
-      "orderIndex": 0,
+      "orderIndex": 1,
       "eraDescription": "The antediluvian age when 200 Watcher angels descended on Mount Hermon, took human wives, fathered the Nephilim, and taught humanity forbidden knowledge. Ended with the Great Flood as divine judgment.",
       "startDate": {
         "era": "Before the Flood",
@@ -1146,7 +1146,7 @@
       "figureType": "Human",
       "gender": "Male",
       "domain": "Kingship",
-      "figureDescription": "First king after the Flood according to the Sumerian King List. Reigned 1,500 years (mythological length). Ascended to heaven on an eagle.",
+      "figureDescription": "Etana (𒂊𒋫𒈾, E.TA.NA) was the thirteenth king of the first dynasty of Kish, according to the Sumerian King List. He is listed as the successor of Arwium, the son of Mashda, as king of Kish. The list also calls Etana \"the shepherd, who ascended to heaven and consolidated all the foreign countries\", and states that he ruled 1,500 years (some copies read 635) before being succeeded by his son Balih, said to have ruled 400 years.",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1191,8 +1191,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 28,800 years (mythological length). (Listed reign: 28,800 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "Alulim (Sumerian: 𒀉𒇻𒅆, romanized: Álulim; transliterated: a₂.lu.lim) was a mythological Mesopotamian ruler, regarded as the first king ever to rule. He is known from the Sumerian King List, Ballad of Early Rulers, and other similar sources which invariably place him in Eridu and assign a reign to him lasting tens of thousands of years. The tablet of Old Babylonian period (c. (Listed reign: 28,800 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1214,8 +1214,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 36,000 years (mythological length). (Listed reign: 36,000 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "Alalngar was the second king to exercise the kingship of Eridu over all of Sumer—according to the Sumerian King List (SKL). He may have ruled c. 2866 – c. (Listed reign: 36,000 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1237,8 +1237,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 43,200 years (mythological length). (Listed reign: 43,200 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "En-men-lu-ana appears as the first king of Bad-tibira in a version of the Sumerian King List. The list claims that En-men-lu-ana ruled for c. 43,200 years, and was succeeded by En-men-gal-ana. (Listed reign: 43,200 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1260,8 +1260,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 28,800 years (mythological length). (Listed reign: 28,800 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "En-men-gal-ana appears as the second king of Bad-tibira in some versions of the Sumerian King List. According to that literary composition, En-men-gal-ana ruled for 28,800 years. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in Early Dynastic documents. (Listed reign: 28,800 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1283,8 +1283,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 36,000 years (mythological length). Epithet: ''\"the shepherd\"''. Dumuzid was deified and was the object of later devotional depictions, as the husband of goddess Inanna. (Listed reign: 36,000 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "Dumuzid, Dumuzi, or Tammuz (Sumerian: 𒌉𒍣, romanized: Dumuzid; Akkadian: Duʾūzu, Dûzu; Arabic: تمّوز, romanized: Tammuz, Tammūz; Hebrew: תַּמּוּז, romanized: Tammūz; Syriac: ܬܵܡܘܿܙ, romanized: Tāmōz), known to the Sumerians as Dumuzid the Shepherd (Sumerian: 𒌉𒍣𒉺𒇻, romanized: Dumuzid sipad) and to the Canaanites as Adon (Phoenician: 𐤀𐤃𐤍; Proto-Hebrew: 𐤀𐤃𐤍), is an ancient Mesopotamian and Levantine deity associated with agriculture and shepherds, who was also the first and primary consort of the goddess Inanna (later known as Ishtar). In Sumerian mythology, Dumuzid's sister was Geshtinanna, the goddess of agriculture, fertility, and dream interpretation. In the Sumerian King List, Dumuzid is listed as an antediluvian king of the city of Bad-tibira and also an early king of the city of Uruk. (Listed reign: 36,000 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1306,8 +1306,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 28,800 years (mythological length). (Listed reign: 28,800 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "En-sipad-zid-ana appears as the king of Larak in some versions of the Sumerian King List (SKL). According to that literary composition, En-sipad-zid-ana ruled for 28,800 years. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in Early Dynastic documents. (Listed reign: 28,800 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1329,8 +1329,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 21,000 years (mythological length). (Listed reign: 21,000 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "En-men-dur-ana (also En-men-dur-an-ki, Enmenduranki) of Zimbir (the city now known as Sippar) was an ancient Sumerian king, whose name appears in the Sumerian King List as the seventh pre-dynastic king of Sumer. He was also the topic of myth and legend, said to have reigned for around 21,000 years. (Listed reign: 21,000 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1352,8 +1352,8 @@
       "title": "King of Sumerian King List",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler in the Sumerian King List. Reigned 18,600 years (mythological length). (Listed reign: 18,600 years.)",
+      "domain": "Antediluvian Kingship",
+      "figureDescription": "Ubara-tutu (or Ubartutu) of Shuruppak was the last antediluvian king of Sumer, according to some versions of the Sumerian King List. He was said to have reigned for 18,600 years (5 sars and 1 ner). He was the son of En-men-dur-ana, a Sumerian mythological figure often compared to Enoch, as he entered heaven without dying. (Listed reign: 18,600 years.)",
       "birthDate": {
         "era": "",
         "isApproximate": true,
@@ -1375,8 +1375,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 1,200 years (mythological length). historicity uncertain (Listed reign: 1,200 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Jushur (cuneiform: 𒄑𒃡 ĜIŠ.UR3; Sumerian: Ĝušur) appears as a king of Kish in the Sumerian king list, a literary composition created in Mesopotamia at the beginning of the second millennium BC. He is either the first king on the list to be mentioned, or the first king after a flood, depending on the version of the SKL. According to the list, Jushur reigned for 1,200 years. (Listed reign: 1,200 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1398,8 +1398,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 960 years (mythological length). (Listed reign: 960 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Kullassina-bel of Kish was the second king in the First Dynasty of Kish according to the Sumerian king list, which adds that he reigned for 960 years (or 900 in some copies). (Listed reign: 960 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1421,8 +1421,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 670 years (mythological length). (Listed reign: 670 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Nangishlishma of Kish (also written as  Nanjiclicma) was the third Sumerian king in the First Dynasty of Kish,who reigned for around 670 years according to some versions of the Sumerian king list. His name does not appear in Early Dynastic inscriptions, meaning that he is unlikely to have been a real historical person. (Listed reign: 670 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1444,8 +1444,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 420 years (mythological length). (Listed reign: 420 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "En-tarah-ana of Kish was the fourth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. The Weld-Blundell Prism was damaged at this point, so Thorkild Jacobsen had restored this ruler's name as Bahina. En-tarah-ana is unlikely to have existed as his name does not appear on texts dating from the period in which he was presumed to have lived (Early Dynastic period). (Listed reign: 420 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1467,8 +1467,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 300 years (mythological length). (Listed reign: 300 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Babum of Kish was the fifth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. Babum is unlikely to have existed as his name does not appear on texts dating from the period in which he was presumed to have lived (Early Dynastic period). Like other leader of the first dynasty, his name is an Akkadian word, bābum meaning \"gate\". (Listed reign: 300 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1490,7 +1490,7 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the First dynasty of Kish. Reigned 840 years (mythological length). (Listed reign: 840 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
@@ -1513,8 +1513,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 960 years (mythological length). (Listed reign: 960 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Kalibum of Kish was the seventh Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. This name is written \"Ga-lí-bu-um ... normalized as Kalibum\", and is believed to be derived from the Akkadian for 'hound'. (Listed reign: 960 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1536,8 +1536,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 840 years (mythological length). (Listed reign: 840 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Kalumum (Sumerian:𒅗𒇻𒈬𒌝) of Kish was the eighth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. Like the other members of the First dynasty prior to Etana, he was named for an animal; his name \"Kalumun\" is Akkadian for \"lamb\". Kalulum is unlikely to have existed as his name does not appear on texts dating from the period in which he was presumed to have lived (Early Dynastic period). (Listed reign: 840 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1559,7 +1559,7 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the First dynasty of Kish. Reigned 900 years (mythological length). (Listed reign: 900 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
@@ -1582,8 +1582,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 600 years (mythological length). (Listed reign: 600 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Atab of Kish was the tenth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. His successor was his son Mashda. Atab is unlikely to have existed as his name does not appear on texts dating from the period in which he was presumed to have lived (Early Dynastic period). (Listed reign: 600 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1605,8 +1605,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 840 years (mythological length). (Listed reign: 840 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Mashda of Kish was the eleventh Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. He was a son of the king Atab. Like the other members of the First dynasty prior to Etana, he was named for an animal; his name \"Mashda\" is Akkadian for \"gazelle\". (Listed reign: 840 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1628,8 +1628,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 720 years (mythological length). (Listed reign: 720 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Arwium of Kish was the twelfth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. His father was Mashda, the previous ruler. Like the other members of the First dynasty prior to Etana, he was named for an animal; his name \"Arwium\" is Akkadian for \"male gazelle\". (Listed reign: 720 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1651,8 +1651,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 400 years (mythological length). (Listed reign: 400 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Balih of Kish was the fourteenth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. His father was Etana, whom he succeeded as ruler. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in Early Dynastic documents. (Listed reign: 400 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1674,8 +1674,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 660 years (mythological length). (Listed reign: 660 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "En-me-nuna of Kish was the fifteenth Sumerian king in the First Dynasty of Kish, according to the Sumerian King List. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in Early Dynastic documents. En-me-nuna is not one of them. (Listed reign: 660 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1697,8 +1697,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 900 years (mythological length). (Listed reign: 900 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Melem-Kish of Kish was the sixteenth Sumerian king in the First Dynasty of Kish, according to the Sumerian King List (SKL). His father was En-me-nuna, whom he succeeded as ruler. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in Early Dynastic documents. (Listed reign: 900 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1720,8 +1720,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 1,200 years (mythological length). (Listed reign: 1,200 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Barsal-nuna (Sumerian: 𒁇𒊩𒉣𒈾 bar.sal.nun.na) of Kish was the seventeenth Sumerian king in the First Dynasty of Kish, according to the Sumerian King List. His father was En-me-nuna; he succeeded his brother Melem-Kish. His name may have meant Sheep of the Prince. (Listed reign: 1,200 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1743,8 +1743,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 140 years.",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Zamug of Kish was the eighteenth Sumerian king in the First Dynasty of Kish, according to the Sumerian king list. His father was Barsal-nuna, whom he succeeded as ruler. His name does not appear in documents other than the SKL, meaning that it is unlikely that he was a historical person.",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1766,8 +1766,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 305 years (mythological length). (Listed reign: 305 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Tizqar of Kish was the nineteenth Sumerian king in the First Dynasty of Kish and succeeded his father Zamuq as ruler, according to some versions of the Sumerian King List. His name does not appear in Early Dynastic inscriptions, meaning that he is unlikely to have been a real historical person. (Listed reign: 305 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1789,8 +1789,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 900 years (mythological length). (Listed reign: 900 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Ilku of Kish was the twentieth Sumerian king in the First Dynasty of Kish, according to the Sumerian King List. His name does not appear in Early Dynastic inscriptions, meaning that he is unlikely to have been a real historical person. (Listed reign: 900 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1812,8 +1812,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 1,200 years (mythological length). (Listed reign: 1,200 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Iltasadum of Kish was the 21st Sumerian king in the First Dynasty of Kish, according to the Sumerian King List. His name does not appear in Early Dynastic inscriptions, meaning that he is unlikely to have been a real historical person. (Listed reign: 1,200 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1835,8 +1835,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 900 years (mythological length). EDI (Listed reign: 900 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Enmebaragesi (Sumerian: 𒂗𒈨𒁈𒄄𒋛 Enmebárgisi [EN-ME-BARA2-GI4-SE]; fl. c. 2750 BC) originally Mebarasi (𒈨𒁈𒋛) was the penultimate king of the first dynasty of Kish and is recorded as having reigned 900 years in the Sumerian King List. (Listed reign: 900 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1858,8 +1858,8 @@
       "title": "King of First dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Kish. Reigned 625 years (mythological length). EDI (Listed reign: 625 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Aga (Sumerian: 𒀝𒂵 Aga, Agga, or Akkà; fl. c. 2700 BC), commonly known as Aga of Kish, was king in the first dynasty of Kish during the Early Dynastic I period. (Listed reign: 625 years.)",
       "birthDate": {
         "era": "First dynasty of Kish",
         "isApproximate": true,
@@ -1881,7 +1881,7 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Uruk",
       "figureDescription": "Ruler from the First rulers of Uruk. Reigned 324 years (mythological length). Late Uruk Period (Listed reign: 324 years.)",
       "birthDate": {
         "era": "First rulers of Uruk",
@@ -1904,8 +1904,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 420 years (mythological length). Late Uruk Period (Listed reign: 420 years.)",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Enmerkar (fl. c. 2750 BC) was an ancient Sumerian ruler to whom the construction of the city of Uruk and a 420-year reign was attributed. (Listed reign: 420 years.)",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -1927,8 +1927,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 100 years. Jemdet Nasr period",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Dumuzid, titled the Fisherman, was a legendary Sumerian king of Uruk listed originating from Kuara. According to legend, in the 100th year of his reign, he was captured by Enmebaragesi.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -1950,8 +1950,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 30 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Ur-Nungal (died c. 2620 BC) was the sixth Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List, which also claims he ruled 30 years. Both the Sumerian King List and the Tummal Chronicle state he was the son of Gilgamesh, but only the Sumerian King List records he was the father of Udul-kalama.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -1973,8 +1973,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 15 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Udul-kalama (died c. 2605 BC) was the seventh Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List. He may have been a son of Ur-Nungal and grandson of Gilgamesh.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -1996,8 +1996,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 9 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "La-ba'shum (died c. 2596 BC) was the eighth Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List. He was described as ruling for nine years.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -2019,8 +2019,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 8 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "En-nun-tarah-ana (died c. 2588 BC) was the ninth Sumerian ruler in the First Dynasty of Uruk. According to the Sumerian King List, he reigned for 8 years.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -2042,8 +2042,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 36 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Mesh-He (died c. 2552 BC), described as \"the smith\", is the 10th lugal of the first dynasty of Uruk. He ruled in modern-day Iraq.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -2065,8 +2065,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 6 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Melem-Ana of Unug (died c. 2546 BC) was the 11th lugal of the First Dynasty of Uruk. He ruled in Mesopotamia in what is now Iraq.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -2088,8 +2088,8 @@
       "title": "King of First rulers of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First rulers of Uruk. Reigned 36 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Lugal-kitun (Sumerian: 𒈗𒆠𒂅, lugal-ki-tun₃; (died c. 2510 BC) was the 12th and last lugal of the first Dynasty of Uruk. He ruled in Mesopotamia in what is now Iraq.",
       "birthDate": {
         "era": "First rulers of Uruk",
         "isApproximate": true,
@@ -2111,8 +2111,8 @@
       "title": "King of First dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Ur. Reigned 80 years. c. 27th century BC",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Mesannepada (Sumerian: 𒈩𒀭𒉌𒅆𒊒𒁕, Mesannipàdda [MES-AN-NE2-PAD3-DA]), Mesh-Ane-pada or Mes-Anne-pada (\"Youngling chosen by An\"; died c. 2525 BC) was the first king listed for the First Dynasty of Ur on the Sumerian king list. He is listed to have ruled for 80 years, having overthrown Lugal-kitun of Uruk: \"Then Unug (Uruk) was defeated and the kingship was taken to Urim (Ur)\".",
       "birthDate": {
         "era": "First dynasty of Ur",
         "isApproximate": true,
@@ -2134,8 +2134,8 @@
       "title": "King of First dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Ur. Reigned 36 years.",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Meskiagnun, also Mesh-ki-ang-Nanna (Sumerian: 𒈩𒆠𒉘𒉣, Meskiag̃nun [mes-ki-aŋ₂-nun], also 𒀭𒈩𒆠𒉘𒉣𒈾, Meskiag̃nunna [Dmes-ki-aŋ₂-nun-na]; died c. 2450 BC), was the fourth lugal or king of the First Dynasty of Ur, according to the Sumerian King List, which states he ruled for 36 years.",
       "birthDate": {
         "era": "First dynasty of Ur",
         "isApproximate": true,
@@ -2157,8 +2157,8 @@
       "title": "King of First dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Ur. Reigned 25 years.",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Elulu (Sumerian: 𒂊𒇻𒇻, e-lu-lu; fl. c. 2445 BC) is listed as the third king of the First Dynasty of Ur on the Sumerian king list, which states he reigned for 25 years.",
       "birthDate": {
         "era": "First dynasty of Ur",
         "isApproximate": true,
@@ -2180,8 +2180,8 @@
       "title": "King of First dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the First dynasty of Ur. Reigned 36 years.",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Balulu (Sumerian: 𒁀𒇻𒇻, ba-lu-lu; fl. c. 2440 BC) was the final king of the First Dynasty of Ur, according to the Sumerian King List, which states he ruled for 36 years:",
       "birthDate": {
         "era": "First dynasty of Ur",
         "isApproximate": true,
@@ -2203,8 +2203,8 @@
       "title": "King of Dynasty of Awan",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Awan. Reigned 356 years (mythological length). Name lost due to a lacunae. (Listed reign: 356 years.)",
+      "domain": "Kingship of Awan",
+      "figureDescription": "3 (three) is a number, numeral and digit. It is the natural number following 2 and preceding 4, and is the smallest odd prime number and the only prime preceding a square number. (Listed reign: 356 years.)",
       "birthDate": {
         "era": "Dynasty of Awan",
         "isApproximate": true,
@@ -2226,8 +2226,8 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 201 years (mythological length). Epithet: ''\"the fuller\"''. (Listed reign: 201 years.)",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Susada appears as the first king of the second dynasty of Kish in some versions of the Sumerian King List. According to that literary composition, Susada ruled for 201 years. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in contemporary documents. (Listed reign: 201 years.)",
       "birthDate": {
         "era": "Second dynasty of Kish",
         "isApproximate": true,
@@ -2249,8 +2249,8 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 81 years.",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Dadasig appears as the second king of the second dynasty of Kish in some versions of the Sumerian King List. According to that literary composition, Dadasig ruled for 81 years. The kings on the early part of the SKL are usually not considered historical, except when they are mentioned in contemporary documents.",
       "birthDate": {
         "era": "Second dynasty of Kish",
         "isApproximate": true,
@@ -2272,7 +2272,7 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 360 years (mythological length). Epithet: ''\"the boatman\"''. (Listed reign: 360 years.)",
       "birthDate": {
         "era": "Second dynasty of Kish",
@@ -2295,7 +2295,7 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 195 years. Epithet: ''\"the son of Mamagal\"''.",
       "birthDate": {
         "era": "Second dynasty of Kish",
@@ -2318,7 +2318,7 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 360 years (mythological length). (Listed reign: 360 years.)",
       "birthDate": {
         "era": "Second dynasty of Kish",
@@ -2341,7 +2341,7 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 180 years. Epithet: ''\"the son of Tuge\"''.",
       "birthDate": {
         "era": "Second dynasty of Kish",
@@ -2364,7 +2364,7 @@
       "title": "King of Second dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Second dynasty of Kish. Reigned 360 years (mythological length). (Listed reign: 360 years.)",
       "birthDate": {
         "era": "Second dynasty of Kish",
@@ -2387,7 +2387,7 @@
       "title": "King of Dynasty of Hamazi",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Hamazi",
       "figureDescription": "Ruler from the Dynasty of Hamazi. Reigned 360 years (mythological length). (Listed reign: 360 years.)",
       "birthDate": {
         "era": "Dynasty of Hamazi",
@@ -2410,8 +2410,8 @@
       "title": "King of Second dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Second dynasty of Uruk. Reigned 60 years. c. 25th century BC",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Enshakushanna (Sumerian: 𒂗𒊮𒊨𒀭𒈾, en-sha3-kush2-an-na; fl. c. 2350 BC), or Enshagsagana, En-shag-kush-ana, Enukduanna, En-Shakansha-Ana, En-šakušuana was a king of Uruk around the mid-3rd millennium BC who is named on the Sumerian King List, which states his reign to have been 60 years.",
       "birthDate": {
         "era": "Second dynasty of Uruk",
         "isApproximate": true,
@@ -2433,8 +2433,8 @@
       "title": "King of Second dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Second dynasty of Uruk. Reigned 120 years.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Lugal-kinishe-dudu (𒈗𒆠𒉌𒂠𒌌𒌌, lugal-ki-ni-še₃-du₇-du₇) also Lugal-kiginne-dudu  (𒈗𒆠𒁺𒉌𒌌𒌌, lugal-ki-gin-ne2-du₇-du₇; fl. c. 2400 BC), was a King and (ensi) of Uruk and Ur who lived towards the end of the 25th century BC.",
       "birthDate": {
         "era": "Second dynasty of Uruk",
         "isApproximate": true,
@@ -2456,7 +2456,7 @@
       "title": "King of Second dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Uruk",
       "figureDescription": "Ruler from the Second dynasty of Uruk. Reigned 7 years.",
       "birthDate": {
         "era": "Second dynasty of Uruk",
@@ -2479,8 +2479,8 @@
       "title": "King of Second dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Second dynasty of Ur. Reigned 120 years.",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Nanni is an Italian surname and a masculine Italian given name (as a shortened form of Giovanni). Notable people with the name include:",
       "birthDate": {
         "era": "Second dynasty of Ur",
         "isApproximate": true,
@@ -2502,8 +2502,8 @@
       "title": "King of Second dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Second dynasty of Ur. Reigned 48 years. Epithet: ''\"the son of Nanni\"''.",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Meskiagnun, also Mesh-ki-ang-Nanna (Sumerian: 𒈩𒆠𒉘𒉣, Meskiag̃nun [mes-ki-aŋ₂-nun], also 𒀭𒈩𒆠𒉘𒉣𒈾, Meskiag̃nunna [Dmes-ki-aŋ₂-nun-na]; died c. 2450 BC), was the fourth lugal or king of the First Dynasty of Ur, according to the Sumerian King List, which states he ruled for 36 years.",
       "birthDate": {
         "era": "Second dynasty of Ur",
         "isApproximate": true,
@@ -2525,8 +2525,8 @@
       "title": "King of Dynasty of Adab",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Adab. Reigned 90 years. c. 25th century BC",
+      "domain": "Kingship of Adab",
+      "figureDescription": "Lugal-Anne-Mundu (Sumerian: 𒈗𒀭𒉌𒈬𒌦𒆕, lugal-an-ne₂-mu-un-du₃, fl. c. 2500 BC) was the most important king of the city-state of Adab in Sumer.",
       "birthDate": {
         "era": "Dynasty of Adab",
         "isApproximate": true,
@@ -2548,7 +2548,7 @@
       "title": "King of Dynasty of Mari",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Mari",
       "figureDescription": "Ruler from the Dynasty of Mari. Reigned 30 years.",
       "birthDate": {
         "era": "Dynasty of Mari",
@@ -2571,8 +2571,8 @@
       "title": "King of Dynasty of Mari",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Mari. Reigned 17 years. Epithet: ''\"the son of Anbu\"''.",
+      "domain": "Kingship of Mari",
+      "figureDescription": "Amba or anba (Arabic: عنبة, Hebrew: עמבה) is a tangy condiment made with mango pickle. Created by Iraqi Jewish merchants in Bombay who purportedly shipped mangoes in vinegar back to Baghdad, Amba bears a resemblance to chutneys from South Asia. The spicy, sweet and sour sauce is typically made of pickled green mangoes, vinegar, salt, turmeric, chilies, and fenugreek.",
       "birthDate": {
         "era": "Dynasty of Mari",
         "isApproximate": true,
@@ -2594,7 +2594,7 @@
       "title": "King of Dynasty of Mari",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Mari",
       "figureDescription": "Ruler from the Dynasty of Mari. Reigned 30 years. Epithet: ''\"the leatherworker\"''.",
       "birthDate": {
         "era": "Dynasty of Mari",
@@ -2617,7 +2617,7 @@
       "title": "King of Dynasty of Mari",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Mari",
       "figureDescription": "Ruler from the Dynasty of Mari. Reigned 20 years. Epithet: ''\"the fuller\"''.",
       "birthDate": {
         "era": "Dynasty of Mari",
@@ -2640,8 +2640,8 @@
       "title": "King of Dynasty of Mari",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Mari. Reigned 30 years. Epithet: ''\"the 'gudug' priest\"''.",
+      "domain": "Kingship of Mari",
+      "figureDescription": "A limer, or lymer , was a kind of dog, a scenthound, used on a leash in medieval times to find large game before it was hunted down by the pack. It was sometimes known as a lyam hound/dog  or lime-hound, from the Middle English word lyam, meaning 'leash'. The French cognate limier has sometimes been used for the dogs in English as well.",
       "birthDate": {
         "era": "Dynasty of Mari",
         "isApproximate": true,
@@ -2663,8 +2663,8 @@
       "title": "King of Dynasty of Mari",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Mari. Reigned 9 years.",
+      "domain": "Kingship of Mari",
+      "figureDescription": "Ruler from the Dynasty of Mari. Reigned 9 years. c. 2350–2341 BC",
       "birthDate": {
         "era": "Dynasty of Mari",
         "isApproximate": true,
@@ -2686,8 +2686,8 @@
       "title": "King of Third dynasty of Kish",
       "figureType": "Human",
       "gender": "Female",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Kish. Reigned 100 years. Epithet: ''\"the woman tavern-keeper, who made firm the foundations of Kish\"''. The only known woman in the King List",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Kubaba (Sumerian: 𒆬𒀭𒁀𒌑, kug-Dba-u₂) was a legendary Mesopotamian queen who according to the Sumerian King List ruled over Kish for a hundred years before the rise of the dynasty of Akshak. It has been suggested that she was not a historical figure due to anomalies such as the atypical form of the name.",
       "birthDate": {
         "era": "Third dynasty of Kish",
         "isApproximate": true,
@@ -2709,7 +2709,7 @@
       "title": "King of Dynasty of Akshak",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Akshak",
       "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 30 years.",
       "birthDate": {
         "era": "Dynasty of Akshak",
@@ -2732,7 +2732,7 @@
       "title": "King of Dynasty of Akshak",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Akshak",
       "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 6 years.",
       "birthDate": {
         "era": "Dynasty of Akshak",
@@ -2755,7 +2755,7 @@
       "title": "King of Dynasty of Akshak",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Akshak",
       "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 6 years.",
       "birthDate": {
         "era": "Dynasty of Akshak",
@@ -2778,8 +2778,8 @@
       "title": "King of Dynasty of Akshak",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 20 years.",
+      "domain": "Kingship of Akshak",
+      "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 20 years. c. 2350–2330 BC",
       "birthDate": {
         "era": "Dynasty of Akshak",
         "isApproximate": true,
@@ -2801,7 +2801,7 @@
       "title": "King of Dynasty of Akshak",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Akshak",
       "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 24 years.",
       "birthDate": {
         "era": "Dynasty of Akshak",
@@ -2820,11 +2820,11 @@
       "disambiguation": ""
     },
     {
-      "name": "Shu-Suen",
+      "name": "Shu-Suen (Akshak)",
       "title": "King of Dynasty of Akshak",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Akshak",
       "figureDescription": "Ruler from the Dynasty of Akshak. Reigned 7 years. Epithet: ''\"the son of Ishu-Il\"''.",
       "birthDate": {
         "era": "Dynasty of Akshak",
@@ -2843,12 +2843,12 @@
       "disambiguation": "Dynasty of Akshak"
     },
     {
-      "name": "Puzur-Suen",
+      "name": "Puzur-Suen (Kish)",
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 25 years. Epithet: ''\"the son of Kug-Bau\"''.",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Puzur-Suen (fl. c. 2360 BC) was a king of Sumer, possibly a son of Queen Kugbau, the 1st ruler of the 4th dynasty of Kish.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
         "isApproximate": true,
@@ -2870,8 +2870,8 @@
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fourth dynasty of Kish. Epithet: ''\"the son of Puzur-Suen\"''. Sargon of Akkad was his cup-bearer",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Ur-Zababa (fl. c. 2340 BC) is listed on the Sumerian King List as the second king of the 4th Dynasty of Kish.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
         "isApproximate": true,
@@ -2893,7 +2893,7 @@
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 30 years.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
@@ -2916,7 +2916,7 @@
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 7 years. Epithet: ''\"the son of Zimudar\"''.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
@@ -2939,7 +2939,7 @@
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 11 years.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
@@ -2962,7 +2962,7 @@
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Kish",
       "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 11 years.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
@@ -2985,8 +2985,8 @@
       "title": "King of Fourth dynasty of Kish",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 7 years. Epithet: ''\"the jeweller\"''.",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Ruler from the Fourth dynasty of Kish. Reigned 7 years. c. 2280–2273 BC. Epithet: ''\"the jeweller\"''.",
       "birthDate": {
         "era": "Fourth dynasty of Kish",
         "isApproximate": true,
@@ -3008,8 +3008,8 @@
       "title": "King of Third dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Uruk. Reigned 25 years. c. 2296–2271 BC (short)",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Lugal-Zage-Si (LUGAL.ZAG.GE.SI 𒈗𒍠𒄀𒋛; frequently spelled Lugalzaggesi, sometimes Lugalzagesi or \"Lugal-Zaggisi\") of Umma (died c. 2334 BC) was the last Sumerian king before the conquest of Sumer by Sargon of Akkad and the rise of the Akkadian Empire, and was considered as the only king of the third dynasty of Uruk, according to the Sumerian King List. Initially, as king of Umma, he led the final victory of Umma in the generation-long conflict with the city-state Lagash for the fertile plain of Gu-Edin.",
       "birthDate": {
         "era": "Third dynasty of Uruk",
         "isApproximate": true,
@@ -3031,8 +3031,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2270–2215 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Sargon of Akkad (; Akkadian: 𒊬𒊒𒄀, romanized: Šarrugi; died c. 2279 BC), also known as Sargon the Great, was the first ruler of the Akkadian Empire, known for his conquests of the Sumerian city-states in the 24th to 23rd centuries BC. He is sometimes identified as the first person in recorded history to rule over an empire.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3054,8 +3054,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 9 years. c. 2214–2206 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Rimush (or Rimuš, 𒌷𒈬𒍑 Ri-mu-uš; died c. 2270 BC) was the second king of the Akkadian Empire. He was the son of Sargon of Akkad.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3077,8 +3077,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2205–2191 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Manishtushu (Man-ištušu) (𒈠𒀭𒅖𒌅𒋢, Ma-an-ish-tu-su; died c. 2255 BC) was the third king of the Akkadian Empire, reigning 15 years c. 2270 BC until his death c.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3100,8 +3100,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 56 years. c. 2190–2154 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Naram-Sin, also transcribed Narām-Sîn or Naram-Suen (Akkadian: 𒀭𒈾𒊏𒄠𒀭𒂗𒍪: DNa-ra-am DSîn, meaning \"Beloved of the Moon God Sîn\", the \"𒀭\" a determinative marking the name of a god; died c. 2218 BC), was a ruler of the Akkad, who reigned c. 2255–2218 BC (middle chronology), and was the third successor and grandson of King Sargon of Akkad.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3123,8 +3123,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 24 years. c. 2153–2129 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Shar-Kali-Sharri (𒀭𒊬𒂵𒉌 𒈗𒌷, DShar-ka-li-Sharri; died c. 2193 BC) reigned c. 2218–2193 BC (middle chronology) as the ruler of Akkad.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3146,8 +3146,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 21 years. c. 2125–2104 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Dudu (Sumerian: 𒁺𒁺, du-du; died c. 2168 BC) was a 22nd-century BC king of Akkad, who reigned for 21 years, c. 2189–2168 BC, according to the Sumerian king list.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3169,8 +3169,8 @@
       "title": "King of Dynasty of Akkad",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Akkad. Reigned 15 years. c. 2104–2083 BC (short)",
+      "domain": "Kingship of Akkad",
+      "figureDescription": "Shu-turul (Shu-durul, 𒋗𒄙𒄒, shu-tur2-ul3 also Šu-Turul; died c. 2154 BC) was the last king of Akkad, ruling for 15 years according to the Sumerian king list. It indicates that he succeeded his father Dudu.",
       "birthDate": {
         "era": "Dynasty of Akkad",
         "isApproximate": true,
@@ -3192,8 +3192,8 @@
       "title": "King of Fourth dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fourth dynasty of Uruk. Reigned 7 years. Known from inscriptions.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Ur-nigin, also Ur-nigina (𒌨𒆸, ur-niŋin) or Ur-nigar (𒌨𒉌𒃻, ur-ni-gar) was a Governor (ensi) of Uruk who lived in 22nd century BC.",
       "birthDate": {
         "era": "Fourth dynasty of Uruk",
         "isApproximate": true,
@@ -3215,8 +3215,8 @@
       "title": "King of Fourth dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fourth dynasty of Uruk. Reigned 6 years. Epithet: ''\"the son of Ur-ningin\"''. Known from inscriptions.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Ur-gigir (𒌨𒄑𒇀, ur-{gesh}gigir) was the son of Ur-nigin and a Governor (ensi) of Uruk who lived in 22nd century BC.",
       "birthDate": {
         "era": "Fourth dynasty of Uruk",
         "isApproximate": true,
@@ -3238,7 +3238,7 @@
       "title": "King of Fourth dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Uruk",
       "figureDescription": "Ruler from the Fourth dynasty of Uruk. Reigned 6 years.",
       "birthDate": {
         "era": "Fourth dynasty of Uruk",
@@ -3261,7 +3261,7 @@
       "title": "King of Fourth dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Uruk",
       "figureDescription": "Ruler from the Fourth dynasty of Uruk. Reigned 5 years.",
       "birthDate": {
         "era": "Fourth dynasty of Uruk",
@@ -3284,8 +3284,8 @@
       "title": "King of Fourth dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fourth dynasty of Uruk. Reigned 25 years. Epithet: ''\"the son of Ur-gigir\"''.",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Ruler from the Fourth dynasty of Uruk. Reigned 25 years. c. 2160–2135 BC. Epithet: ''\"the son of Ur-gigir\"''.",
       "birthDate": {
         "era": "Fourth dynasty of Uruk",
         "isApproximate": true,
@@ -3307,8 +3307,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 6 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Inkishush or Inkišuš (fl. late 3rd millennium BC) was the first Gutian ruler of the Gutian Dynasty mentioned on the Sumerian King List. According to this list, he was the successor of Imta.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3330,8 +3330,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 6 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Sarlagab or Zarlagab (c. 2200 BC)) was the second Gutian ruler of the Gutian Dynasty of Sumer mentioned on the Sumerian King List as possibly reigning for six years.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3353,8 +3353,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 6 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Shulme (fl. late 3rd millennium BC) was the third Gutian ruler of the Gutian Dynasty of Sumer mentioned on the Sumerian King List. According to the list, he was the successor of Sarlagab.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3376,8 +3376,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 6 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Elulmesh (fl. late 3rd millennium BCE) was the fourth Gutian ruler of the Gutian Dynasty of Sumer mentioned on the Sumerian King List. While there is virtually no surviving evidence dating from this short timespan (thought to correspond with the first Gutian inroads into Akkadian territory), it has been suggested that this Elulmesh is to be identified as the same as the Akkadian king Ilulu, also known from the King List.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3399,8 +3399,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 5 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Inimabakesh (fl. late 3rd millennium BCE) was the fifth Gutian ruler of the Gutian Dynasty of Sumer mentioned on the Sumerian King List. Inimabakesh was the successor of Elulmesh.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3422,8 +3422,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 6 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Igeshaush (fl. late 3rd millennium BCE) was the 6th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). Igeshaush was the successor of Inimabakesh.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3445,8 +3445,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 3 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Yarlagab (fl. late 3rd millennium BCE) was the 7th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). According to the SKL: Yarlagab was the successor of Igeshaush.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3468,8 +3468,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 3 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Ibate (fl. late 3rd millennium BCE) was the 8th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the Sumerian King List (SKL).",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3491,8 +3491,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 3 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Yarla or Yarlangab (fl. late 3rd millennium BCE) was the 9th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). Yarla was the successor of Ibate.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3514,8 +3514,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 1 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Kurum (fl. late 3rd millennium BCE) was the 10th Gutian ruler of the Gutian Dynasty of Sumer, mentioned on the \"Sumerian King List\" (SKL). According to the SKL; Kurum was the successor of Yarla.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3537,8 +3537,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 3 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Apilkin (fl. late 3rd millennium BCE) was the 11th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the Sumerian King List (SKL). According to the SKL, Apilkin was the successor of Kurum and was succeeded by La-erabum.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3560,8 +3560,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 2 years. mace head inscription",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "La-erabum or Lasirab (𒆷𒂍𒊏𒀊 la-é-ra-ab also read la-a3-ra-ab, formerly read la-si-ra-ab, fl. circa 2150 BCE) was the 12th Gutian ruler of the Gutian Dynasty of Sumer.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3583,8 +3583,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 2 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Irarum (fl. late 3rd millennium BCE) was the 13th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). According to the SKL: Irarum was the successor of La-erabum.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3606,8 +3606,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 1 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Ibranum (fl. late 3rd millennium BCE) was the 14th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). According to the SKL: Ibranum was the successor of Irarum.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3629,8 +3629,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 2 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Hablum (fl. late 3rd millennium BCE) was the 15th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). According to the SKL: Hablum was the successor of Ibranum.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3652,8 +3652,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 7 years. ''\"the son of Hablum\"''",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Puzur-Suen (fl. c. 2360 BC) was a king of Sumer, possibly a son of Queen Kugbau, the 1st ruler of the 4th dynasty of Kish.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3675,8 +3675,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 7 years.",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Yarlaganda (fl. late 3rd millennium BCE) was the 17th Gutian ruler of the Gutian Dynasty of Sumer mentioned on the \"Sumerian King List\" (SKL). According to the SKL: Yarlaganda was the successor of Puzur-Suen.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3698,7 +3698,7 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
+      "domain": "Kingship of Gutium",
       "figureDescription": "Ruler from the Gutian rule. Reigned 7 years. Si'um or Si-u",
       "birthDate": {
         "era": "Gutian rule",
@@ -3721,8 +3721,8 @@
       "title": "King of Gutian rule",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Gutian rule. Reigned 0.11 years. defeated by Utu-hengal of Uruk",
+      "domain": "Kingship of Gutium",
+      "figureDescription": "Tirigan (fl. late 3rd millennium BCE, 𒋾𒌷𒂵𒀀𒀭, ti-ri₂-ga-a-an) was the 19th and last Gutian ruler in Sumer mentioned on the \"Sumerian King List\" (SKL). According to the SKL: Tirigan was the successor of Si'um.",
       "birthDate": {
         "era": "Gutian rule",
         "isApproximate": true,
@@ -3744,8 +3744,8 @@
       "title": "King of Fifth dynasty of Uruk",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Fifth dynasty of Uruk. c. 2055–2048 BC (short)",
+      "domain": "Kingship of Uruk",
+      "figureDescription": "Utu-hengal (Sumerian: 𒀭𒌓𒃶𒅅, Dutu-ḫe₂-g̃al₂; died c. 2112 BC), also written Utu-heg̃al, Utu-heĝal, and sometimes transcribed as Utu-hegal, Utu-hejal, Utu-Khengal, was one of the first native kings of Sumer after two hundred years of Akkadian and Gutian rule, and was at the origin of the foundation of the Third Dynasty of Ur by his governor of Ur, Ur-Nammu. He was officially \"King of Uruk\" in his inscriptions, and is therefore considered as the founder, and only member, of the \"Fifth Dynasty of Uruk\" (Uruk V).",
       "birthDate": {
         "era": "Fifth dynasty of Uruk",
         "isApproximate": true,
@@ -3767,8 +3767,8 @@
       "title": "King of Third dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 18 years. c. 2047–2030 BC (short)",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Ur-Nammu (or Ur-Namma, Ur-Engur, Ur-Gur, Sumerian: 𒌨𒀭𒇉; died c. 2094 BC) was a Sumerian king who founded the Sumerian Third Dynasty of Ur, in southern Mesopotamia, following several centuries of Akkadian and Gutian rule. Though he built many temples and canals his main achievement was building the core of the Ur III Empire through military conquest.",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3790,8 +3790,8 @@
       "title": "King of Third dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 48 years. c. 2029–1982 BC (short)",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Shulgi (𒀭𒂄𒄀 dšul-gi, (died c. 2046 BC) formerly read as Dungi) of Ur was the second king of the Third Dynasty of Ur. He reigned for 48 years, from c.",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3813,8 +3813,8 @@
       "title": "King of Third dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1981–1973 BC (short)",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Amar-Sin (Akkadian: 𒀭𒀫𒀭𒂗𒍪: DAmarDSîn, \"calf of Sîn\", the \"𒀭\" being a silent honorific for \"Divine\"; died c. 2037 BC) initially misread as Bur-Sin (c. 2046–2037 BC middle chronology), was the third ruler of the Third Dynasty of Ur.",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3836,8 +3836,8 @@
       "title": "King of Third dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 9 years. c. 1972–1964 BC (short)",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Shu-Sin, also Šu-Suen (Akkadian: 𒀭𒋗𒀭𒂗𒍪: DŠuDSîn, after the Moon God Sîn\", the \"𒀭\" being a silent honorific for \"Divine\", formerly read Gimil-Sin; died c. 2028 BC) was king of Sumer and Akkad, and was the fourth king of the Ur III dynasty. He succeeded Amar-Sin, who might have been his father, and reigned c.",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3859,8 +3859,8 @@
       "title": "King of Third dynasty of Ur",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Third dynasty of Ur. Reigned 24 years. c. 1963–1940 BC (short)",
+      "domain": "Kingship of Ur",
+      "figureDescription": "Ibbi-Sin (Sumerian: 𒀭𒄿𒉈𒀭𒂗𒍪, Di-bi₂-Dsuen; died c. 2004 BC) was king of Sumer and Akkad and last king of the Ur III dynasty, and reigned c. 2028–2004 BC (Middle chronology).",
       "birthDate": {
         "era": "Third dynasty of Ur",
         "isApproximate": true,
@@ -3882,8 +3882,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 33 years. c. 1953–1920 BC (short)",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Ishbi-Erra (Akkadian: 𒀭𒅖𒁉𒀴𒊏\t diš-bi-ir₃-ra; died c. 1985 BC) was the founder of the dynasty of Isin, reigning from c. 2018 — c.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -3905,8 +3905,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 20 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Shu-Ilishu (Akkadian: Šu-ilišu; died c. 1975 BC) was the 2nd ruler of the dynasty of Isin.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -3928,8 +3928,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 20 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Iddin-Dagan (Akkadian: 𒀭𒄿𒁷𒀭𒁕𒃶, Di-din-Dda-gan;  died c. 1954 BC) was the 3rd king of the dynasty of Isin. He is best known for his participation in the sacred marriage rite and the sexually-explicit hymn that described it.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -3951,8 +3951,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 20 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Ishme-Dagan (Akkadian: 𒀭𒅖𒈨𒀭𒁕𒃶, Diš-me-Dda-gan, Išme-Dagān; died c. 1935 BC) was the 4th king of the First Dynasty of Isin, according to the \"Sumerian King List\" (SKL). Also according to the SKL: he was both the son and successor of Iddin-Dagan.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -3974,8 +3974,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 11 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Lipit-Ishtar (Akkadian: 𒇷𒁉𒀉𒁹𒁯, Lipit-Ištar; died c. 1924 BC) was the 5th king of the First Dynasty of Isin, according to the Sumerian King List. The King List notes that he was the son of Ishme-Dagan, and was succeeded by Ur-Ninurta.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -3997,8 +3997,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 28 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Ur-Ninurta (died c. 1896 BC) was the 6th king of the 1st Dynasty of Isin. A usurper, Ur-Ninurta seized the throne on the fall of Lipit-Ishtar and held it until his violent death some 28 years later.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4020,8 +4020,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 21 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Būr-Sîn (inscribed  𒀭𒁓𒀭𒂗𒍪 dbur-dEN.ZU; died c. 1874 BC), was the 7th king of the 1st Dynasty of Isin and ruled for 21 years according to the Sumerian King List, 22 years according to the Ur-Isin king list. His reign was characterized by an ebb and flow in hegemony over the religious centers of Nippur and Ur.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4043,8 +4043,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 5 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Lipit-Enlil, written dli-pí-it den.líl, where the Sumerian King List and the Ur-Isin king list match on his name and reign  (died c. 1868 BC), was the 8th king of the 1st dynasty of Isin and ruled for around five years, c. 1874–1868 BC (MC).",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4066,8 +4066,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 8 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Erra-Imittī, (cuneiform: dèr-ra-i-mit-ti or èr-ra-ZAG.LU meaning “Support of Erra”; died c. 1861 BC) was king of Isin, modern Ishan al-Bahriyat, and according to the Sumerian King List ruled for eight years. He succeeded Lipit-Enlil, with whom his relationship is uncertain and was a contemporary and rival of Sumuel and Nur-Adad of the dynasty of Larsa.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4089,8 +4089,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 24 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Enlil-bani (𒀭𒂗𒆤𒁀𒉌; died c. 1836 BC) was the 10th king of the 1st Dynasty of Isin and reigned 24 years according to the Ur-Isin kinglist. He is best known for the legendary and perhaps apocryphal manner of his ascendancy.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4112,8 +4112,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 3 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Zambiya, dza-am-bi-ia, (died c. 1833 BC), was the 11th king of the 1st Dynasty of Isin. He is best known for his defeat at the hands of Sin-Iqisham, king of Larsa.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4135,8 +4135,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 4 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Iter-pisha, inscribed in cuneiform as i-te-er-pi/pi4-ša and meaning \"Her command is surpassing\", (died c. 1829 BC) was the 12th king of Isin during the Old Babylonian period. The Sumerian King List tells us that \"the divine Iter-pisha ruled for 4 years.\" The Ur-Isin King List which was written in the 4th year of the reign of Damiq-ilishu gives a reign of just 3 years.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4158,8 +4158,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 4 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Ur-du-kuga, written dur-du6-kù-ga (died c. 1825 BC) was the 13th king of the Dynasty of Isin and reigned for 4 years according to the Sumerian King List, or 3 years according to the Ur-Isin kinglist. He was the third in a sequence of short reigning monarchs whose filiation was unknown and whose power extended over a small region encompassing little more than the city of Isin and its neighbor Nippur.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -4181,8 +4181,8 @@
       "title": "King of Dynasty of Isin",
       "figureType": "Human",
       "gender": "Male",
-      "domain": "",
-      "figureDescription": "Ruler from the Dynasty of Isin. Reigned 11 years.",
+      "domain": "Kingship of Isin",
+      "figureDescription": "Sîn-māgir (Akkadian: 𒀭𒂗𒍪𒈠𒄫, Dsuen-ma-gir, inscribed dEN.ZU-ma-gir, “Sîn upholds,”; died c. 1814 BC) was the 14th king of Isin and reigned for around 11 years.",
       "birthDate": {
         "era": "Dynasty of Isin",
         "isApproximate": true,
@@ -5074,12 +5074,12 @@
       "disambiguation": ""
     },
     {
-      "name": "Duttur",
-      "title": "Ewe Goddess, Mother of Dumuzi",
+      "name": "Haia",
+      "title": "God of Stores, Father of Ninlil",
       "figureType": "Deity",
-      "gender": "Female",
-      "domain": "Sheep, Motherhood",
-      "figureDescription": "Ewe goddess, mother of Dumuzi and Geshtinanna.",
+      "gender": "Male",
+      "domain": "Stores, Seals, Doorways",
+      "figureDescription": "God of stores and husband of Nisaba. Father of Ninlil (also known as Sud). Sometimes called Haya.",
       "birthDate": {
         "era": "Age of the First Gods",
         "isApproximate": true,
@@ -5093,16 +5093,16 @@
         "endYear": null
       },
       "source": "Sumerian mythology",
-      "id": "4ECA13D2-5FE6-42CB-A59C-0E0CDAA09E38",
+      "id": "793C6396-FAD4-44A4-BD87-70B42572CA88",
       "disambiguation": ""
     },
     {
-      "name": "Geshtinanna",
-      "title": "Divine Scribe, Sister of Dumuzi",
+      "name": "Nisaba",
+      "title": "Goddess of Writing and Grain",
       "figureType": "Deity",
       "gender": "Female",
-      "domain": "Vegetation, Dreams, Scribes",
-      "figureDescription": "Goddess of vegetation and dreams. Sister of Dumuzi who searched for him when he was taken to the underworld.",
+      "domain": "Writing, Grain, Surveying, Accounting",
+      "figureDescription": "Goddess of writing, grain, and surveying. Mother of Ninlil (also called Sud). Also known as Nunbarshegunu.",
       "birthDate": {
         "era": "Age of the First Gods",
         "isApproximate": true,
@@ -5115,8 +5115,192 @@
         "startYear": null,
         "endYear": null
       },
-      "source": "Inanna's Descent, Dumuzi's Dream",
-      "id": "00FB57EE-5263-470B-901A-385FE70633A6",
+      "source": "Sumerian mythology",
+      "id": "48B67DD0-2A20-428C-AEDC-B528255CD318",
+      "disambiguation": ""
+    },
+    {
+      "name": "Ningikuga",
+      "title": "Lady of the Pure Reed",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Reeds, Marshes, Purity",
+      "figureDescription": "Goddess of reeds and marshes, a consort of Enki. Mother of Ningal.",
+      "birthDate": {
+        "era": "Age of the First Gods",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Sumerian mythology",
+      "id": "B67C1ECB-A924-447B-A702-CD0872C25707",
+      "disambiguation": ""
+    },
+    {
+      "name": "Duttur",
+      "title": "Ewe Goddess, Mother of Dumuzi",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Sheep, Motherhood, Mourning",
+      "figureDescription": "Ewe goddess, mother of Dumuzi and Geshtinanna. Also known as Sirtur.",
+      "birthDate": {
+        "era": "Age of the First Gods",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Sumerian mythology",
+      "id": "D9470E7F-99F9-4F16-89D7-09A76FD6AEFF",
+      "disambiguation": ""
+    },
+    {
+      "name": "Geshtinanna",
+      "title": "Goddess of Agriculture and Dream Interpretation",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Agriculture, Fertility, Dreams",
+      "figureDescription": "Sister of Dumuzi, goddess of agriculture and dream interpretation. Daughter of Enki and Duttur.",
+      "birthDate": {
+        "era": "Age of the First Gods",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Sumerian mythology",
+      "id": "5ED60ACA-B282-448D-8B74-0F2772E2AAD2",
+      "disambiguation": ""
+    },
+    {
+      "name": "Eannatum",
+      "title": "King of Lagash",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Lagash",
+      "figureDescription": "Eannatum (Sumerian: 𒂍𒀭𒈾𒁺) was a Sumerian the ensi (ruler) of Lagash c. 2450 BC. He is best known for his victory over the rival city-state of Umma, commemorated on the Stele of the Vultures, one of the earliest known war monuments. Under his reign, Lagash controlled much of Sumer including Ur, Uruk, Larsa, and Kish. He also campaigned against Elam and the mountain peoples of the Zagros.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Stele of the Vultures; Lagash inscriptions",
+      "id": "ac95a1b1-4528-54bd-849c-aebdc9cf27ae",
+      "disambiguation": ""
+    },
+    {
+      "name": "Entemena",
+      "title": "King of Lagash",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Lagash",
+      "figureDescription": "Entemena (Sumerian: 𒂗𒋼𒈨𒈾), son of Eannatum, was a Sumerian king of Lagash who reigned c. 2440–2425 BC. He is known for negotiating a border treaty with Umma after years of conflict over the fertile Gu-Edin plain. His inscriptions describe the construction of canals and temples, including the restoration of the temple of Ningirsu at Girsu.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Entemena inscriptions; Lagash border cones",
+      "id": "43a5fadb-295b-549c-b8cf-b7bf76299db9",
+      "disambiguation": ""
+    },
+    {
+      "name": "Urukagina",
+      "title": "King of Lagash",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Lagash",
+      "figureDescription": "Urukagina (Sumerian: 𒌷𒅗𒄀𒈾; also Uruinimgina) was a Sumerian king of Lagash who reigned c. 2380–2360 BC. He is famous for enacting one of the earliest known legal reforms, recorded on the 'Reform Cylinders' — measures to curb corruption, protect widows and orphans, and reduce the power of the temple bureaucracy. His reign ended when Lugal-zage-si of Umma conquered and destroyed Lagash.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Urukagina Reform Cylinders; Sumerian King List",
+      "id": "c8b63a68-b1a0-5da3-8f70-b3a981aef2bd",
+      "disambiguation": ""
+    },
+    {
+      "name": "Ukush",
+      "title": "King of Umma",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Umma",
+      "figureDescription": "Ukush (also Ush) was a Sumerian king of Umma during the Early Dynastic III period, c. 2370 BC. He is mentioned in the Stele of the Vultures as the adversary of Eannatum of Lagash. He was the father of Lugal-zage-si, who would later unite Sumer under the Third Dynasty of Uruk.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Stele of the Vultures; Lagash inscriptions",
+      "id": "43a583d6-3b8b-5786-9688-c177d763c858",
+      "disambiguation": ""
+    },
+    {
+      "name": "Mesilim",
+      "title": "King of Kish",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Mesilim (also Mesalim) was a Sumerian king of Kish who reigned c. 2600 BC, during the Early Dynastic IIIa period. He is known from inscriptions as the earliest recorded arbitrator in history, having settled the border dispute between the city-states of Lagash and Umma under the authority of the god Enlil. His inscribed mace-heads have been found at Lagash.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Mesilim inscriptions; Lagash border cones",
+      "id": "c435aa98-d798-583f-ad86-ade0f2fd0bc2",
       "disambiguation": ""
     }
   ],
@@ -5594,6 +5778,216 @@
       "toFigureId": "df48c2f2-ed69-4695-a90c-a401237f3c3d",
       "relationshipType": "Ally",
       "source": "Book of Enoch (1 Enoch)"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian mythology",
+      "fromFigureId": "793C6396-FAD4-44A4-BD87-70B42572CA88",
+      "toFigureId": "d7b3beb6-a9db-5caa-a314-129c4965304b"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian mythology",
+      "fromFigureId": "48B67DD0-2A20-428C-AEDC-B528255CD318",
+      "toFigureId": "d7b3beb6-a9db-5caa-a314-129c4965304b"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian mythology",
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "B67C1ECB-A924-447B-A702-CD0872C25707"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian mythology",
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "a092d4df-e0f3-5348-9011-c181ee29760c"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian mythology",
+      "fromFigureId": "B67C1ECB-A924-447B-A702-CD0872C25707",
+      "toFigureId": "a092d4df-e0f3-5348-9011-c181ee29760c"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Enlil and Ninlil",
+      "fromFigureId": "a319752f-4a1a-5677-ad91-673b8b3ee177",
+      "toFigureId": "7463291d-4e62-5eae-b918-070104897810"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Enlil and Ninlil",
+      "fromFigureId": "d7b3beb6-a9db-5caa-a314-129c4965304b",
+      "toFigureId": "7463291d-4e62-5eae-b918-070104897810"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian mythology",
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "846ba80d-6244-5db9-9f78-116574ad1203"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian mythology",
+      "fromFigureId": "D9470E7F-99F9-4F16-89D7-09A76FD6AEFF",
+      "toFigureId": "846ba80d-6244-5db9-9f78-116574ad1203"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian mythology",
+      "fromFigureId": "7d81b568-becf-5fab-a418-67f65640db59",
+      "toFigureId": "5ED60ACA-B282-448D-8B74-0F2772E2AAD2"
+    },
+    {
+      "relationshipType": "Mother",
+      "source": "Sumerian mythology",
+      "fromFigureId": "D9470E7F-99F9-4F16-89D7-09A76FD6AEFF",
+      "toFigureId": "5ED60ACA-B282-448D-8B74-0F2772E2AAD2"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "46971a47-8022-5678-9b5c-c18351faa35f",
+      "toFigureId": "e414973f-b10a-574c-a971-7016ab72e014"
+    },
+    {
+      "relationshipType": "Creator",
+      "source": "Epic of Gilgamesh",
+      "fromFigureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda",
+      "toFigureId": "05cccd93-f70f-5645-a357-5f3d64664c4b"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "edff4880-7db2-552d-b07e-dc6c8cc2d9ea",
+      "toFigureId": "d87cc61e-611b-55a0-931b-5caff639948b"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "d87cc61e-611b-55a0-931b-5caff639948b",
+      "toFigureId": "38928ba9-e896-547e-a18e-a55284bef20e"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "85e1904f-3baa-5709-83dc-0670c02d6194",
+      "toFigureId": "1a884bb4-c8dc-5264-a743-cc742c5646f3"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "5dae1459-6562-5a7e-9a85-0da0858d17a0",
+      "toFigureId": "2d045f0d-0c14-5c51-8ae3-8486ae14eed6"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "5dae1459-6562-5a7e-9a85-0da0858d17a0",
+      "toFigureId": "68b75fa6-fcde-5399-870c-be915353a8b8"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "68b75fa6-fcde-5399-870c-be915353a8b8",
+      "toFigureId": "c7697eda-91fe-5168-9375-7dd89a9e1403"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "c7697eda-91fe-5168-9375-7dd89a9e1403",
+      "toFigureId": "0c00a0cb-137e-5af9-b2b9-4d3cc9ec9aed"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "3c9a3036-d217-5d73-9d71-2643e518f074",
+      "toFigureId": "17876b42-c48d-5607-9c83-d10fd1f3b1f9"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "99f3c136-97b9-5e83-8ad8-a187ebbc1778",
+      "toFigureId": "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+      "toFigureId": "66afae89-070d-5b99-85c9-ff96da4b0b30"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "66afae89-070d-5b99-85c9-ff96da4b0b30",
+      "toFigureId": "858bf7ca-112e-5564-ac28-3dec496e44a3"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "bb74cc9e-dfdb-562e-b1be-a31687c85e19",
+      "toFigureId": "d94201ee-5a5b-5508-a9e9-39184697d0f7"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "9adc1297-044e-5cee-a4f7-5306f43fa887",
+      "toFigureId": "fa135e55-2176-50bc-94ec-f3155100022f"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "fa135e55-2176-50bc-94ec-f3155100022f",
+      "toFigureId": "d5c45d6c-c48d-55c1-a350-92578ddc9985"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "d5c45d6c-c48d-55c1-a350-92578ddc9985",
+      "toFigureId": "95cb9b1b-18ea-5d37-bb53-251ec2e2278f"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "95cb9b1b-18ea-5d37-bb53-251ec2e2278f",
+      "toFigureId": "2599e15d-1445-5d4c-97c5-95f24444cf7c"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "0a67bdd0-f942-5b50-9f72-355f71fa3e44",
+      "toFigureId": "4b75366a-25fd-5e0c-a50e-92980a4bbcf5"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "4b75366a-25fd-5e0c-a50e-92980a4bbcf5",
+      "toFigureId": "ce5d8ee9-a2f6-5b13-983d-fa2175ed3803"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "ce5d8ee9-a2f6-5b13-983d-fa2175ed3803",
+      "toFigureId": "4d3be0f9-3f59-5060-b2c2-6152b6ba7f2a"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "4d3be0f9-3f59-5060-b2c2-6152b6ba7f2a",
+      "toFigureId": "85d33fd4-80be-5eb0-861a-e5fe0f30a332"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "f3b5dc26-9b8a-5553-aebf-c1aaa53a47ec",
+      "toFigureId": "e348e3aa-89c5-5174-aa38-7a92ecfc51b4"
+    },
+    {
+      "relationshipType": "Father",
+      "source": "Sumerian King List",
+      "fromFigureId": "e348e3aa-89c5-5174-aa38-7a92ecfc51b4",
+      "toFigureId": "f9618960-5970-5515-90b9-850c51ff66a8"
     }
   ],
   "places": [
@@ -5605,7 +5999,13 @@
       "source": "Sumerian King List",
       "latitude": 30.816,
       "longitude": 45.996,
-      "id": "b8874cda-ac06-54aa-8f50-79c9dab490bb"
+      "id": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
+      "foundedDate": {
+        "startYear": -5500,
+        "endYear": -5000,
+        "era": "Pre-Sumerian",
+        "isApproximate": true
+      }
     },
     {
       "name": "Uruk",
@@ -5615,7 +6015,13 @@
       "source": "Epic of Gilgamesh",
       "latitude": 31.322,
       "longitude": 45.637,
-      "id": "81476542-a174-55cf-a47e-4032687cd00e"
+      "id": "81476542-a174-55cf-a47e-4032687cd00e",
+      "foundedDate": {
+        "startYear": -4000,
+        "endYear": -3100,
+        "era": "Late Uruk",
+        "isApproximate": true
+      }
     },
     {
       "name": "Ur",
@@ -5625,7 +6031,12 @@
       "source": "Sumerian texts",
       "latitude": 30.963,
       "longitude": 46.103,
-      "id": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+      "id": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "foundedDate": {
+        "startYear": -3800,
+        "era": "Ubaid",
+        "isApproximate": true
+      }
     },
     {
       "name": "Nippur",
@@ -5635,7 +6046,13 @@
       "source": "Sumerian texts",
       "latitude": 32.126,
       "longitude": 45.233,
-      "id": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
+      "id": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "foundedDate": {
+        "startYear": -5000,
+        "endYear": -4500,
+        "era": "Ubaid",
+        "isApproximate": true
+      }
     },
     {
       "name": "Babylon",
@@ -5645,7 +6062,12 @@
       "source": "Enuma Elish",
       "latitude": 32.536,
       "longitude": 44.421,
-      "id": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+      "id": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
+      "foundedDate": {
+        "startYear": -2300,
+        "era": "Old Babylonian",
+        "isApproximate": true
+      }
     },
     {
       "name": "Kish",
@@ -5810,7 +6232,7 @@
     {
       "name": "Sheol",
       "placeType": "Underworld",
-      "modernLocation": null,
+      "modernLocation": "",
       "placeDescription": "The underworld realm of the dead, described in Enoch's vision as a place with hollows and compartments where the spirits of the dead await judgment. Includes the place of punishment for the fallen angels, with a great burning fire.",
       "source": "Book of Enoch (1 Enoch), ch. 22",
       "latitude": null,
@@ -5820,12 +6242,242 @@
     {
       "name": "Paradise",
       "placeType": "Cosmic Realm",
-      "modernLocation": null,
+      "modernLocation": "",
       "placeDescription": "The Garden of Righteousness, a heavenly realm where the tree of life stands. In Enoch's vision, it is located among seven magnificent mountains in the north-west. The dwelling place of the righteous after death, reserved for those who have not been corrupted by the Watchers' teachings.",
       "source": "Book of Enoch (1 Enoch), ch. 24-25, 32",
       "latitude": null,
       "longitude": null,
       "id": "0B922AA5-DC91-4E42-AEB0-FC87AF435C22"
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000001",
+      "name": "Lagash",
+      "placeType": "City",
+      "modernLocation": "Tell al-Hiba, Iraq",
+      "placeDescription": "Major Sumerian city-state, capital of the Lagash region under the Second dynasty of Lagash. Patron deity Ningirsu/Ninurta. Gudea of Lagash ruled here.",
+      "source": "Sumerian King List; Gudea inscriptions",
+      "latitude": 31.45,
+      "longitude": 46.41
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000002",
+      "name": "Larsa",
+      "placeType": "City",
+      "modernLocation": "Tell as-Senkereh, Iraq",
+      "placeDescription": "Important Sumerian city-state and cult center of the sun god Utu. Capital of the Kingdom of Larsa during the Isin-Larsa period.",
+      "source": "Sumerian King List; Larsa inscriptions",
+      "latitude": 31.43,
+      "longitude": 45.87
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000003",
+      "name": "Sippar",
+      "placeType": "City",
+      "modernLocation": "Tell Abu Habbah, Iraq",
+      "placeDescription": "Ancient Sumerian city on the Euphrates. Major cult center of Utu (Shamash) and the home of the Babylonian sun god. Site of the Ebabbar temple.",
+      "source": "Sumerian King List; Babylonian texts",
+      "latitude": 33.06,
+      "longitude": 44.25
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000004",
+      "name": "Susa",
+      "placeType": "City",
+      "modernLocation": "Shush, Iran",
+      "placeDescription": "Capital of Elam, one of the oldest cities in the world. Important in SKL as the seat of the Awan dynasty. Major political and economic center.",
+      "source": "Sumerian King List; Elamite texts",
+      "latitude": 32.19,
+      "longitude": 48.24
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000005",
+      "name": "Shuruppak",
+      "placeType": "City",
+      "modernLocation": "Tell Fara, Iraq",
+      "placeDescription": "Antediluvian Sumerian city. Home of Ziusudra/Utnapishtim, the Sumerian flood hero. Mentioned in the Sumerian King List as the seat of the last king before the Flood.",
+      "source": "Sumerian King List; Epic of Gilgamesh",
+      "latitude": 31.77,
+      "longitude": 45.51
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000006",
+      "name": "Umma",
+      "placeType": "City",
+      "modernLocation": "Tell Jokha, Iraq",
+      "placeDescription": "Sumerian city-state, rival of Lagash. Patron deity Shara (son of Inanna). Important center for the cult of Shara and the Umma-Lagash border conflict.",
+      "source": "Sumerian texts; Shara inscriptions",
+      "latitude": 31.73,
+      "longitude": 45.87
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000007",
+      "name": "Bad-tibira",
+      "placeType": "City",
+      "modernLocation": "Tell al-Madain, Iraq",
+      "placeDescription": "Antediluvian Sumerian city mentioned in the SKL as the second city to hold kingship before the Flood. Also known as Patibira. Associated with Dumuzi and the metalworking god Enki.",
+      "source": "Sumerian King List",
+      "latitude": 31.48,
+      "longitude": 46.0
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000008",
+      "name": "Borsippa",
+      "placeType": "City",
+      "modernLocation": "Birs Nimrud, Iraq",
+      "placeDescription": "Sumerian city near Babylon. Major cult center of Nabu, the god of wisdom and writing. Site of the Ezida temple and a large ziggurat.",
+      "source": "Babylonian texts; Nabu inscriptions",
+      "latitude": 32.39,
+      "longitude": 44.34
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000009",
+      "name": "Kutha",
+      "placeType": "City",
+      "modernLocation": "Tell Ibrahim, Iraq",
+      "placeDescription": "Sumerian city north of Nippur. Cult center of Nergal, god of plague and the underworld. Site of the Emeslam temple.",
+      "source": "Sumerian texts; Nergal inscriptions",
+      "latitude": 32.76,
+      "longitude": 44.62
+    },
+    {
+      "id": "2a000001-0001-4000-8000-000000000010",
+      "name": "Dilbat",
+      "placeType": "City",
+      "modernLocation": "Tell ad-Duleim, Iraq",
+      "placeDescription": "Sumerian city south of Babylon. Cult center of the god Uraš (also known as Urash of Dilbat). Known for its temple of Uraš named the E-ibbi-Anum.",
+      "source": "Sumerian texts; Uraš inscriptions",
+      "latitude": 32.15,
+      "longitude": 44.52
+    },
+    {
+      "name": "Girsu",
+      "placeType": "City",
+      "modernLocation": "Tell Telloh, Dhi Qar Governorate, Iraq",
+      "latitude": 31.5581,
+      "longitude": 46.1767,
+      "id": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "placeDescription": "Girsu (Sumerian: 𒄈𒋢𒆠 ĝirsu; modern Tell Telloh) was a city of the Sumerian city-state of Lagash. It was the religious center of Lagash, home to the temple of the patron god Ningirsu. The Stele of the Vultures was discovered here, as were numerous administrative tablets from the Early Dynastic and Ur III periods.",
+      "source": ""
+    },
+    {
+      "name": "Gu-Edin",
+      "placeType": "Region",
+      "modernLocation": "Dhi Qar Governorate, Iraq",
+      "latitude": 31.4,
+      "longitude": 46.2,
+      "id": "423a5c3b-624e-5f5b-b591-aa1e03f07ecf",
+      "placeDescription": "Gu-Edin (also Gu'edena, meaning 'Edge of the Plain' in Sumerian) was a fertile agricultural plain located on the border between the Sumerian city-states of Lagash and Umma. This land was the subject of a generations-long border conflict, one of the earliest recorded wars in human history.",
+      "source": ""
+    },
+    {
+      "name": "Aratta",
+      "placeType": "Region",
+      "modernLocation": "Possibly eastern Iran or the Armenian Highlands",
+      "latitude": null,
+      "longitude": null,
+      "id": "e1d4b09d-92b5-502b-9e21-550fea0e617b",
+      "placeDescription": "Aratta was a legendary kingdom described in Sumerian literature as a wealthy, mountainous land rich in gold, silver, and lapis lazuli. It was the rival of Uruk during the reigns of the legendary kings Enmerkar and Lugalbanda. Its exact geographical location is unknown, with scholarly theories placing it in eastern Iran, the Caspian region, or Armenia.",
+      "source": ""
+    },
+    {
+      "name": "Dabrum",
+      "placeType": "City",
+      "modernLocation": "Unknown, possibly central Iraq",
+      "latitude": null,
+      "longitude": null,
+      "id": "d7451c10-fe2c-5ee4-b238-85e353869811",
+      "placeDescription": "Dabrum (also Dubrum) was a city mentioned in the victory stele of Utu-hengal of Uruk. The citizens of Dabrum captured the fleeing Gutian king Tirigan and his family, handing them over to Utu-hengal. Its exact location is unknown.",
+      "source": ""
+    },
+    {
+      "name": "E-anna",
+      "placeType": "Temple",
+      "modernLocation": "Tell al-Warka, Muthanna Governorate, Iraq",
+      "placeDescription": "Temple of Inanna in Uruk. 'House of Heaven' (Sumerian: 𒂍𒀭 e₂-anna) was one of the oldest and most important temples in Mesopotamia, dating to the Uruk period (c. 4000 BCE). The White Temple built atop the Anu Ziggurat was part of this vast sacred precinct.",
+      "source": "Sumerian texts",
+      "latitude": 31.3225,
+      "longitude": 45.6361,
+      "id": "c1b69140-d051-57ad-92fd-e449813c2aa2"
+    },
+    {
+      "name": "E-babbar",
+      "placeType": "Temple",
+      "modernLocation": "Tell Abu Habbah, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Utu/Shamash in Sippar. 'White House' (Sumerian: 𒂍𒌓𒌓 e₂-babbar) was the main cult center of the sun god in northern Babylonia. A second E-babbar existed in Larsa.",
+      "source": "Sumerian texts",
+      "latitude": 33.0606,
+      "longitude": 44.2526,
+      "id": "bb854b3f-dd43-591e-853b-cd645e1b3164"
+    },
+    {
+      "name": "E-ninnu",
+      "placeType": "Temple",
+      "modernLocation": "Tell Telloh, Dhi Qar Governorate, Iraq",
+      "placeDescription": "Temple of Ningirsu/Ninurta in Girsu. 'House of Fifty' (Sumerian: 𒂍𒉌𒉣𒉣 e₂-ninnu) was the most important temple in the Lagash state. Eannatum and Entemena richly endowed it with votive offerings and inscriptions.",
+      "source": "Sumerian inscriptions",
+      "latitude": 31.6131,
+      "longitude": 46.1683,
+      "id": "92367f2f-7383-508a-9d7e-43d7e8568217"
+    },
+    {
+      "name": "E-gishnugal",
+      "placeType": "Temple",
+      "modernLocation": "Tell Muqayyar, Dhi Qar Governorate, Iraq",
+      "placeDescription": "Temple of Nanna/Sin in Ur. 'House of Great Light' (Sumerian: 𒂍𒄑𒉣𒃲 e₂-giš-nun-gal) was the great moon temple complex of Ur, part of which was the famous ziggurat built by Ur-Namma (c. 2100 BCE).",
+      "source": "Sumerian texts",
+      "latitude": 30.9633,
+      "longitude": 46.1044,
+      "id": "24e82729-beff-5b59-bbc8-a55199e6bc0e"
+    },
+    {
+      "name": "Esagila",
+      "placeType": "Temple",
+      "modernLocation": "Hillah, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Marduk in Babylon. 'House That Lifts Its Head' (Sumerian: 𒂍𒊕𒅍𒆷 e₂-sag-ila₂) was the most important temple in Babylonia during the late period. The annual Akitu (New Year) festival was celebrated here.",
+      "source": "Babylonian texts",
+      "latitude": 32.5403,
+      "longitude": 44.4208,
+      "id": "a21a51d6-be8a-5beb-ba9d-97bbddde9c1c"
+    },
+    {
+      "name": "Etemenanki",
+      "placeType": "Temple",
+      "modernLocation": "Hillah, Babil Governorate, Iraq",
+      "placeDescription": "The great ziggurat of Marduk in Babylon. 'House of the Foundation of Heaven and Underworld' (Sumerian: 𒂍𒋼𒀀𒆠 e₂-temen-an-ki) is widely believed to be the inspiration for the biblical Tower of Babel. Built by Nabopolassar and Nebuchadnezzar II.",
+      "source": "Babylonian texts",
+      "latitude": 32.5356,
+      "longitude": 44.4233,
+      "id": "ea2f8c1e-69e8-5a92-bfc6-aec4a0448b3b"
+    },
+    {
+      "name": "E-meslam",
+      "placeType": "Temple",
+      "modernLocation": "Tell Ibrahim, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Nergal in Kutha. 'House of the Meslam' (Sumerian: 𒂍𒈩𒇴 e₂-mes-lam) was the temple of the underworld god Nergal. Meslam also became an epithet of the god himself.",
+      "source": "Sumerian texts",
+      "latitude": 32.7567,
+      "longitude": 44.3167,
+      "id": "35f1c309-f1a5-5e64-af33-f614539ac880"
+    },
+    {
+      "name": "E-zida",
+      "placeType": "Temple",
+      "modernLocation": "Birs Nimrud, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Nabu in Borsippa. 'True House' (Sumerian: 𒂍𒍣𒁕 e₂-zida) was the most important temple of the scribe god Nabu. Its ziggurat, Eurmeiminanki, was a prominent landmark visible from Babylon.",
+      "source": "Babylonian texts",
+      "latitude": 32.3917,
+      "longitude": 44.347,
+      "id": "f77daa6a-2fcf-5af2-98e8-1150e0522018"
+    },
+    {
+      "name": "E-galmah",
+      "placeType": "Temple",
+      "modernLocation": "Isin, Al-Qadisiyyah Governorate, Iraq",
+      "placeDescription": "Temple of Gula/Ninisinna in Isin. 'Great House' (Sumerian: 𒂍𒃲𒈤 e₂-galmah) was the primary temple of Gula, the goddess of healing, and the center of a major healing cult in ancient Mesopotamia.",
+      "source": "Sumerian texts",
+      "latitude": 31.9,
+      "longitude": 44.5,
+      "id": "2d65d318-6b74-5933-aec3-a2977ad8d214"
     }
   ],
   "events": [
@@ -5922,7 +6574,8 @@
         "a319752f-4a1a-5677-ad91-673b8b3ee177",
         "7d81b568-becf-5fab-a418-67f65640db59",
         "e414973f-b10a-574c-a971-7016ab72e014"
-      ]
+      ],
+      "sortName": "Flood"
     },
     {
       "name": "Gilgamesh and Enkidu Slay Humbaba",
@@ -6112,6 +6765,946 @@
         "1EA519C1-4A60-4D5F-B14B-EC1D7D856AD9"
       ],
       "placeId": null
+    },
+    {
+      "name": "Sargon Conquers Sumer",
+      "eventType": "Battle",
+      "eventDescription": "Sargon of Akkad defeated Lugal-Zage-Si of Uruk and conquered all of Sumer, unifying the region under Akkadian rule for the first time in history. This marked the beginning of the Akkadian Empire, the first territorial empire in Mesopotamia.",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": -2334,
+        "endYear": -2334
+      },
+      "era": "Dynasty of Akkad",
+      "source": "Sumerian King List; Sargon of Akkad inscriptions",
+      "id": "1a1a0001-0001-4000-8000-000000000001",
+      "involvedFigureIds": [
+        "9fdce57d-122f-5a3f-8f39-2e3a03bed456"
+      ],
+      "placeId": null
+    },
+    {
+      "name": "Founding of Akkad",
+      "eventType": "Foundation",
+      "eventDescription": "Sargon built the city of Akkad (Agade) as his imperial capital. The city's exact location remains unknown but was likely near the confluence of the Tigris and Euphrates rivers. Akkad became the richest and most powerful city in Mesopotamia during the Akkadian period.",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": -2334,
+        "endYear": -2334
+      },
+      "era": "Dynasty of Akkad",
+      "source": "Sumerian King List; Sargon inscriptions",
+      "id": "1a1a0001-0001-4000-8000-000000000002",
+      "involvedFigureIds": [
+        "9fdce57d-122f-5a3f-8f39-2e3a03bed456"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52"
+    },
+    {
+      "name": "Great Revolt Against Naram-Sin",
+      "eventType": "Battle",
+      "eventDescription": "A massive coalition of Sumerian city-states, led by kings from Kish, Uruk, Ur, and other cities, rebelled against Akkadian rule. Naram-Sin defeated the coalition in nine major battles in a single year, as recorded in the 'Great Revolt' inscriptions. This event marked the beginning of Naram-Sin's deification.",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": -2254,
+        "endYear": -2254
+      },
+      "era": "Dynasty of Akkad",
+      "source": "Naram-Sin inscriptions; Old Babylonian copies",
+      "id": "1a1a0001-0001-4000-8000-000000000003",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": null
+    },
+    {
+      "name": "Fall of Akkad",
+      "eventType": "Destruction",
+      "eventDescription": "The Akkadian Empire collapsed under pressure from Gutian invasions, internal rebellion, and possibly severe drought. The Gutians overran Mesopotamia, and the city of Akkad was destroyed. The 'Curse of Akkad' literary work describes the devastation as divine punishment for Naram-Sin's sacrilege.",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": -2154,
+        "endYear": -2154
+      },
+      "era": "Dynasty of Akkad",
+      "source": "Sumerian King List; Curse of Akkad",
+      "id": "1a1a0001-0001-4000-8000-000000000004",
+      "involvedFigureIds": [],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52"
+    },
+    {
+      "name": "Ur-Namma Founds the Third Dynasty of Ur",
+      "eventType": "Foundation",
+      "eventDescription": "Ur-Namma (also known as Ur-Nammu), a governor of Ur under Utu-Hegal of Uruk, rose to power and founded the Third Dynasty of Ur after defeating the Gutians and re-establishing Sumerian independence. He reunified Sumer and ushered in the 'Sumerian Renaissance.'",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": -2112,
+        "endYear": -2112
+      },
+      "era": "Third dynasty of Ur",
+      "source": "Sumerian King List; Ur-Namma inscriptions",
+      "id": "1a1a0001-0001-4000-8000-000000000005",
+      "involvedFigureIds": [
+        "9adc1297-044e-5cee-a4f7-5306f43fa887"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "name": "Ur-Namma Builds the Great Ziggurat of Ur",
+      "eventType": "Foundation",
+      "eventDescription": "Ur-Namma constructed the Great Ziggurat of Ur (Etemenniguru), a massive stepped pyramid dedicated to the moon god Nanna/Sin. The ziggurat measured approximately 64 by 46 meters at its base and stood about 30 meters tall. It remains one of the best-preserved ziggurats in Mesopotamia.",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": -2100,
+        "endYear": -2100
+      },
+      "era": "Third dynasty of Ur",
+      "source": "Ur-Namma inscriptions; archaeological evidence",
+      "id": "1a1a0001-0001-4000-8000-000000000006",
+      "involvedFigureIds": [
+        "9adc1297-044e-5cee-a4f7-5306f43fa887"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "name": "Code of Ur-Nammu",
+      "eventType": "Creation",
+      "eventDescription": "Ur-Namma issued the earliest known written law code, predating Hammurabi's code by more than three centuries. The code established justice, protected the weak from the powerful, set fixed prices and wages, and prescribed punishments for various offenses. Only fragments survive on clay tablets.",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": -2100,
+        "endYear": -2100
+      },
+      "era": "Third dynasty of Ur",
+      "source": "Code of Ur-Nammu tablets (Nippur, Ur)",
+      "id": "1a1a0001-0001-4000-8000-000000000007",
+      "involvedFigureIds": [
+        "9adc1297-044e-5cee-a4f7-5306f43fa887"
+      ],
+      "placeId": null
+    },
+    {
+      "name": "Shulgi's Administrative Reforms",
+      "eventType": "Creation",
+      "eventDescription": "King Shulgi reformed the entire Ur III state apparatus, standardizing weights and measures, creating a centralized bureaucracy, establishing a system of messenger stations with royal roads, reorganizing the military, and commissioning extensive building projects. He also declared himself a god and promoted the cult of the deified king.",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": -2094,
+        "endYear": -2094
+      },
+      "era": "Third dynasty of Ur",
+      "source": "Shulgi hymns; administrative tablets from Ur III period",
+      "id": "1a1a0001-0001-4000-8000-000000000008",
+      "involvedFigureIds": [
+        "fa135e55-2176-50bc-94ec-f3155100022f"
+      ],
+      "placeId": null
+    },
+    {
+      "name": "Fall of Ur",
+      "eventType": "Destruction",
+      "eventDescription": "The city of Ur was sacked by the Elamites and their allies, ending the Third Dynasty of Ur. King Ibbi-Sin was taken captive to Elam. This catastrophic event was mourned in the 'Lamentation over the Destruction of Ur,' one of the most famous Sumerian literary compositions describing the city's complete devastation.",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": -2004,
+        "endYear": -2004
+      },
+      "era": "Third dynasty of Ur",
+      "source": "Sumerian King List; Lamentation over the Destruction of Ur",
+      "id": "1a1a0001-0001-4000-8000-000000000009",
+      "involvedFigureIds": [],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "name": "Ishbi-Erra Founds the Dynasty of Isin",
+      "eventType": "Foundation",
+      "eventDescription": "Ishbi-Erra, a former official of Ibbi-Sin of Ur, established himself at Isin and founded a new dynasty after the fall of Ur. He successfully defended against Elamite incursions and gradually restored Sumerian control over much of southern Mesopotamia, beginning the Isin-Larsa period.",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": -2017,
+        "endYear": -2017
+      },
+      "era": "Dynasty of Isin",
+      "source": "Sumerian King List; Ishbi-Erra inscriptions",
+      "id": "1a1a0001-0001-4000-8000-000000000010",
+      "involvedFigureIds": [
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313"
+    },
+    {
+      "name": "Enmebaragesi's Reign",
+      "eventType": "City Founding",
+      "eventDescription": "Enmebaragesi, king of Kish, is the earliest ruler on the Sumerian King List whose historicity has been confirmed by archaeological evidence. He led campaigns against Elam and is credited with building the first temple at Kish. His reign marks the transition from mythological to historically attested kingship.",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": -2700,
+        "endYear": -2700
+      },
+      "era": "First dynasty of Kish",
+      "source": "Sumerian King List; Kish inscriptions",
+      "id": "1a1a0001-0001-4000-8000-000000000011",
+      "involvedFigureIds": [
+        "3c9a3036-d217-5d73-9d71-2643e518f074"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d"
+    },
+    {
+      "name": "Gilgamesh Builds the Walls of Uruk",
+      "eventType": "Foundation",
+      "eventDescription": "Gilgamesh, the legendary king of Uruk, built the massive city walls of Uruk, described in the Epic of Gilgamesh as walls of 'sun-dried brick' with a perimeter of approximately 9 kilometers. The walls, along with the temple of Eanna, were considered the defining achievements of his reign.",
+      "date": {
+        "era": "First rulers of Uruk",
+        "isApproximate": true,
+        "startYear": -2700,
+        "endYear": -2700
+      },
+      "era": "First rulers of Uruk",
+      "source": "Epic of Gilgamesh, Tablet I; archaeological evidence",
+      "id": "1a1a0001-0001-4000-8000-000000000012",
+      "involvedFigureIds": [
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "name": "Enmebaragesi Subjugates Elam",
+      "eventType": "Battle",
+      "eventDescription": "Enmebaragesi, king of Kish, made the land of Elam submit — the earliest historically attested military campaign in Mesopotamian history. His victory over Elam is recorded in the Sumerian King List and on contemporary vase fragments found at Nippur and Khafajah.",
+      "era": "First dynasty of Kish",
+      "source": "Sumerian King List; Enmebaragesi vase inscriptions",
+      "involvedFigureIds": [
+        "3c9a3036-d217-5d73-9d71-2643e518f074"
+      ],
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "id": "83c69454-b13a-5aa6-8fc5-2bc72dbc1fed",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmebaragesi Builds the Ekur at Nippur",
+      "eventType": "Foundation",
+      "eventDescription": "Enmebaragesi of Kish built or renovated the Ekur, the temple of Enlil at Nippur. This construction project established Kish's influence over the religious center of Sumer. The event is recorded in the Tummal Inscription, which credits Enmebaragesi as the first builder of Enlil's temple.",
+      "era": "First dynasty of Kish",
+      "source": "Tummal Inscription",
+      "involvedFigureIds": [
+        "3c9a3036-d217-5d73-9d71-2643e518f074"
+      ],
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "id": "38226e6d-9086-50ac-a078-70a81235abf9",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Aga of Kish Besieges Uruk",
+      "eventType": "Battle",
+      "eventDescription": "Aga of Kish, son of Enmebaragesi, laid siege to Uruk after Gilgamesh refused to pay tribute. The siege is described in the Sumerian poem 'Gilgamesh and Aga.' Aga's messengers demanded submission, but Gilgamesh rallied Uruk's defenders after consulting the city's assembly and his mother Ninsun.",
+      "era": "First dynasty of Kish",
+      "source": "Gilgamesh and Aga (Sumerian poem)",
+      "involvedFigureIds": [
+        "17876b42-c48d-5607-9c83-d10fd1f3b1f9",
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "id": "1541f34a-baf4-5c5e-9006-e38308ff8dde",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Gilgamesh Defeats Aga of Kish",
+      "eventType": "Battle",
+      "eventDescription": "Gilgamesh of Uruk defeated Aga of Kish, ending Kish's hegemony over Sumer. According to the poem 'Gilgamesh and Aga,' the victory was achieved through the bravery of Gilgamesh and his companion Enkidu. Despite the defeat, Aga was treated mercifully — an early example of chivalrous conduct in warfare.",
+      "era": "First rulers of Uruk",
+      "source": "Gilgamesh and Aga (Sumerian poem)",
+      "involvedFigureIds": [
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+        "17876b42-c48d-5607-9c83-d10fd1f3b1f9"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "a1b4d599-b6b8-5940-8f98-782a3963a406",
+      "date": {
+        "era": "First rulers of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmerkar's Expedition Against Aratta",
+      "eventType": "Battle",
+      "eventDescription": "Enmerkar, king of Uruk, led a military expedition across the Zagros Mountains against the wealthy land of Aratta. The campaign is the subject of several Sumerian epics including 'Enmerkar and the Lord of Aratta' and 'Lugalbanda in the Mountain Cave.' After a prolonged contest of diplomacy and magic, Aratta submitted and paid tribute of gold, silver, and lapis lazuli.",
+      "era": "Early Dynastic Period",
+      "source": "Enmerkar and the Lord of Aratta; Lugalbanda cycle",
+      "involvedFigureIds": [
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132",
+        "f5402631-c60a-566e-b129-5be7daf07a86"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "2afabbc1-de6b-5cb4-b00b-0654cf9b23ed",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmerkar Invents Writing",
+      "eventType": "Creation",
+      "eventDescription": "According to Sumerian legend, Enmerkar invented writing to convey a complex message to the lord of Aratta. When his messenger could no longer remember the long message, Enmerkar 'patted some clay and put words on it, like a tablet.' This is the earliest known story about the invention of writing, placing the development at the court of Uruk.",
+      "era": "Early Dynastic Period",
+      "source": "Enmerkar and the Lord of Aratta (c. 2100 BC composition)",
+      "involvedFigureIds": [
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "7a2efd89-205b-5b9e-ae87-2fb2eeb342b4",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugalbanda in the Mountain Cave",
+      "eventType": "Quest",
+      "eventDescription": "During Enmerkar's expedition against Aratta, his general and brother Lugalbanda fell gravely ill while crossing the Zabu mountains. He was left for dead in a cave but miraculously recovered through the intervention of the sun god Utu. After feasting the chick of the Anzud bird, Lugalbanda gained the mythical bird's favor and superhuman speed.",
+      "era": "Early Dynastic Period",
+      "source": "Lugalbanda in the Mountain Cave (Sumerian epic poem)",
+      "involvedFigureIds": [
+        "f5402631-c60a-566e-b129-5be7daf07a86",
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+      ],
+      "id": "a56790a6-238f-5be2-bfe8-ce336c6d07fd",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmerkar Dedicates the E-ana Temple to Inanna",
+      "eventType": "Foundation",
+      "eventDescription": "Enmerkar built or extensively renovated the E-ana (House of Heaven) temple precinct in Uruk, dedicated to the goddess Inanna. This monumental project established Uruk's primacy as a religious center. According to legend, Inanna herself chose to reside in Uruk's E-ana, guaranteeing divine favor for the city's rulers.",
+      "era": "Early Dynastic Period",
+      "source": "Enmerkar and the Lord of Aratta; Sumerian King List",
+      "involvedFigureIds": [
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "82ebd088-8ce1-57a2-a995-0057bd51ce03",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Mesilim of Kish Arbitrates Lagash-Umma Border",
+      "eventType": "Creation",
+      "eventDescription": "Mesilim, king of Kish, acting under the authority of the god Enlil, intervened to settle the border dispute between Lagash and Umma. He established a boundary line marked by a stele, defining the territory of the two city-states. This is the earliest recorded instance of international arbitration in world history.",
+      "era": "Early Dynastic Period",
+      "source": "Lagash border cones; Entemena inscriptions",
+      "involvedFigureIds": [
+        "c435aa98-d798-583f-ad86-ade0f2fd0bc2"
+      ],
+      "placeId": "423a5c3b-624e-5f5b-b591-aa1e03f07ecf",
+      "id": "cdda743c-2df6-505a-a5fc-ea2a6b404983",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Eannatum of Lagash Defeats Umma",
+      "eventType": "Battle",
+      "eventDescription": "Eannatum, ruler of Lagash, defeated the forces of Umma under King Ush (Ukush) in a decisive battle for the fertile Gu-Edin plain. The victory is commemorated on the Stele of the Vultures, the oldest known war monument, which shows Eannatum leading a phalanx of spearmen and vultures carrying away the severed heads of the defeated enemy.",
+      "era": "Early Dynastic Period",
+      "source": "Stele of the Vultures (Eannatum inscriptions)",
+      "involvedFigureIds": [
+        "ac95a1b1-4528-54bd-849c-aebdc9cf27ae",
+        "43a583d6-3b8b-5786-9688-c177d763c858"
+      ],
+      "placeId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "id": "a260c5d1-1c64-529e-a2e6-0824815af020",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Entemena's Border Treaty with Umma",
+      "eventType": "Creation",
+      "eventDescription": "Entemena of Lagash negotiated and inscribed a border treaty with the city-state of Umma, recorded on clay cones deposited in the foundation of the Ningirsu temple at Girsu. The treaty fixed the boundary canal, established water rights, and included oaths to the gods. It remains one of the earliest diplomatic treaties ever discovered.",
+      "era": "Early Dynastic Period",
+      "source": "Entemena border cones (c. 2425 BC)",
+      "involvedFigureIds": [
+        "43a5fadb-295b-549c-b8cf-b7bf76299db9"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "id": "94ee0f0d-be8d-548b-b413-eebc8d9e58b2",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Urukagina's Social Reforms",
+      "eventType": "Creation",
+      "eventDescription": "Urukagina, king of Lagash, enacted a series of legal and social reforms recorded on clay cylinders. He curbed the power of the temple bureaucracy, eliminated oppressive fees and taxes, protected widows and orphans from exploitation, and established what may be the earliest known code of justice. The reforms explicitly state that 'the king freed the citizens of Lagash from debt and seizure.'",
+      "era": "Early Dynastic Period",
+      "source": "Urukagina Reform Cylinders (c. 2370 BC)",
+      "involvedFigureIds": [
+        "c8b63a68-b1a0-5da3-8f70-b3a981aef2bd"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "id": "4f26a992-8542-5269-b954-d7cc0a07a75f",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-zage-si Destroys Lagash",
+      "eventType": "Destruction",
+      "eventDescription": "Lugal-zage-si of Umma conquered and sacked the city-state of Lagash, ending the reign of its last independent king Urukagina. The destruction was described in a lament by Urukagina — one of the earliest examples of the 'city lament' genre — which accused Lugal-zage-si of sinning against the god Ningirsu. The sack paved the way for Lugal-zage-si's unification of Sumer.",
+      "era": "Third dynasty of Uruk",
+      "source": "Lamentation over the Fall of Lagash; Urukagina inscriptions",
+      "involvedFigureIds": [
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d",
+        "c8b63a68-b1a0-5da3-8f70-b3a981aef2bd"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "id": "40cb4ea7-9948-52c9-8d05-2eb10e82d387",
+      "date": {
+        "era": "Third dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-zage-si Conquers Kish and Overthrows Ur-Zababa",
+      "eventType": "Battle",
+      "eventDescription": "Lugal-zage-si, expanding from his base in Umma and Uruk, invaded Kish and overthrew its king Ur-Zababa. This conquest removed one of the last major obstacles to his control over northern Sumer. He also conquered Ur, Nippur, and Larsa, fully uniting Sumer under a single ruler for the first reliably documented time.",
+      "era": "Third dynasty of Uruk",
+      "source": "Nippur vase of Lugal-zage-si; Sumerian King List",
+      "involvedFigureIds": [
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d",
+        "a294f6a8-012a-5f43-a196-627038033459"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "id": "6a5fa192-a79e-5bd5-8f70-a47822b0aab3",
+      "date": {
+        "era": "Third dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-zage-si Claims Dominion from Sea to Sea",
+      "eventType": "Foundation",
+      "eventDescription": "In his dedication on the Nippur vase, Lugal-zage-si proclaimed that Enlil had given him 'all the lands between the upper and the lower seas' — from the Mediterranean to the Persian Gulf. This is the first known claim by a Mesopotamian ruler to have reached the Mediterranean coast, marking a new conception of universal kingship.",
+      "era": "Third dynasty of Uruk",
+      "source": "Nippur vase inscription of Lugal-zage-si",
+      "involvedFigureIds": [
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d"
+      ],
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "id": "8c4cf396-bedb-5e0e-a7d0-bc85850dd5ac",
+      "date": {
+        "era": "Third dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Sargon Overthrows Lugal-zage-si at Uruk",
+      "eventType": "Battle",
+      "eventDescription": "Sargon of Akkad defeated Lugal-zage-si in a battle at Uruk, destroying the city's walls and capturing the king. According to Old Babylonian copies of Sargon's inscriptions, Sargon led Lugal-zage-si in a neck-stock to the gate of Enlil at Nippur as a display of total submission. This battle marked the end of Sumerian rule and the beginning of the Akkadian Empire.",
+      "era": "Dynasty of Akkad",
+      "source": "Sargon inscriptions (Old Babylonian copies); Sumerian King List",
+      "involvedFigureIds": [
+        "9fdce57d-122f-5a3f-8f39-2e3a03bed456",
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "2e2da2ce-8d34-52dc-96da-11758cb6ecea",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Sargon's Campaign Against the Syrian Lands",
+      "eventType": "Battle",
+      "eventDescription": "Sargon of Akkad led a major military campaign into northern Syria, subjugating the region of Mari, Yarmuti, and Ebla, and reaching the Cedar Forest (Lebanon) and the Silver Mountains (Taurus). According to his inscriptions, he washed his weapons in the Mediterranean Sea, symbolizing the extent of Akkadian power. He boasted of conquering 34 cities in total.",
+      "era": "Dynasty of Akkad",
+      "source": "Sargon inscriptions; Weidner Chronicle",
+      "involvedFigureIds": [
+        "9fdce57d-122f-5a3f-8f39-2e3a03bed456"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "caeba0d0-e72c-59b4-afc8-2f7d2eb5e64e",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Rimush Suppresses Rebellions",
+      "eventType": "Battle",
+      "eventDescription": "Rimush, son of Sargon and second king of the Akkadian Empire, faced widespread revolts in Sumer shortly after his accession. His inscriptions record defeating coalitions of Sumerian city-states including Ur and Umma. He reportedly killed thousands of rebels and deported survivors. Despite his victories, the rebellions weakened Akkadian control and he was assassinated after a brief reign.",
+      "era": "Dynasty of Akkad",
+      "source": "Rimush inscriptions; Sumerian King List",
+      "involvedFigureIds": [
+        "5e475393-f2f3-58c1-8d20-f3ce8fb6204d"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "e65eccaf-7a03-545e-baa2-143d1927248b",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Manishtushu's Land Reform",
+      "eventType": "Creation",
+      "eventDescription": "Manishtushu, third king of the Akkadian Empire, issued a major land redistribution decree known as the Manishtushu Obelisk. This diorite monument records the purchase of large tracts of land in northern Babylonia, detailing field sizes, prices, and the names of both Sumerian and Akkadian sellers. The obelisk provides invaluable insight into Akkadian property law and economic organization.",
+      "era": "Dynasty of Akkad",
+      "source": "Manishtushu Obelisk (Louvre Museum)",
+      "involvedFigureIds": [
+        "01beac28-49d5-5e16-bed5-ff8ff903c7ca"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000003",
+      "id": "c768b90b-7b48-58ad-830e-1e587821d702",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Naram-Sin's Conquest of Ebla and Armanum",
+      "eventType": "Battle",
+      "eventDescription": "Naram-Sin of Akkad campaigned into northern Syria and conquered the powerful kingdom of Ebla and the fortified city of Armanum (possibly Aleppo). His year names record the campaign as 'the year the king went on a campaign in Amarnum.' Bronze objects inscribed 'Naram-Sin, king of the four quarters, conqueror of Armanum and Ebla' confirm the conquest.",
+      "era": "Dynasty of Akkad",
+      "source": "Naram-Sin year names; inscribed objects from Ur",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "2ddd5b7d-51a8-56d3-800e-ea6f92bef5c5",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Naram-Sin Defeats the Lullubi",
+      "eventType": "Battle",
+      "eventDescription": "Naram-Sin of Akkad defeated the Lullubi, a mountain tribe of the central Zagros, under their king Satuni. The victory is celebrated on the Victory Stele of Naram-Sin, a masterpiece of Akkadian art now in the Louvre. The stele shows Naram-Sin climbing a mountain, larger than his soldiers, trampling enemies and spearing them, horned helmet signifying his divine status.",
+      "era": "Dynasty of Akkad",
+      "source": "Victory Stele of Naram-Sin (Louvre Museum, Sb 4)",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "efcbaf2e-a295-5416-9ecf-a25efe066bb9",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Naram-Sin Declares Himself God of Akkad",
+      "eventType": "Creation",
+      "eventDescription": "Following his successful suppression of the Great Revolt, Naram-Sin deified himself, becoming the first Mesopotamian king to claim divine status during his lifetime. The citizens of Akkad built a temple dedicated to him as the city's patron god. He began writing his name with the divine determinative dingir (𒀭), placing himself on equal footing with the gods of the pantheon.",
+      "era": "Dynasty of Akkad",
+      "source": "Bassetki Statue inscription; deification texts",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "888f5da5-f717-5ccb-bae1-6d3471dfa619",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shar-Kali-Sharri Defends Against the Gutians",
+      "eventType": "Battle",
+      "eventDescription": "Shar-Kali-Sharri, son of Naram-Sin, spent much of his 25-year reign defending the Akkadian Empire against the Gutian mountain tribes from the Zagros. His year names record multiple campaigns against the Gutians, including a battle with the Gutian king (Sarlagab or similar) in the region. Despite his efforts, the empire continued to fragment, and after his death, Akkad fell into rapid decline.",
+      "era": "Dynasty of Akkad",
+      "source": "Shar-Kali-Sharri year names; Sumerian King List",
+      "involvedFigureIds": [
+        "e786e717-cdc3-52bd-9648-77602dba726d"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "59192ee6-9ea4-51e5-83cf-5cca1fb225cc",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Gutian Invasion of Sumer",
+      "eventType": "Destruction",
+      "eventDescription": "The Gutian tribes from the Zagros Mountains invaded and overran Sumer after the collapse of the Akkadian Empire. Sumerian sources describe the Gutians as a 'fanged snake of the mountain ranges' who 'filled Sumer with wickedness.' Under Gutian suzerainty, many Sumerian cities continued to be ruled by local governors who paid tribute to Gutian kings.",
+      "era": "Gutian rule",
+      "source": "Sumerian King List; Utu-hengal Victory Stele",
+      "involvedFigureIds": [
+        "6cba35c8-ae42-54c2-bd95-b0fdf6f90d90"
+      ],
+      "id": "6ba25f59-b18e-510e-b92a-93b57040967d",
+      "date": {
+        "era": "Gutian rule",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Utu-hengal Revolts Against the Gutians",
+      "eventType": "Battle",
+      "eventDescription": "Utu-hengal, the ensi (governor) of Uruk under Gutian rule, declared himself king and led a rebellion against the last Gutian ruler Tirigan. According to his victory stele, he received a divine command from Enlil to 'obliterate the name' of Gutium. He mobilized the cities of Sumer and marched against the Gutian forces.",
+      "era": "Fifth dynasty of Uruk",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)",
+      "involvedFigureIds": [
+        "67c1a91b-09c9-5214-ac52-c2ca2c067ddd",
+        "6cba35c8-ae42-54c2-bd95-b0fdf6f90d90"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "dbe1a30c-2120-5e38-9613-c47fbb3e2aef",
+      "date": {
+        "era": "Fifth dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Utu-hengal Defeats Tirigan",
+      "eventType": "Battle",
+      "eventDescription": "Utu-hengal of Uruk defeated the Gutian king Tirigan in a decisive battle near the region of Daknu. Tirigan fled the battlefield alone on foot but was captured three days later by the citizens of Dabrum along with his wife, children, and attendants. Utu-hengal brought him in chains to Uruk and set his foot on the captive king's neck before the god Utu, ending approximately one century of Gutian rule over Sumer.",
+      "era": "Fifth dynasty of Uruk",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)",
+      "involvedFigureIds": [
+        "67c1a91b-09c9-5214-ac52-c2ca2c067ddd",
+        "6cba35c8-ae42-54c2-bd95-b0fdf6f90d90"
+      ],
+      "placeId": "d7451c10-fe2c-5ee4-b238-85e353869811",
+      "id": "f454fbea-c0dd-5fff-9744-981ba5eb55cc",
+      "date": {
+        "era": "Fifth dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ur-Namma Destroys Gutium",
+      "eventType": "Battle",
+      "eventDescription": "Ur-Namma, founder of the Third Dynasty of Ur, completed the defeat of the Gutians by invading and destroying their homeland of Gutium. The event is recorded in his year name: 'the year Gutium was destroyed.' According to one Sumerian epic, Ur-Namma himself died in battle with the Gutians when he was abandoned by his own army.",
+      "era": "Third dynasty of Ur",
+      "source": "Ur-Namma year names; Sumerian epic tradition",
+      "involvedFigureIds": [
+        "9adc1297-044e-5cee-a4f7-5306f43fa887"
+      ],
+      "id": "61a40657-d7a5-597c-85d4-b3c056874066",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shulgi Builds the Great Wall of Sumer",
+      "eventType": "Foundation",
+      "eventDescription": "Shulgi of Ur constructed a massive defensive wall between the Tigris and Euphrates rivers, known as the 'Wall of the Fraying Shore' or 'Wall of Sumer,' to protect the Ur III state from Amorite incursions from the Syrian desert. Stretching approximately 280 km, the wall was garrisoned with troops and marked a major engineering and military undertaking of the period.",
+      "era": "Third dynasty of Ur",
+      "source": "Shulgi inscriptions; administrative tablets",
+      "involvedFigureIds": [
+        "fa135e55-2176-50bc-94ec-f3155100022f"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "70a0d80f-123a-52a8-89b4-c9313908e2da",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shulgi's Military Campaigns",
+      "eventType": "Battle",
+      "eventDescription": "Shulgi, second king of the Third Dynasty of Ur, conducted at least nine military campaigns during his 48-year reign. He campaigned against the Amorites in the northwest, the Elamites and the people of Simurrum and Lullubum in the east, and raided into the Zagros mountains. He proclaimed himself 'king of the four quarters' and established Ur as the dominant power in Mesopotamia.",
+      "era": "Third dynasty of Ur",
+      "source": "Shulgi year names; Shulgi hymns",
+      "involvedFigureIds": [
+        "fa135e55-2176-50bc-94ec-f3155100022f"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "2048a9c6-57e9-505d-a099-1a9eee643a8a",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shu-Suen Builds the Amorite Wall",
+      "eventType": "Foundation",
+      "eventDescription": "Shu-Suen, fourth king of the Third Dynasty of Ur, built a second defensive barrier against Amorite infiltration called the 'Wall of Shu-Suen' (later known as the 'Wall of the Amorites'). This wall, located between the Tigris and Euphrates, was intended to block Amorite pastoralists from entering Sumerian territory. It was garrisoned but ultimately proved insufficient to halt Amorite migration.",
+      "era": "Third dynasty of Ur",
+      "source": "Shu-Suen year names; administrative documents",
+      "involvedFigureIds": [
+        "95cb9b1b-18ea-5d37-bb53-251ec2e2278f"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "6f658e6d-6be5-52fa-8069-078fc1d4e12e",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ibbi-Suen Loses the Provinces",
+      "eventType": "Destruction",
+      "eventDescription": "Under Ibbi-Suen, the last king of the Third Dynasty of Ur, the Ur III state rapidly disintegrated. Elamites raided from the east, Amorites infiltrated from the west, and the provincial governor Ishbi-Erra broke away, establishing an independent kingdom at Isin. Year by year, Ibbi-Suen's inscriptions record the loss of control over Sumer's key cities until only Ur remained under his authority.",
+      "era": "Third dynasty of Ur",
+      "source": "Ibbi-Suen year names; royal correspondence",
+      "involvedFigureIds": [
+        "2599e15d-1445-5d4c-97c5-95f24444cf7c",
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "22409690-104c-5fbb-a061-4a808d2870b2",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ishbi-Erra Evacuates Ur",
+      "eventType": "Destruction",
+      "eventDescription": "As the Third Dynasty of Ur collapsed under Elamite attack, Ishbi-Erra, a high official of Ibbi-Suen who had established himself at Isin, organized the evacuation of Ur. He claimed to have 'saved the people of Ur from destruction' and gathered them under his protection at Isin. When Ur finally fell to the Elamites, Isin emerged as the successor state.",
+      "era": "Dynasty of Isin",
+      "source": "Ishbi-Erra inscriptions; Sumerian King List",
+      "involvedFigureIds": [
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "7bde55a7-225a-5653-80f6-fdf2b0583768",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ishbi-Erra Expels the Elamites from Ur",
+      "eventType": "Battle",
+      "eventDescription": "After the fall of Ur, Ishbi-Erra of Isin led a military campaign to expel the Elamite occupying forces from the city of Ur. He successfully drove them out and restored the cult sites, including the temple of Nanna. This victory established Isin's control over Ur and the southern Sumerian heartland, legitimizing Ishbi-Erra's claim to be the successor of the Ur III dynasty.",
+      "era": "Dynasty of Isin",
+      "source": "Ishbi-Erra year names; royal inscriptions",
+      "involvedFigureIds": [
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "918a7604-a8b1-5300-8358-c894c4383a8e",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shu-Ilishu Recovers the Statue of Nanna",
+      "eventType": "Battle",
+      "eventDescription": "Shu-Ilishu, second king of the Dynasty of Isin, negotiated or fought for the return of the cult statue of the moon god Nanna (Sin) from Elam. The statue had been carried away as spoils when Elamites sacked Ur. Its recovery and restoration to Ur's E-gish-shir-gal temple was a major religious and political achievement, legitimizing the Isin dynasty as the protector of Sumerian cults.",
+      "era": "Dynasty of Isin",
+      "source": "Shu-Ilishu inscriptions; year formula",
+      "involvedFigureIds": [
+        "4b75366a-25fd-5e0c-a50e-92980a4bbcf5"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "f3cae400-4e6d-5f1c-a83b-63bf6f07403c",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lipit-Eshtar's Law Code",
+      "eventType": "Creation",
+      "eventDescription": "Lipit-Eshtar, fifth king of the Dynasty of Isin, issued a law code written in Sumerian, predating the more famous Code of Hammurabi by nearly two centuries. The code covered property rights, marriage and family law, debt, and damages. Although only fragments survive, it established a legal tradition that influenced later Mesopotamian law codes.",
+      "era": "Dynasty of Isin",
+      "source": "Lipit-Eshtar Law Code tablets (Nippur)",
+      "involvedFigureIds": [
+        "85d33fd4-80be-5eb0-861a-e5fe0f30a332"
+      ],
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "id": "3b407f84-7123-5304-b981-efa48d4bae88",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enlil-bani: The Substitute King",
+      "eventType": "Foundation",
+      "eventDescription": "According to later tradition, Enlil-bani of Isin began his reign in unusual circumstances. King Erra-imitti, fearing an ill omen, appointed a gardener named Enlil-bani as a substitute king to absorb any divine wrath. When Erra-imitti died suddenly (reportedly by drinking hot broth too quickly), Enlil-bani remained on the throne and ruled for 24 years, building extensively in Nippur and Isin.",
+      "era": "Dynasty of Isin",
+      "source": "Sumerian King List; Weidner Chronicle",
+      "involvedFigureIds": [
+        "193e7b4e-1b04-5150-be28-35f4aaa7c69d"
+      ],
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "id": "1bc9c2ea-9887-5dda-ba52-7fced6ab43f5",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-Ane-mundu's Empire",
+      "eventType": "Foundation",
+      "eventDescription": "Lugal-Ane-mundu of Adab, according to later Sumerian tradition, established a short-lived empire stretching from the Mediterranean to the Zagros mountains. His inscription on a clay prism claims he conquered the 'four quarters' and received tribute from the lands of Elam, Marhashi, Gutium, and the Amorites. While the account may be embellished, it reflects the reach of Adab's influence in the ED III period.",
+      "era": "Dynasty of Adab",
+      "source": "Lugal-Ane-mundu prism inscription; Sumerian King List",
+      "involvedFigureIds": [
+        "cfcc2b16-4c80-576d-9dd8-9eb606e9ba58"
+      ],
+      "placeId": "901ef2b9-770e-5f65-a0e0-863b13ec62f8",
+      "id": "44a05bbe-90c0-5388-90b9-286ccbbe637f",
+      "date": {
+        "era": "Dynasty of Adab",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Kug-Bau Rules Over Kish",
+      "eventType": "Foundation",
+      "eventDescription": "Kug-Bau (Kubaba), a tavern-keeper, became king of Kish and founded the Third Dynasty of Kish — the only female ruler recorded in the Sumerian King List. According to tradition, she 'founded the dynasty' and ruled for 100 years. She appears in later Hittite and Hurrian mythology as a goddess, and her name was given to the mother goddess of the Hittite pantheon.",
+      "era": "Third dynasty of Kish",
+      "source": "Sumerian King List; later religious texts",
+      "involvedFigureIds": [
+        "6c726b76-1ef4-5ee6-8c42-78ed5068f940"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "id": "82bd0646-ad73-59a0-a3cd-7b387be00538",
+      "date": {
+        "era": "Third dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "En-shag-kush-ana's Campaigns",
+      "eventType": "Battle",
+      "eventDescription": "En-shag-kush-ana, a king of the Second Dynasty of Uruk, conducted successful military campaigns against the city of Kish and other northern rivals. His inscriptions, found at Nippur, claim that he was recognized as king by the assembly of the gods. His reign marks one of the first attempts by Uruk to reassert hegemony after the decline of the First Dynasty of Ur.",
+      "era": "Second dynasty of Uruk",
+      "source": "En-shag-kush-ana inscriptions; Sumerian King List",
+      "involvedFigureIds": [
+        "61aca70c-88bb-569e-bcd1-76171ae9beb9"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "4910b23e-5168-51ad-bb45-0653fa6840ed",
+      "date": {
+        "era": "Second dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "The Royal Tombs of Ur",
+      "eventType": "Foundation",
+      "eventDescription": "The First Dynasty of Ur was founded by Mesh-Ane-pada (c. 2560 BC), who is listed in the Sumerian King List as the first king of Ur. The 'Royal Tombs of Ur' — including the famous tomb of Pu-abi — date to this period and contain extraordinary wealth of gold, silver, lapis lazuli, and the remains of human sacrifices. These burials provide the richest archaeological record of Early Dynastic Sumer.",
+      "era": "First dynasty of Ur",
+      "source": "Sumerian King List; Royal Cemetery of Ur excavations (Sir Leonard Woolley)",
+      "involvedFigureIds": [
+        "89dfa6cf-53b8-576f-a150-0dac23669481"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "37f01690-42c6-5e24-bb8a-8641611bb5ca",
+      "date": {
+        "era": "First dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
     }
   ],
   "sources": [
@@ -6460,56 +8053,56 @@
       "entityType": "Event",
       "note": "Full battle sequence",
       "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
-      "entityId": "b089afd2-0703-5e9d-bd5a-c893a4c7f955"
+      "entityId": "Slaying of Tiamat"
     },
     {
       "location": "Tablet I, 60-72",
       "entityType": "Event",
       "note": "Ea/Enki puts Apsu to sleep and slays him",
       "sourceId": "2b0f3272-543d-5a93-9d1b-a53b47dda6ba",
-      "entityId": "b5793656-b15a-5c6d-b593-dfab639b6c01"
+      "entityId": "Slaying of Apsu"
     },
     {
       "location": "Tablet I, 190-330",
       "entityType": "Event",
       "note": "Full creation sequence",
       "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
-      "entityId": "3e8d0ff6-89be-5d77-81a6-702e0734f385"
+      "entityId": "Creation of Mankind"
     },
     {
       "location": "Tablet III",
       "entityType": "Event",
       "note": "Flood narrative in Atra-Hasis",
       "sourceId": "e2d93d2b-da26-5d23-9548-30a1813bbe6d",
-      "entityId": "ca67f49f-cb98-5aee-b814-46da9592b286"
+      "entityId": "The Great Flood"
     },
     {
       "location": "Tablet XI, 1-196",
       "entityType": "Event",
       "note": "Utnapishtim's flood account",
       "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
-      "entityId": "ca67f49f-cb98-5aee-b814-46da9592b286"
+      "entityId": "The Great Flood"
     },
     {
       "location": "Tablets III-V",
       "entityType": "Event",
       "note": "Cedar Forest expedition",
       "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
-      "entityId": "18eefef7-45b3-581b-8039-a5464cdbeb35"
+      "entityId": "Gilgamesh and Enkidu Slay Humbaba"
     },
     {
       "location": "Tablet VII",
       "entityType": "Event",
       "note": "Enkidu's illness and death",
       "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
-      "entityId": "8194bddd-f01a-542d-858b-9c160ff3fc74"
+      "entityId": "Death of Enkidu"
     },
     {
       "location": "Lines 1-410",
       "entityType": "Event",
       "note": "Complete descent narrative",
       "sourceId": "56dac505-cfe5-5876-8815-f2e81b5a5eaf",
-      "entityId": "93cf47db-da54-5ac8-984c-9ef534c2d5df"
+      "entityId": "Inanna's Descent to the Underworld"
     },
     {
       "location": "Column i, 1-5",
@@ -7055,14 +8648,14 @@
       "location": "Sumerian King List entry",
       "note": "Ruler from the Dynasty of Akshak. Reigned 7 years. Epithet: ''\"the son of Ishu-Il\"''.",
       "entityType": "Figure",
-      "entityId": "Shu-Suen (Dynasty of Akshak)"
+      "entityId": "Shu-Suen (Akshak)"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
       "location": "Sumerian King List entry",
       "note": "Ruler from the Fourth dynasty of Kish. Reigned 25 years. Epithet: ''\"the son of Kug-Bau\"''.",
       "entityType": "Figure",
-      "entityId": "Puzur-Suen (Fourth dynasty of Kish)"
+      "entityId": "Puzur-Suen (Kish)"
     },
     {
       "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
@@ -7588,6 +9181,90 @@
       "note": "Taught every wicked stroke of spirits and demons",
       "entityType": "Figure",
       "entityId": "df48c2f2-ed69-4695-a90c-a401237f3c3d"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List entry",
+      "entityType": "Event",
+      "entityId": "Sargon Conquers Sumer",
+      "note": "Sargon's conquest of the Sumerian city-states"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List entry",
+      "entityType": "Event",
+      "entityId": "Founding of Akkad",
+      "note": "Sargon founds his new capital at Akkad"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Naram-Sin inscriptions",
+      "entityType": "Event",
+      "entityId": "Great Revolt Against Naram-Sin",
+      "note": "Coalition of city-states rebels against Akkadian rule"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List entry",
+      "entityType": "Event",
+      "entityId": "Fall of Akkad",
+      "note": "Collapse of the Akkadian Empire under the Gutians"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List entry",
+      "entityType": "Event",
+      "entityId": "Ur-Namma Founds the Third Dynasty of Ur",
+      "note": "Ur-Namma reunites Sumer after Gutian rule"
+    },
+    {
+      "sourceId": "1cefe9d0-0f3a-5004-9c66-215403e328a8",
+      "location": "Ur-Namma hymns",
+      "entityType": "Event",
+      "entityId": "Ur-Namma Builds the Great Ziggurat of Ur",
+      "note": "Construction of the great ziggurat of Ur"
+    },
+    {
+      "sourceId": "1cefe9d0-0f3a-5004-9c66-215403e328a8",
+      "location": "Code of Ur-Nammu tablets",
+      "entityType": "Event",
+      "entityId": "Code of Ur-Nammu",
+      "note": "Earliest known law code, predating Hammurabi"
+    },
+    {
+      "sourceId": "1cefe9d0-0f3a-5004-9c66-215403e328a8",
+      "location": "Shulgi hymns and administrative tablets",
+      "entityType": "Event",
+      "entityId": "Shulgi's Administrative Reforms",
+      "note": "Standardization of weights, measures, and bureaucracy"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List; Lamentation over Ur",
+      "entityType": "Event",
+      "entityId": "Fall of Ur",
+      "note": "Elamites sack Ur, ending the Third Dynasty"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List entry",
+      "entityType": "Event",
+      "entityId": "Ishbi-Erra Founds the Dynasty of Isin",
+      "note": "Ishbi-Erra establishes the Isin dynasty after Ur's fall"
+    },
+    {
+      "sourceId": "25bb611a-df83-5345-b7d9-c57595af6c70",
+      "location": "Sumerian King List entry",
+      "entityType": "Event",
+      "entityId": "Enmebaragesi's Reign",
+      "note": "Earliest ruler confirmed by contemporary archaeological evidence"
+    },
+    {
+      "sourceId": "459bc0e1-2a4e-57ba-b232-590e714ee0ad",
+      "location": "Tablet I, 1-30",
+      "entityType": "Event",
+      "entityId": "Gilgamesh Builds the Walls of Uruk",
+      "note": "Gilgamesh fortifies Uruk with massive brick walls"
     }
   ],
   "alternateNames": [
@@ -8076,6 +9753,144 @@
       "source": "Babylonian texts",
       "figureId": "a014834c-ef84-5e71-a916-73cb1b66fd0f",
       "placeId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb",
+      "placeId": "2a000001-0001-4000-8000-000000000002"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Babylonian texts",
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb",
+      "placeId": "2a000001-0001-4000-8000-000000000003"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "7463291d-4e62-5eae-b918-070104897810",
+      "placeId": "2a000001-0001-4000-8000-000000000009"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Babylonian texts",
+      "figureId": "436defeb-eb9d-5098-b520-33a9162892e1",
+      "placeId": "2a000001-0001-4000-8000-000000000008"
+    },
+    {
+      "role": "Patron Deity",
+      "source": "Sumerian texts",
+      "figureId": "94c9a1bf-cb01-567f-ba0a-5013cc90bdda",
+      "placeId": "901ef2b9-770e-5f65-a0e0-863b13ec62f8"
+    },
+    {
+      "role": "Ruler",
+      "source": "Sumerian King List",
+      "figureId": "846ba80d-6244-5db9-9f78-116574ad1203",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian texts",
+      "figureId": "c0ba0c5a-3fcf-5ca4-829a-d759c0591933",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian texts",
+      "figureId": "a092d4df-e0f3-5348-9011-c181ee29760c",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian texts",
+      "figureId": "d7b3beb6-a9db-5caa-a314-129c4965304b",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian texts",
+      "figureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian texts",
+      "figureId": "5ED60ACA-B282-448D-8B74-0F2772E2AAD2",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian texts",
+      "figureId": "793C6396-FAD4-44A4-BD87-70B42572CA88",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "role": "Worshipped At",
+      "source": "Sumerian hymns",
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+      "placeId": "c1b69140-d051-57ad-92fd-e449813c2aa2",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb",
+      "placeId": "bb854b3f-dd43-591e-853b-cd645e1b3164",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26",
+      "placeId": "92367f2f-7383-508a-9d7e-43d7e8568217",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "placeId": "24e82729-beff-5b59-bbc8-a55199e6bc0e",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "placeId": "a21a51d6-be8a-5beb-ba9d-97bbddde9c1c",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "placeId": "ea2f8c1e-69e8-5a92-bfc6-aec4a0448b3b",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "7463291d-4e62-5eae-b918-070104897810",
+      "placeId": "35f1c309-f1a5-5e64-af33-f614539ac880",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "436defeb-eb9d-5098-b520-33a9162892e1",
+      "placeId": "f77daa6a-2fcf-5af2-98e8-1150e0522018",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb",
+      "placeId": "2a000001-0001-4000-8000-000000000003",
+      "role": "Patron Deity",
+      "source": "Sumerian texts"
+    },
+    {
+      "figureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26",
+      "placeId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "role": "Patron Deity",
+      "source": "Sumerian texts"
     }
   ],
   "placePlaceAssociations": [
@@ -8108,6 +9923,60 @@
       "source": "Geography",
       "fromPlaceId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
       "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+    },
+    {
+      "fromPlaceId": "c1b69140-d051-57ad-92fd-e449813c2aa2",
+      "toPlaceId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "bb854b3f-dd43-591e-853b-cd645e1b3164",
+      "toPlaceId": "2a000001-0001-4000-8000-000000000003",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "92367f2f-7383-508a-9d7e-43d7e8568217",
+      "toPlaceId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "24e82729-beff-5b59-bbc8-a55199e6bc0e",
+      "toPlaceId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "a21a51d6-be8a-5beb-ba9d-97bbddde9c1c",
+      "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "ea2f8c1e-69e8-5a92-bfc6-aec4a0448b3b",
+      "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "35f1c309-f1a5-5e64-af33-f614539ac880",
+      "toPlaceId": "2a000001-0001-4000-8000-000000000009",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "f77daa6a-2fcf-5af2-98e8-1150e0522018",
+      "toPlaceId": "2a000001-0001-4000-8000-000000000008",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "2d65d318-6b74-5933-aec3-a2977ad8d214",
+      "toPlaceId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
     }
   ],
   "eventEventAssociations": [
@@ -8141,5 +10010,352 @@
       "fromEventId": "8194bddd-f01a-542d-858b-9c160ff3fc74",
       "toEventId": "0495493d-589c-5003-85c7-23660b02131a"
     }
-  ]
+  ],
+  "eventPlaceAssociations": [
+    {
+      "eventId": "b5793656-b15a-5c6d-b593-dfab639b6c01",
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24",
+      "role": "Occurred At",
+      "source": "Enuma Elish, Tablet I"
+    },
+    {
+      "eventId": "3e8d0ff6-89be-5d77-81a6-702e0734f385",
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24",
+      "role": "Occurred At",
+      "source": "Atra-Hasis"
+    },
+    {
+      "eventId": "93cf47db-da54-5ac8-984c-9ef534c2d5df",
+      "placeId": "9261e9ee-c4bd-56b3-9f55-794b3ce61f3d",
+      "role": "Occurred At",
+      "source": "Inanna's Descent"
+    },
+    {
+      "eventId": "18eefef7-45b3-581b-8039-a5464cdbeb35",
+      "placeId": "ff5304c0-2d6f-5d5b-abde-41dce43c9300",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablets III-V"
+    },
+    {
+      "eventId": "8194bddd-f01a-542d-858b-9c160ff3fc74",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablet VII"
+    },
+    {
+      "eventId": "0495493d-589c-5003-85c7-23660b02131a",
+      "placeId": "83c1e5f4-e6e0-543e-b6bb-81ad24fb62c2",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablets IX-XI"
+    },
+    {
+      "eventId": "34a3a17e-c9aa-54cd-9d91-b540ad97871a",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Etana myth"
+    },
+    {
+      "eventId": "02c2d29b-3cdf-585c-8d04-a4b71a5b5564",
+      "placeId": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
+      "role": "Occurred At",
+      "source": "Sumerian King List"
+    },
+    {
+      "eventId": "79C39079-E57D-454A-8F4D-EC382FF65A32",
+      "placeId": "4BB51DE4-DDC5-415A-B27E-529975A72E5E",
+      "role": "Occurred At",
+      "source": "Book of Enoch (1 Enoch), ch. 6-8"
+    },
+    {
+      "eventId": "B9986FB0-D22A-4C2C-82CE-B1967BD2A5D3",
+      "placeId": "FDBC2118-26B6-4559-9000-9F7F7CDD95F0",
+      "role": "Occurred At",
+      "source": "Book of Enoch (1 Enoch), ch. 10:4-8"
+    },
+    {
+      "eventId": "688A47EA-A1D0-4090-B9C8-451D90EA9074",
+      "placeId": "E87D9CBC-25F5-4278-BFC4-0D348F9B5C0C",
+      "role": "Occurred At",
+      "source": "Book of Enoch (1 Enoch), ch. 10:11-12"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000002",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Sargon inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000004",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Curse of Akkad"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000005",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Ur-Namma inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000006",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ur-Namma inscriptions; archaeological evidence"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000009",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Lamentation over the Destruction of Ur"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000010",
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Ishbi-Erra inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000011",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Kish inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000012",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablet I; archaeological evidence"
+    },
+    {
+      "eventId": "83c69454-b13a-5aa6-8fc5-2bc72dbc1fed",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Enmebaragesi vase inscriptions"
+    },
+    {
+      "eventId": "38226e6d-9086-50ac-a078-70a81235abf9",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "role": "Occurred At",
+      "source": "Tummal Inscription"
+    },
+    {
+      "eventId": "1541f34a-baf4-5c5e-9006-e38308ff8dde",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Gilgamesh and Aga (Sumerian poem)"
+    },
+    {
+      "eventId": "a1b4d599-b6b8-5940-8f98-782a3963a406",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Gilgamesh and Aga (Sumerian poem)"
+    },
+    {
+      "eventId": "2afabbc1-de6b-5cb4-b00b-0654cf9b23ed",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Enmerkar and the Lord of Aratta; Lugalbanda cycle"
+    },
+    {
+      "eventId": "7a2efd89-205b-5b9e-ae87-2fb2eeb342b4",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Enmerkar and the Lord of Aratta (c. 2100 BC composition)"
+    },
+    {
+      "eventId": "82ebd088-8ce1-57a2-a995-0057bd51ce03",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Enmerkar and the Lord of Aratta; Sumerian King List"
+    },
+    {
+      "eventId": "cdda743c-2df6-505a-a5fc-ea2a6b404983",
+      "placeId": "423a5c3b-624e-5f5b-b591-aa1e03f07ecf",
+      "role": "Occurred At",
+      "source": "Lagash border cones; Entemena inscriptions"
+    },
+    {
+      "eventId": "a260c5d1-1c64-529e-a2e6-0824815af020",
+      "placeId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "role": "Occurred At",
+      "source": "Stele of the Vultures (Eannatum inscriptions)"
+    },
+    {
+      "eventId": "94ee0f0d-be8d-548b-b413-eebc8d9e58b2",
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "role": "Occurred At",
+      "source": "Entemena border cones (c. 2425 BC)"
+    },
+    {
+      "eventId": "4f26a992-8542-5269-b954-d7cc0a07a75f",
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "role": "Occurred At",
+      "source": "Urukagina Reform Cylinders (c. 2370 BC)"
+    },
+    {
+      "eventId": "40cb4ea7-9948-52c9-8d05-2eb10e82d387",
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "role": "Occurred At",
+      "source": "Lamentation over the Fall of Lagash; Urukagina inscriptions"
+    },
+    {
+      "eventId": "6a5fa192-a79e-5bd5-8f70-a47822b0aab3",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Nippur vase of Lugal-zage-si; Sumerian King List"
+    },
+    {
+      "eventId": "8c4cf396-bedb-5e0e-a7d0-bc85850dd5ac",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "role": "Occurred At",
+      "source": "Nippur vase inscription of Lugal-zage-si"
+    },
+    {
+      "eventId": "2e2da2ce-8d34-52dc-96da-11758cb6ecea",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Sargon inscriptions (Old Babylonian copies); Sumerian King List"
+    },
+    {
+      "eventId": "caeba0d0-e72c-59b4-afc8-2f7d2eb5e64e",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Sargon inscriptions; Weidner Chronicle"
+    },
+    {
+      "eventId": "e65eccaf-7a03-545e-baa2-143d1927248b",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Rimush inscriptions; Sumerian King List"
+    },
+    {
+      "eventId": "c768b90b-7b48-58ad-830e-1e587821d702",
+      "placeId": "2a000001-0001-4000-8000-000000000003",
+      "role": "Occurred At",
+      "source": "Manishtushu Obelisk (Louvre Museum)"
+    },
+    {
+      "eventId": "2ddd5b7d-51a8-56d3-800e-ea6f92bef5c5",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Naram-Sin year names; inscribed objects from Ur"
+    },
+    {
+      "eventId": "efcbaf2e-a295-5416-9ecf-a25efe066bb9",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Victory Stele of Naram-Sin (Louvre Museum, Sb 4)"
+    },
+    {
+      "eventId": "888f5da5-f717-5ccb-bae1-6d3471dfa619",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Bassetki Statue inscription; deification texts"
+    },
+    {
+      "eventId": "59192ee6-9ea4-51e5-83cf-5cca1fb225cc",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Shar-Kali-Sharri year names; Sumerian King List"
+    },
+    {
+      "eventId": "dbe1a30c-2120-5e38-9613-c47fbb3e2aef",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)"
+    },
+    {
+      "eventId": "f454fbea-c0dd-5fff-9744-981ba5eb55cc",
+      "placeId": "d7451c10-fe2c-5ee4-b238-85e353869811",
+      "role": "Occurred At",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)"
+    },
+    {
+      "eventId": "70a0d80f-123a-52a8-89b4-c9313908e2da",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shulgi inscriptions; administrative tablets"
+    },
+    {
+      "eventId": "2048a9c6-57e9-505d-a099-1a9eee643a8a",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shulgi year names; Shulgi hymns"
+    },
+    {
+      "eventId": "6f658e6d-6be5-52fa-8069-078fc1d4e12e",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shu-Suen year names; administrative documents"
+    },
+    {
+      "eventId": "22409690-104c-5fbb-a061-4a808d2870b2",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ibbi-Suen year names; royal correspondence"
+    },
+    {
+      "eventId": "7bde55a7-225a-5653-80f6-fdf2b0583768",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ishbi-Erra inscriptions; Sumerian King List"
+    },
+    {
+      "eventId": "918a7604-a8b1-5300-8358-c894c4383a8e",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ishbi-Erra year names; royal inscriptions"
+    },
+    {
+      "eventId": "f3cae400-4e6d-5f1c-a83b-63bf6f07403c",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shu-Ilishu inscriptions; year formula"
+    },
+    {
+      "eventId": "3b407f84-7123-5304-b981-efa48d4bae88",
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Occurred At",
+      "source": "Lipit-Eshtar Law Code tablets (Nippur)"
+    },
+    {
+      "eventId": "1bc9c2ea-9887-5dda-ba52-7fced6ab43f5",
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Weidner Chronicle"
+    },
+    {
+      "eventId": "44a05bbe-90c0-5388-90b9-286ccbbe637f",
+      "placeId": "901ef2b9-770e-5f65-a0e0-863b13ec62f8",
+      "role": "Occurred At",
+      "source": "Lugal-Ane-mundu prism inscription; Sumerian King List"
+    },
+    {
+      "eventId": "82bd0646-ad73-59a0-a3cd-7b387be00538",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Sumerian King List; later religious texts"
+    },
+    {
+      "eventId": "4910b23e-5168-51ad-bb45-0653fa6840ed",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "En-shag-kush-ana inscriptions; Sumerian King List"
+    },
+    {
+      "eventId": "37f01690-42c6-5e24-bb8a-8641611bb5ca",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Royal Cemetery of Ur excavations (Sir Leonard Woolley)"
+    }
+  ],
+  "things": [],
+  "figureTypes": [],
+  "placeTypes": [],
+  "eventTypes": [],
+  "thingFigureAssociations": [],
+  "thingPlaceAssociations": [],
+  "thingEventAssociations": [],
+  "imageAssets": [],
+  "tags": []
 }

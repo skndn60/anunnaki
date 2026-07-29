@@ -16,6 +16,9 @@ struct FigureListView: View {
     @State private var imageDetailImage: ImageAsset?
     @State private var showDeleteConfirm = false
     @State private var selectedTypeFilters: Set<String> = []
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
     @AppStorage("figureDetailWidth") private var detailWidth: Double = 320
 
     enum FigureSortOrder: String, CaseIterable {
@@ -184,6 +187,11 @@ struct FigureListView: View {
                             onEdit: { editingFigure = figure },
                             onDelete: { showDeleteConfirm = true },
                             onClose: { selectedFigureID = nil },
+                            onEditDescription: {
+                                editRichDescription = figure.richDescription
+                                editPlainDescription = figure.figureDescription
+                                showDescriptionEditor = true
+                            },
                             leadingButtons: [
                                 ToolbarButton(icon: "tree", color: .green, help: "Show in inline lineage tree") {
                                     coordinator?.navigateToLineageFigure(figure.persistentModelID)
@@ -220,6 +228,20 @@ struct FigureListView: View {
         }
         .sheet(item: $editingFigure) { figure in
             FigureFormView(figure: figure)
+        }
+        .sheet(isPresented: $showDescriptionEditor) {
+            if let figure = selectedFigure {
+                DescriptionEditorSheet(
+                    entityName: figure.name,
+                    richDescription: $editRichDescription,
+                    plainDescription: $editPlainDescription,
+                    onSave: {
+                        figure.richDescription = editRichDescription
+                        figure.figureDescription = editPlainDescription
+                        try? modelContext.save()
+                    }
+                )
+            }
         }
 
         .onChange(of: imageDetailImage) { _, newValue in
@@ -386,145 +408,4 @@ struct FigureRow: View {
     }
 }
 
-// MARK: - Figure Form
 
-struct FigureFormView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) var dismiss
-
-    let figure: Figure?
-    @Query private var figureTypes: [FigureType]
-
-    @State private var name = ""
-    @State private var disambiguation = ""
-    @State private var title = ""
-    @State private var selectedFigureType: FigureType? = nil
-    @State private var gender: Figure.Gender = .unknown
-    @State private var domain = ""
-    @State private var figureDescription = ""
-    @State private var birthDate: MythologicalDate = .unknown
-    @State private var deathDate: MythologicalDate = .unknown
-    @State private var source = ""
-    @State private var causeOfDeath = ""
-    @State private var reignStartText = ""
-    @State private var reignEndText = ""
-    @State private var selectedTags: [Tag] = []
-
-    private var isEditing: Bool { figure != nil }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text(isEditing ? "Edit Figure" : "Add Figure")
-                .font(.title3.bold())
-                .padding()
-
-            Form {
-                Section("Identity") {
-                    TextField("Name", text: $name)
-                    TextField("Disambiguation", text: $disambiguation, prompt: Text("e.g. Fourth dynasty of Kish"))
-                    TextField("Title", text: $title, prompt: Text("e.g. King of the Gods"))
-                    Picker("Type", selection: $selectedFigureType) {
-                        Text("None").tag(nil as FigureType?)
-                        ForEach(figureTypes) { type in
-                            Text(type.name).tag(type as FigureType?)
-                        }
-                    }
-                    Picker("Gender", selection: $gender) {
-                        ForEach(Figure.Gender.allCases, id: \.self) { g in
-                            Text("\(g.symbol) \(g.rawValue)").tag(g)
-                        }
-                    }
-                    TextField("Domain", text: $domain, prompt: Text("e.g. Sky, Wisdom, War"))
-                }
-
-                Section("Reign (SKL)") {
-                    HStack {
-                        TextField("Start Year", text: $reignStartText, prompt: Text("e.g. -2047"))
-                            .help("Negative = BCE, positive = CE")
-                        TextField("End Year", text: $reignEndText, prompt: Text("e.g. -2030"))
-                            .help("Negative = BCE, positive = CE")
-                    }
-                }
-
-                MythologicalDateEditor(label: "Birth / Origin", date: $birthDate)
-                MythologicalDateEditor(label: "Death / End", date: $deathDate)
-
-                Section("Source & Notes") {
-                    TextField("Source Text", text: $source, prompt: Text("e.g. Enuma Elish"))
-                    TextField("Cause of Death", text: $causeOfDeath, prompt: Text("e.g. Slain in battle"))
-                    TextEditor(text: $figureDescription)
-                        .frame(minHeight: 60)
-                }
-
-                Section("Tags") {
-                    TagEditorView(tags: $selectedTags)
-                }
-            }
-            .formStyle(.grouped)
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(isEditing ? "Save" : "Add") { save() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty)
-            }
-            .padding()
-        }
-        .frame(width: 540, height: 680)
-        .onAppear { loadIfEditing() }
-    }
-
-    private func loadIfEditing() {
-        guard let figure else { return }
-        name = figure.name
-        disambiguation = figure.disambiguation ?? ""
-        title = figure.title
-        selectedFigureType = figure.figureType
-        gender = figure.gender
-        domain = figure.domain
-        figureDescription = figure.figureDescription
-        birthDate = figure.birthDate
-        deathDate = figure.deathDate
-        source = figure.source
-        causeOfDeath = figure.causeOfDeath ?? ""
-        reignStartText = figure.reignStartYear.map(String.init) ?? ""
-        reignEndText = figure.reignEndYear.map(String.init) ?? ""
-        selectedTags = figure.tags
-    }
-
-    private func save() {
-        if let figure {
-            figure.name = name
-            figure.disambiguation = disambiguation.isEmpty ? nil : disambiguation
-            figure.title = title
-            figure.figureType = selectedFigureType
-            figure.gender = gender
-            figure.domain = domain
-            figure.figureDescription = figureDescription
-            figure.birthDate = birthDate
-            figure.deathDate = deathDate
-            figure.source = source
-            figure.causeOfDeath = causeOfDeath.isEmpty ? nil : causeOfDeath
-            figure.isConcept = false
-            figure.reignStartYear = Int(reignStartText)
-            figure.reignEndYear = Int(reignEndText)
-            figure.tags = selectedTags
-            RecentEditStore.trackEdit(entityType: "Figure", entityName: figure.name)
-        } else {
-            let newFigure = Figure(
-                name: name, disambiguation: disambiguation.isEmpty ? nil : disambiguation, title: title, figureType: selectedFigureType,
-                gender: gender, domain: domain, figureDescription: figureDescription,
-                birthDate: birthDate, deathDate: deathDate, source: source,
-                causeOfDeath: causeOfDeath.isEmpty ? nil : causeOfDeath
-            )
-            newFigure.reignStartYear = Int(reignStartText)
-            newFigure.reignEndYear = Int(reignEndText)
-            newFigure.tags = selectedTags
-            modelContext.insert(newFigure)
-            RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
-        }
-        dismiss()
-    }
-}

@@ -111,6 +111,8 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - `Sources/Me/Views/FigureTypeManagerView.swift` — Management list + add/edit sheet for figure types
 - `Sources/Me/Views/EventTypeManagerView.swift` — Management list + add/edit sheet for event types
 - `Sources/Me/Views/PlaceTypeManagerView.swift` — Management list + add/edit sheet for place types
+- `Sources/Me/Views/WizardContainer.swift` — Reusable multi-step wizard container with step indicator and navigation
+- `Sources/Me/Views/FigureFormView.swift` — Extracted 3-step wizard form for adding/editing figures (Identity → Details → Source & Tags)
 - `Sources/Me/Views/ContentView.swift` — Sidebar navigation split view, handles loading/seed state
 - `Tests/MeCoreTests/MeCoreTests.swift` — Unit tests for MeCore
 - `/tmp/parse_skl.py` — Python parser for Sumerian King List wikitext, generates seed JSON with UUIDs
@@ -135,6 +137,31 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - `Sources/Me/Resources/AppIcon.icns` — Regenerated from fixed PNG (all required sizes via iconset)
 
 **Icon fix (known issue):** The Swift script sets corner pixels with `dist > cornerRadius` to A=0, but creates a hard cutoff. The icon may look jagged at small sizes. Need a proper approach: either use `NSImage` with `cornerRadius` mask or a proper image editor. The fix is a starting point but makes corners transparent instead of opaque as before.
+
+### 2026-07-27 — FigureFormView wizard + WizardContainer
+
+**Changes made:**
+- `Sources/Me/Views/WizardContainer.swift` — New reusable generic container: step indicator (dots + labels), back/next/save navigation bar, cancel action. Designed for any multi-step form flow.
+- `Sources/Me/Views/FigureFormView.swift` — Extracted from inline in FigureListView.swift. Rebuilt as 3-step wizard using WizardContainer:
+  - Step 1 (Identity): name, disambiguation, title, type picker, gender picker, domain
+  - Step 2 (Details): description, birth/death dates, reign start/end years
+  - Step 3 (Source & Tags): source text, cause of death, tags
+- `Sources/Me/Views/FigureListView.swift` — Removed inline `FigureFormView` struct (~140 lines). All 5 callers (FigureListView, SumerianKingListView, EntityReportSheet, EnochView, DashboardView) continue to reference `FigureFormView` unchanged — no import changes needed since it's in the same module.
+- `AGENTS.md` — Updated TODO: "Wizard system" replaced with "Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView)". Added WizardContainer + FigureFormView to important files list.
+
+**Design decisions:**
+- Save deferred to final step (clicking "Save"/"Add" on step 3). No incremental saves.
+- Name field required to enable Next on step 1 (matching original behavior where Save was disabled when name empty).
+- Step indicator shows connected dots with current step highlighted. Step labels shown below.
+- Window height reduced from 680 → 520 (wizard nav is more compact than the original full-form layout).
+- Back button hidden on step 1, Next/Save uses `.keyboardShortcut(.defaultAction)`.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/WizardContainer.swift` — Added
+- `Sources/Me/Views/FigureFormView.swift` — Added (extracted from FigureListView.swift)
+
+**Relevant files:**
+- `Sources/Me/Views/FigureListView.swift` — Updated
 
 **Relevant new/removed files:**
 - `Sources/Me/Views/DisplayRow.swift` — Added
@@ -343,12 +370,49 @@ This is faster and more reliable than reading code to simulate the layout engine
 - [ ] **Backfill descriptions for Buzi & Haziana:** Imported SKL-era figures from interrupted batch — Buzi (has Wikipedia page, father of Ezekiel) and Haziana (no Wikipedia page, needs manual description) have empty `figureDescription`. Low priority.
 - [ ] **Write tests for Migration.swift:** 15% coverage, 368 lines, runs on every launch — highest risk for subtle bugs.
 - [ ] **Write tests for SKLDatePropagator.swift:** 0% coverage, 53 lines, BCE year math with edge cases (mythological reigns, negative years).
+- [ ] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView):**
+  - FigureFormView is done (3-step: Identity → Details → Source & Tags), using WizardContainer
+  - Replicate WizardContainer + step split for the other 3 form views
+- [x] **FigureGroup system — completed 2026-07-28:**
+  - `FigureGroupListView.swift` — Full list-detail split (HStack) with `@AppStorage` resizable divider, add/edit/delete via sheet, empty state, figure members list in detail panel with sidebar navigation
+  - `FigureGroupFormView.swift` — 2-step wizard (Identity → Figures) using `WizardContainer`, SF Symbol icon field, ColorPicker, searchable figure selector with multi-select
+  - `ContentView.swift` — Added `.figureGroups` NavigationItem with folder icon in Data section, coordinator-aware branch in detail chain
+  - `NavigationCoordinator.swift` — Added `pendingGroupID`, `navigateToGroup(_:)`, `consumePendingGroupID()`, and `.figureGroups` branch in `navigateToHistory`
+  - `FigureDetailView.swift` — "Groups" section with membership list, `+` button → `GroupLinkPopover` (searchable group list + optional note), follows PlaceLinkPopover pattern
+  - `Migration.swift` — `ensureDefaultFigureGroups` creates 6 default groups (Divine Council, Sumerian Pantheon, Akkadian/East Semitic, Book of Enoch, Primordial Beings, SKL Kings) with orderIndex, wired into ContentView.swift launch sequence
 
-### 2026-07-27 — Coverage dashboard collapsible sections, NSTableView reentrant warning fix
+### 2026-07-27 — SKL events, figures & places enrichment; JSON decode debugging
 
-**Changes made:**
-- `Sources/Me/Views/DashboardView.swift` — Made each `CoverageBlock` collapsible with `@State isExpanded`, chevron rotation, tap-to-toggle, transition animation. Default collapsed.
-- `Sources/Me/Views/FigureListView.swift` — Wrapped `proxy.scrollTo` in `Task { @MainActor in }` to defer NSTableView mutation past the current delegate cycle, silencing the "reentrant operation in NSTableView delegate" warning.
+**Objective:** Enrich the database with historically attested events across SKL dynasties (project 1) and temple places (project 2) via additive migration only (no reseeding).
+
+**Changes made to seed_data.json (207 figures, 37 places, 67 events):**
+- Added 40 new events across all SKL dynasties: Kish I (4), Uruk I (4), Lagash-Umma (5), Uruk III (2), Akkad (8), Gutian (4), Ur III (4), Isin (5), other dynasties (4). Events include battles, foundations, treaties, reforms, transitions, and constructions.
+- Added 5 new figures: Eannatum, Entemena, Urukagina, Ukush, Mesilim (with stable UUIDs).
+- Added 4 new places: Girsu (City), Gu-Edin (Region), Aratta (Region), Dabrum (City).
+- Added 56 `eventPlaceAssociations` entries for place-linked events.
+- Sanitized all `null` values for non-optional `String` fields across the JSON.
+- Added missing `"things": []` key.
+
+**New code:**
+- `Migration.ensureSKLEventsAndFigures(context:)` — Reads seed_data.json, backfills missing figures, places, and events for existing databases. Creates figure→event involvement and event→place associations.
+- `ContentView.swift` — Added migration call to launch sequence (after `ensureEventCitations`).
+
+**Debugging saga — JSON decode failures:**
+1. **Stale resource copy:** `Sources/Me/Resources/seed_data.json` had only 197 figures (old version). `Me_Me.bundle` served stale data to `Bundle.main` fallback paths. Fixed by syncing both copies.
+2. **Missing `"things": []` key:** `SeedDataRoot.things` is non-optional `[SeedThing]`. The generated JSON had no `things` key, causing `JSONDecoder.decode` to throw `keyNotFound` silently.
+3. **Null non-optional strings:** 6 places had `"source": null` or `"modernLocation": null`. Swift `Codable.init(from:)` throws `valueNotFound` on `null` for non-optional `String`. The `try?` in all 3 migrations (`ensureSKLAnchorDates`, `ensureMissingCitiesAndAssociations`, `ensureSKLEventsAndFigures`) swallowed the error.
+4. **Debug lesson:** Added `do/catch` with `print(error)` to identify the actual decode error. After fix, all 3 migrations load 207 figures, 37 places, 67 events successfully.
+
+**Other fixes:**
+- `EventListView.swift`, `PlaceListView.swift` — Wrapped `proxy.scrollTo` in `Task { @MainActor in }` to silence "reentrant operation in NSTableView delegate" warning (FigureListView was previously fixed).
+
+**Relevant files:**
+- `Sources/MeCore/Resources/seed_data.json` — Updated
+- `Sources/Me/Resources/seed_data.json` — Synced copy
+- `Sources/MeCore/Store/Migration.swift` — `ensureSKLEventsAndFigures` added
+- `Sources/Me/Views/ContentView.swift` — Migration call added
+- `Sources/Me/Views/EventListView.swift` — NSTableView fix
+- `Sources/Me/Views/PlaceListView.swift` — NSTableView fix
 
 ### 2026-07-26 — Query results actionable: sidebar nav, lineage button, copy
 
@@ -477,3 +541,65 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/MeCore/Resources/seed_data.json` — 9 anchor date ranges added
 - `Sources/MeCore/Store/Migration.swift` — `ensureSKLAnchorDates` method
 - `Sources/Me/Views/ContentView.swift` — Migration call added to launch sequence
+
+### 2026-07-29 — Type filter pills for Places/Events/Things + search field visibility audit
+
+**Changes made:**
+
+- `Sources/Me/Views/PlaceListView.swift` — Added `selectedTypeFilters` + clickable `typeFilterButton` for `PlaceType`, replacing static `PlaceTypeLegend`. `sortedPlaces` → `filteredPlaces` with type filtering.
+- `Sources/Me/Views/EventListView.swift` — Same treatment: `selectedTypeFilters` + clickable `typeFilterButton` for `EventType`, replacing static `EventTypeLegend`. `sortedEvents` → `filteredEvents`.
+- `Sources/Me/Views/ThingListView.swift` — Added `@Query` for `ThingType` + `selectedTypeFilters` + type filter bar with clickable pills (was missing entirely).
+- `Sources/Me/Views/PlaceTypeLegend.swift` — Removed (replaced by inline filter buttons)
+- `Sources/Me/Views/EventTypeLegend.swift` — Removed (replaced by inline filter buttons)
+- `Sources/Me/Views/EventFormView.swift` — Changed figure and location search fields from `.textFieldStyle(.plain)` with `.quaternary.opacity(0.15)` background (nearly invisible) to `.textFieldStyle(.roundedBorder)` (macOS standard bezel).
+- Global search field audit: 22 search fields across 9 files changed from `.textFieldStyle(.plain)` to `.textFieldStyle(.roundedBorder)`:
+  - `EventDetailView.swift` — 2 popover searches (figures, places)
+  - `PlaceDetailView.swift` — 2 popover searches (figures, events)
+  - `FigureDetailView.swift` — 1 filter bar + 3 popover searches (entities, places, groups)
+  - `RelationshipListView.swift` — 1 entity search
+  - `AlternateNameListView.swift` — 2 search fields (figures, places)
+  - `AssociationsView.swift` — 5 search fields (2x figures, 2x places, 1x generic)
+  - `FigureGroupFormView.swift` — 1 search figures field
+  - `ThingListView.swift` — 3 association form search fields
+  - `ContentView.swift` — 1 global search toolbar
+- 4 inline editing fields (comments, notes) left as `.plain` intentionally.
+
+**Coding convention added:** Search fields should use `.textFieldStyle(.roundedBorder)` for visible macOS-standard bezel. Inline editing/comment fields may use `.textFieldStyle(.plain)` with a visible background container.
+
+**Relevant files:**
+- `Sources/Me/Views/PlaceListView.swift` — Updated
+- `Sources/Me/Views/EventListView.swift` — Updated
+- `Sources/Me/Views/ThingListView.swift` — Updated
+- `Sources/Me/Views/EventFormView.swift` — Updated
+- `Sources/Me/Views/PlaceTypeLegend.swift` — Removed
+- `Sources/Me/Views/EventTypeLegend.swift` — Removed
+
+### 2026-07-29 — Rich text descriptions, EventFigureAssociation join model, DetailToolbar polish
+
+**Rich text support for descriptions:**
+- `Sources/Me/Views/RichTextEditor.swift` — NSViewRepresentable wrapping NSTextView with native format toolbar (B/I/U, font panel). Toolbar buttons use `regularSquare` bezel, 15pt semibold font, 38pt toolbar height. `syncRichData()` called on attribute-only changes. `updateNSView` uses `isEqual()` for full attribute comparison.
+- `Sources/Me/Views/RichTextDisplay.swift` — renders `Data?` as `Text(AttributedString)` with plain text fallback
+- `Sources/Me/Views/DescriptionEditorSheet.swift` — reusable quick-edit sheet, sized 640×480
+- `Figure.swift`, `Place.swift`, `Event.swift`, `Thing.swift` — added `richDescription: Data?` (optional, migration-safe)
+- All form views (FigureFormView, PlaceFormView, EventFormView, ThingFormView) — replaced TextEditor with RichTextEditorSection
+- All detail views — display via RichTextDisplay; edit button in DetailToolbar
+
+**DetailToolbar polish:**
+- `Sources/Me/Views/IconActionButton.swift` — Enlarged to 15pt semibold / 30×30pt (was 12pt / 24×24)
+- `Sources/Me/Views/DetailToolbar.swift` — Added `onEditDescription` parameter. Button order: Edit → Edit description → Delete → leadingButtons → Close. Close button enlarged to match.
+- Moved edit-description button from system `.toolbar` (invisible on embedded child views) to DetailToolbar leadingButtons, then to dedicated `onEditDescription` slot.
+
+**EventFigureAssociation join model (per-event display name override for figures):**
+- `Sources/MeCore/Models/EventFigureAssociation.swift` — New `@Model` with `event`, `figure`, `displayName: String?`, `roleType: EventFigureRoleType?`
+- `Sources/MeCore/Models/EventFigureRoleType.swift` — New dynamic role type (follows EventPlaceRoleType pattern)
+- `Sources/MeCore/Models/Event.swift` — Added `figureAssociations: [EventFigureAssociation]?` (optional for migration safety). Existing `involvedFigures` preserved for backward compat.
+- `Sources/Me/AnunnakiApp.swift` — Schema updated with new models
+- `Sources/Me/Views/EventDetailView.swift` — Figure link popover redesigned: two-step flow (search → confirm display name). Picker prefilled with figure's AKA names. Edit-pencil per row for display name changes. Delete-X per row removes from either `involvedFigures` or `figureAssociations`. Search also matches alternate names.
+- `figureDisplayList` computed property merges old `involvedFigures` + new `figureAssociations`, deduplicating by figure ID.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/RichTextEditor.swift` — Added
+- `Sources/Me/Views/RichTextDisplay.swift` — Added
+- `Sources/Me/Views/DescriptionEditorSheet.swift` — Added
+- `Sources/MeCore/Models/EventFigureAssociation.swift` — Added
+- `Sources/MeCore/Models/EventFigureRoleType.swift` — Added

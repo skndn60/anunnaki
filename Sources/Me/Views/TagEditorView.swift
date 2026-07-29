@@ -55,6 +55,47 @@ struct TagEditorView: View {
                     .buttonStyle(.plain)
                 }
             }
+
+            if tagInputText.isEmpty {
+                DisclosureGroup("All Tags (\(allTags.count))") {
+                    if allTags.isEmpty {
+                        Text("No tags yet. Type a name above to create one.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ScrollView(.vertical, showsIndicators: true) {
+                            FlowLayout(spacing: 4) {
+                                ForEach(allTags) { tag in
+                                    let isSelected = tags.contains(tag)
+                                    Button {
+                                        if isSelected {
+                                            tags.removeAll { $0.persistentModelID == tag.persistentModelID }
+                                        } else {
+                                            tags.append(tag)
+                                        }
+                                    } label: {
+                                        HStack(spacing: 2) {
+                                            tagLabel(tag)
+                                            if isSelected {
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 8, weight: .bold))
+                                                    .foregroundStyle(.green)
+                                            }
+                                        }
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 3)
+                                        .background(Capsule().fill(isSelected ? Color.green.opacity(0.12) : Color.secondary.opacity(0.06)))
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 140)
+                    }
+                }
+                .disclosureGroupStyle(.automatic)
+                .font(.caption)
+            }
         }
     }
 

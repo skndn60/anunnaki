@@ -31,6 +31,7 @@ final class NavigationCoordinator {
     var pendingPlaceID: PersistentIdentifier?
     var pendingEventID: PersistentIdentifier?
     var pendingThingID: PersistentIdentifier?
+    var pendingGroupID: PersistentIdentifier?
     var pendingLineageFigureID: PersistentIdentifier?
     var history: [NavigationBreadcrumb] = []
     var recentQueryText = ""
@@ -60,6 +61,12 @@ final class NavigationCoordinator {
         selectedItem = .things
     }
 
+    func navigateToGroup(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
+        if recordHistory { pushHistory(id: id, name: name, item: .figureGroups) }
+        pendingGroupID = id
+        selectedItem = .figureGroups
+    }
+
     func navigateToLineageFigure(_ id: PersistentIdentifier) {
         pendingLineageFigureID = id
         selectedItem = .lineage
@@ -71,6 +78,12 @@ final class NavigationCoordinator {
             history.append(crumb)
             if history.count > 24 { history.removeFirst() }
         }
+    }
+
+    func consumePendingGroupID() -> PersistentIdentifier? {
+        let id = pendingGroupID
+        pendingGroupID = nil
+        return id
     }
 
     func consumePendingLineageFigureID() -> PersistentIdentifier? {
@@ -92,6 +105,8 @@ final class NavigationCoordinator {
             if let id = entry.entityID { navigateToEvent(id, recordHistory: false) }
         case .things:
             if let id = entry.entityID { navigateToThing(id, recordHistory: false) }
+        case .figureGroups:
+            if let id = entry.entityID { navigateToGroup(id, recordHistory: false) }
         case .lineage: selectedItem = .lineage
         case .query: selectedItem = .query
         default: break

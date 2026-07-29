@@ -5187,6 +5187,121 @@
       "source": "Sumerian mythology",
       "id": "5ED60ACA-B282-448D-8B74-0F2772E2AAD2",
       "disambiguation": ""
+    },
+    {
+      "name": "Eannatum",
+      "title": "King of Lagash",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Lagash",
+      "figureDescription": "Eannatum (Sumerian: 𒂍𒀭𒈾𒁺) was a Sumerian the ensi (ruler) of Lagash c. 2450 BC. He is best known for his victory over the rival city-state of Umma, commemorated on the Stele of the Vultures, one of the earliest known war monuments. Under his reign, Lagash controlled much of Sumer including Ur, Uruk, Larsa, and Kish. He also campaigned against Elam and the mountain peoples of the Zagros.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Stele of the Vultures; Lagash inscriptions",
+      "id": "ac95a1b1-4528-54bd-849c-aebdc9cf27ae",
+      "disambiguation": ""
+    },
+    {
+      "name": "Entemena",
+      "title": "King of Lagash",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Lagash",
+      "figureDescription": "Entemena (Sumerian: 𒂗𒋼𒈨𒈾), son of Eannatum, was a Sumerian king of Lagash who reigned c. 2440–2425 BC. He is known for negotiating a border treaty with Umma after years of conflict over the fertile Gu-Edin plain. His inscriptions describe the construction of canals and temples, including the restoration of the temple of Ningirsu at Girsu.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Entemena inscriptions; Lagash border cones",
+      "id": "43a5fadb-295b-549c-b8cf-b7bf76299db9",
+      "disambiguation": ""
+    },
+    {
+      "name": "Urukagina",
+      "title": "King of Lagash",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Lagash",
+      "figureDescription": "Urukagina (Sumerian: 𒌷𒅗𒄀𒈾; also Uruinimgina) was a Sumerian king of Lagash who reigned c. 2380–2360 BC. He is famous for enacting one of the earliest known legal reforms, recorded on the 'Reform Cylinders' — measures to curb corruption, protect widows and orphans, and reduce the power of the temple bureaucracy. His reign ended when Lugal-zage-si of Umma conquered and destroyed Lagash.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Urukagina Reform Cylinders; Sumerian King List",
+      "id": "c8b63a68-b1a0-5da3-8f70-b3a981aef2bd",
+      "disambiguation": ""
+    },
+    {
+      "name": "Ukush",
+      "title": "King of Umma",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Umma",
+      "figureDescription": "Ukush (also Ush) was a Sumerian king of Umma during the Early Dynastic III period, c. 2370 BC. He is mentioned in the Stele of the Vultures as the adversary of Eannatum of Lagash. He was the father of Lugal-zage-si, who would later unite Sumer under the Third Dynasty of Uruk.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Stele of the Vultures; Lagash inscriptions",
+      "id": "43a583d6-3b8b-5786-9688-c177d763c858",
+      "disambiguation": ""
+    },
+    {
+      "name": "Mesilim",
+      "title": "King of Kish",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship of Kish",
+      "figureDescription": "Mesilim (also Mesalim) was a Sumerian king of Kish who reigned c. 2600 BC, during the Early Dynastic IIIa period. He is known from inscriptions as the earliest recorded arbitrator in history, having settled the border dispute between the city-states of Lagash and Umma under the authority of the god Enlil. His inscribed mace-heads have been found at Lagash.",
+      "birthDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Mesilim inscriptions; Lagash border cones",
+      "id": "c435aa98-d798-583f-ad86-ade0f2fd0bc2",
+      "disambiguation": ""
     }
   ],
   "relationships": [
@@ -6117,7 +6232,7 @@
     {
       "name": "Sheol",
       "placeType": "Underworld",
-      "modernLocation": null,
+      "modernLocation": "",
       "placeDescription": "The underworld realm of the dead, described in Enoch's vision as a place with hollows and compartments where the spirits of the dead await judgment. Includes the place of punishment for the fallen angels, with a great burning fire.",
       "source": "Book of Enoch (1 Enoch), ch. 22",
       "latitude": null,
@@ -6127,7 +6242,7 @@
     {
       "name": "Paradise",
       "placeType": "Cosmic Realm",
-      "modernLocation": null,
+      "modernLocation": "",
       "placeDescription": "The Garden of Righteousness, a heavenly realm where the tree of life stands. In Enoch's vision, it is located among seven magnificent mountains in the north-west. The dwelling place of the righteous after death, reserved for those who have not been corrupted by the Watchers' teachings.",
       "source": "Book of Enoch (1 Enoch), ch. 24-25, 32",
       "latitude": null,
@@ -6233,6 +6348,136 @@
       "source": "Sumerian texts; Uraš inscriptions",
       "latitude": 32.15,
       "longitude": 44.52
+    },
+    {
+      "name": "Girsu",
+      "placeType": "City",
+      "modernLocation": "Tell Telloh, Dhi Qar Governorate, Iraq",
+      "latitude": 31.5581,
+      "longitude": 46.1767,
+      "id": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "placeDescription": "Girsu (Sumerian: 𒄈𒋢𒆠 ĝirsu; modern Tell Telloh) was a city of the Sumerian city-state of Lagash. It was the religious center of Lagash, home to the temple of the patron god Ningirsu. The Stele of the Vultures was discovered here, as were numerous administrative tablets from the Early Dynastic and Ur III periods.",
+      "source": ""
+    },
+    {
+      "name": "Gu-Edin",
+      "placeType": "Region",
+      "modernLocation": "Dhi Qar Governorate, Iraq",
+      "latitude": 31.4,
+      "longitude": 46.2,
+      "id": "423a5c3b-624e-5f5b-b591-aa1e03f07ecf",
+      "placeDescription": "Gu-Edin (also Gu'edena, meaning 'Edge of the Plain' in Sumerian) was a fertile agricultural plain located on the border between the Sumerian city-states of Lagash and Umma. This land was the subject of a generations-long border conflict, one of the earliest recorded wars in human history.",
+      "source": ""
+    },
+    {
+      "name": "Aratta",
+      "placeType": "Region",
+      "modernLocation": "Possibly eastern Iran or the Armenian Highlands",
+      "latitude": null,
+      "longitude": null,
+      "id": "e1d4b09d-92b5-502b-9e21-550fea0e617b",
+      "placeDescription": "Aratta was a legendary kingdom described in Sumerian literature as a wealthy, mountainous land rich in gold, silver, and lapis lazuli. It was the rival of Uruk during the reigns of the legendary kings Enmerkar and Lugalbanda. Its exact geographical location is unknown, with scholarly theories placing it in eastern Iran, the Caspian region, or Armenia.",
+      "source": ""
+    },
+    {
+      "name": "Dabrum",
+      "placeType": "City",
+      "modernLocation": "Unknown, possibly central Iraq",
+      "latitude": null,
+      "longitude": null,
+      "id": "d7451c10-fe2c-5ee4-b238-85e353869811",
+      "placeDescription": "Dabrum (also Dubrum) was a city mentioned in the victory stele of Utu-hengal of Uruk. The citizens of Dabrum captured the fleeing Gutian king Tirigan and his family, handing them over to Utu-hengal. Its exact location is unknown.",
+      "source": ""
+    },
+    {
+      "name": "E-anna",
+      "placeType": "Temple",
+      "modernLocation": "Tell al-Warka, Muthanna Governorate, Iraq",
+      "placeDescription": "Temple of Inanna in Uruk. 'House of Heaven' (Sumerian: 𒂍𒀭 e₂-anna) was one of the oldest and most important temples in Mesopotamia, dating to the Uruk period (c. 4000 BCE). The White Temple built atop the Anu Ziggurat was part of this vast sacred precinct.",
+      "source": "Sumerian texts",
+      "latitude": 31.3225,
+      "longitude": 45.6361,
+      "id": "c1b69140-d051-57ad-92fd-e449813c2aa2"
+    },
+    {
+      "name": "E-babbar",
+      "placeType": "Temple",
+      "modernLocation": "Tell Abu Habbah, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Utu/Shamash in Sippar. 'White House' (Sumerian: 𒂍𒌓𒌓 e₂-babbar) was the main cult center of the sun god in northern Babylonia. A second E-babbar existed in Larsa.",
+      "source": "Sumerian texts",
+      "latitude": 33.0606,
+      "longitude": 44.2526,
+      "id": "bb854b3f-dd43-591e-853b-cd645e1b3164"
+    },
+    {
+      "name": "E-ninnu",
+      "placeType": "Temple",
+      "modernLocation": "Tell Telloh, Dhi Qar Governorate, Iraq",
+      "placeDescription": "Temple of Ningirsu/Ninurta in Girsu. 'House of Fifty' (Sumerian: 𒂍𒉌𒉣𒉣 e₂-ninnu) was the most important temple in the Lagash state. Eannatum and Entemena richly endowed it with votive offerings and inscriptions.",
+      "source": "Sumerian inscriptions",
+      "latitude": 31.6131,
+      "longitude": 46.1683,
+      "id": "92367f2f-7383-508a-9d7e-43d7e8568217"
+    },
+    {
+      "name": "E-gishnugal",
+      "placeType": "Temple",
+      "modernLocation": "Tell Muqayyar, Dhi Qar Governorate, Iraq",
+      "placeDescription": "Temple of Nanna/Sin in Ur. 'House of Great Light' (Sumerian: 𒂍𒄑𒉣𒃲 e₂-giš-nun-gal) was the great moon temple complex of Ur, part of which was the famous ziggurat built by Ur-Namma (c. 2100 BCE).",
+      "source": "Sumerian texts",
+      "latitude": 30.9633,
+      "longitude": 46.1044,
+      "id": "24e82729-beff-5b59-bbc8-a55199e6bc0e"
+    },
+    {
+      "name": "Esagila",
+      "placeType": "Temple",
+      "modernLocation": "Hillah, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Marduk in Babylon. 'House That Lifts Its Head' (Sumerian: 𒂍𒊕𒅍𒆷 e₂-sag-ila₂) was the most important temple in Babylonia during the late period. The annual Akitu (New Year) festival was celebrated here.",
+      "source": "Babylonian texts",
+      "latitude": 32.5403,
+      "longitude": 44.4208,
+      "id": "a21a51d6-be8a-5beb-ba9d-97bbddde9c1c"
+    },
+    {
+      "name": "Etemenanki",
+      "placeType": "Temple",
+      "modernLocation": "Hillah, Babil Governorate, Iraq",
+      "placeDescription": "The great ziggurat of Marduk in Babylon. 'House of the Foundation of Heaven and Underworld' (Sumerian: 𒂍𒋼𒀀𒆠 e₂-temen-an-ki) is widely believed to be the inspiration for the biblical Tower of Babel. Built by Nabopolassar and Nebuchadnezzar II.",
+      "source": "Babylonian texts",
+      "latitude": 32.5356,
+      "longitude": 44.4233,
+      "id": "ea2f8c1e-69e8-5a92-bfc6-aec4a0448b3b"
+    },
+    {
+      "name": "E-meslam",
+      "placeType": "Temple",
+      "modernLocation": "Tell Ibrahim, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Nergal in Kutha. 'House of the Meslam' (Sumerian: 𒂍𒈩𒇴 e₂-mes-lam) was the temple of the underworld god Nergal. Meslam also became an epithet of the god himself.",
+      "source": "Sumerian texts",
+      "latitude": 32.7567,
+      "longitude": 44.3167,
+      "id": "35f1c309-f1a5-5e64-af33-f614539ac880"
+    },
+    {
+      "name": "E-zida",
+      "placeType": "Temple",
+      "modernLocation": "Birs Nimrud, Babil Governorate, Iraq",
+      "placeDescription": "Temple of Nabu in Borsippa. 'True House' (Sumerian: 𒂍𒍣𒁕 e₂-zida) was the most important temple of the scribe god Nabu. Its ziggurat, Eurmeiminanki, was a prominent landmark visible from Babylon.",
+      "source": "Babylonian texts",
+      "latitude": 32.3917,
+      "longitude": 44.347,
+      "id": "f77daa6a-2fcf-5af2-98e8-1150e0522018"
+    },
+    {
+      "name": "E-galmah",
+      "placeType": "Temple",
+      "modernLocation": "Isin, Al-Qadisiyyah Governorate, Iraq",
+      "placeDescription": "Temple of Gula/Ninisinna in Isin. 'Great House' (Sumerian: 𒂍𒃲𒈤 e₂-galmah) was the primary temple of Gula, the goddess of healing, and the center of a major healing cult in ancient Mesopotamia.",
+      "source": "Sumerian texts",
+      "latitude": 31.9,
+      "longitude": 44.5,
+      "id": "2d65d318-6b74-5933-aec3-a2977ad8d214"
     }
   ],
   "events": [
@@ -6732,6 +6977,734 @@
         "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
       ],
       "placeId": "81476542-a174-55cf-a47e-4032687cd00e"
+    },
+    {
+      "name": "Enmebaragesi Subjugates Elam",
+      "eventType": "Battle",
+      "eventDescription": "Enmebaragesi, king of Kish, made the land of Elam submit — the earliest historically attested military campaign in Mesopotamian history. His victory over Elam is recorded in the Sumerian King List and on contemporary vase fragments found at Nippur and Khafajah.",
+      "era": "First dynasty of Kish",
+      "source": "Sumerian King List; Enmebaragesi vase inscriptions",
+      "involvedFigureIds": [
+        "3c9a3036-d217-5d73-9d71-2643e518f074"
+      ],
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "id": "83c69454-b13a-5aa6-8fc5-2bc72dbc1fed",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmebaragesi Builds the Ekur at Nippur",
+      "eventType": "Foundation",
+      "eventDescription": "Enmebaragesi of Kish built or renovated the Ekur, the temple of Enlil at Nippur. This construction project established Kish's influence over the religious center of Sumer. The event is recorded in the Tummal Inscription, which credits Enmebaragesi as the first builder of Enlil's temple.",
+      "era": "First dynasty of Kish",
+      "source": "Tummal Inscription",
+      "involvedFigureIds": [
+        "3c9a3036-d217-5d73-9d71-2643e518f074"
+      ],
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "id": "38226e6d-9086-50ac-a078-70a81235abf9",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Aga of Kish Besieges Uruk",
+      "eventType": "Battle",
+      "eventDescription": "Aga of Kish, son of Enmebaragesi, laid siege to Uruk after Gilgamesh refused to pay tribute. The siege is described in the Sumerian poem 'Gilgamesh and Aga.' Aga's messengers demanded submission, but Gilgamesh rallied Uruk's defenders after consulting the city's assembly and his mother Ninsun.",
+      "era": "First dynasty of Kish",
+      "source": "Gilgamesh and Aga (Sumerian poem)",
+      "involvedFigureIds": [
+        "17876b42-c48d-5607-9c83-d10fd1f3b1f9",
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "id": "1541f34a-baf4-5c5e-9006-e38308ff8dde",
+      "date": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Gilgamesh Defeats Aga of Kish",
+      "eventType": "Battle",
+      "eventDescription": "Gilgamesh of Uruk defeated Aga of Kish, ending Kish's hegemony over Sumer. According to the poem 'Gilgamesh and Aga,' the victory was achieved through the bravery of Gilgamesh and his companion Enkidu. Despite the defeat, Aga was treated mercifully — an early example of chivalrous conduct in warfare.",
+      "era": "First rulers of Uruk",
+      "source": "Gilgamesh and Aga (Sumerian poem)",
+      "involvedFigureIds": [
+        "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+        "17876b42-c48d-5607-9c83-d10fd1f3b1f9"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "a1b4d599-b6b8-5940-8f98-782a3963a406",
+      "date": {
+        "era": "First rulers of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmerkar's Expedition Against Aratta",
+      "eventType": "Battle",
+      "eventDescription": "Enmerkar, king of Uruk, led a military expedition across the Zagros Mountains against the wealthy land of Aratta. The campaign is the subject of several Sumerian epics including 'Enmerkar and the Lord of Aratta' and 'Lugalbanda in the Mountain Cave.' After a prolonged contest of diplomacy and magic, Aratta submitted and paid tribute of gold, silver, and lapis lazuli.",
+      "era": "Early Dynastic Period",
+      "source": "Enmerkar and the Lord of Aratta; Lugalbanda cycle",
+      "involvedFigureIds": [
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132",
+        "f5402631-c60a-566e-b129-5be7daf07a86"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "2afabbc1-de6b-5cb4-b00b-0654cf9b23ed",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmerkar Invents Writing",
+      "eventType": "Creation",
+      "eventDescription": "According to Sumerian legend, Enmerkar invented writing to convey a complex message to the lord of Aratta. When his messenger could no longer remember the long message, Enmerkar 'patted some clay and put words on it, like a tablet.' This is the earliest known story about the invention of writing, placing the development at the court of Uruk.",
+      "era": "Early Dynastic Period",
+      "source": "Enmerkar and the Lord of Aratta (c. 2100 BC composition)",
+      "involvedFigureIds": [
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "7a2efd89-205b-5b9e-ae87-2fb2eeb342b4",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugalbanda in the Mountain Cave",
+      "eventType": "Quest",
+      "eventDescription": "During Enmerkar's expedition against Aratta, his general and brother Lugalbanda fell gravely ill while crossing the Zabu mountains. He was left for dead in a cave but miraculously recovered through the intervention of the sun god Utu. After feasting the chick of the Anzud bird, Lugalbanda gained the mythical bird's favor and superhuman speed.",
+      "era": "Early Dynastic Period",
+      "source": "Lugalbanda in the Mountain Cave (Sumerian epic poem)",
+      "involvedFigureIds": [
+        "f5402631-c60a-566e-b129-5be7daf07a86",
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+      ],
+      "id": "a56790a6-238f-5be2-bfe8-ce336c6d07fd",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enmerkar Dedicates the E-ana Temple to Inanna",
+      "eventType": "Foundation",
+      "eventDescription": "Enmerkar built or extensively renovated the E-ana (House of Heaven) temple precinct in Uruk, dedicated to the goddess Inanna. This monumental project established Uruk's primacy as a religious center. According to legend, Inanna herself chose to reside in Uruk's E-ana, guaranteeing divine favor for the city's rulers.",
+      "era": "Early Dynastic Period",
+      "source": "Enmerkar and the Lord of Aratta; Sumerian King List",
+      "involvedFigureIds": [
+        "42e850fd-bd44-5bd5-9bc9-eb96ba637132"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "82ebd088-8ce1-57a2-a995-0057bd51ce03",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Mesilim of Kish Arbitrates Lagash-Umma Border",
+      "eventType": "Creation",
+      "eventDescription": "Mesilim, king of Kish, acting under the authority of the god Enlil, intervened to settle the border dispute between Lagash and Umma. He established a boundary line marked by a stele, defining the territory of the two city-states. This is the earliest recorded instance of international arbitration in world history.",
+      "era": "Early Dynastic Period",
+      "source": "Lagash border cones; Entemena inscriptions",
+      "involvedFigureIds": [
+        "c435aa98-d798-583f-ad86-ade0f2fd0bc2"
+      ],
+      "placeId": "423a5c3b-624e-5f5b-b591-aa1e03f07ecf",
+      "id": "cdda743c-2df6-505a-a5fc-ea2a6b404983",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Eannatum of Lagash Defeats Umma",
+      "eventType": "Battle",
+      "eventDescription": "Eannatum, ruler of Lagash, defeated the forces of Umma under King Ush (Ukush) in a decisive battle for the fertile Gu-Edin plain. The victory is commemorated on the Stele of the Vultures, the oldest known war monument, which shows Eannatum leading a phalanx of spearmen and vultures carrying away the severed heads of the defeated enemy.",
+      "era": "Early Dynastic Period",
+      "source": "Stele of the Vultures (Eannatum inscriptions)",
+      "involvedFigureIds": [
+        "ac95a1b1-4528-54bd-849c-aebdc9cf27ae",
+        "43a583d6-3b8b-5786-9688-c177d763c858"
+      ],
+      "placeId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "id": "a260c5d1-1c64-529e-a2e6-0824815af020",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Entemena's Border Treaty with Umma",
+      "eventType": "Creation",
+      "eventDescription": "Entemena of Lagash negotiated and inscribed a border treaty with the city-state of Umma, recorded on clay cones deposited in the foundation of the Ningirsu temple at Girsu. The treaty fixed the boundary canal, established water rights, and included oaths to the gods. It remains one of the earliest diplomatic treaties ever discovered.",
+      "era": "Early Dynastic Period",
+      "source": "Entemena border cones (c. 2425 BC)",
+      "involvedFigureIds": [
+        "43a5fadb-295b-549c-b8cf-b7bf76299db9"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "id": "94ee0f0d-be8d-548b-b413-eebc8d9e58b2",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Urukagina's Social Reforms",
+      "eventType": "Creation",
+      "eventDescription": "Urukagina, king of Lagash, enacted a series of legal and social reforms recorded on clay cylinders. He curbed the power of the temple bureaucracy, eliminated oppressive fees and taxes, protected widows and orphans from exploitation, and established what may be the earliest known code of justice. The reforms explicitly state that 'the king freed the citizens of Lagash from debt and seizure.'",
+      "era": "Early Dynastic Period",
+      "source": "Urukagina Reform Cylinders (c. 2370 BC)",
+      "involvedFigureIds": [
+        "c8b63a68-b1a0-5da3-8f70-b3a981aef2bd"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "id": "4f26a992-8542-5269-b954-d7cc0a07a75f",
+      "date": {
+        "era": "Early Dynastic Period",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-zage-si Destroys Lagash",
+      "eventType": "Destruction",
+      "eventDescription": "Lugal-zage-si of Umma conquered and sacked the city-state of Lagash, ending the reign of its last independent king Urukagina. The destruction was described in a lament by Urukagina — one of the earliest examples of the 'city lament' genre — which accused Lugal-zage-si of sinning against the god Ningirsu. The sack paved the way for Lugal-zage-si's unification of Sumer.",
+      "era": "Third dynasty of Uruk",
+      "source": "Lamentation over the Fall of Lagash; Urukagina inscriptions",
+      "involvedFigureIds": [
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d",
+        "c8b63a68-b1a0-5da3-8f70-b3a981aef2bd"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "id": "40cb4ea7-9948-52c9-8d05-2eb10e82d387",
+      "date": {
+        "era": "Third dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-zage-si Conquers Kish and Overthrows Ur-Zababa",
+      "eventType": "Battle",
+      "eventDescription": "Lugal-zage-si, expanding from his base in Umma and Uruk, invaded Kish and overthrew its king Ur-Zababa. This conquest removed one of the last major obstacles to his control over northern Sumer. He also conquered Ur, Nippur, and Larsa, fully uniting Sumer under a single ruler for the first reliably documented time.",
+      "era": "Third dynasty of Uruk",
+      "source": "Nippur vase of Lugal-zage-si; Sumerian King List",
+      "involvedFigureIds": [
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d",
+        "a294f6a8-012a-5f43-a196-627038033459"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "id": "6a5fa192-a79e-5bd5-8f70-a47822b0aab3",
+      "date": {
+        "era": "Third dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-zage-si Claims Dominion from Sea to Sea",
+      "eventType": "Foundation",
+      "eventDescription": "In his dedication on the Nippur vase, Lugal-zage-si proclaimed that Enlil had given him 'all the lands between the upper and the lower seas' — from the Mediterranean to the Persian Gulf. This is the first known claim by a Mesopotamian ruler to have reached the Mediterranean coast, marking a new conception of universal kingship.",
+      "era": "Third dynasty of Uruk",
+      "source": "Nippur vase inscription of Lugal-zage-si",
+      "involvedFigureIds": [
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d"
+      ],
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "id": "8c4cf396-bedb-5e0e-a7d0-bc85850dd5ac",
+      "date": {
+        "era": "Third dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Sargon Overthrows Lugal-zage-si at Uruk",
+      "eventType": "Battle",
+      "eventDescription": "Sargon of Akkad defeated Lugal-zage-si in a battle at Uruk, destroying the city's walls and capturing the king. According to Old Babylonian copies of Sargon's inscriptions, Sargon led Lugal-zage-si in a neck-stock to the gate of Enlil at Nippur as a display of total submission. This battle marked the end of Sumerian rule and the beginning of the Akkadian Empire.",
+      "era": "Dynasty of Akkad",
+      "source": "Sargon inscriptions (Old Babylonian copies); Sumerian King List",
+      "involvedFigureIds": [
+        "9fdce57d-122f-5a3f-8f39-2e3a03bed456",
+        "54041a81-b7ee-5a81-8e03-1cdd4d0efb4d"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "2e2da2ce-8d34-52dc-96da-11758cb6ecea",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Sargon's Campaign Against the Syrian Lands",
+      "eventType": "Battle",
+      "eventDescription": "Sargon of Akkad led a major military campaign into northern Syria, subjugating the region of Mari, Yarmuti, and Ebla, and reaching the Cedar Forest (Lebanon) and the Silver Mountains (Taurus). According to his inscriptions, he washed his weapons in the Mediterranean Sea, symbolizing the extent of Akkadian power. He boasted of conquering 34 cities in total.",
+      "era": "Dynasty of Akkad",
+      "source": "Sargon inscriptions; Weidner Chronicle",
+      "involvedFigureIds": [
+        "9fdce57d-122f-5a3f-8f39-2e3a03bed456"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "caeba0d0-e72c-59b4-afc8-2f7d2eb5e64e",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Rimush Suppresses Rebellions",
+      "eventType": "Battle",
+      "eventDescription": "Rimush, son of Sargon and second king of the Akkadian Empire, faced widespread revolts in Sumer shortly after his accession. His inscriptions record defeating coalitions of Sumerian city-states including Ur and Umma. He reportedly killed thousands of rebels and deported survivors. Despite his victories, the rebellions weakened Akkadian control and he was assassinated after a brief reign.",
+      "era": "Dynasty of Akkad",
+      "source": "Rimush inscriptions; Sumerian King List",
+      "involvedFigureIds": [
+        "5e475393-f2f3-58c1-8d20-f3ce8fb6204d"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "e65eccaf-7a03-545e-baa2-143d1927248b",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Manishtushu's Land Reform",
+      "eventType": "Creation",
+      "eventDescription": "Manishtushu, third king of the Akkadian Empire, issued a major land redistribution decree known as the Manishtushu Obelisk. This diorite monument records the purchase of large tracts of land in northern Babylonia, detailing field sizes, prices, and the names of both Sumerian and Akkadian sellers. The obelisk provides invaluable insight into Akkadian property law and economic organization.",
+      "era": "Dynasty of Akkad",
+      "source": "Manishtushu Obelisk (Louvre Museum)",
+      "involvedFigureIds": [
+        "01beac28-49d5-5e16-bed5-ff8ff903c7ca"
+      ],
+      "placeId": "2a000001-0001-4000-8000-000000000003",
+      "id": "c768b90b-7b48-58ad-830e-1e587821d702",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Naram-Sin's Conquest of Ebla and Armanum",
+      "eventType": "Battle",
+      "eventDescription": "Naram-Sin of Akkad campaigned into northern Syria and conquered the powerful kingdom of Ebla and the fortified city of Armanum (possibly Aleppo). His year names record the campaign as 'the year the king went on a campaign in Amarnum.' Bronze objects inscribed 'Naram-Sin, king of the four quarters, conqueror of Armanum and Ebla' confirm the conquest.",
+      "era": "Dynasty of Akkad",
+      "source": "Naram-Sin year names; inscribed objects from Ur",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "2ddd5b7d-51a8-56d3-800e-ea6f92bef5c5",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Naram-Sin Defeats the Lullubi",
+      "eventType": "Battle",
+      "eventDescription": "Naram-Sin of Akkad defeated the Lullubi, a mountain tribe of the central Zagros, under their king Satuni. The victory is celebrated on the Victory Stele of Naram-Sin, a masterpiece of Akkadian art now in the Louvre. The stele shows Naram-Sin climbing a mountain, larger than his soldiers, trampling enemies and spearing them, horned helmet signifying his divine status.",
+      "era": "Dynasty of Akkad",
+      "source": "Victory Stele of Naram-Sin (Louvre Museum, Sb 4)",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "efcbaf2e-a295-5416-9ecf-a25efe066bb9",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Naram-Sin Declares Himself God of Akkad",
+      "eventType": "Creation",
+      "eventDescription": "Following his successful suppression of the Great Revolt, Naram-Sin deified himself, becoming the first Mesopotamian king to claim divine status during his lifetime. The citizens of Akkad built a temple dedicated to him as the city's patron god. He began writing his name with the divine determinative dingir (𒀭), placing himself on equal footing with the gods of the pantheon.",
+      "era": "Dynasty of Akkad",
+      "source": "Bassetki Statue inscription; deification texts",
+      "involvedFigureIds": [
+        "b1d74540-b06a-5ab9-8bbf-21b04fc0f3e5"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "888f5da5-f717-5ccb-bae1-6d3471dfa619",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shar-Kali-Sharri Defends Against the Gutians",
+      "eventType": "Battle",
+      "eventDescription": "Shar-Kali-Sharri, son of Naram-Sin, spent much of his 25-year reign defending the Akkadian Empire against the Gutian mountain tribes from the Zagros. His year names record multiple campaigns against the Gutians, including a battle with the Gutian king (Sarlagab or similar) in the region. Despite his efforts, the empire continued to fragment, and after his death, Akkad fell into rapid decline.",
+      "era": "Dynasty of Akkad",
+      "source": "Shar-Kali-Sharri year names; Sumerian King List",
+      "involvedFigureIds": [
+        "e786e717-cdc3-52bd-9648-77602dba726d"
+      ],
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "id": "59192ee6-9ea4-51e5-83cf-5cca1fb225cc",
+      "date": {
+        "era": "Dynasty of Akkad",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Gutian Invasion of Sumer",
+      "eventType": "Destruction",
+      "eventDescription": "The Gutian tribes from the Zagros Mountains invaded and overran Sumer after the collapse of the Akkadian Empire. Sumerian sources describe the Gutians as a 'fanged snake of the mountain ranges' who 'filled Sumer with wickedness.' Under Gutian suzerainty, many Sumerian cities continued to be ruled by local governors who paid tribute to Gutian kings.",
+      "era": "Gutian rule",
+      "source": "Sumerian King List; Utu-hengal Victory Stele",
+      "involvedFigureIds": [
+        "6cba35c8-ae42-54c2-bd95-b0fdf6f90d90"
+      ],
+      "id": "6ba25f59-b18e-510e-b92a-93b57040967d",
+      "date": {
+        "era": "Gutian rule",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Utu-hengal Revolts Against the Gutians",
+      "eventType": "Battle",
+      "eventDescription": "Utu-hengal, the ensi (governor) of Uruk under Gutian rule, declared himself king and led a rebellion against the last Gutian ruler Tirigan. According to his victory stele, he received a divine command from Enlil to 'obliterate the name' of Gutium. He mobilized the cities of Sumer and marched against the Gutian forces.",
+      "era": "Fifth dynasty of Uruk",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)",
+      "involvedFigureIds": [
+        "67c1a91b-09c9-5214-ac52-c2ca2c067ddd",
+        "6cba35c8-ae42-54c2-bd95-b0fdf6f90d90"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "dbe1a30c-2120-5e38-9613-c47fbb3e2aef",
+      "date": {
+        "era": "Fifth dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Utu-hengal Defeats Tirigan",
+      "eventType": "Battle",
+      "eventDescription": "Utu-hengal of Uruk defeated the Gutian king Tirigan in a decisive battle near the region of Daknu. Tirigan fled the battlefield alone on foot but was captured three days later by the citizens of Dabrum along with his wife, children, and attendants. Utu-hengal brought him in chains to Uruk and set his foot on the captive king's neck before the god Utu, ending approximately one century of Gutian rule over Sumer.",
+      "era": "Fifth dynasty of Uruk",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)",
+      "involvedFigureIds": [
+        "67c1a91b-09c9-5214-ac52-c2ca2c067ddd",
+        "6cba35c8-ae42-54c2-bd95-b0fdf6f90d90"
+      ],
+      "placeId": "d7451c10-fe2c-5ee4-b238-85e353869811",
+      "id": "f454fbea-c0dd-5fff-9744-981ba5eb55cc",
+      "date": {
+        "era": "Fifth dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ur-Namma Destroys Gutium",
+      "eventType": "Battle",
+      "eventDescription": "Ur-Namma, founder of the Third Dynasty of Ur, completed the defeat of the Gutians by invading and destroying their homeland of Gutium. The event is recorded in his year name: 'the year Gutium was destroyed.' According to one Sumerian epic, Ur-Namma himself died in battle with the Gutians when he was abandoned by his own army.",
+      "era": "Third dynasty of Ur",
+      "source": "Ur-Namma year names; Sumerian epic tradition",
+      "involvedFigureIds": [
+        "9adc1297-044e-5cee-a4f7-5306f43fa887"
+      ],
+      "id": "61a40657-d7a5-597c-85d4-b3c056874066",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shulgi Builds the Great Wall of Sumer",
+      "eventType": "Foundation",
+      "eventDescription": "Shulgi of Ur constructed a massive defensive wall between the Tigris and Euphrates rivers, known as the 'Wall of the Fraying Shore' or 'Wall of Sumer,' to protect the Ur III state from Amorite incursions from the Syrian desert. Stretching approximately 280 km, the wall was garrisoned with troops and marked a major engineering and military undertaking of the period.",
+      "era": "Third dynasty of Ur",
+      "source": "Shulgi inscriptions; administrative tablets",
+      "involvedFigureIds": [
+        "fa135e55-2176-50bc-94ec-f3155100022f"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "70a0d80f-123a-52a8-89b4-c9313908e2da",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shulgi's Military Campaigns",
+      "eventType": "Battle",
+      "eventDescription": "Shulgi, second king of the Third Dynasty of Ur, conducted at least nine military campaigns during his 48-year reign. He campaigned against the Amorites in the northwest, the Elamites and the people of Simurrum and Lullubum in the east, and raided into the Zagros mountains. He proclaimed himself 'king of the four quarters' and established Ur as the dominant power in Mesopotamia.",
+      "era": "Third dynasty of Ur",
+      "source": "Shulgi year names; Shulgi hymns",
+      "involvedFigureIds": [
+        "fa135e55-2176-50bc-94ec-f3155100022f"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "2048a9c6-57e9-505d-a099-1a9eee643a8a",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shu-Suen Builds the Amorite Wall",
+      "eventType": "Foundation",
+      "eventDescription": "Shu-Suen, fourth king of the Third Dynasty of Ur, built a second defensive barrier against Amorite infiltration called the 'Wall of Shu-Suen' (later known as the 'Wall of the Amorites'). This wall, located between the Tigris and Euphrates, was intended to block Amorite pastoralists from entering Sumerian territory. It was garrisoned but ultimately proved insufficient to halt Amorite migration.",
+      "era": "Third dynasty of Ur",
+      "source": "Shu-Suen year names; administrative documents",
+      "involvedFigureIds": [
+        "95cb9b1b-18ea-5d37-bb53-251ec2e2278f"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "6f658e6d-6be5-52fa-8069-078fc1d4e12e",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ibbi-Suen Loses the Provinces",
+      "eventType": "Destruction",
+      "eventDescription": "Under Ibbi-Suen, the last king of the Third Dynasty of Ur, the Ur III state rapidly disintegrated. Elamites raided from the east, Amorites infiltrated from the west, and the provincial governor Ishbi-Erra broke away, establishing an independent kingdom at Isin. Year by year, Ibbi-Suen's inscriptions record the loss of control over Sumer's key cities until only Ur remained under his authority.",
+      "era": "Third dynasty of Ur",
+      "source": "Ibbi-Suen year names; royal correspondence",
+      "involvedFigureIds": [
+        "2599e15d-1445-5d4c-97c5-95f24444cf7c",
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "22409690-104c-5fbb-a061-4a808d2870b2",
+      "date": {
+        "era": "Third dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ishbi-Erra Evacuates Ur",
+      "eventType": "Destruction",
+      "eventDescription": "As the Third Dynasty of Ur collapsed under Elamite attack, Ishbi-Erra, a high official of Ibbi-Suen who had established himself at Isin, organized the evacuation of Ur. He claimed to have 'saved the people of Ur from destruction' and gathered them under his protection at Isin. When Ur finally fell to the Elamites, Isin emerged as the successor state.",
+      "era": "Dynasty of Isin",
+      "source": "Ishbi-Erra inscriptions; Sumerian King List",
+      "involvedFigureIds": [
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "7bde55a7-225a-5653-80f6-fdf2b0583768",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Ishbi-Erra Expels the Elamites from Ur",
+      "eventType": "Battle",
+      "eventDescription": "After the fall of Ur, Ishbi-Erra of Isin led a military campaign to expel the Elamite occupying forces from the city of Ur. He successfully drove them out and restored the cult sites, including the temple of Nanna. This victory established Isin's control over Ur and the southern Sumerian heartland, legitimizing Ishbi-Erra's claim to be the successor of the Ur III dynasty.",
+      "era": "Dynasty of Isin",
+      "source": "Ishbi-Erra year names; royal inscriptions",
+      "involvedFigureIds": [
+        "0a67bdd0-f942-5b50-9f72-355f71fa3e44"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "918a7604-a8b1-5300-8358-c894c4383a8e",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Shu-Ilishu Recovers the Statue of Nanna",
+      "eventType": "Battle",
+      "eventDescription": "Shu-Ilishu, second king of the Dynasty of Isin, negotiated or fought for the return of the cult statue of the moon god Nanna (Sin) from Elam. The statue had been carried away as spoils when Elamites sacked Ur. Its recovery and restoration to Ur's E-gish-shir-gal temple was a major religious and political achievement, legitimizing the Isin dynasty as the protector of Sumerian cults.",
+      "era": "Dynasty of Isin",
+      "source": "Shu-Ilishu inscriptions; year formula",
+      "involvedFigureIds": [
+        "4b75366a-25fd-5e0c-a50e-92980a4bbcf5"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "f3cae400-4e6d-5f1c-a83b-63bf6f07403c",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lipit-Eshtar's Law Code",
+      "eventType": "Creation",
+      "eventDescription": "Lipit-Eshtar, fifth king of the Dynasty of Isin, issued a law code written in Sumerian, predating the more famous Code of Hammurabi by nearly two centuries. The code covered property rights, marriage and family law, debt, and damages. Although only fragments survive, it established a legal tradition that influenced later Mesopotamian law codes.",
+      "era": "Dynasty of Isin",
+      "source": "Lipit-Eshtar Law Code tablets (Nippur)",
+      "involvedFigureIds": [
+        "85d33fd4-80be-5eb0-861a-e5fe0f30a332"
+      ],
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "id": "3b407f84-7123-5304-b981-efa48d4bae88",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Enlil-bani: The Substitute King",
+      "eventType": "Foundation",
+      "eventDescription": "According to later tradition, Enlil-bani of Isin began his reign in unusual circumstances. King Erra-imitti, fearing an ill omen, appointed a gardener named Enlil-bani as a substitute king to absorb any divine wrath. When Erra-imitti died suddenly (reportedly by drinking hot broth too quickly), Enlil-bani remained on the throne and ruled for 24 years, building extensively in Nippur and Isin.",
+      "era": "Dynasty of Isin",
+      "source": "Sumerian King List; Weidner Chronicle",
+      "involvedFigureIds": [
+        "193e7b4e-1b04-5150-be28-35f4aaa7c69d"
+      ],
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "id": "1bc9c2ea-9887-5dda-ba52-7fced6ab43f5",
+      "date": {
+        "era": "Dynasty of Isin",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Lugal-Ane-mundu's Empire",
+      "eventType": "Foundation",
+      "eventDescription": "Lugal-Ane-mundu of Adab, according to later Sumerian tradition, established a short-lived empire stretching from the Mediterranean to the Zagros mountains. His inscription on a clay prism claims he conquered the 'four quarters' and received tribute from the lands of Elam, Marhashi, Gutium, and the Amorites. While the account may be embellished, it reflects the reach of Adab's influence in the ED III period.",
+      "era": "Dynasty of Adab",
+      "source": "Lugal-Ane-mundu prism inscription; Sumerian King List",
+      "involvedFigureIds": [
+        "cfcc2b16-4c80-576d-9dd8-9eb606e9ba58"
+      ],
+      "placeId": "901ef2b9-770e-5f65-a0e0-863b13ec62f8",
+      "id": "44a05bbe-90c0-5388-90b9-286ccbbe637f",
+      "date": {
+        "era": "Dynasty of Adab",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "Kug-Bau Rules Over Kish",
+      "eventType": "Foundation",
+      "eventDescription": "Kug-Bau (Kubaba), a tavern-keeper, became king of Kish and founded the Third Dynasty of Kish — the only female ruler recorded in the Sumerian King List. According to tradition, she 'founded the dynasty' and ruled for 100 years. She appears in later Hittite and Hurrian mythology as a goddess, and her name was given to the mother goddess of the Hittite pantheon.",
+      "era": "Third dynasty of Kish",
+      "source": "Sumerian King List; later religious texts",
+      "involvedFigureIds": [
+        "6c726b76-1ef4-5ee6-8c42-78ed5068f940"
+      ],
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "id": "82bd0646-ad73-59a0-a3cd-7b387be00538",
+      "date": {
+        "era": "Third dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "En-shag-kush-ana's Campaigns",
+      "eventType": "Battle",
+      "eventDescription": "En-shag-kush-ana, a king of the Second Dynasty of Uruk, conducted successful military campaigns against the city of Kish and other northern rivals. His inscriptions, found at Nippur, claim that he was recognized as king by the assembly of the gods. His reign marks one of the first attempts by Uruk to reassert hegemony after the decline of the First Dynasty of Ur.",
+      "era": "Second dynasty of Uruk",
+      "source": "En-shag-kush-ana inscriptions; Sumerian King List",
+      "involvedFigureIds": [
+        "61aca70c-88bb-569e-bcd1-76171ae9beb9"
+      ],
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "id": "4910b23e-5168-51ad-bb45-0653fa6840ed",
+      "date": {
+        "era": "Second dynasty of Uruk",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
+    },
+    {
+      "name": "The Royal Tombs of Ur",
+      "eventType": "Foundation",
+      "eventDescription": "The First Dynasty of Ur was founded by Mesh-Ane-pada (c. 2560 BC), who is listed in the Sumerian King List as the first king of Ur. The 'Royal Tombs of Ur' — including the famous tomb of Pu-abi — date to this period and contain extraordinary wealth of gold, silver, lapis lazuli, and the remains of human sacrifices. These burials provide the richest archaeological record of Early Dynastic Sumer.",
+      "era": "First dynasty of Ur",
+      "source": "Sumerian King List; Royal Cemetery of Ur excavations (Sir Leonard Woolley)",
+      "involvedFigureIds": [
+        "89dfa6cf-53b8-576f-a150-0dac23669481"
+      ],
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "id": "37f01690-42c6-5e24-bb8a-8641611bb5ca",
+      "date": {
+        "era": "First dynasty of Ur",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      }
     }
   ],
   "sources": [
@@ -8858,6 +9831,66 @@
       "source": "Sumerian hymns",
       "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
       "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4"
+    },
+    {
+      "figureId": "61fe9c30-3c37-55ab-9eed-2667e32b9574",
+      "placeId": "c1b69140-d051-57ad-92fd-e449813c2aa2",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb",
+      "placeId": "bb854b3f-dd43-591e-853b-cd645e1b3164",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26",
+      "placeId": "92367f2f-7383-508a-9d7e-43d7e8568217",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "89e9e9ea-ddd9-500b-ad14-3252eb959c1c",
+      "placeId": "24e82729-beff-5b59-bbc8-a55199e6bc0e",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "placeId": "a21a51d6-be8a-5beb-ba9d-97bbddde9c1c",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "a1df3bc5-779c-50fd-aa9c-ac15fad2f7d5",
+      "placeId": "ea2f8c1e-69e8-5a92-bfc6-aec4a0448b3b",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "7463291d-4e62-5eae-b918-070104897810",
+      "placeId": "35f1c309-f1a5-5e64-af33-f614539ac880",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "436defeb-eb9d-5098-b520-33a9162892e1",
+      "placeId": "f77daa6a-2fcf-5af2-98e8-1150e0522018",
+      "role": "Worshipped At",
+      "source": "Sumerian hymns"
+    },
+    {
+      "figureId": "071116db-a8da-5ed6-8c23-9e3f657a60fb",
+      "placeId": "2a000001-0001-4000-8000-000000000003",
+      "role": "Patron Deity",
+      "source": "Sumerian texts"
+    },
+    {
+      "figureId": "bbe16dcb-7921-54c4-8c73-25014ef1bb26",
+      "placeId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "role": "Patron Deity",
+      "source": "Sumerian texts"
     }
   ],
   "placePlaceAssociations": [
@@ -8890,6 +9923,60 @@
       "source": "Geography",
       "fromPlaceId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
       "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3"
+    },
+    {
+      "fromPlaceId": "c1b69140-d051-57ad-92fd-e449813c2aa2",
+      "toPlaceId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "bb854b3f-dd43-591e-853b-cd645e1b3164",
+      "toPlaceId": "2a000001-0001-4000-8000-000000000003",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "92367f2f-7383-508a-9d7e-43d7e8568217",
+      "toPlaceId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "24e82729-beff-5b59-bbc8-a55199e6bc0e",
+      "toPlaceId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "a21a51d6-be8a-5beb-ba9d-97bbddde9c1c",
+      "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "ea2f8c1e-69e8-5a92-bfc6-aec4a0448b3b",
+      "toPlaceId": "72f7ec4d-f2b2-5034-9ee9-91bfafe82ac3",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "35f1c309-f1a5-5e64-af33-f614539ac880",
+      "toPlaceId": "2a000001-0001-4000-8000-000000000009",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "f77daa6a-2fcf-5af2-98e8-1150e0522018",
+      "toPlaceId": "2a000001-0001-4000-8000-000000000008",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
+    },
+    {
+      "fromPlaceId": "2d65d318-6b74-5933-aec3-a2977ad8d214",
+      "toPlaceId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Located Within",
+      "source": "Mesopotamian geography"
     }
   ],
   "eventEventAssociations": [
@@ -8923,5 +10010,352 @@
       "fromEventId": "8194bddd-f01a-542d-858b-9c160ff3fc74",
       "toEventId": "0495493d-589c-5003-85c7-23660b02131a"
     }
-  ]
+  ],
+  "eventPlaceAssociations": [
+    {
+      "eventId": "b5793656-b15a-5c6d-b593-dfab639b6c01",
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24",
+      "role": "Occurred At",
+      "source": "Enuma Elish, Tablet I"
+    },
+    {
+      "eventId": "3e8d0ff6-89be-5d77-81a6-702e0734f385",
+      "placeId": "5d3aa10a-d95e-57b1-ba13-062d94eecc24",
+      "role": "Occurred At",
+      "source": "Atra-Hasis"
+    },
+    {
+      "eventId": "93cf47db-da54-5ac8-984c-9ef534c2d5df",
+      "placeId": "9261e9ee-c4bd-56b3-9f55-794b3ce61f3d",
+      "role": "Occurred At",
+      "source": "Inanna's Descent"
+    },
+    {
+      "eventId": "18eefef7-45b3-581b-8039-a5464cdbeb35",
+      "placeId": "ff5304c0-2d6f-5d5b-abde-41dce43c9300",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablets III-V"
+    },
+    {
+      "eventId": "8194bddd-f01a-542d-858b-9c160ff3fc74",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablet VII"
+    },
+    {
+      "eventId": "0495493d-589c-5003-85c7-23660b02131a",
+      "placeId": "83c1e5f4-e6e0-543e-b6bb-81ad24fb62c2",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablets IX-XI"
+    },
+    {
+      "eventId": "34a3a17e-c9aa-54cd-9d91-b540ad97871a",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Etana myth"
+    },
+    {
+      "eventId": "02c2d29b-3cdf-585c-8d04-a4b71a5b5564",
+      "placeId": "b8874cda-ac06-54aa-8f50-79c9dab490bb",
+      "role": "Occurred At",
+      "source": "Sumerian King List"
+    },
+    {
+      "eventId": "79C39079-E57D-454A-8F4D-EC382FF65A32",
+      "placeId": "4BB51DE4-DDC5-415A-B27E-529975A72E5E",
+      "role": "Occurred At",
+      "source": "Book of Enoch (1 Enoch), ch. 6-8"
+    },
+    {
+      "eventId": "B9986FB0-D22A-4C2C-82CE-B1967BD2A5D3",
+      "placeId": "FDBC2118-26B6-4559-9000-9F7F7CDD95F0",
+      "role": "Occurred At",
+      "source": "Book of Enoch (1 Enoch), ch. 10:4-8"
+    },
+    {
+      "eventId": "688A47EA-A1D0-4090-B9C8-451D90EA9074",
+      "placeId": "E87D9CBC-25F5-4278-BFC4-0D348F9B5C0C",
+      "role": "Occurred At",
+      "source": "Book of Enoch (1 Enoch), ch. 10:11-12"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000002",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Sargon inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000004",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Curse of Akkad"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000005",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Ur-Namma inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000006",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ur-Namma inscriptions; archaeological evidence"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000009",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Lamentation over the Destruction of Ur"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000010",
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Ishbi-Erra inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000011",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Kish inscriptions"
+    },
+    {
+      "eventId": "1a1a0001-0001-4000-8000-000000000012",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Epic of Gilgamesh, Tablet I; archaeological evidence"
+    },
+    {
+      "eventId": "83c69454-b13a-5aa6-8fc5-2bc72dbc1fed",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Enmebaragesi vase inscriptions"
+    },
+    {
+      "eventId": "38226e6d-9086-50ac-a078-70a81235abf9",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "role": "Occurred At",
+      "source": "Tummal Inscription"
+    },
+    {
+      "eventId": "1541f34a-baf4-5c5e-9006-e38308ff8dde",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Gilgamesh and Aga (Sumerian poem)"
+    },
+    {
+      "eventId": "a1b4d599-b6b8-5940-8f98-782a3963a406",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Gilgamesh and Aga (Sumerian poem)"
+    },
+    {
+      "eventId": "2afabbc1-de6b-5cb4-b00b-0654cf9b23ed",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Enmerkar and the Lord of Aratta; Lugalbanda cycle"
+    },
+    {
+      "eventId": "7a2efd89-205b-5b9e-ae87-2fb2eeb342b4",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Enmerkar and the Lord of Aratta (c. 2100 BC composition)"
+    },
+    {
+      "eventId": "82ebd088-8ce1-57a2-a995-0057bd51ce03",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Enmerkar and the Lord of Aratta; Sumerian King List"
+    },
+    {
+      "eventId": "cdda743c-2df6-505a-a5fc-ea2a6b404983",
+      "placeId": "423a5c3b-624e-5f5b-b591-aa1e03f07ecf",
+      "role": "Occurred At",
+      "source": "Lagash border cones; Entemena inscriptions"
+    },
+    {
+      "eventId": "a260c5d1-1c64-529e-a2e6-0824815af020",
+      "placeId": "3bee920d-4c88-5c74-8e52-18269cb7af75",
+      "role": "Occurred At",
+      "source": "Stele of the Vultures (Eannatum inscriptions)"
+    },
+    {
+      "eventId": "94ee0f0d-be8d-548b-b413-eebc8d9e58b2",
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "role": "Occurred At",
+      "source": "Entemena border cones (c. 2425 BC)"
+    },
+    {
+      "eventId": "4f26a992-8542-5269-b954-d7cc0a07a75f",
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "role": "Occurred At",
+      "source": "Urukagina Reform Cylinders (c. 2370 BC)"
+    },
+    {
+      "eventId": "40cb4ea7-9948-52c9-8d05-2eb10e82d387",
+      "placeId": "2a000001-0001-4000-8000-000000000001",
+      "role": "Occurred At",
+      "source": "Lamentation over the Fall of Lagash; Urukagina inscriptions"
+    },
+    {
+      "eventId": "6a5fa192-a79e-5bd5-8f70-a47822b0aab3",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Nippur vase of Lugal-zage-si; Sumerian King List"
+    },
+    {
+      "eventId": "8c4cf396-bedb-5e0e-a7d0-bc85850dd5ac",
+      "placeId": "242790fa-1f12-5ec4-bafd-ebb5770327a9",
+      "role": "Occurred At",
+      "source": "Nippur vase inscription of Lugal-zage-si"
+    },
+    {
+      "eventId": "2e2da2ce-8d34-52dc-96da-11758cb6ecea",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Sargon inscriptions (Old Babylonian copies); Sumerian King List"
+    },
+    {
+      "eventId": "caeba0d0-e72c-59b4-afc8-2f7d2eb5e64e",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Sargon inscriptions; Weidner Chronicle"
+    },
+    {
+      "eventId": "e65eccaf-7a03-545e-baa2-143d1927248b",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Rimush inscriptions; Sumerian King List"
+    },
+    {
+      "eventId": "c768b90b-7b48-58ad-830e-1e587821d702",
+      "placeId": "2a000001-0001-4000-8000-000000000003",
+      "role": "Occurred At",
+      "source": "Manishtushu Obelisk (Louvre Museum)"
+    },
+    {
+      "eventId": "2ddd5b7d-51a8-56d3-800e-ea6f92bef5c5",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Naram-Sin year names; inscribed objects from Ur"
+    },
+    {
+      "eventId": "efcbaf2e-a295-5416-9ecf-a25efe066bb9",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Victory Stele of Naram-Sin (Louvre Museum, Sb 4)"
+    },
+    {
+      "eventId": "888f5da5-f717-5ccb-bae1-6d3471dfa619",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Bassetki Statue inscription; deification texts"
+    },
+    {
+      "eventId": "59192ee6-9ea4-51e5-83cf-5cca1fb225cc",
+      "placeId": "84f75f83-d755-5ae4-8da4-b07f07659e52",
+      "role": "Occurred At",
+      "source": "Shar-Kali-Sharri year names; Sumerian King List"
+    },
+    {
+      "eventId": "dbe1a30c-2120-5e38-9613-c47fbb3e2aef",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)"
+    },
+    {
+      "eventId": "f454fbea-c0dd-5fff-9744-981ba5eb55cc",
+      "placeId": "d7451c10-fe2c-5ee4-b238-85e353869811",
+      "role": "Occurred At",
+      "source": "Victory Stele of Utu-hengal (Louvre, AO 6018)"
+    },
+    {
+      "eventId": "70a0d80f-123a-52a8-89b4-c9313908e2da",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shulgi inscriptions; administrative tablets"
+    },
+    {
+      "eventId": "2048a9c6-57e9-505d-a099-1a9eee643a8a",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shulgi year names; Shulgi hymns"
+    },
+    {
+      "eventId": "6f658e6d-6be5-52fa-8069-078fc1d4e12e",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shu-Suen year names; administrative documents"
+    },
+    {
+      "eventId": "22409690-104c-5fbb-a061-4a808d2870b2",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ibbi-Suen year names; royal correspondence"
+    },
+    {
+      "eventId": "7bde55a7-225a-5653-80f6-fdf2b0583768",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ishbi-Erra inscriptions; Sumerian King List"
+    },
+    {
+      "eventId": "918a7604-a8b1-5300-8358-c894c4383a8e",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Ishbi-Erra year names; royal inscriptions"
+    },
+    {
+      "eventId": "f3cae400-4e6d-5f1c-a83b-63bf6f07403c",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Shu-Ilishu inscriptions; year formula"
+    },
+    {
+      "eventId": "3b407f84-7123-5304-b981-efa48d4bae88",
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Occurred At",
+      "source": "Lipit-Eshtar Law Code tablets (Nippur)"
+    },
+    {
+      "eventId": "1bc9c2ea-9887-5dda-ba52-7fced6ab43f5",
+      "placeId": "a8ec8e7d-72a7-50c7-81a3-353ec87dd313",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Weidner Chronicle"
+    },
+    {
+      "eventId": "44a05bbe-90c0-5388-90b9-286ccbbe637f",
+      "placeId": "901ef2b9-770e-5f65-a0e0-863b13ec62f8",
+      "role": "Occurred At",
+      "source": "Lugal-Ane-mundu prism inscription; Sumerian King List"
+    },
+    {
+      "eventId": "82bd0646-ad73-59a0-a3cd-7b387be00538",
+      "placeId": "763c958b-ec00-5b9a-bc39-17e67e50d08d",
+      "role": "Occurred At",
+      "source": "Sumerian King List; later religious texts"
+    },
+    {
+      "eventId": "4910b23e-5168-51ad-bb45-0653fa6840ed",
+      "placeId": "81476542-a174-55cf-a47e-4032687cd00e",
+      "role": "Occurred At",
+      "source": "En-shag-kush-ana inscriptions; Sumerian King List"
+    },
+    {
+      "eventId": "37f01690-42c6-5e24-bb8a-8641611bb5ca",
+      "placeId": "3b898611-9e5b-563e-83e4-f2f430c225a4",
+      "role": "Occurred At",
+      "source": "Sumerian King List; Royal Cemetery of Ur excavations (Sir Leonard Woolley)"
+    }
+  ],
+  "things": [],
+  "figureTypes": [],
+  "placeTypes": [],
+  "eventTypes": [],
+  "thingFigureAssociations": [],
+  "thingPlaceAssociations": [],
+  "thingEventAssociations": [],
+  "imageAssets": [],
+  "tags": []
 }

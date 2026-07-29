@@ -18,7 +18,12 @@ struct ThingListView: View {
     @State private var showDeleteAssociationConfirm = false
     @State private var imageDetailImage: ImageAsset?
     @State private var searchText = ""
+    @State private var selectedTypeFilters: Set<String> = []
     @State private var sortOrder: ThingSortOrder = .name
+    @Query(sort: \ThingType.name) private var thingTypes: [ThingType]
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
 
     enum ThingSortOrder: String, CaseIterable {
         case name = "Name"
@@ -27,6 +32,9 @@ struct ThingListView: View {
 
     private var filteredThings: [Thing] {
         var result = things
+        if !selectedTypeFilters.isEmpty {
+            result = result.filter { selectedTypeFilters.contains($0.thingType?.name ?? "") }
+        }
         if !searchText.isEmpty {
             let query = searchText.lowercased()
             result = result.filter {
@@ -103,6 +111,24 @@ struct ThingListView: View {
                     )
                 }
 
+                if !thingTypes.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(thingTypes) { type in
+                                typeFilterButton(type)
+                            }
+                            if !selectedTypeFilters.isEmpty {
+                                Button("Clear") { selectedTypeFilters.removeAll() }
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                    .padding(.leading, 4)
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 Divider()
 
                 if filteredThings.isEmpty {
@@ -137,7 +163,7 @@ struct ThingListView: View {
                             thingGroupSection(group)
                         }
                     }
-                    .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .frame(minWidth: 450, maxWidth: .infinity)
                 }
             }
             .frame(minWidth: 450, maxWidth: .infinity)
@@ -149,7 +175,12 @@ struct ThingListView: View {
                         DetailToolbar(
                             onEdit: { editingThing = thing },
                             onDelete: { showDeleteConfirm = true },
-                            onClose: { selectedThingID = nil }
+                            onClose: { selectedThingID = nil },
+                            onEditDescription: {
+                                editRichDescription = thing.richDescription
+                                editPlainDescription = thing.thingDescription
+                                showDescriptionEditor = true
+                            }
                         )
                     ThingDetailView(
                             thing: thing,
@@ -176,6 +207,20 @@ struct ThingListView: View {
         }
         .sheet(item: $editingThing) { thing in
             ThingFormView(thing: thing)
+        }
+        .sheet(isPresented: $showDescriptionEditor) {
+            if let thing = selectedThing {
+                DescriptionEditorSheet(
+                    entityName: thing.name,
+                    richDescription: $editRichDescription,
+                    plainDescription: $editPlainDescription,
+                    onSave: {
+                        thing.richDescription = editRichDescription
+                        thing.thingDescription = editPlainDescription
+                        try? modelContext.save()
+                    }
+                )
+            }
         }
         .sheet(isPresented: $showingAddFigureAssociation) {
             if let thing = selectedThing {
@@ -231,6 +276,36 @@ struct ThingListView: View {
         selectedThingID = id
     }
 
+    private func typeFilterButton(_ type: ThingType) -> some View {
+        Button(action: {
+            if selectedTypeFilters.contains(type.name) {
+                selectedTypeFilters.remove(type.name)
+            } else {
+                selectedTypeFilters.insert(type.name)
+            }
+        }) {
+            HStack(spacing: 4) {
+                Circle().fill(type.color).frame(width: 7, height: 7)
+                Text(type.name).font(.caption)
+                if selectedTypeFilters.contains(type.name) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(selectedTypeFilters.contains(type.name) ? type.color.opacity(0.2) : Color.primary.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(selectedTypeFilters.contains(type.name) ? type.color : Color.clear, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private func thingGroupSection(_ group: (key: String, things: [Thing])) -> some View {
         Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
             ForEach(group.things) { thing in
@@ -283,6 +358,9 @@ struct ThingDetailView: View {
     var onAddEvent: (() -> Void)?
     var onDeleteAssociation: ((any PersistentModel) -> Void)?
     var onSelectImage: ((ImageAsset) -> Void)?
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
 
     var body: some View {
         ScrollView {
@@ -299,12 +377,12 @@ struct ThingDetailView: View {
                         .font(.title2.bold())
                 }
 
-                if !thing.thingDescription.isEmpty {
+                if !thing.thingDescription.isEmpty || thing.richDescription != nil {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Description")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text(thing.thingDescription)
+                        RichTextDisplay(richData: thing.richDescription, fallback: thing.thingDescription)
                             .font(.body)
                     }
                 }
@@ -508,96 +586,6 @@ struct AssociationRow: View {
     }
 }
 
-// MARK: - Thing Form
-
-struct ThingFormView: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) var dismiss
-
-    let thing: Thing?
-
-    @Query private var thingTypes: [ThingType]
-
-    @State private var name = ""
-    @State private var thingDescription = ""
-    @State private var source = ""
-    @State private var selectedThingType: ThingType? = nil
-
-    private var isEditing: Bool { thing != nil }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text(isEditing ? "Edit Thing" : "Add Thing")
-                .font(.title3.bold())
-                .padding()
-
-            Form {
-                Section("Thing Details") {
-                    TextField("Name", text: $name, prompt: Text("e.g. Tablet of Destinies"))
-
-                    if !thingTypes.isEmpty {
-                        Picker("Type", selection: $selectedThingType) {
-                            Text("None").tag(nil as ThingType?)
-                            ForEach(thingTypes) { type in
-                                HStack {
-                                    Image(systemName: type.icon)
-                                    Text(type.name)
-                                }.tag(type as ThingType?)
-                            }
-                        }
-                    }
-                }
-
-                Section("Description") {
-                    TextEditor(text: $thingDescription)
-                        .frame(minHeight: 80)
-                }
-
-                Section("Source") {
-                    TextField("Source", text: $source, prompt: Text("e.g. Enuma Elish"))
-                }
-            }
-            .formStyle(.grouped)
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(isEditing ? "Save" : "Add") { save() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(name.isEmpty)
-            }
-            .padding()
-        }
-        .frame(width: 500, height: 400)
-        .onAppear { loadIfEditing() }
-    }
-
-    private func loadIfEditing() {
-        guard let thing else { return }
-        name = thing.name
-        thingDescription = thing.thingDescription
-        source = thing.source
-        selectedThingType = thing.thingType
-    }
-
-    private func save() {
-        if let thing {
-            thing.name = name
-            thing.thingDescription = thingDescription
-            thing.source = source
-            thing.thingType = selectedThingType
-            RecentEditStore.trackEdit(entityType: "Thing", entityName: thing.name)
-        } else {
-            let newThing = Thing(name: name, thingDescription: thingDescription, source: source)
-            newThing.thingType = selectedThingType
-            modelContext.insert(newThing)
-            RecentEditStore.trackEdit(entityType: "Thing", entityName: newThing.name)
-        }
-        dismiss()
-    }
-}
-
 // MARK: - Add Thing↔Figure Association Form
 
 struct AddThingFigureAssociationForm: View {
@@ -621,7 +609,7 @@ struct AddThingFigureAssociationForm: View {
             Form {
                 Section("Figure") {
                     TextField("Search figures\u{2026}", text: $searchText)
-                        .textFieldStyle(.plain)
+                        .textFieldStyle(.roundedBorder)
 
                     let filtered = figures.filter {
                         searchText.isEmpty || $0.name.localizedCaseInsensitiveContains(searchText)
@@ -721,7 +709,7 @@ struct AddThingPlaceAssociationForm: View {
             Form {
                 Section("Place") {
                     TextField("Search places\u{2026}", text: $searchText)
-                        .textFieldStyle(.plain)
+                        .textFieldStyle(.roundedBorder)
 
                     let filtered = places.filter {
                         searchText.isEmpty || $0.name.localizedCaseInsensitiveContains(searchText)
@@ -821,7 +809,7 @@ struct AddThingEventAssociationForm: View {
             Form {
                 Section("Event") {
                     TextField("Search events\u{2026}", text: $searchText)
-                        .textFieldStyle(.plain)
+                        .textFieldStyle(.roundedBorder)
 
                     let filtered = events.filter {
                         searchText.isEmpty || $0.name.localizedCaseInsensitiveContains(searchText)

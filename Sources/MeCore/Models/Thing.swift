@@ -5,6 +5,7 @@ import SwiftData
 package final class Thing {
     package var name: String
     package var thingDescription: String
+    package var richDescription: Data?
     package var source: String
 
     @Relationship(deleteRule: .cascade, inverse: \ThingFigureAssociation.thing)
