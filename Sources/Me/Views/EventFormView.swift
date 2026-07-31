@@ -117,6 +117,7 @@ struct EventFormView: View {
         Form {
             Section("Event Details") {
                 TextField("Name", text: $name, prompt: Text("e.g. Slaying of Tiamat"))
+                    .textFieldStyle(.roundedBorder)
                 Picker("Type", selection: $eventType) {
                     ForEach(eventTypes, id: \.persistentModelID) { type in
                         Text(type.name).tag(type as EventType?)
@@ -142,8 +143,10 @@ struct EventFormView: View {
                 }
                 if showCustomSourceField {
                     TextField("Source name", text: $source, prompt: Text("e.g. Enuma Elish, Tablet IV"))
+                        .textFieldStyle(.roundedBorder)
                 }
                 TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
+                    .textFieldStyle(.roundedBorder)
             }
         }
         .formStyle(.grouped)

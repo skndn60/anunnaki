@@ -89,10 +89,13 @@ struct FigureFormView: View {
         Form {
             Section("Identity") {
                 TextField("Name", text: $name)
+                    .textFieldStyle(.roundedBorder)
                     .help("The primary name of this figure")
                 TextField("Disambiguation", text: $disambiguation, prompt: Text("e.g. Fourth dynasty of Kish"))
+                    .textFieldStyle(.roundedBorder)
                     .help("Optional context to distinguish from other figures with the same name")
                 TextField("Title", text: $title, prompt: Text("e.g. King of the Gods"))
+                    .textFieldStyle(.roundedBorder)
                 Picker("Type", selection: $selectedFigureType) {
                     Text("None").tag(nil as FigureType?)
                     ForEach(figureTypes) { type in
@@ -105,6 +108,7 @@ struct FigureFormView: View {
                     }
                 }
                 TextField("Domain", text: $domain, prompt: Text("e.g. Sky, Wisdom, War"))
+                    .textFieldStyle(.roundedBorder)
                     .help("Comma-separated list of domains this figure governs")
             }
         }
@@ -116,8 +120,10 @@ struct FigureFormView: View {
             Section("Reign") {
                 HStack {
                     TextField("Start Year", text: $reignStartText, prompt: Text("e.g. -2047"))
+                        .textFieldStyle(.roundedBorder)
                         .help("Negative = BCE, positive = CE")
                     TextField("End Year", text: $reignEndText, prompt: Text("e.g. -2030"))
+                        .textFieldStyle(.roundedBorder)
                         .help("Negative = BCE, positive = CE")
                 }
             }
@@ -138,6 +144,7 @@ struct FigureFormView: View {
 
             Section("Cause of Death") {
                 TextField("Cause of Death", text: $causeOfDeath, prompt: Text("e.g. Slain in battle"))
+                    .textFieldStyle(.roundedBorder)
             }
         }
         .formStyle(.grouped)
@@ -171,6 +178,7 @@ struct FigureFormView: View {
 
                 if showCustomSourceField {
                     TextField("Source name", text: $source, prompt: Text("e.g. Enuma Elish"))
+                        .textFieldStyle(.roundedBorder)
                 }
             }
 

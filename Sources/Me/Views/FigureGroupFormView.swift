@@ -79,13 +79,16 @@ struct FigureGroupFormView: View {
         Form {
             Section("Identity") {
                 TextField("Name", text: $name, prompt: Text("e.g. Divine Council, Anunnaki Council"))
+                    .textFieldStyle(.roundedBorder)
                     .help("The name of this figure group")
 
                 TextField("Description", text: $groupDescription, prompt: Text("Optional description"), axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
                     .lineLimit(3...6)
 
                 HStack {
                     TextField("Icon (SF Symbol)", text: $icon, prompt: Text("rectangle.3.group"))
+                        .textFieldStyle(.roundedBorder)
                         .autocorrectionDisabled()
                     Image(systemName: icon)
                         .font(.title2)

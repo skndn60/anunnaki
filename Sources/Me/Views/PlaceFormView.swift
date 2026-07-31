@@ -83,8 +83,10 @@ struct PlaceFormView: View {
         Form {
             Section("Identity") {
                 TextField("Name", text: $name, prompt: Text("e.g. Uruk, Eridu, Kur"))
+                    .textFieldStyle(.roundedBorder)
                     .help("The primary name of this place")
                 TextField("Sort Name", text: $sortName, prompt: Text("Leave blank to auto-derive from name"))
+                    .textFieldStyle(.roundedBorder)
                 Picker("Type", selection: $placeType) {
                     ForEach(placeTypes, id: \.persistentModelID) { type in
                         Text(type.name).tag(type as PlaceType?)
@@ -104,6 +106,7 @@ struct PlaceFormView: View {
                 }
                 if showCustomSourceField {
                     TextField("Source name", text: $source, prompt: Text("e.g. Sumerian King List"))
+                        .textFieldStyle(.roundedBorder)
                 }
             }
         }
@@ -113,13 +116,17 @@ struct PlaceFormView: View {
     private var locationStep: some View {
         Form {
             Section("Location") {
-                TextField("Modern Location", text: $modernLocation, prompt: Text("e.g. Southern Iraq, Warka"))
+                TextField("Modern Location", text: $modernLocation, prompt: Text("e.g. Southern Iraq, Warka"), axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(2...6)
             }
 
             Section("Coordinates") {
                 HStack {
                     TextField("Latitude", text: $latitudeStr, prompt: Text("e.g. 31.322"))
+                        .textFieldStyle(.roundedBorder)
                     TextField("Longitude", text: $longitudeStr, prompt: Text("e.g. 45.637"))
+                        .textFieldStyle(.roundedBorder)
                 }
             }
         }

@@ -17,6 +17,10 @@ struct RichTextEditor: NSViewRepresentable {
         textView.isEditable = true
         textView.isSelectable = true
         textView.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+        textView.drawsBackground = true
+        textView.backgroundColor = NSColor.controlBackgroundColor
+        scrollView.drawsBackground = true
+        scrollView.backgroundColor = NSColor.controlBackgroundColor
         textView.delegate = context.coordinator
         context.coordinator.textView = textView
 
@@ -44,11 +48,14 @@ struct RichTextEditor: NSViewRepresentable {
         guard let scrollView = container.subviews.compactMap({ $0 as? NSScrollView }).first,
               let textView = scrollView.documentView as? NSTextView else { return }
         if let data = richData,
-           let attributedString = try? NSAttributedString(
+           let loadedString = try? NSAttributedString(
             data: data,
             options: [.documentType: NSAttributedString.DocumentType.rtf],
             documentAttributes: nil
            ) {
+            let mutable = NSMutableAttributedString(attributedString: loadedString)
+            mutable.removeAttribute(.backgroundColor, range: NSRange(location: 0, length: mutable.length))
+            let attributedString = mutable
             if !textView.attributedString().isEqual(attributedString) {
                 context.coordinator.isUpdating = true
                 textView.textStorage?.setAttributedString(attributedString)
@@ -146,6 +153,30 @@ struct RichTextEditor: NSViewRepresentable {
             }
         }
 
+        @objc func stripFormatting(_ sender: Any?) {
+            guard let tv = textView, let storage = tv.textStorage else { return }
+            let range = tv.selectedRange()
+            let effectiveRange = range.length == 0 ? NSRange(location: 0, length: storage.length) : range
+
+            let plainText = storage.attributedSubstring(from: effectiveRange).string
+            let defaultFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+            let defaultColor = NSColor.textColor
+
+            let replacement = NSAttributedString(string: plainText, attributes: [
+                .font: defaultFont,
+                .foregroundColor: defaultColor,
+            ])
+            storage.replaceCharacters(in: effectiveRange, with: replacement)
+
+            tv.typingAttributes = [
+                .font: defaultFont,
+                .foregroundColor: defaultColor,
+            ]
+            tv.needsDisplay = true
+
+            syncRichData()
+        }
+
         @objc func orderFrontFontPanel(_ sender: Any?) {
             NSFontManager.shared.orderFrontFontPanel(sender)
         }
@@ -167,6 +198,10 @@ private class RichTextToolbar: NSView {
             makeDivider(),
 
             makeButton(title: "Aa", action: #selector(RichTextEditor.Coordinator.orderFrontFontPanel), target: target, tooltip: "Font Panel (Cmd+T)"),
+
+            makeDivider(),
+
+            makeButton(title: "T", action: #selector(RichTextEditor.Coordinator.stripFormatting), target: target, tooltip: "Strip Formatting (remove fonts, sizes, colors)"),
         ])
         stack.orientation = .horizontal
         stack.spacing = 4

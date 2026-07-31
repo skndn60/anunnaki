@@ -151,6 +151,7 @@ struct ContentView: View {
                     Migration.ensureEventCitations(context: modelContext)
                     Migration.ensureSKLEventsAndFigures(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
+
                     try? modelContext.save()
                 }
                 isSeeding = false

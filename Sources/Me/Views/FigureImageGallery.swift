@@ -385,12 +385,17 @@ struct ImageDetailContent: View {
     @Query(sort: \Event.name) private var events: [Event]
     @Query(sort: \Thing.name) private var things: [Thing]
     @Query(sort: \Tag.name) private var allTags: [Tag]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var previewImage: NSImage?
     @State private var caption: String = ""
     @State private var source: String = ""
+    @State private var showCustomSource = false
     @State private var imageDescription: String = ""
-    @State private var searchText: String = ""
+    @State private var figureSearchText = ""
+    @State private var placeSearchText = ""
+    @State private var eventSearchText = ""
+    @State private var thingSearchText = ""
     @State private var tagInputText: String = ""
 
     var body: some View {
@@ -452,163 +457,75 @@ struct ImageDetailContent: View {
                     .padding(.top, 4)
 
                 Group {
-                    TextField("Caption", text: $caption)
+                    TextField("Caption", text: $caption, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
-                    TextField("Description", text: $imageDescription)
+                        .lineLimit(1...3)
+                    TextField("Description", text: $imageDescription, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
-                    TextField("Source", text: $source)
-                        .textFieldStyle(.roundedBorder)
-                }
-
-                Divider()
-
-                linkedSection(title: "Associated Figures (\(image.figures.count))", icon: "person.fill") {
-                    if image.figures.isEmpty {
-                        Text("None").foregroundStyle(.tertiary)
-                    }
-                    ForEach(image.figures) { fig in
-                        HStack {
-                            Label(fig.name, systemImage: "person.fill")
-                            Spacer()
-                            Button("Remove") {
-                                image.figures.removeAll { $0.persistentModelID == fig.persistentModelID }
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.red)
+                        .lineLimit(2...6)
+                    Picker("Source", selection: $source) {
+                        Text("None").tag("")
+                        ForEach(sources) { s in
+                            Text(s.name).tag(s.name)
                         }
+                        Divider()
+                        Text("Custom\u{2026}").tag("__custom__")
                     }
-                }
-
-                linkedSection(title: "Associated Places (\(image.places.count))", icon: "mappin") {
-                    if image.places.isEmpty {
-                        Text("None").foregroundStyle(.tertiary)
+                    .onChange(of: source) { _, newValue in
+                        showCustomSource = newValue == "__custom__"
+                        if showCustomSource { source = "" }
                     }
-                    ForEach(image.places) { place in
-                        HStack {
-                            Label(place.name, systemImage: "mappin")
-                            Spacer()
-                            Button("Remove") {
-                                image.places.removeAll { $0.persistentModelID == place.persistentModelID }
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.red)
-                        }
-                    }
-                }
-
-                linkedSection(title: "Associated Events (\(image.events.count))", icon: "bolt.fill") {
-                    if image.events.isEmpty {
-                        Text("None").foregroundStyle(.tertiary)
-                    }
-                    ForEach(image.events) { evt in
-                        HStack {
-                            Label(evt.name, systemImage: "bolt.fill")
-                            Spacer()
-                            Button("Remove") {
-                                image.events.removeAll { $0.persistentModelID == evt.persistentModelID }
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.red)
-                        }
-                    }
-                }
-
-                linkedSection(title: "Associated Things (\(image.things.count))", icon: "cube.box") {
-                    if image.things.isEmpty {
-                        Text("None").foregroundStyle(.tertiary)
-                    }
-                    ForEach(image.things) { thg in
-                        HStack {
-                            Label(thg.name, systemImage: "cube.box")
-                            Spacer()
-                            Button("Remove") {
-                                image.things.removeAll { $0.persistentModelID == thg.persistentModelID }
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.red)
-                        }
-                    }
-                }
-
-                linkedSection(title: "Tags (\(image.tags.count))", icon: "tag") {
-                    if image.tags.isEmpty {
-                        Text("None").foregroundStyle(.tertiary)
-                    }
-                    ForEach(image.tags) { tag in
-                        HStack {
-                            tagLabel(tag)
-                            Spacer()
-                            Button("Remove") {
-                                image.tags = image.tags.filter { $0.persistentModelID != tag.persistentModelID }
-                                try? modelContext.save()
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.red)
-                        }
+                    if showCustomSource {
+                        TextField("Source name", text: $source, prompt: Text("e.g. Wikipedia"))
+                            .textFieldStyle(.roundedBorder)
                     }
                 }
 
                 Divider()
 
-                Text("Add Links")
-                    .font(.subheadline.bold())
+                searchableLinkedSection(
+                    title: "Associated Figures",
+                    items: image.figures,
+                    icon: "person.fill",
+                    searchText: $figureSearchText,
+                    allEntities: figures,
+                    alreadyLinked: image.figures,
+                    onLink: { image.figures.append($0) },
+                    onRemove: { fig in image.figures.removeAll { $0.persistentModelID == fig.persistentModelID } }
+                )
 
-                TextField("Search figures, places, events, or things\u{2026}", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
+                searchableLinkedSection(
+                    title: "Associated Places",
+                    items: image.places,
+                    icon: "mappin",
+                    searchText: $placeSearchText,
+                    allEntities: places,
+                    alreadyLinked: image.places,
+                    onLink: { image.places.append($0) },
+                    onRemove: { place in image.places.removeAll { $0.persistentModelID == place.persistentModelID } }
+                )
 
-                if !searchText.isEmpty {
-                    let filteredFigures = figures.filter { !image.figures.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
-                    let filteredPlaces = places.filter { !image.places.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
-                    let filteredEvents = events.filter { !image.events.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
-                    let filteredThings = things.filter { !image.things.contains($0) && $0.name.localizedCaseInsensitiveContains(searchText) }
+                searchableLinkedSection(
+                    title: "Associated Events",
+                    items: image.events,
+                    icon: "bolt.fill",
+                    searchText: $eventSearchText,
+                    allEntities: events,
+                    alreadyLinked: image.events,
+                    onLink: { image.events.append($0) },
+                    onRemove: { evt in image.events.removeAll { $0.persistentModelID == evt.persistentModelID } }
+                )
 
-                    if filteredFigures.isEmpty && filteredPlaces.isEmpty && filteredEvents.isEmpty && filteredThings.isEmpty {
-                        Text("No matches").foregroundStyle(.tertiary)
-                    } else {
-                        VStack(alignment: .leading, spacing: 2) {
-                            ForEach(filteredFigures) { fig in
-                                Button {
-                                    image.figures.append(fig)
-                                    searchText = ""
-                                } label: {
-                                    Label(fig.name, systemImage: "person.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            ForEach(filteredPlaces) { place in
-                                Button {
-                                    image.places.append(place)
-                                    searchText = ""
-                                } label: {
-                                    Label(place.name, systemImage: "mappin")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            ForEach(filteredEvents) { evt in
-                                Button {
-                                    image.events.append(evt)
-                                    searchText = ""
-                                } label: {
-                                    Label(evt.name, systemImage: "bolt.fill")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            ForEach(filteredThings) { thg in
-                                Button {
-                                    image.things.append(thg)
-                                    searchText = ""
-                                } label: {
-                                    Label(thg.name, systemImage: "cube.box")
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                }
+                searchableLinkedSection(
+                    title: "Associated Things",
+                    items: image.things,
+                    icon: "cube.box",
+                    searchText: $thingSearchText,
+                    allEntities: things,
+                    alreadyLinked: image.things,
+                    onLink: { image.things.append($0) },
+                    onRemove: { thg in image.things.removeAll { $0.persistentModelID == thg.persistentModelID } }
+                )
 
                 TextField("Add tag\u{2026}", text: $tagInputText)
                     .textFieldStyle(.roundedBorder)
@@ -672,12 +589,69 @@ struct ImageDetailContent: View {
         }
     }
 
-    private func linkedSection(title: String, icon: String, @ViewBuilder content: () -> some View) -> some View {
+    @ViewBuilder
+    private func searchableLinkedSection<Entity: PersistentModel>(
+        title: String,
+        items: [Entity],
+        icon: String,
+        searchText: Binding<String>,
+        allEntities: [Entity],
+        alreadyLinked: [Entity],
+        onLink: @escaping (Entity) -> Void,
+        onRemove: @escaping (Entity) -> Void
+    ) -> some View where Entity: AnyObject {
         VStack(alignment: .leading, spacing: 6) {
-            Text(title)
+            Text("\(title) (\(items.count))")
                 .font(.subheadline.bold())
-            content()
+            if items.isEmpty {
+                Text("None")
+                    .foregroundStyle(.tertiary)
+            }
+            ForEach(items, id: \.persistentModelID) { entity in
+                HStack {
+                    Label(entityName(entity), systemImage: icon)
+                    Spacer()
+                    Button("Remove") {
+                        onRemove(entity)
+                        try? modelContext.save()
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.red)
+                }
+            }
+            TextField("Search \(title.lowercased())...", text: searchText)
+                .textFieldStyle(.roundedBorder)
+            if !searchText.wrappedValue.isEmpty {
+                let filtered = allEntities.filter { e in
+                    !alreadyLinked.contains(where: { $0.persistentModelID == e.persistentModelID })
+                        && entityName(e).localizedCaseInsensitiveContains(searchText.wrappedValue)
+                }
+                if filtered.isEmpty {
+                    Text("No matches")
+                        .foregroundStyle(.tertiary)
+                        .font(.caption)
+                } else {
+                    ForEach(filtered, id: \.persistentModelID) { entity in
+                        Button {
+                            onLink(entity)
+                            searchText.wrappedValue = ""
+                        } label: {
+                            Label(entityName(entity), systemImage: icon)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
         }
+    }
+
+    private func entityName(_ entity: some Any) -> String {
+        if let fig = entity as? Figure { return fig.name }
+        if let place = entity as? Place { return place.name }
+        if let evt = entity as? Event { return evt.name }
+        if let thing = entity as? Thing { return thing.name }
+        return "?"
     }
 }
 

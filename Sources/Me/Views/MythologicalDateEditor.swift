@@ -11,9 +11,11 @@ struct MythologicalDateEditor: View {
     var body: some View {
         Section(label) {
             TextField("Year", text: $startYearString, prompt: Text("e.g. 5500"))
+                .textFieldStyle(.roundedBorder)
                 .onChange(of: startYearString) { _, _ in applyYears() }
 
             TextField("To (optional)", text: $endYearString, prompt: Text("leave blank for single year"))
+                .textFieldStyle(.roundedBorder)
                 .onChange(of: endYearString) { _, _ in applyYears() }
 
             Picker("BCE/CE", selection: $isBCE) {
@@ -41,6 +43,7 @@ struct MythologicalDateEditor: View {
             Toggle("Approximate", isOn: $date.isApproximate)
 
             TextField("Period", text: $date.era, prompt: Text("e.g. Pre-Sumerian"))
+            .textFieldStyle(.roundedBorder)
 
             HStack {
                 Text("Preview:")
