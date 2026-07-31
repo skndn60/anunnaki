@@ -361,6 +361,13 @@ struct ThingDetailView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var showAddAttribution = false
+    @State private var editingAttribution: ContentAttribution?
+
+    private var thingAttributions: [ContentAttribution] {
+        let all: [ContentAttribution] = modelContext.fetchAll()
+        return all.filter { $0.thing == thing }
+    }
 
     var body: some View {
         ScrollView {
@@ -378,14 +385,27 @@ struct ThingDetailView: View {
                 }
 
                 if !thing.thingDescription.isEmpty || thing.richDescription != nil {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Description")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        RichTextDisplay(richData: thing.richDescription, fallback: thing.thingDescription)
-                            .font(.body)
+                    AttributedPropertyView(attributions: thingAttributions, propertyName: "thingDescription") {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Description")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            RichTextDisplay(richData: thing.richDescription, fallback: thing.thingDescription)
+                                .font(.body)
+                        }
                     }
                 }
+
+                // Attributions
+                ContentAttributionSection(
+                    attributions: thingAttributions,
+                    onAdd: { showAddAttribution = true },
+                    onEdit: { editingAttribution = $0 },
+                    onDelete: { attribution in
+                        modelContext.delete(attribution)
+                        try? modelContext.save()
+                    }
+                )
 
                 if !thing.source.isEmpty {
                     VStack(alignment: .leading, spacing: 4) {
@@ -501,6 +521,12 @@ struct ThingDetailView: View {
             .padding(20)
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .sheet(isPresented: $showAddAttribution) {
+            ContentAttributionFormView(attribution: nil)
+        }
+        .sheet(item: $editingAttribution) { attribution in
+            ContentAttributionFormView(attribution: attribution)
         }
     }
 }

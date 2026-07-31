@@ -26,6 +26,8 @@ struct EventDetailView: View {
     @State private var editFigureAssociation: EventFigureAssociation?
     @State private var editDisplayName = ""
     @State private var showEditDisplayName = false
+    @State private var showAddAttribution = false
+    @State private var editingAttribution: ContentAttribution?
 
     private var figureDisplayList: [(figure: Figure, displayName: String?, association: EventFigureAssociation?)] {
         var result: [(figure: Figure, displayName: String?, association: EventFigureAssociation?)] = event.involvedFigures.map { (figure: $0, displayName: nil, association: nil) }
@@ -108,15 +110,28 @@ struct EventDetailView: View {
 
                 // Description
                 if !event.eventDescription.isEmpty || event.richDescription != nil {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Description")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        RichTextDisplay(richData: event.richDescription, fallback: event.eventDescription)
-                            .font(.body)
+                    AttributedPropertyView(attributions: eventAttributions, propertyName: "eventDescription") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Description")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            RichTextDisplay(richData: event.richDescription, fallback: event.eventDescription)
+                                .font(.body)
+                        }
                     }
                 }
+
+                // Attributions
+                ContentAttributionSection(
+                    attributions: eventAttributions,
+                    onAdd: { showAddAttribution = true },
+                    onEdit: { editingAttribution = $0 },
+                    onDelete: { attribution in
+                        modelContext.delete(attribution)
+                        try? modelContext.save()
+                    }
+                )
 
                 // Involved Figures
                 Divider()
@@ -418,9 +433,20 @@ struct EventDetailView: View {
                 .frame(width: 320)
             }
         }
+        .sheet(isPresented: $showAddAttribution) {
+            ContentAttributionFormView(attribution: nil)
+        }
+        .sheet(item: $editingAttribution) { attribution in
+            ContentAttributionFormView(attribution: attribution)
+        }
     }
 
     private var eventIcon: String { event.eventType?.icon ?? "bolt" }
+
+    private var eventAttributions: [ContentAttribution] {
+        let all: [ContentAttribution] = modelContext.fetchAll()
+        return all.filter { $0.event == event }
+    }
 
     private var eventCitations: [Citation] {
         let all: [Citation] = modelContext.fetchAll()

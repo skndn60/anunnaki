@@ -46,6 +46,9 @@ package final class Place {
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.place)
     package var stickies: [StickyNote] = []
 
+    @Relationship(inverse: \ContentAttribution.place)
+    package var contentAttributions: [ContentAttribution]? = nil
+
     package init(
         name: String = "",
         placeType: PlaceType? = nil,

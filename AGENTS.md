@@ -373,6 +373,7 @@ This is faster and more reliable than reading code to simulate the layout engine
 - [ ] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView):**
   - FigureFormView is done (3-step: Identity → Details → Source & Tags), using WizardContainer
   - Replicate WizardContainer + step split for the other 3 form views
+- [ ] **FigureGroup kind/type system:** Add `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`) to FigureGroup model. Sidebar dispatches to dedicated views based on kind. Migrate Book of Enoch, Sumerian King List, The Flood from hardcoded History sidebar items into FigureGroup entries. Subgroups (archangels, igigi, commanders) handled by tags/categories on members within a single Enoch group, not separate groups. Keeps data management centralized in FigureGroup while preserving specialized rendering.
 - [x] **FigureGroup system — completed 2026-07-28:**
   - `FigureGroupListView.swift` — Full list-detail split (HStack) with `@AppStorage` resizable divider, add/edit/delete via sheet, empty state, figure members list in detail panel with sidebar navigation
   - `FigureGroupFormView.swift` — 2-step wizard (Identity → Figures) using `WizardContainer`, SF Symbol icon field, ColorPicker, searchable figure selector with multi-select
@@ -380,6 +381,13 @@ This is faster and more reliable than reading code to simulate the layout engine
   - `NavigationCoordinator.swift` — Added `pendingGroupID`, `navigateToGroup(_:)`, `consumePendingGroupID()`, and `.figureGroups` branch in `navigateToHistory`
   - `FigureDetailView.swift` — "Groups" section with membership list, `+` button → `GroupLinkPopover` (searchable group list + optional note), follows PlaceLinkPopover pattern
   - `Migration.swift` — `ensureDefaultFigureGroups` creates 6 default groups (Divine Council, Sumerian Pantheon, Akkadian/East Semitic, Book of Enoch, Primordial Beings, SKL Kings) with orderIndex, wired into ContentView.swift launch sequence
+- [x] **ContentAttribution model — completed 2026-07-30:**
+  - `ContentAttribution` model with `figure/place/event/thing`, `source`, `propertyName`, `url`, `contentPreview`, `note` (all properties optional for migration safety)
+  - `ContentAttributionFormView` — add/edit form with search-based entity selectors, property picker (context-sensitive per entity type), source picker, URL field
+  - `ContentAttributionSection` — displays source → property → preview → note per row with edit pencil and delete buttons
+  - All 4 detail views (Figure, Place, Event, Thing) — filtered attributions, add/edit/delete sheets
+  - `AttributedPropertyView` — reusable inline source badge displayed below descriptions and titles when matching `ContentAttribution` exists (book icon + source name + clickable link)
+  - `url: String?` on model for linking back to the source, displayed as clickable hostname in section and badge
 
 ### 2026-07-27 — SKL events, figures & places enrichment; JSON decode debugging
 
@@ -603,3 +611,34 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/Me/Views/DescriptionEditorSheet.swift` — Added
 - `Sources/MeCore/Models/EventFigureAssociation.swift` — Added
 - `Sources/MeCore/Models/EventFigureRoleType.swift` — Added
+
+### 2026-07-30 — ContentAttribution model + inline source badges
+
+**Problem:** Users had no way to track which source contributed which part of an entity's description, or to link back to the original source URL. The model and form existed but were not fully wired (no edit, no URL, no inline display).
+
+**Changes made:**
+
+- `ContentAttribution.swift` — Added `url: String?` for linking back to the source, all properties optional for migration safety
+- `ContentAttributionFormView.swift` — Added editable URL field (`.textContentType(.URL)`), edit support in `ContentAttributionSection` (pencil button per row), clickable hostname link in section rows
+- `AttributedPropertyView.swift` — New reusable inline badge: when a matching `ContentAttribution` exists for the displayed property, shows a small teal book icon + source name + clickable link below the property value
+- `FigureDetailView.swift` — Wired : description and title with `AttributedPropertyView`; added `editingAttribution` state + edit sheet via `.sheet(item:)`
+- `PlaceDetailView.swift` — Same for description
+- `EventDetailView.swift` — Same for description
+- `ThingListView.swift` (ThingDetailView) — Same for description
+
+**Key design decisions:**
+- `AttributedPropertyView` uses `@ViewBuilder` to wrap any content — generic reusable component
+- Badge only appears when a `ContentAttribution` with matching `propertyName` exists
+- Domain in the `LazyVGrid` left un-attributed (grid layout doesn't support wrapping cleanly)
+- `.sheet(item: $editingAttribution)` pattern matches the existing `showAddAttribution` pattern
+
+**New files:**
+- `Sources/Me/Views/AttributedPropertyView.swift` — Added
+
+**Relevant files:**
+- `Sources/MeCore/Models/ContentAttribution.swift` — Updated (`url: String?`)
+- `Sources/Me/Views/ContentAttributionFormView.swift` — Updated (URL field, edit pencil, hostname link)
+- `Sources/Me/Views/FigureDetailView.swift` — Updated (wired for title + description)
+- `Sources/Me/Views/PlaceDetailView.swift` — Updated
+- `Sources/Me/Views/EventDetailView.swift` — Updated
+- `Sources/Me/Views/ThingListView.swift` — Updated

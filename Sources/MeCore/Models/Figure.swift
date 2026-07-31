@@ -66,6 +66,9 @@ package final class Figure {
     @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.figure)
     package var groupAssociations: [FigureGroupAssociation] = []
 
+    @Relationship(inverse: \ContentAttribution.figure)
+    package var contentAttributions: [ContentAttribution]? = nil
+
     package enum Gender: String, Codable, CaseIterable, Hashable {
         case male = "Male"
         case female = "Female"

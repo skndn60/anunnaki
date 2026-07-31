@@ -21,6 +21,8 @@ struct PlaceDetailView: View {
     @State private var eventSearchText = ""
     @State private var selectedEventForLink: Event?
     @State private var selectedEventRole: EventPlaceRoleType?
+    @State private var showAddAttribution = false
+    @State private var editingAttribution: ContentAttribution?
 
     private var relatedEvents: [Event] {
         place.eventAssociations.compactMap { $0.event }
@@ -97,9 +99,6 @@ struct PlaceDetailView: View {
 
                 // Properties
                 LazyVGrid(columns: [GridItem(.fixed(110), alignment: .trailing), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 10) {
-                    if !place.modernLocation.isEmpty {
-                        PropertyRow(label: "Modern Location", value: place.modernLocation)
-                    }
                     if !place.source.isEmpty {
                         PropertyRow(label: "Source", value: place.source)
                     }
@@ -107,18 +106,42 @@ struct PlaceDetailView: View {
                         PropertyRow(label: "Founded", value: founded.displayLabel)
                     }
                 }
-
-                // Description
-                if !place.placeDescription.isEmpty || place.richDescription != nil {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Description")
+                if !place.modernLocation.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Modern Location")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        RichTextDisplay(richData: place.richDescription, fallback: place.placeDescription)
-                            .font(.body)
+                        Text(place.modernLocation)
+                            .font(.callout)
+                            .textSelection(.enabled)
                     }
                 }
+
+                // Description
+                if !place.placeDescription.isEmpty || place.richDescription != nil {
+                    AttributedPropertyView(attributions: placeAttributions, propertyName: "placeDescription") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Description")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            RichTextDisplay(richData: place.richDescription, fallback: place.placeDescription)
+                                .font(.body)
+                        }
+                    }
+                }
+
+                // Attributions
+                ContentAttributionSection(
+                    attributions: placeAttributions,
+                    onAdd: { showAddAttribution = true },
+                    onEdit: { editingAttribution = $0 },
+                    onDelete: { attribution in
+                        modelContext.delete(attribution)
+                        try? modelContext.save()
+                    }
+                )
 
                 // Alternate Names
                 Divider()
@@ -433,9 +456,20 @@ struct PlaceDetailView: View {
         .sheet(isPresented: $showAddAltSheet) {
             AlternateNameFormView(alternateName: nil, preSelectedPlace: place)
         }
+        .sheet(isPresented: $showAddAttribution) {
+            ContentAttributionFormView(attribution: nil)
+        }
+        .sheet(item: $editingAttribution) { attribution in
+            ContentAttributionFormView(attribution: attribution)
+        }
     }
 
     private var placeIcon: String { place.placeType?.icon ?? "mappin" }
+
+    private var placeAttributions: [ContentAttribution] {
+        let all: [ContentAttribution] = modelContext.fetchAll()
+        return all.filter { $0.place == place }
+    }
 
     private var placeCitations: [Citation] {
         let all: [Citation] = modelContext.fetchAll()

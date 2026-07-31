@@ -847,6 +847,7 @@ package struct SeedData {
                     context.insert(tag)
                 }
             }
+
         }
 
         // Save
@@ -882,6 +883,7 @@ package struct SeedData {
         for entity in (try? context.fetch(FetchDescriptor<ThingFigureAssociation>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<Tag>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<DataVersion>())) ?? [] { context.delete(entity) }
+        for entity in (try? context.fetch(FetchDescriptor<ContentAttribution>())) ?? [] { context.delete(entity) }
         for entity in (try? context.fetch(FetchDescriptor<Thing>())) ?? [] { context.delete(entity) }
     }
 

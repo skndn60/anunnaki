@@ -26,6 +26,9 @@ package final class Thing {
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.thing)
     package var stickies: [StickyNote] = []
 
+    @Relationship(inverse: \ContentAttribution.thing)
+    package var contentAttributions: [ContentAttribution]? = nil
+
     package var thingType: ThingType?
 
     package init(name: String = "", thingDescription: String = "", source: String = "") {

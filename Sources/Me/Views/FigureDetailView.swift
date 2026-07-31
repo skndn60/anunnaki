@@ -36,6 +36,8 @@ struct FigureDetailView: View {
     @State private var editingCommentsID: PersistentIdentifier?
     @State private var editingCommentsText: String = ""
     @State private var filterText = ""
+    @State private var showAddAttribution = false
+    @State private var editingAttribution: ContentAttribution?
     init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil, backLabel: String? = nil, onBack: (() -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
@@ -58,6 +60,11 @@ struct FigureDetailView: View {
             $0.categoryEnum == .knownGap &&
             ($0.parentType == nil || $0.parentType == typeName)
         }
+    }
+
+    private var figureAttributions: [ContentAttribution] {
+        let all: [ContentAttribution] = modelContext.fetchAll()
+        return all.filter { $0.figure == figure }
     }
 
     private var figureCitations: [Citation] {
@@ -125,9 +132,11 @@ struct FigureDetailView: View {
                         .foregroundStyle(.tertiary)
                 }
                 if !figure.title.isEmpty {
-                    Text(figure.title)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    AttributedPropertyView(attributions: figureAttributions, propertyName: "title") {
+                        Text(figure.title)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
 
@@ -446,15 +455,28 @@ struct FigureDetailView: View {
 
                 // Description
                 if !figure.figureDescription.isEmpty || figure.richDescription != nil {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Description")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        RichTextDisplay(richData: figure.richDescription, fallback: figure.figureDescription)
-                            .font(.body)
+                    AttributedPropertyView(attributions: figureAttributions, propertyName: "figureDescription") {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Description")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            RichTextDisplay(richData: figure.richDescription, fallback: figure.figureDescription)
+                                .font(.body)
+                        }
                     }
                 }
+
+                // Attributions
+                ContentAttributionSection(
+                    attributions: figureAttributions,
+                    onAdd: { showAddAttribution = true },
+                    onEdit: { editingAttribution = $0 },
+                    onDelete: { attribution in
+                        modelContext.delete(attribution)
+                        try? modelContext.save()
+                    }
+                )
 
                 // Alternate Names
                 alternateNamesView
@@ -760,6 +782,12 @@ struct FigureDetailView: View {
         }
         .sheet(isPresented: $showAddCitation) {
             AddCitationSheet(figure: self.figure)
+        }
+        .sheet(isPresented: $showAddAttribution) {
+            ContentAttributionFormView(attribution: nil)
+        }
+        .sheet(item: $editingAttribution) { attribution in
+            ContentAttributionFormView(attribution: attribution)
         }
     }
 

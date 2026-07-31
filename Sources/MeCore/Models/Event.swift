@@ -43,6 +43,9 @@ package final class Event {
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.event)
     package var stickies: [StickyNote] = []
 
+    @Relationship(inverse: \ContentAttribution.event)
+    package var contentAttributions: [ContentAttribution]? = nil
+
     package init(
         name: String = "",
         eventType: EventType? = nil,
