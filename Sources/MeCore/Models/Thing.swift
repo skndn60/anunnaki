@@ -26,6 +26,10 @@ package final class Thing {
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.thing)
     package var stickies: [StickyNote] = []
 
+    /// Groups this thing belongs to
+    @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.thing)
+    package var groupAssociations: [FigureGroupAssociation] = []
+
     @Relationship(inverse: \ContentAttribution.thing)
     package var contentAttributions: [ContentAttribution]? = nil
 

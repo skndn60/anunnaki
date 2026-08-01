@@ -43,6 +43,10 @@ package final class Event {
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.event)
     package var stickies: [StickyNote] = []
 
+    /// Groups this event belongs to
+    @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.event)
+    package var groupAssociations: [FigureGroupAssociation] = []
+
     @Relationship(inverse: \ContentAttribution.event)
     package var contentAttributions: [ContentAttribution]? = nil
 

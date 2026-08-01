@@ -409,6 +409,19 @@ struct PlaceDetailView: View {
                     }
                 }
 
+                // Groups
+                EntityGroupsSection(
+                    entityType: .place,
+                    associations: place.groupAssociations,
+                    onCreateAssociation: { group in
+                        let assoc = FigureGroupAssociation(place: place)
+                        modelContext.insert(assoc)
+                        place.groupAssociations.append(assoc)
+                        group.figureAssociations.append(assoc)
+                        try? modelContext.save()
+                    }
+                )
+
                 // Citations
                 if !placeCitations.isEmpty {
                     Divider()

@@ -1374,7 +1374,8 @@ private struct GroupLinkPopover: View {
     @State private var note: String = ""
 
     private var allGroups: [FigureGroup] {
-        (try? modelContext.fetch(FetchDescriptor<FigureGroup>(sortBy: [SortDescriptor(\.orderIndex)]))) ?? []
+        let all: [FigureGroup] = (try? modelContext.fetch(FetchDescriptor<FigureGroup>(sortBy: [SortDescriptor(\.orderIndex)]))) ?? []
+        return all.filter { $0.entityType == .figure }
     }
 
     private var filteredGroups: [FigureGroup] {

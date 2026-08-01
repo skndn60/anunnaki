@@ -1030,17 +1030,18 @@ package struct Migration {
         let count = (try? context.fetchCount(FetchDescriptor<FigureGroup>())) ?? 0
         guard count == 0 else { return }
 
-        let defaults: [(name: String, description: String, icon: String, colorHex: String, filter: GroupMemberFilter?)] = [
-            ("Divine Council", "Gods who sit in council, including the Anunnaki and Igigi", "person.3.fill", "5856D6", nil),
-            ("Sumerian Pantheon", "Major gods and goddesses of the Sumerian pantheon", "star.fill", "FF9500",
-             GroupMemberFilter(figureTypeNames: ["Deity"], domainKeywords: ["Sumerian"])),
-            ("Akkadian/East Semitic", "Gods of the Akkadian, Assyrian, and Babylonian traditions", "star.circle.fill", "FF3B30",
-             GroupMemberFilter(domainKeywords: ["Akkadian", "Babylonian", "Assyrian"])),
-            ("Book of Enoch", "Figures from the Book of Enoch tradition", "book.fill", "FBBF24", nil),
+        let defaults: [(name: String, description: String, icon: String, colorHex: String, filter: GroupMemberFilter?, kind: GroupKind)] = [
+            ("Divine Council", "Gods who sit in council, including the Anunnaki and Igigi", "person.3", "5856D6", nil, .standard),
+            ("Sumerian Pantheon", "Major gods and goddesses of the Sumerian pantheon", "star", "FF9500",
+             GroupMemberFilter(figureTypeNames: ["Deity"], domainKeywords: ["Sumerian"]), .standard),
+            ("Akkadian/East Semitic", "Gods of the Akkadian, Assyrian, and Babylonian traditions", "star.circle", "FF3B30",
+             GroupMemberFilter(domainKeywords: ["Akkadian", "Babylonian", "Assyrian"]), .standard),
+            ("Book of Enoch", "Figures from the Book of Enoch tradition", "book", "FBBF24", nil, .enoch),
             ("Primordial Beings", "Primordial entities from before the gods", "sparkles", "8E8E93",
-             GroupMemberFilter(figureTypeNames: ["Primordial"])),
+             GroupMemberFilter(figureTypeNames: ["Primordial"]), .standard),
             ("SKL Kings", "Kings of the Sumerian King List", "list.star", "007AFF",
-             GroupMemberFilter(domainKeywords: ["Kingship"])),
+             GroupMemberFilter(domainKeywords: ["Kingship"]), .skl),
+            ("The Flood", "The Mesopotamian flood narrative (Atra-Hasis, Epic of Gilgamesh)", "drop", "34C759", nil, .flood),
         ]
 
         for (idx, config) in defaults.enumerated() {
@@ -1056,7 +1057,52 @@ package struct Migration {
                 icon: config.icon,
                 colorHex: config.colorHex,
                 orderIndex: idx,
-                memberFilter: filterJSON
+                memberFilter: filterJSON,
+                kind: config.kind
+            )
+            context.insert(group)
+        }
+        try? context.save()
+    }
+
+    package static func ensureFigureGroupKinds(context: ModelContext) {
+        let allGroups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+
+        let kindByName: [String: GroupKind] = [
+            "Book of Enoch": .enoch,
+            "SKL Kings": .skl,
+            "Sumerian King List": .skl,
+            "The Flood": .flood,
+        ]
+
+        let iconByName: [String: String] = [
+            "Divine Council": "person.3",
+            "Sumerian Pantheon": "star",
+            "Akkadian/East Semitic": "star.circle",
+            "Book of Enoch": "book",
+            "SKL Kings": "list.star",
+            "Sumerian King List": "list.star",
+            "The Flood": "drop",
+        ]
+
+        for group in allGroups {
+            if let kind = kindByName[group.name], group.kind != kind {
+                group.kind = kind
+            }
+            if let icon = iconByName[group.name], group.icon != icon {
+                group.icon = icon
+            }
+        }
+
+        if !allGroups.contains(where: { $0.name == "The Flood" }) {
+            let maxOrder = allGroups.map(\.orderIndex).max() ?? 0
+            let group = FigureGroup(
+                name: "The Flood",
+                groupDescription: "The Mesopotamian flood narrative (Atra-Hasis, Epic of Gilgamesh)",
+                icon: "drop",
+                colorHex: "34C759",
+                orderIndex: maxOrder + 1,
+                kind: .flood
             )
             context.insert(group)
         }

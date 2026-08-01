@@ -373,7 +373,24 @@ This is faster and more reliable than reading code to simulate the layout engine
 - [ ] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView):**
   - FigureFormView is done (3-step: Identity → Details → Source & Tags), using WizardContainer
   - Replicate WizardContainer + step split for the other 3 form views
-- [ ] **FigureGroup kind/type system:** Add `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`) to FigureGroup model. Sidebar dispatches to dedicated views based on kind. Migrate Book of Enoch, Sumerian King List, The Flood from hardcoded History sidebar items into FigureGroup entries. Subgroups (archangels, igigi, commanders) handled by tags/categories on members within a single Enoch group, not separate groups. Keeps data management centralized in FigureGroup while preserving specialized rendering.
+- [x] **FigureGroup kind/type system — completed 2026-07-31:**
+  - `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`) on `FigureGroup` as `kindRawValue: String?` (migration-safe) + computed `kind`. Default `.standard`.
+  - Sidebar "Groups" section driven by `@Query(sort: \FigureGroup.orderIndex)` — new groups appear in the sidebar with zero code.
+  - `SidebarSelection` type (`.item(NavigationItem)` / `.group(PersistentIdentifier)`) replaces `selectedItem: NavigationItem?` in `NavigationCoordinator`. Selection binding in `ContentView` updated; `navigateToGroup` now sets `.group(id)`.
+  - `ContentView.groupDestination(group:)` dispatches by kind: `.standard` → `FigureGroupCollectionView`, `.enoch` → `EnochView`, `.skl` → `SumerianKingListView`, `.flood` → ComingSoon.
+  - Removed hardcoded `.enoch`, `.sumerianKingList`, `.flood` cases from `NavigationItem` (icon/section/destination) — they are now data-driven groups.
+  - `FigureGroupCollectionView.swift` — New clean read-oriented collection view (header, search, adaptive member grid → figure detail) for `.standard` groups. Group editing stays in Figure Group manager.
+  - `FigureGroupFormView` — Added Kind picker to Identity step.
+  - `Migration.ensureFigureGroupKinds` — Backfills kinds by group name (Book of Enoch→.enoch, SKL Kings/Sumerian King List→.skl, The Flood→.flood) and creates "The Flood" group if missing. `ensureDefaultFigureGroups` now includes kinds + a 7th "The Flood" default. Wired into ContentView launch after `ensureDefaultFigureGroups`.
+  - **Subgroups added 2026-07-31:** `FigureGroup.parentGroup` / `subgroups` relationship (`.nullify` delete rule, migration-safe), `directFigures` computed property, parent picker in `FigureGroupFormView` (cycle-safe `setParent`), manager list shows subgroup indicator, sidebar shows top-level published groups only, collection view is a unified expandable outline mixing figures + subgroups (recursive `FigureGroupTreeNode`, `MixedItem` enum) with a stateless ancestor breadcrumb trail (derived from `parentGroup` chain) for navigating back up. Navigation between levels uses `navigateToGroup(recordHistory: false)` — no shared-history pollution.
+- [x] **Group collection view: inline detail panel + place members — completed 2026-08-01:** Folded into the Generic EntityGroup system. `EntityGroupCollectionView` now has an inline 320pt detail panel (Edit/Delete per type, EnochView pattern) and groups hold places/events/things via `entityType`.
+- [x] **Generic EntityGroup system (Option A) — completed 2026-08-01:** See session log 2026-08-01. Implemented WITHOUT renaming the stored model (see deviation note there). All 4 entity types get Enoch-style sidebar pages + inline detail panel + per-type bulk-add/sync filters. Note: no default place/event/thing groups are auto-created — users build them via the Groups manager (avoided sidebar clutter); the existing `ensureDefaultFigureGroups`/`ensureFigureGroupKinds` migrations are untouched and figure-only.
+- [ ] **Free-form text blocks in groups (book/story pages):** Let users interleave prose between members/subgroups so a group reads like a book chapter ("create a Story"). Today a group has only one free-text field (`groupDescription`) rendered at the top; members are an alphabetized list. Plan:
+  - New `@Model GroupTextBlock`: `group` (cascade), `title: String`, `text: String`, `richText: Data?` (optional, migration-safe; reuse `RichTextEditor`/`RichTextDisplay`), `orderIndex: Int`.
+  - "Insert Text" affordance in the group — either per-position ("insert after this member/subgroup") or via a reorderable ordered spine.
+  - Collection view: `MixedItem` gains `.textBlock` case, rendered as a styled prose block between members.
+  - Design wrinkle: interleaving requires explicit ordering — members can no longer be purely alphabetized; each item needs `orderIndex` (or text anchors "after item X").
+  - Two scopes: (a) FigureGroup-first, deliverable sooner on its own; (b) fold into Generic EntityGroup as a unified "page content items" spine (text blocks + entities + subgroups in one ordered list) powering story pages for all 4 types. User leaning toward (b) but wants this concept captured regardless.
 - [x] **FigureGroup system — completed 2026-07-28:**
   - `FigureGroupListView.swift` — Full list-detail split (HStack) with `@AppStorage` resizable divider, add/edit/delete via sheet, empty state, figure members list in detail panel with sidebar navigation
   - `FigureGroupFormView.swift` — 2-step wizard (Identity → Figures) using `WizardContainer`, SF Symbol icon field, ColorPicker, searchable figure selector with multi-select
@@ -642,3 +659,123 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/Me/Views/PlaceDetailView.swift` — Updated
 - `Sources/Me/Views/EventDetailView.swift` — Updated
 - `Sources/Me/Views/ThingListView.swift` — Updated
+
+### 2026-07-31 — Data-driven sidebar groups (GroupKind system)
+
+**Goal:** Let the user create new figure groups and have them appear in the sidebar with zero programming effort. Specialized views (Book of Enoch, Sumerian King List, The Flood) become data-driven groups that dispatch to their dedicated views.
+
+**Changes made:**
+
+- `Sources/MeCore/Models/FigureGroup.swift` — Added `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`, each with `displayName`) + `kindRawValue: String?` (migration-safe) + computed `kind`. Init takes `kind: GroupKind = .standard`.
+- `Sources/Me/Views/ContentView.swift` — Added `@Query(sort: \FigureGroup.orderIndex)`; sidebar gained a data-driven "Groups" section (icon + colored label per group). All sidebar rows now tagged with new `SidebarSelection` (`.item(NavigationItem)` / `.group(PersistentIdentifier)`). Detail dispatch switched to a `switch` on `SidebarSelection`; `.group(id)` routes through `groupDestination(group:)`. Removed `.enoch`, `.sumerianKingList`, `.flood` from `NavigationItem` (icon/section/destination) — they are now groups.
+- `Sources/Me/Views/NavigationCoordinator.swift` — `selectedItem: NavigationItem?` → `selection: SidebarSelection?`. `navigateToGroup` now sets `.group(id)`. `navigateToHistory` returns to the group's dedicated view via the new selection type.
+- `Sources/Me/Views/FigureGroupCollectionView.swift` — New clean read-oriented collection view for `.standard` groups: large header (icon/name/description/count), search field, adaptive `LazyVGrid` of member cards → navigates to figure detail in sidebar.
+- `Sources/Me/Views/FigureGroupFormView.swift` — Added Kind picker to Identity step (loads/saves `group.kind`).
+- `Sources/MeCore/Store/Migration.swift` — `ensureDefaultFigureGroups` now assigns kinds + adds a 7th "The Flood" default group. New `ensureFigureGroupKinds` backfills kinds by name (Book of Enoch→.enoch, SKL Kings/Sumerian King List→.skl, The Flood→.flood) and creates "The Flood" if missing — additive, safe for existing DBs.
+
+**Key design decisions:**
+- The sidebar Groups section is fully `@Query`-driven: creating a group in the Figure Groups manager immediately shows it in the sidebar. Zero code per new `.standard` group.
+- New code is only needed for a *new kind* with a bespoke view; the three existing hardcoded History items became that migration, done once.
+- `.standard` group destination is a clean read-only collection; the management UI (bulk add/sync/edit/delete) stays under the Figure Groups item in Data.
+- `Color(hex:)` stays file-private per existing convention (duplicated in ContentView, FigureGroupFormView, FigureGroupListView, FigureGroupCollectionView).
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/FigureGroupCollectionView.swift` — Added
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift` — Updated
+- `Sources/Me/Views/ContentView.swift` — Updated
+- `Sources/Me/Views/NavigationCoordinator.swift` — Updated
+- `Sources/Me/Views/FigureGroupFormView.swift` — Updated
+- `Sources/MeCore/Store/Migration.swift` — Updated
+
+### 2026-07-31 — FigureGroup subgroups + unified expandable collection view
+
+**Goal:** Let users build "pages" like Book of Enoch from data alone — top-level group in the sidebar, subgroups for sections, figures as members — with zero programming. Follow-up to the GroupKind system.
+
+**Changes made:**
+
+- `Sources/MeCore/Models/FigureGroup.swift` — Added `parentGroup: FigureGroup?` / `subgroups: [FigureGroup]?` (`.nullify` delete rule, inverse `\FigureGroup.parentGroup`), `directFigures: [Figure]` computed property (figures directly in this group, excluding descendants' figures).
+- `Sources/Me/Views/FigureGroupFormView.swift` — Parent Group picker on Identity step, cycle-safe `setParent(_:parent:)` (removes prior parent, appends to new, excludes self + descendants).
+- `Sources/Me/Views/FigureGroupCollectionView.swift` — Rewrote the `.standard` group view as a unified expandable outline:
+  - Removed the Figures/Subgroups segmented tabs (felt artificial).
+  - Top level mixes direct figures and subgroup rows, sorted by name, via a file-level `MixedItem` enum (`.figure`/`.group`).
+  - Recursive `FigureGroupTreeNode` renders each subgroup as an expandable row (chevron toggles via `@State Set<PersistentIdentifier>`) that reveals its figures and its own subgroups inline, indented.
+  - Subgroup rows show icon, subgroup count, figure count; context menu "Open as Page" navigates into the subgroup via `coordinator.navigateToGroup(recordHistory: false)`.
+  - Stateless ancestor breadcrumb trail at top (derived from walking `parentGroup` chain) — click any ancestor to navigate back up; works at any depth, no shared-history pollution.
+  - Removed grid/list toggle; search filters across figures + subgroup names.
+- `Sources/Me/Views/FigureGroupListView.swift` — Manager rows show an indent arrow for subgroups and a folder badge for groups with children.
+- `Sources/Me/Views/ContentView.swift` — Sidebar groups section filters to top-level + published; detail lookup uses all groups so subgroups render when navigated to.
+- `AGENTS.md` — Added TODO: inline 320pt figure-detail panel + place membership for groups (to fully replicate EnochView with data alone).
+
+**Key design decisions:**
+- Sidebar shows top-level published groups only; subgroups are reached by drilling into their parent (avoids sidebar bloat). Clicking any ancestor in the trail re-renders that group as its own page.
+- Navigation between group levels uses `navigateToGroup(recordHistory: false)` — no group breadcrumbs pushed into the shared figure/place/event history trail.
+- Expansion state (`Set<PersistentIdentifier>`) lives in the collection view so it survives re-renders but resets when navigating between groups.
+- Subgroups are recursive — a subgroup can contain its own subgroups, so hierarchy depth is unlimited.
+- `MixedItem` and `FigureGroupTreeNode` are file-private in FigureGroupCollectionView.swift (tree recursion needs a shared type).
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift` — Updated
+- `Sources/Me/Views/FigureGroupCollectionView.swift` — Rewritten
+- `Sources/Me/Views/FigureGroupFormView.swift` — Updated
+- `Sources/Me/Views/FigureGroupListView.swift` — Updated
+- `AGENTS.md` — TODO updated
+
+### 2026-07-31 — Generic EntityGroup planning (Places/Events/Things groups)
+
+**Context:** User wants to replicate the "Book of Enoch" experience (curated sidebar page with subgroups + inline detail panel) for Places, Events, and Things — i.e., data-driven groups for all four entity types, no programming. This is a research-only session; nothing was built.
+
+**Findings:**
+- `FigureGroup` system spans 6 pieces across 10 files (~76 references): model + `FigureGroupAssociation` join, `FigureGroupFormView` (2-step wizard), `FigureGroupListView` manager (bulk add, sync filter, published checkbox, subgroup indicators), `FigureGroupCollectionView` (expandable outline + ancestor trail + search), sidebar + `NavigationCoordinator` wiring, `Migration.ensureDefaultFigureGroups`/`ensureFigureGroupKinds`.
+- Two design options evaluated:
+  - **Option A (generic `EntityGroup`)**: one `entityType`-parameterized model/join/views used by all 4 types. Estimated **4–5 days**. Chosen for long-term maintainability.
+  - **Option B (3 parallel copies)**: replicate the stack for Place/Event/Thing groups. Estimated **5–6 days**, more maintenance debt, but zero risk to the working FigureGroup system.
+- The inline 320pt detail panel (EnochView pattern) is a prerequisite to make any group page feel "Book of Enoch"-like; currently only opens figures in a separate window.
+
+**Decision:** Deferred to TODO. User is credit-constrained and does NOT want a half-finished refactor that leaves the tree uncompiling. Full plan written into the TODO item ("Generic EntityGroup system (Option A)") with explicit warning: must reach a compiling state in one sitting. A session that starts this must budget for the complete refactor before running low on resources.
+
+**Relevant files:**
+- `AGENTS.md` — TODO updated (Generic EntityGroup system item)
+
+### 2026-08-01 — Generic EntityGroup system implemented (Option A, all 4 types)
+
+**Goal:** Give Places, Events, and Things the same Enoch-style sidebar pages that figures have, entirely data-driven. Implemented WITHOUT renaming the stored `FigureGroup` class — the model keeps its name for migration safety; genericity comes from a new `entityType` field. The old `FigureGroupCollectionView` was replaced by `EntityGroupCollectionView` (inline 320pt detail panel included, so the previous "inline detail panel + place members" TODO is subsumed).
+
+**Changes made:**
+
+- `Sources/MeCore/Models/FigureGroup.swift`:
+  - New `GroupEntityType` enum (`.figure`/`.place`/`.event`/`.thing`) with `displayName`, `pluralName`, `sidebarHeader`, `icon`.
+  - Added `entityTypeRawValue: String?` (migration-safe) + computed `entityType` (defaults to `.figure` when nil). `init` gains `entityType: GroupEntityType = .figure`.
+  - Added `directPlaces`, `directEvents`, `directThings` computed properties (parallel to `directFigures`).
+  - `GroupMemberFilter` extended with `placeTypeNames`, `eventTypeNames`, `thingTypeNames`, `matchesPlace/matchesEvent/matchesThing`, and type-aware `summary`. Init arg order (declaration order): `figureTypeNames, domainKeywords, placeTypeNames, eventTypeNames, thingTypeNames, nameMatch`.
+- `Sources/MeCore/Models/FigureGroupAssociation.swift` — Rewritten as a polymorphic join: optional `figure`/`place`/`event`/`thing` references; `init` accepts any one.
+- `Sources/MeCore/Models/Place.swift`, `Event.swift`, `Thing.swift` — Added inverse `@Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.<type>) groupAssociations`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — NEW, replaces deleted `FigureGroupCollectionView.swift`. Type-aware unified expandable outline (recursive `EntityGroupTreeNode`, `MixedItem` mixing entities + subgroups), search, stateless ancestor breadcrumb trail, plus an inline 320pt detail panel (FigureDetailView/PlaceDetailView/EventDetailView/ThingDetailView) with Edit/Delete per type and "Open in Window" for figure/place/event (window IDs `figure-detail`, `place-quickview`, `event-quickview`; image detail via `image-detail`).
+- `Sources/Me/Views/GroupMemberItem.swift` — NEW shared enum (`.figure/.place/.event/.thing`) with `entityType`, `name`, `icon`, `color`, `subtitle`, `makeAssociation()`, `init?(association:)`.
+- `Sources/Me/Views/EntityGroupsSection.swift` — NEW reusable "Groups" section with "+" link popover, wired into `PlaceDetailView`, `EventDetailView`, `ThingListView` (ThingDetailView) alongside the existing `FigureDetailView` one.
+- `Sources/Me/Views/ContentView.swift` — Sidebar shows per-entity-type group sections (Figure Groups, Places Groups, Events Groups, Things Groups); `groupDestination` dispatches by `entityType` (`.enoch`/`.skl`/`.flood` kinds keep their dedicated views for figures, all others → `EntityGroupCollectionView`); sidebar label renamed "Figure Groups" → "Groups".
+- `Sources/Me/Views/FigureGroupFormView.swift` — "Members Are" entity-type picker in Identity step (changing it clears selected member IDs); type-aware member selection via `GroupMemberItem`; `kind` picker disabled (forced `.standard`) when `entityType != .figure`; parent group picker forces child `entityType` to match the parent.
+- `Sources/Me/Views/FigureGroupListView.swift` — Title "Figure Groups" → "Groups"; `FigureGroupDetailView` member rows now take `onOpenMember: ((GroupMemberItem) -> Void)?`; `syncMembers()` type-aware; `BulkAddMembersSheet` rewritten type-aware with a `TypePill` helper.
+- `Sources/Me/Views/FigureDetailView.swift` — `GroupLinkPopover` filters groups to `entityType == .figure` only.
+- `Sources/MeCore/Store/Migration.swift` — Sumerian Pantheon filter call reordered to match the new `GroupMemberFilter` declaration order.
+- `Tests/MeCoreTests/MeCoreTests.swift` — Schema now includes `FigureGroup`/`FigureGroupAssociation`; 6 new tests: entityType default, round-trip, nil-raw backward compatibility, filter matches place/event/thing types, direct members across types, inverse associations. 63 tests pass.
+- `AGENTS.md` — TODO items "Generic EntityGroup system (Option A)" and "inline detail panel + place members" marked done; design doc updated.
+
+**Design decisions:**
+- **No model rename.** `FigureGroup`/`FigureGroupAssociation` keep their names; `entityTypeRawValue` is a nullable new attribute defaulting to `.figure`, so the user's existing Book of Enoch store migrates via lightweight migration with zero data work. An eventual rename is cosmetic-only.
+- **No default place/event/thing groups.** Only the existing figure defaults are seeded — avoids sidebar clutter; users build non-figure groups via the Groups manager.
+- Sidebar shows per-type headers so group pages are discoverable; subgroups still drill in via parent pages (not the sidebar).
+- `kind` applies to figures only; a non-figure group is always `.standard` (its dedicated Enoch/SKL/Flood views are figure-specific).
+- The group form's "Members Are" picker is the single source of truth for a group's type; parent/child type consistency is enforced in the form (children must match parent).
+
+**Lessons learned:**
+- Swift requires labeled `init` args in declaration order — alphabetizing `GroupMemberFilter`'s parameters broke existing call sites; keep declaration order stable and put mutable defaulted args (e.g., `nameMatch`) last.
+- `GroupEntityType` derives its `icon`/display strings once; all views consume them, so per-type rendering differences stay in one place.
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift`, `FigureGroupAssociation.swift`, `Place.swift`, `Event.swift`, `Thing.swift`
+- `Sources/Me/Views/EntityGroupCollectionView.swift` (new), `GroupMemberItem.swift` (new), `EntityGroupsSection.swift` (new), `ContentView.swift`, `FigureGroupFormView.swift`, `FigureGroupListView.swift`, `FigureDetailView.swift`, `PlaceDetailView.swift`, `EventDetailView.swift`, `ThingListView.swift`
+- `Sources/MeCore/Store/Migration.swift`
+- `Tests/MeCoreTests/MeCoreTests.swift`
+- `FigureGroups.md` (updated), `AGENTS.md` (TODO + session log)

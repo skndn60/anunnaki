@@ -22,7 +22,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case places = "Places"
     case events = "Events"
     case things = "Things"
-    case figureGroups = "Figure Groups"
+    case figureGroups = "Groups"
     case dictionary = "Dictionary"
     case relationships = "Relationships"
     case associations = "Associations"
@@ -33,10 +33,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case images = "Gallery"
     case sources = "Sources"
     case versions = "Versions"
-    case enoch = "Book of Enoch"
-    case sumerianKingList = "Sumerian King List"
     case sklMap = "Dynasty Map"
-    case flood = "The Flood"
     case theMes = "The Me’s"
 
     var icon: String {
@@ -61,10 +58,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .images: return "photo.on.rectangle.angled"
         case .sources: return "books.vertical"
         case .versions: return "clock.arrow.circlepath"
-        case .enoch: return "book.fill"
-        case .sumerianKingList: return "list.star"
         case .sklMap: return "map"
-        case .flood: return "drop"
         case .theMes: return "rectangle.3.group"
         case .things: return "cube.box"
         case .figureGroups: return "folder"
@@ -78,7 +72,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .missionControl, .importWiki, .versions: return .tools
         case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
         case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary: return .data
-        case .enoch, .sumerianKingList, .sklMap, .flood, .theMes: return .history
+        case .sklMap, .theMes: return .history
         }
     }
 
@@ -108,10 +102,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .images: ImageLibraryView()
         case .sources: SourceListView()
         case .versions: VersionListView()
-        case .enoch: EnochView()
-        case .sumerianKingList: SumerianKingListView()
         case .sklMap: SumerianDynastyMapView()
-        case .flood: ComingSoonView(title: "The Flood")
         case .theMes: ComingSoonView(title: "The Me’s")
         }
     }
@@ -124,6 +115,7 @@ struct ContentView: View {
     @State private var showRecoveryAlert = MeApp.recoveryError != nil
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
 
     var body: some View {
         if isSeeding {
@@ -151,6 +143,7 @@ struct ContentView: View {
                     Migration.ensureEventCitations(context: modelContext)
                     Migration.ensureSKLEventsAndFigures(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
+                    Migration.ensureFigureGroupKinds(context: modelContext)
 
                     try? modelContext.save()
                 }
@@ -158,30 +151,46 @@ struct ContentView: View {
             }
         } else {
             NavigationSplitView {
-                List(selection: $coordinator.selectedItem) {
+                List(selection: $coordinator.selection) {
                     Section("Overview") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .overview }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
+                                .tag(SidebarSelection.item(item))
                         }
                     }
                     Section("Tools") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .tools }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
+                                .tag(SidebarSelection.item(item))
                         }
                     }
                     Section("Visualizations") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .visualizations }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
+                                .tag(SidebarSelection.item(item))
                         }
                     }
                     Section("History") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .history }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
+                                .tag(SidebarSelection.item(item))
+                        }
+                    }
+                    ForEach(GroupEntityType.allCases, id: \.self) { type in
+                        let typeGroups = allFigureGroups.filter { $0.isPublished && $0.parentGroup == nil && $0.entityType == type }
+                        if !typeGroups.isEmpty {
+                            Section(type.sidebarHeader) {
+                                ForEach(typeGroups) { group in
+                                    Label(group.name, systemImage: group.icon)
+                                        .tag(SidebarSelection.group(group.persistentModelID))
+                                }
+                            }
                         }
                     }
                     Section("Data") {
                         ForEach(NavigationItem.allCases.filter { $0.section == .data }, id: \.self) { item in
                             Label(item.rawValue, systemImage: item.icon)
+                                .tag(SidebarSelection.item(item))
                         }
                     }
                 }
@@ -192,37 +201,44 @@ struct ContentView: View {
                 if !globalSearchText.isEmpty {
                     GlobalSearchView(searchText: globalSearchText, onNavigateTo: { item in
                         globalSearchText = ""
-                        coordinator.selectedItem = item
+                        coordinator.selection = .item(item)
                     })
-                } else if coordinator.selectedItem == .dashboard {
-                    DashboardView(onNavigateTo: { coordinator.selectedItem = $0 })
-                } else if coordinator.selectedItem == .networkGraph {
-                    NetworkGraphView(coordinator: coordinator)
-                } else if let selectedItem = coordinator.selectedItem {
-                    if selectedItem == .figures {
-                        FigureListView(coordinator: coordinator)
-                    } else if selectedItem == .places {
-                        PlaceListView(coordinator: coordinator)
-                    } else if selectedItem == .events {
-                        EventListView(coordinator: coordinator)
-                    } else if selectedItem == .things {
-                        ThingListView(coordinator: coordinator)
-                    } else if selectedItem == .figureGroups {
-                        FigureGroupListView(coordinator: coordinator)
-                    } else if selectedItem == .dictionary {
-                        DictionaryListView(coordinator: coordinator)
-                    } else if selectedItem == .enoch {
-                        EnochView(coordinator: coordinator)
-                    } else if selectedItem == .sumerianKingList {
-                        SumerianKingListView(coordinator: coordinator)
-                    } else if selectedItem == .sklMap {
-                        SumerianDynastyMapView(coordinator: coordinator)
-                    } else if selectedItem == .lineage {
-                        LineageTreeView(coordinator: coordinator)
-                    } else if selectedItem == .query {
-                        QueryView(coordinator: coordinator)
-                    } else {
-                        selectedItem.destination
+                } else if let selection = coordinator.selection {
+                    switch selection {
+                    case .group(let id):
+                        if let group = allFigureGroups.first(where: { $0.persistentModelID == id }) {
+                            groupDestination(group: group)
+                        } else {
+                            Text("Select a view from the sidebar")
+                                .font(.title2)
+                                .foregroundStyle(.secondary)
+                        }
+                    case .item(let selectedItem):
+                        if selectedItem == .dashboard {
+                            DashboardView(onNavigateTo: { coordinator.selection = .item($0) })
+                        } else if selectedItem == .networkGraph {
+                            NetworkGraphView(coordinator: coordinator)
+                        } else if selectedItem == .figures {
+                            FigureListView(coordinator: coordinator)
+                        } else if selectedItem == .places {
+                            PlaceListView(coordinator: coordinator)
+                        } else if selectedItem == .events {
+                            EventListView(coordinator: coordinator)
+                        } else if selectedItem == .things {
+                            ThingListView(coordinator: coordinator)
+                        } else if selectedItem == .figureGroups {
+                            FigureGroupListView(coordinator: coordinator)
+                        } else if selectedItem == .dictionary {
+                            DictionaryListView(coordinator: coordinator)
+                        } else if selectedItem == .sklMap {
+                            SumerianDynastyMapView(coordinator: coordinator)
+                        } else if selectedItem == .lineage {
+                            LineageTreeView(coordinator: coordinator)
+                        } else if selectedItem == .query {
+                            QueryView(coordinator: coordinator)
+                        } else {
+                            selectedItem.destination
+                        }
                     }
                 } else {
                     Text("Select a view from the sidebar")
@@ -291,5 +307,51 @@ struct ComingSoonView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+extension ContentView {
+    @ViewBuilder
+    private func groupDestination(group: FigureGroup) -> some View {
+        switch group.kind {
+        case .standard:
+            EntityGroupCollectionView(group: group, coordinator: coordinator)
+        case .enoch:
+            if group.entityType == .figure {
+                EnochView(coordinator: coordinator)
+            } else {
+                EntityGroupCollectionView(group: group, coordinator: coordinator)
+            }
+        case .skl:
+            if group.entityType == .figure {
+                SumerianKingListView(coordinator: coordinator)
+            } else {
+                EntityGroupCollectionView(group: group, coordinator: coordinator)
+            }
+        case .flood:
+            if group.entityType == .figure {
+                ComingSoonView(title: "The Flood")
+            } else {
+                EntityGroupCollectionView(group: group, coordinator: coordinator)
+            }
+        }
+    }
+}
+
+private extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let r, g, b: Double
+        switch hex.count {
+        case 6:
+            r = Double((int >> 16) & 0xFF) / 255
+            g = Double((int >> 8) & 0xFF) / 255
+            b = Double(int & 0xFF) / 255
+        default:
+            r = 0.5; g = 0.5; b = 0.5
+        }
+        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
     }
 }

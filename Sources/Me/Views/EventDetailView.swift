@@ -405,6 +405,19 @@ struct EventDetailView: View {
                     }
                 }
 
+                // Groups
+                EntityGroupsSection(
+                    entityType: .event,
+                    associations: event.groupAssociations,
+                    onCreateAssociation: { group in
+                        let assoc = FigureGroupAssociation(event: event)
+                        modelContext.insert(assoc)
+                        event.groupAssociations.append(assoc)
+                        group.figureAssociations.append(assoc)
+                        try? modelContext.save()
+                    }
+                )
+
                 Spacer()
             }
             .padding(20)

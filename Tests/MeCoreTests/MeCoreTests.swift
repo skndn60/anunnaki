@@ -20,7 +20,8 @@ final class MeCoreTests: XCTestCase {
             ThingPlaceAssociation.self, ThingPlaceRoleType.self,
             ThingEventAssociation.self, ThingEventRoleType.self,
             Agent.self, CollectedDatum.self, BlindSpot.self,
-            BlockedSource.self, DictionaryEntry.self
+            BlockedSource.self, DictionaryEntry.self,
+            FigureGroup.self, FigureGroupAssociation.self
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         do {
@@ -1221,5 +1222,139 @@ final class MeCoreTests: XCTestCase {
             XCTFail("Expected noMatch, got \(result)")
             return
         }
+    }
+
+    func testFigureGroupEntityTypeDefaultsToFigure() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Council")
+        context.insert(group)
+        try? context.save()
+        XCTAssertEqual(group.entityType, .figure)
+        XCTAssertEqual(group.entityTypeRawValue, "figure")
+    }
+
+    func testFigureGroupEntityTypeBackwardsCompatibleNil() {
+        let group = FigureGroup(name: "Council")
+        group.entityTypeRawValue = nil
+        XCTAssertEqual(group.entityType, .figure)
+    }
+
+    func testFigureGroupEntityTypeRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Temples", entityType: .place)
+        context.insert(group)
+        try? context.save()
+        XCTAssertEqual(group.entityType, .place)
+        XCTAssertEqual(group.entityTypeRawValue, "place")
+    }
+
+    func testGroupMemberFilterMatchesPlaceType() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let templeType = PlaceType(name: "Temple", icon: "building.columns", colorHex: "5856D6")
+        let cityType = PlaceType(name: "City", icon: "building", colorHex: "8E8E93")
+        context.insert(templeType)
+        context.insert(cityType)
+        let temple = Place(name: "Ekur", placeType: templeType)
+        let city = Place(name: "Ur", placeType: cityType)
+        let untyped = Place(name: "Netherworld")
+        context.insert(temple)
+        context.insert(city)
+        context.insert(untyped)
+        try? context.save()
+
+        let filter = GroupMemberFilter(placeTypeNames: ["Temple"])
+        XCTAssertTrue(filter.matchesPlace(temple))
+        XCTAssertFalse(filter.matchesPlace(city))
+        XCTAssertFalse(filter.matchesPlace(untyped))
+    }
+
+    func testGroupMemberFilterMatchesEventType() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let battleType = EventType(name: "Battle", icon: "crossed.circles", colorHex: "FF3B30")
+        let festivalType = EventType(name: "Festival", icon: "music.note", colorHex: "FF9500")
+        context.insert(battleType)
+        context.insert(festivalType)
+        let battle = Event(name: "Battle of Lagash", eventType: battleType)
+        let festival = Event(name: "Akitu", eventType: festivalType)
+        context.insert(battle)
+        context.insert(festival)
+        try? context.save()
+
+        let filter = GroupMemberFilter(eventTypeNames: ["Battle"])
+        XCTAssertTrue(filter.matchesEvent(battle))
+        XCTAssertFalse(filter.matchesEvent(festival))
+    }
+
+    func testGroupMemberFilterMatchesThingType() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let artifactType = ThingType(name: "Artifact", icon: "cube", colorHex: "8E8E93")
+        context.insert(artifactType)
+        let artifact = Thing(name: "Tablet of Destinies")
+        artifact.thingType = artifactType
+        let plain = Thing(name: "Me")
+        context.insert(artifact)
+        context.insert(plain)
+        try? context.save()
+
+        let filter = GroupMemberFilter(thingTypeNames: ["Artifact"])
+        XCTAssertTrue(filter.matchesThing(artifact))
+        XCTAssertFalse(filter.matchesThing(plain))
+    }
+
+    func testGroupDirectMembersAcrossTypes() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Enki")
+        let place = Place(name: "Eridu")
+        let event = Event(name: "The Flood")
+        let thing = Thing(name: "Tablet")
+        context.insert(figure)
+        context.insert(place)
+        context.insert(event)
+        context.insert(thing)
+
+        let group = FigureGroup(name: "Mixed")
+        context.insert(group)
+        for assoc in [
+            FigureGroupAssociation(figure: figure),
+            FigureGroupAssociation(place: place),
+            FigureGroupAssociation(event: event),
+            FigureGroupAssociation(thing: thing)
+        ] {
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        XCTAssertEqual(group.directFigures.map(\.name), ["Enki"])
+        XCTAssertEqual(group.directPlaces.map(\.name), ["Eridu"])
+        XCTAssertEqual(group.directEvents.map(\.name), ["The Flood"])
+        XCTAssertEqual(group.directThings.map(\.name), ["Tablet"])
+        XCTAssertEqual(place.groupAssociations.count, 1)
+        XCTAssertEqual(event.groupAssociations.count, 1)
+        XCTAssertEqual(thing.groupAssociations.count, 1)
+    }
+
+    func testGroupReparentTopLevelGroupAfterSave() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let parent = FigureGroup(name: "Cities", entityType: .place)
+        let child = FigureGroup(name: "Sumerian Cities", entityType: .place)
+        context.insert(parent)
+        context.insert(child)
+        try? context.save()
+
+        XCTAssertNil(child.parentGroup)
+
+        parent.subgroups?.append(child)
+        try? context.save()
+
+        XCTAssertEqual(child.parentGroup?.persistentModelID, parent.persistentModelID)
+        XCTAssertTrue((parent.subgroups ?? []).contains { $0.persistentModelID == child.persistentModelID })
     }
 }

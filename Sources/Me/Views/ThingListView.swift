@@ -516,6 +516,19 @@ struct ThingDetailView: View {
                     onSelectImage: onSelectImage
                 )
 
+                // Groups
+                EntityGroupsSection(
+                    entityType: .thing,
+                    associations: thing.groupAssociations,
+                    onCreateAssociation: { group in
+                        let assoc = FigureGroupAssociation(thing: thing)
+                        modelContext.insert(assoc)
+                        thing.groupAssociations.append(assoc)
+                        group.figureAssociations.append(assoc)
+                        try? modelContext.save()
+                    }
+                )
+
                 Spacer()
             }
             .padding(20)

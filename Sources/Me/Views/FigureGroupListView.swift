@@ -20,7 +20,7 @@ struct FigureGroupListView: View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 HStack {
-                    Text("Figure Groups")
+                    Text("Groups")
                         .font(.title2.bold())
                     Spacer()
                     Button(action: { showingAddSheet = true }) {
@@ -38,10 +38,10 @@ struct FigureGroupListView: View {
                         Image(systemName: "folder")
                             .font(.system(size: 48))
                             .foregroundStyle(.secondary)
-                        Text("No figure groups yet")
+                        Text("No groups yet")
                             .font(.title3)
                             .foregroundStyle(.secondary)
-                        Text("Create groups to organize figures into categories like divine councils, dynasties, or pantheons.")
+                        Text("Create groups to organize figures, places, events, or things into categories like divine councils, dynasties, or pantheons.")
                             .font(.body)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
@@ -71,9 +71,26 @@ struct FigureGroupListView: View {
                         )
                         FigureGroupDetailView(
                             group: group,
-                            onSelectFigure: { figure in
-                                    coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
-                                    coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
+                            onOpenMember: { item in
+                                coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
+                                switch item.entityType {
+                                case .figure:
+                                    if let figure = item.figure {
+                                        coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
+                                    }
+                                case .place:
+                                    if let place = item.place {
+                                        coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
+                                    }
+                                case .event:
+                                    if let event = item.event {
+                                        coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
+                                    }
+                                case .thing:
+                                    if let thing = item.thing {
+                                        coordinator?.navigateToThing(thing.persistentModelID, name: thing.name, recordHistory: false)
+                                    }
+                                }
                             }
                         )
                     }
@@ -108,7 +125,9 @@ struct FigureGroupListView: View {
     private func consumePendingNavigation() {
         guard let id = coordinator?.consumePendingGroupID() else { return }
         if groups.contains(where: { $0.persistentModelID == id }) {
-            selectedGroupID = id
+            Task { @MainActor in
+                selectedGroupID = id
+            }
         }
     }
 
@@ -123,6 +142,11 @@ struct FigureGroupRow: View {
 
     var body: some View {
         HStack(spacing: 10) {
+            if group.parentGroup != nil {
+                Image(systemName: "arrow.turn.up.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
             Image(systemName: group.icon)
                 .font(.caption)
                 .foregroundStyle(Color(hex: group.colorHex))
@@ -130,6 +154,11 @@ struct FigureGroupRow: View {
             Text(group.name)
                 .fontWeight(.medium)
             Spacer()
+            if !(group.subgroups ?? []).isEmpty {
+                Image(systemName: "folder.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
             Text("\(group.figureAssociations.count)")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -142,25 +171,38 @@ struct FigureGroupRow: View {
 
 struct FigureGroupDetailView: View {
     let group: FigureGroup
-    var onSelectFigure: ((Figure) -> Void)?
+    var onOpenMember: ((GroupMemberItem) -> Void)?
     @Environment(\.modelContext) private var modelContext
     @State private var showBulkAdd = false
     @State private var showSyncConfirm = false
 
-    private var members: [FigureGroupAssociation] {
+    private var members: [GroupMemberItem] {
         group.figureAssociations
-            .sorted { ($0.figure?.name ?? "") < ($1.figure?.name ?? "") }
+            .compactMap(GroupMemberItem.init(association:))
+            .sorted { $0.name < $1.name }
     }
 
     private var allFigures: [Figure] {
         (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
     }
 
+    private var allPlaces: [Place] {
+        (try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var allEvents: [Event] {
+        (try? modelContext.fetch(FetchDescriptor<Event>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var allThings: [Thing] {
+        (try? modelContext.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // Header
-                HStack(spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
                     Image(systemName: group.icon)
                         .font(.system(size: 36))
                         .foregroundStyle(Color(hex: group.colorHex))
@@ -169,8 +211,8 @@ struct FigureGroupDetailView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(group.name)
                             .font(.title2.bold())
-                        if !group.groupDescription.isEmpty {
-                            Text(group.groupDescription)
+                        if !group.groupDescription.isEmpty || group.richDescription != nil {
+                            RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -205,6 +247,15 @@ struct FigureGroupDetailView: View {
                     }
 
                     Spacer()
+
+                    Toggle(isOn: Binding(
+                        get: { group.isPublished },
+                        set: { group.isPublished = $0; try? modelContext.save() }
+                    )) {
+                        Label("Show in sidebar", systemImage: "sidebar.left")
+                    }
+                    .toggleStyle(.checkbox)
+                    .help("Hide this group from the sidebar while keeping its data")
                 }
 
                 // Members
@@ -215,32 +266,26 @@ struct FigureGroupDetailView: View {
                         .textCase(.uppercase)
 
                     if members.isEmpty {
-                        Text("No figures in this group")
+                        Text("No \(group.entityType.pluralName.lowercased()) in this group")
                             .font(.callout)
                             .foregroundStyle(.tertiary)
                     } else {
-                        ForEach(members) { assoc in
+                        ForEach(members) { item in
                             HStack(spacing: 10) {
-                                Image(systemName: assoc.figure?.figureType?.icon ?? "person.fill")
+                                Image(systemName: item.icon)
                                     .font(.caption)
-                                    .foregroundStyle(assoc.figure?.figureType?.color ?? .gray)
+                                    .foregroundStyle(item.color)
                                     .frame(width: 16)
-                                if let figure = assoc.figure {
-                                    Button(action: { onSelectFigure?(figure) }) {
-                                        Text(figure.name)
-                                            .font(.callout)
-                                            .foregroundStyle(Color.accentColor)
-                                            .underline()
-                                    }
-                                    .buttonStyle(.plain)
-                                    .pointingHand()
-                                } else {
-                                    Text("(removed)")
+                                Button(action: { onOpenMember?(item) }) {
+                                    Text(item.name)
                                         .font(.callout)
-                                        .foregroundStyle(.tertiary)
+                                        .foregroundStyle(Color.accentColor)
+                                        .underline()
                                 }
-                                if !assoc.note.isEmpty {
-                                    Text(assoc.note)
+                                .buttonStyle(.plain)
+                                .pointingHand()
+                                if !item.subtitle.isEmpty {
+                                    Text(item.subtitle)
                                         .font(.caption)
                                         .foregroundStyle(.tertiary)
                                 }
@@ -262,17 +307,28 @@ struct FigureGroupDetailView: View {
             Button("Sync") { syncMembers() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Add all figures matching the member filter rule to this group? Existing members will be kept.")
+            Text("Add all \(group.entityType.pluralName.lowercased()) matching the member filter rule to this group? Existing members will be kept.")
         }
     }
 
     private func syncMembers() {
         guard let filter = group.decodedFilter else { return }
-        let existingIDs = Set(members.compactMap { $0.figure?.persistentModelID })
-        let toAdd = allFigures.filter { filter.matches($0) && !existingIDs.contains($0.persistentModelID) }
-        for figure in toAdd {
-            let assoc = FigureGroupAssociation(figure: figure, group: group)
+        let existingIDs = Set(members.map(\.id))
+        let items: [GroupMemberItem]
+        switch group.entityType {
+        case .figure:
+            items = allFigures.filter { filter.matches($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.figure)
+        case .place:
+            items = allPlaces.filter { filter.matchesPlace($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.place)
+        case .event:
+            items = allEvents.filter { filter.matchesEvent($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.event)
+        case .thing:
+            items = allThings.filter { filter.matchesThing($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.thing)
+        }
+        for item in items {
+            let assoc = item.makeAssociation()
             modelContext.insert(assoc)
+            group.figureAssociations.append(assoc)
         }
         try? modelContext.save()
     }
@@ -291,35 +347,68 @@ private struct BulkAddMembersSheet: View {
     @State private var showSuccess = false
 
     @Query(sort: \FigureType.name) private var figureTypes: [FigureType]
+    @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
+    @Query(sort: \EventType.name) private var eventTypes: [EventType]
+    @Query(sort: \ThingType.name) private var thingTypes: [ThingType]
 
-    private var allFigures: [Figure] {
-        (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    private var entityType: GroupEntityType { group.entityType }
+
+    private var typePills: [TypePill] {
+        switch entityType {
+        case .figure: return figureTypes.map { TypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        case .place: return placeTypes.map { TypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        case .event: return eventTypes.map { TypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        case .thing: return thingTypes.map { TypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        }
     }
 
-    private var existingFigureIDs: Set<PersistentIdentifier> {
-        Set(group.figureAssociations.compactMap { $0.figure?.persistentModelID })
+    private var allCandidates: [GroupMemberItem] {
+        switch entityType {
+        case .figure:
+            return ((try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.figure)
+        case .place:
+            return ((try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.place)
+        case .event:
+            return ((try? modelContext.fetch(FetchDescriptor<Event>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.event)
+        case .thing:
+            return ((try? modelContext.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.thing)
+        }
     }
 
-    private var matchingFigures: [Figure] {
-        let domainKeywords = domainText.split(separator: ",").map(String.init).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        let criteriaMet = allFigures.filter { figure in
+    private var existingIDs: Set<PersistentIdentifier> {
+        Set(group.figureAssociations.compactMap { assoc in
+            switch entityType {
+            case .figure: return assoc.figure?.persistentModelID
+            case .place: return assoc.place?.persistentModelID
+            case .event: return assoc.event?.persistentModelID
+            case .thing: return assoc.thing?.persistentModelID
+            }
+        })
+    }
+
+    private var domainKeywords: [String] {
+        domainText.split(separator: ",").map(String.init).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    private var matchingItems: [GroupMemberItem] {
+        let criteriaMet = allCandidates.filter { item in
             if selectedTypeNames.isEmpty && domainKeywords.isEmpty && nameSearch.isEmpty { return false }
             var matched = false
-            if let typeName = figure.figureType?.name,
-               selectedTypeNames.contains(where: { $0.localizedCaseInsensitiveCompare(typeName) == .orderedSame }) {
+            if selectedTypeNames.contains(where: { $0.localizedCaseInsensitiveCompare(item.subtitle) == .orderedSame }) {
                 matched = true
             }
             if !domainKeywords.isEmpty,
+               case .figure(let figure) = item,
                domainKeywords.contains(where: { figure.domain.localizedCaseInsensitiveContains($0) }) {
                 matched = true
             }
             if !nameSearch.isEmpty,
-               figure.name.localizedCaseInsensitiveContains(nameSearch) {
+               item.name.localizedCaseInsensitiveContains(nameSearch) {
                 matched = true
             }
             return matched
         }
-        return criteriaMet.filter { !existingFigureIDs.contains($0.persistentModelID) }
+        return criteriaMet.filter { !existingIDs.contains($0.id) }
     }
 
     private var hasActiveFilter: Bool {
@@ -336,27 +425,29 @@ private struct BulkAddMembersSheet: View {
                 VStack(spacing: 14) {
                     // Filter by type
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("By Figure Type")
+                        Text("By \(entityType.displayName) Type")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                         let columns = [GridItem(.adaptive(minimum: 140))]
                         LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
-                            ForEach(figureTypes) { type in
-                                typeFilterButton(type)
+                            ForEach(typePills) { pill in
+                                typeFilterButton(pill)
                             }
                         }
                     }
 
-                    // Filter by domain
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("By Domain Keyword")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        TextField("e.g. Sumerian, Akkadian, Kingship", text: $domainText)
-                            .textFieldStyle(.plain)
-                            .padding(8)
-                            .background(Color(.textBackgroundColor))
-                            .cornerRadius(6)
+                    // Filter by domain (figures only)
+                    if entityType == .figure {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("By Domain Keyword")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("e.g. Sumerian, Akkadian, Kingship", text: $domainText)
+                                .textFieldStyle(.plain)
+                                .padding(8)
+                                .background(Color(.textBackgroundColor))
+                                .cornerRadius(6)
+                        }
                     }
 
                     // Filter by name
@@ -375,34 +466,34 @@ private struct BulkAddMembersSheet: View {
                     if hasActiveFilter {
                         Divider()
                         HStack {
-                            Text("\(matchingFigures.count) figure(s) match and can be added")
+                            Text("\(matchingItems.count) \(entityType.pluralName.lowercased()) match and can be added")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            if !matchingFigures.isEmpty {
+                            if !matchingItems.isEmpty {
                                 Button("Add All") {
                                     addAllMatching()
                                 }
                                 .buttonStyle(.borderedProminent)
-                                .disabled(matchingFigures.isEmpty)
+                                .disabled(matchingItems.isEmpty)
                             }
                         }
 
-                        if !matchingFigures.isEmpty {
-                            List(matchingFigures.prefix(20), id: \.persistentModelID) { figure in
+                        if !matchingItems.isEmpty {
+                            List(matchingItems.prefix(20)) { item in
                                 HStack(spacing: 10) {
-                                    Image(systemName: figure.figureType?.icon ?? "person.fill")
+                                    Image(systemName: item.icon)
                                         .font(.caption)
-                                        .foregroundStyle(figure.figureType?.color ?? .gray)
+                                        .foregroundStyle(item.color)
                                         .frame(width: 16)
-                                    Text(figure.name)
+                                    Text(item.name)
                                         .font(.callout)
                                 }
                             }
                             .listStyle(.plain)
-                            .frame(height: min(CGFloat(matchingFigures.count) * 28, 200))
-                            if matchingFigures.count > 20 {
-                                Text("... and \(matchingFigures.count - 20) more")
+                            .frame(height: min(CGFloat(matchingItems.count) * 28, 200))
+                            if matchingItems.count > 20 {
+                                Text("... and \(matchingItems.count - 20) more")
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
                             }
@@ -413,7 +504,7 @@ private struct BulkAddMembersSheet: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Save as membership rule")
                                     .font(.callout)
-                                Text("Future figures matching these criteria will be auto-added when you Sync.")
+                                Text("Future \(entityType.pluralName.lowercased()) matching these criteria will be auto-added when you Sync.")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -424,7 +515,7 @@ private struct BulkAddMembersSheet: View {
                             Image(systemName: "line.3.horizontal.decrease.circle")
                                 .font(.system(size: 36))
                                 .foregroundStyle(.secondary)
-                            Text("Select filter criteria above to find figures to add.")
+                            Text("Select filter criteria above to find \(entityType.pluralName.lowercased()) to add.")
                                 .font(.callout)
                                 .foregroundStyle(.tertiary)
                                 .multilineTextAlignment(.center)
@@ -439,7 +530,7 @@ private struct BulkAddMembersSheet: View {
             Divider()
             HStack {
                 if addedCount > 0 {
-                    Text("Added \(addedCount) figure(s)")
+                    Text("Added \(addedCount) \(entityType.pluralName.lowercased())")
                         .foregroundStyle(.green)
                         .font(.callout)
                 }
@@ -453,21 +544,21 @@ private struct BulkAddMembersSheet: View {
         .alert("Members Added", isPresented: $showSuccess) {
             Button("OK") { dismiss() }
         } message: {
-            Text("\(addedCount) figure(s) were added to \"\(group.name)\".")
+            Text("\(addedCount) \(entityType.pluralName.lowercased()) were added to \"\(group.name)\".")
         }
     }
 
-    private func typeFilterButton(_ type: FigureType) -> some View {
-        let isSelected = selectedTypeNames.contains(type.name)
+    private func typeFilterButton(_ pill: TypePill) -> some View {
+        let isSelected = selectedTypeNames.contains(pill.name)
         return Button(action: {
-            if isSelected { selectedTypeNames.remove(type.name) }
-            else { selectedTypeNames.insert(type.name) }
+            if isSelected { selectedTypeNames.remove(pill.name) }
+            else { selectedTypeNames.insert(pill.name) }
         }) {
             HStack(spacing: 6) {
-                Image(systemName: type.icon)
+                Image(systemName: pill.icon)
                     .font(.caption)
-                    .foregroundStyle(type.color)
-                Text(type.name)
+                    .foregroundStyle(pill.color)
+                Text(pill.name)
                     .font(.caption)
                     .fontWeight(isSelected ? .semibold : .regular)
             }
@@ -475,34 +566,61 @@ private struct BulkAddMembersSheet: View {
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? type.color.opacity(0.15) : Color(.textBackgroundColor))
+                    .fill(isSelected ? pill.color.opacity(0.15) : Color(.textBackgroundColor))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
-                    .stroke(isSelected ? type.color : Color.gray.opacity(0.3), lineWidth: isSelected ? 1.5 : 0.5)
+                    .stroke(isSelected ? pill.color : Color.gray.opacity(0.3), lineWidth: isSelected ? 1.5 : 0.5)
             )
         }
         .buttonStyle(.plain)
     }
 
     private func addAllMatching() {
-        for figure in matchingFigures {
-            let assoc = FigureGroupAssociation(figure: figure, group: group)
+        for item in matchingItems {
+            let assoc = item.makeAssociation()
             modelContext.insert(assoc)
+            group.figureAssociations.append(assoc)
         }
         if saveAsRule && hasActiveFilter {
-            let domainKeywords = domainText.split(separator: ",").map(String.init).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-            let filter = GroupMemberFilter(
-                figureTypeNames: selectedTypeNames.isEmpty ? nil : Array(selectedTypeNames),
-                domainKeywords: domainKeywords.isEmpty ? nil : domainKeywords,
-                nameMatch: nameSearch.isEmpty ? nil : nameSearch
-            )
+            let filter: GroupMemberFilter
+            switch entityType {
+            case .figure:
+                filter = GroupMemberFilter(
+                    figureTypeNames: selectedTypeNames.isEmpty ? nil : Array(selectedTypeNames),
+                    domainKeywords: domainKeywords.isEmpty ? nil : domainKeywords,
+                    nameMatch: nameSearch.isEmpty ? nil : nameSearch
+                )
+            case .place:
+                filter = GroupMemberFilter(
+                    placeTypeNames: selectedTypeNames.isEmpty ? nil : Array(selectedTypeNames),
+                    nameMatch: nameSearch.isEmpty ? nil : nameSearch
+                )
+            case .event:
+                filter = GroupMemberFilter(
+                    eventTypeNames: selectedTypeNames.isEmpty ? nil : Array(selectedTypeNames),
+                    nameMatch: nameSearch.isEmpty ? nil : nameSearch
+                )
+            case .thing:
+                filter = GroupMemberFilter(
+                    thingTypeNames: selectedTypeNames.isEmpty ? nil : Array(selectedTypeNames),
+                    nameMatch: nameSearch.isEmpty ? nil : nameSearch
+                )
+            }
             group.decodedFilter = filter
         }
-        addedCount = matchingFigures.count
+        addedCount = matchingItems.count
         try? modelContext.save()
         showSuccess = true
     }
+}
+
+private struct TypePill: Identifiable {
+    let name: String
+    let icon: String
+    let color: Color
+
+    var id: String { name }
 }
 
 private extension Color {

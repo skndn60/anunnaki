@@ -2,6 +2,16 @@ import Foundation
 import SwiftUI
 import SwiftData
 
+enum SidebarSelection: Hashable {
+    case item(NavigationItem)
+    case group(PersistentIdentifier)
+
+    var item: NavigationItem? {
+        if case .item(let item) = self { return item }
+        return nil
+    }
+}
+
 struct NavigationBreadcrumb: Identifiable {
     let id: UUID
     let name: String
@@ -26,7 +36,7 @@ struct NavigationBreadcrumb: Identifiable {
 
 @Observable
 final class NavigationCoordinator {
-    var selectedItem: NavigationItem? = .dashboard
+    var selection: SidebarSelection? = .item(.dashboard)
     var pendingFigureID: PersistentIdentifier?
     var pendingPlaceID: PersistentIdentifier?
     var pendingEventID: PersistentIdentifier?
@@ -40,36 +50,36 @@ final class NavigationCoordinator {
     func navigateToFigure(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
         if recordHistory { pushHistory(id: id, name: name, item: .figures) }
         pendingFigureID = id
-        selectedItem = .figures
+        selection = .item(.figures)
     }
 
     func navigateToPlace(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
         if recordHistory { pushHistory(id: id, name: name, item: .places) }
         pendingPlaceID = id
-        selectedItem = .places
+        selection = .item(.places)
     }
 
     func navigateToEvent(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
         if recordHistory { pushHistory(id: id, name: name, item: .events) }
         pendingEventID = id
-        selectedItem = .events
+        selection = .item(.events)
     }
 
     func navigateToThing(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
         if recordHistory { pushHistory(id: id, name: name, item: .things) }
         pendingThingID = id
-        selectedItem = .things
+        selection = .item(.things)
     }
 
     func navigateToGroup(_ id: PersistentIdentifier, name: String = "", recordHistory: Bool = true) {
         if recordHistory { pushHistory(id: id, name: name, item: .figureGroups) }
         pendingGroupID = id
-        selectedItem = .figureGroups
+        selection = .group(id)
     }
 
     func navigateToLineageFigure(_ id: PersistentIdentifier) {
         pendingLineageFigureID = id
-        selectedItem = .lineage
+        selection = .item(.lineage)
     }
 
     func pushQueryBreadcrumb(queryText: String) {
@@ -107,9 +117,10 @@ final class NavigationCoordinator {
             if let id = entry.entityID { navigateToThing(id, recordHistory: false) }
         case .figureGroups:
             if let id = entry.entityID { navigateToGroup(id, recordHistory: false) }
-        case .lineage: selectedItem = .lineage
-        case .query: selectedItem = .query
-        default: break
+            else { selection = .item(.figureGroups) }
+        case .lineage: selection = .item(.lineage)
+        case .query: selection = .item(.query)
+        default: selection = .item(entry.item)
         }
     }
 

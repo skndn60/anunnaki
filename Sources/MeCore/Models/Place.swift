@@ -46,6 +46,10 @@ package final class Place {
     @Relationship(deleteRule: .cascade, inverse: \StickyNote.place)
     package var stickies: [StickyNote] = []
 
+    /// Groups this place belongs to
+    @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.place)
+    package var groupAssociations: [FigureGroupAssociation] = []
+
     @Relationship(inverse: \ContentAttribution.place)
     package var contentAttributions: [ContentAttribution]? = nil
 
