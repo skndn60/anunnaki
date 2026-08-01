@@ -2,30 +2,47 @@ import SwiftUI
 import SwiftData
 
 private enum MixedItem: Identifiable {
-    case figure(Figure)
-    case place(Place)
-    case event(Event)
-    case thing(Thing)
+    case figure(Figure, String?)
+    case place(Place, String?)
+    case event(Event, String?)
+    case thing(Thing, String?)
     case group(FigureGroup)
 
     var id: PersistentIdentifier {
         switch self {
-        case .figure(let entity): return entity.persistentModelID
-        case .place(let entity): return entity.persistentModelID
-        case .event(let entity): return entity.persistentModelID
-        case .thing(let entity): return entity.persistentModelID
+        case .figure(let entity, _): return entity.persistentModelID
+        case .place(let entity, _): return entity.persistentModelID
+        case .event(let entity, _): return entity.persistentModelID
+        case .thing(let entity, _): return entity.persistentModelID
         case .group(let entity): return entity.persistentModelID
         }
     }
 
     var name: String {
         switch self {
-        case .figure(let entity): return entity.name
-        case .place(let entity): return entity.name
-        case .event(let entity): return entity.name
-        case .thing(let entity): return entity.name
+        case .figure(let entity, _): return entity.name
+        case .place(let entity, _): return entity.name
+        case .event(let entity, _): return entity.name
+        case .thing(let entity, _): return entity.name
         case .group(let entity): return entity.name
         }
+    }
+
+    var alias: String? {
+        switch self {
+        case .figure(_, let alias): return alias
+        case .place(_, let alias): return alias
+        case .event(_, let alias): return alias
+        case .thing(_, let alias): return alias
+        case .group: return nil
+        }
+    }
+
+    var displayName: String {
+        if let alias, !alias.isEmpty {
+            return "\(name) as \(alias)"
+        }
+        return name
     }
 
     var canOpenInWindow: Bool {
@@ -60,10 +77,10 @@ struct EntityGroupCollectionView: View {
 
     private var directMembers: [MixedItem] {
         switch entityType {
-        case .figure: return group.directFigures.map(MixedItem.figure)
-        case .place: return group.directPlaces.map(MixedItem.place)
-        case .event: return group.directEvents.map(MixedItem.event)
-        case .thing: return group.directThings.map(MixedItem.thing)
+        case .figure: return group.directFigures.map { MixedItem.figure($0, group.displayName(for: $0.persistentModelID)) }
+        case .place: return group.directPlaces.map { MixedItem.place($0, group.displayName(for: $0.persistentModelID)) }
+        case .event: return group.directEvents.map { MixedItem.event($0, group.displayName(for: $0.persistentModelID)) }
+        case .thing: return group.directThings.map { MixedItem.thing($0, group.displayName(for: $0.persistentModelID)) }
         }
     }
 
@@ -233,9 +250,9 @@ struct EntityGroupCollectionView: View {
                 if let figure = selectedFigure {
                     FigureDetailView(
                         figure: figure,
-                        onSelectFigure: { selected in selectedMemberID = selected.persistentModelID },
-                        onSelectPlace: { place in selectedMemberID = place.persistentModelID },
-                        onSelectEvent: { event in selectedMemberID = event.persistentModelID },
+                        onSelectFigure: { selected in deferSelect(selected.persistentModelID) },
+                        onSelectPlace: { place in deferSelect(place.persistentModelID) },
+                        onSelectEvent: { event in deferSelect(event.persistentModelID) },
                         onSelectImage: { imageDetailImage = $0 }
                     )
                 } else {
@@ -247,8 +264,8 @@ struct EntityGroupCollectionView: View {
                 if let place = selectedPlace {
                     PlaceDetailView(
                         place: place,
-                        onSelectFigure: { figure in selectedMemberID = figure.persistentModelID },
-                        onSelectEvent: { event in selectedMemberID = event.persistentModelID },
+                        onSelectFigure: { figure in deferSelect(figure.persistentModelID) },
+                        onSelectEvent: { event in deferSelect(event.persistentModelID) },
                         onSelectImage: { imageDetailImage = $0 }
                     )
                 } else {
@@ -260,8 +277,8 @@ struct EntityGroupCollectionView: View {
                 if let event = selectedEvent {
                     EventDetailView(
                         event: event,
-                        onSelectFigure: { figure in selectedMemberID = figure.persistentModelID },
-                        onSelectPlace: { place in selectedMemberID = place.persistentModelID },
+                        onSelectFigure: { figure in deferSelect(figure.persistentModelID) },
+                        onSelectPlace: { place in deferSelect(place.persistentModelID) },
                         onSelectImage: { imageDetailImage = $0 }
                     )
                 } else {
@@ -317,11 +334,11 @@ struct EntityGroupCollectionView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
             Image(systemName: group.icon)
-                .font(.system(size: 44))
+                .font(.system(size: 28))
                 .foregroundStyle(Color(hex: group.colorHex))
-                .frame(width: 56, height: 56)
+                .frame(width: 40, height: 40)
                 .background(
-                    RoundedRectangle(cornerRadius: 12)
+                    RoundedRectangle(cornerRadius: 9)
                         .fill(Color(hex: group.colorHex).opacity(0.12))
                 )
             VStack(alignment: .leading, spacing: 4) {
@@ -369,18 +386,23 @@ struct EntityGroupCollectionView: View {
         .frame(maxWidth: .infinity)
     }
 
-    private func openInSidebar(_ item: MixedItem) {
-        switch item {
-        case .figure(let figure):
+    private func deferSelect(_ id: PersistentIdentifier) {
+        Task { @MainActor in
+            selectedMemberID = id
+        }
+    }
+
+    private func openInSidebar(_ item: MixedItem) {        switch item {
+        case .figure(let figure, _):
             coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
             coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name, recordHistory: false)
-        case .place(let place):
+        case .place(let place, _):
             coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
             coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
-        case .event(let event):
+        case .event(let event, _):
             coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
             coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
-        case .thing(let thing):
+        case .thing(let thing, _):
             coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
             coordinator?.navigateToThing(thing.persistentModelID, name: thing.name, recordHistory: false)
         case .group:
@@ -390,11 +412,11 @@ struct EntityGroupCollectionView: View {
 
     private func openInWindow(_ item: MixedItem) {
         switch item {
-        case .figure(let figure):
+        case .figure(let figure, _):
             openWindow(id: "figure-detail", value: figure.persistentModelID)
-        case .place(let place):
+        case .place(let place, _):
             openWindow(id: "place-quickview", value: place.persistentModelID)
-        case .event(let event):
+        case .event(let event, _):
             openWindow(id: "event-quickview", value: event.persistentModelID)
         default:
             break
@@ -403,10 +425,10 @@ struct EntityGroupCollectionView: View {
 
     private func beginEdit(_ item: MixedItem) {
         switch item {
-        case .figure(let figure): editingFigure = figure
-        case .place(let place): editingPlace = place
-        case .event(let event): editingEvent = event
-        case .thing(let thing): editingThing = thing
+        case .figure(let figure, _): editingFigure = figure
+        case .place(let place, _): editingPlace = place
+        case .event(let event, _): editingEvent = event
+        case .thing(let thing, _): editingThing = thing
         case .group: break
         }
     }
@@ -444,7 +466,7 @@ private struct GroupDescriptionDisplay: View {
     let group: FigureGroup
 
     var body: some View {
-        RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription)
+        RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription, stripForegroundColor: true)
             .font(.body)
             .foregroundStyle(.secondary)
             .fixedSize(horizontal: false, vertical: true)
@@ -463,36 +485,36 @@ private struct MemberRow: View {
 
     private var icon: String {
         switch item {
-        case .figure(let figure): return figure.figureType?.icon ?? "person.fill"
-        case .place(let place): return place.placeType?.icon ?? "mappin.and.ellipse"
-        case .event(let event): return event.eventType?.icon ?? "bolt.fill"
-        case .thing(let thing): return thing.thingType?.icon ?? "cube.box"
+        case .figure(let figure, _): return figure.figureType?.icon ?? "person.fill"
+        case .place(let place, _): return place.placeType?.icon ?? "mappin.and.ellipse"
+        case .event(let event, _): return event.eventType?.icon ?? "bolt.fill"
+        case .thing(let thing, _): return thing.thingType?.icon ?? "cube.box"
         case .group(let group): return group.icon
         }
     }
 
     private var iconColor: Color {
         switch item {
-        case .figure(let figure): return figure.figureType?.color ?? .gray
-        case .place(let place): return place.placeType?.color ?? .teal
-        case .event(let event): return event.eventType?.color ?? .orange
-        case .thing(let thing): return thing.thingType?.color ?? .purple
+        case .figure(let figure, _): return figure.figureType?.color ?? .gray
+        case .place(let place, _): return place.placeType?.color ?? .teal
+        case .event(let event, _): return event.eventType?.color ?? .orange
+        case .thing(let thing, _): return thing.thingType?.color ?? .purple
         case .group(let group): return Color(hex: group.colorHex)
         }
     }
 
     private var subtitle: String {
         switch item {
-        case .figure(let figure): return figure.figureType?.name ?? ""
-        case .place(let place): return place.placeType?.name ?? ""
-        case .event(let event): return event.eventType?.name ?? ""
-        case .thing(let thing): return thing.thingType?.name ?? ""
+        case .figure(let figure, _): return figure.figureType?.name ?? ""
+        case .place(let place, _): return place.placeType?.name ?? ""
+        case .event(let event, _): return event.eventType?.name ?? ""
+        case .thing(let thing, _): return thing.thingType?.name ?? ""
         case .group: return ""
         }
     }
 
     private var genderSymbol: String? {
-        if case .figure(let figure) = item { return figure.gender.symbol }
+        if case .figure(let figure, _) = item { return figure.gender.symbol }
         return nil
     }
 
@@ -503,7 +525,7 @@ private struct MemberRow: View {
                     .font(.caption)
                     .foregroundStyle(iconColor)
                     .frame(width: 16)
-                Text(item.name)
+                Text(item.displayName)
                     .font(.callout.weight(.medium))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
@@ -572,10 +594,10 @@ private struct EntityGroupTreeNode: View {
 
     private var directMembers: [MixedItem] {
         switch group.entityType {
-        case .figure: return group.directFigures.map(MixedItem.figure)
-        case .place: return group.directPlaces.map(MixedItem.place)
-        case .event: return group.directEvents.map(MixedItem.event)
-        case .thing: return group.directThings.map(MixedItem.thing)
+        case .figure: return group.directFigures.map { MixedItem.figure($0, group.displayName(for: $0.persistentModelID)) }
+        case .place: return group.directPlaces.map { MixedItem.place($0, group.displayName(for: $0.persistentModelID)) }
+        case .event: return group.directEvents.map { MixedItem.event($0, group.displayName(for: $0.persistentModelID)) }
+        case .thing: return group.directThings.map { MixedItem.thing($0, group.displayName(for: $0.persistentModelID)) }
         }
     }
 

@@ -277,7 +277,7 @@ struct FigureGroupDetailView: View {
                                     .foregroundStyle(item.color)
                                     .frame(width: 16)
                                 Button(action: { onOpenMember?(item) }) {
-                                    Text(item.name)
+                                    Text(item.displayName)
                                         .font(.callout)
                                         .foregroundStyle(Color.accentColor)
                                         .underline()
@@ -317,13 +317,13 @@ struct FigureGroupDetailView: View {
         let items: [GroupMemberItem]
         switch group.entityType {
         case .figure:
-            items = allFigures.filter { filter.matches($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.figure)
+            items = allFigures.filter { filter.matches($0) && !existingIDs.contains($0.persistentModelID) }.map { GroupMemberItem.figure($0, nil) }
         case .place:
-            items = allPlaces.filter { filter.matchesPlace($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.place)
+            items = allPlaces.filter { filter.matchesPlace($0) && !existingIDs.contains($0.persistentModelID) }.map { GroupMemberItem.place($0, nil) }
         case .event:
-            items = allEvents.filter { filter.matchesEvent($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.event)
+            items = allEvents.filter { filter.matchesEvent($0) && !existingIDs.contains($0.persistentModelID) }.map { GroupMemberItem.event($0, nil) }
         case .thing:
-            items = allThings.filter { filter.matchesThing($0) && !existingIDs.contains($0.persistentModelID) }.map(GroupMemberItem.thing)
+            items = allThings.filter { filter.matchesThing($0) && !existingIDs.contains($0.persistentModelID) }.map { GroupMemberItem.thing($0, nil) }
         }
         for item in items {
             let assoc = item.makeAssociation()
@@ -365,13 +365,13 @@ private struct BulkAddMembersSheet: View {
     private var allCandidates: [GroupMemberItem] {
         switch entityType {
         case .figure:
-            return ((try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.figure)
+            return ((try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []).map { GroupMemberItem.figure($0, nil) }
         case .place:
-            return ((try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.place)
+            return ((try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []).map { GroupMemberItem.place($0, nil) }
         case .event:
-            return ((try? modelContext.fetch(FetchDescriptor<Event>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.event)
+            return ((try? modelContext.fetch(FetchDescriptor<Event>(sortBy: [SortDescriptor(\.name)]))) ?? []).map { GroupMemberItem.event($0, nil) }
         case .thing:
-            return ((try? modelContext.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []).map(GroupMemberItem.thing)
+            return ((try? modelContext.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []).map { GroupMemberItem.thing($0, nil) }
         }
     }
 
@@ -398,12 +398,12 @@ private struct BulkAddMembersSheet: View {
                 matched = true
             }
             if !domainKeywords.isEmpty,
-               case .figure(let figure) = item,
+               case .figure(let figure, _) = item,
                domainKeywords.contains(where: { figure.domain.localizedCaseInsensitiveContains($0) }) {
                 matched = true
             }
             if !nameSearch.isEmpty,
-               item.name.localizedCaseInsensitiveContains(nameSearch) {
+               item.matches(nameSearch) {
                 matched = true
             }
             return matched

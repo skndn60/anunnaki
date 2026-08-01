@@ -96,6 +96,11 @@ struct GlobalSearchView: View {
                                             .frame(width: 10, height: 10)
                                         Text(figure.name)
                                             .font(.body)
+                                        if let alias = figure.matchedAlternateName(for: searchText) {
+                                            Text("as \(alias)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                         Spacer()
                                         Text(figure.figureType?.name ?? "")
                                             .font(.caption)

@@ -437,7 +437,7 @@ struct ThingDetailView: View {
                         AssociationRow(
                             icon: assoc.roleType?.icon ?? "person",
                             color: assoc.roleType?.color ?? .blue,
-                            label: assoc.figure?.name ?? "?",
+                            label: assoc.displayName.map { "\(assoc.figure?.name ?? "?") as \($0)" } ?? (assoc.figure?.name ?? "?"),
                             role: assoc.roleType?.name,
                             source: assoc.source
                         ) {
@@ -634,7 +634,7 @@ struct AddThingFigureAssociationForm: View {
     @Query(sort: \Figure.name) private var figures: [Figure]
     @Query(sort: \ThingFigureRoleType.name) private var roleTypes: [ThingFigureRoleType]
 
-    @State private var selectedFigure: Figure?
+    @State private var selectedFigure: FigureSearchResult?
     @State private var selectedRoleType: ThingFigureRoleType?
     @State private var source = ""
     @State private var searchText = ""
@@ -650,23 +650,21 @@ struct AddThingFigureAssociationForm: View {
                     TextField("Search figures\u{2026}", text: $searchText)
                         .textFieldStyle(.roundedBorder)
 
-                    let filtered = figures.filter {
-                        searchText.isEmpty || $0.name.localizedCaseInsensitiveContains(searchText)
-                    }
+                    let filtered = searchFigures(figures, query: searchText)
                     ScrollView {
                         VStack(alignment: .leading, spacing: 4) {
-                            ForEach(filtered) { figure in
-                                Button(action: { selectedFigure = figure }) {
+                            ForEach(filtered) { result in
+                                Button(action: { selectedFigure = result }) {
                                     HStack(spacing: 8) {
-                                        if selectedFigure?.persistentModelID == figure.persistentModelID {
+                                        if selectedFigure?.figure.persistentModelID == result.figure.persistentModelID {
                                             Image(systemName: "checkmark")
                                                 .foregroundColor(.accentColor)
                                         } else {
                                             Color.clear.frame(width: 14, height: 14)
                                         }
-                                        Text("\(figure.gender.symbol) \(figure.name)")
+                                        Text("\(result.figure.gender.symbol) \(result.displayName)")
                                             .foregroundStyle(.primary)
-                                        if let type = figure.figureType?.name {
+                                        if let type = result.figure.figureType?.name {
                                             Text(type)
                                                 .font(.caption)
                                                 .foregroundStyle(.tertiary)
@@ -713,12 +711,13 @@ struct AddThingFigureAssociationForm: View {
     }
 
     private func save() {
-        guard let figure = selectedFigure else { return }
+        guard let figure = selectedFigure?.figure else { return }
         let assoc = ThingFigureAssociation(
             thing: thing,
             figure: figure,
             roleType: selectedRoleType,
-            source: source
+            source: source,
+            displayName: selectedFigure?.matchedAlternateName
         )
         modelContext.insert(assoc)
         dismiss()

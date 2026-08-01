@@ -159,7 +159,7 @@ struct AssociationsView: View {
                 List(figurePlaceAssocs) { assoc in
                     HStack(spacing: 10) {
                         Circle().fill(assoc.figure?.figureType?.color ?? .gray).frame(width: 8, height: 8)
-                        Text(assoc.figure?.name ?? "?").fontWeight(.medium)
+                        Text(assoc.displayName.map { "\(assoc.figure?.name ?? "?") as \($0)" } ?? (assoc.figure?.name ?? "?")).fontWeight(.medium)
                         Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
                             .background(RoundedRectangle(cornerRadius: 3).fill(Color.teal.opacity(0.12)))
                         Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
@@ -286,7 +286,7 @@ struct AddFigurePlaceAssociationForm: View {
     @Query private var places: [Place]
     @Query(sort: \FigurePlaceRoleType.name) private var roleTypes: [FigurePlaceRoleType]
 
-    @State private var selectedFigure: Figure?
+    @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var source = ""
@@ -294,12 +294,10 @@ struct AddFigurePlaceAssociationForm: View {
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
 
-    private var filteredFigures: [Figure] {
+    private var filteredFigures: [FigureSearchResult] {
         guard !figureSearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (selectedFigure == nil || fig.persistentModelID != selectedFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(figureSearchText)
-        }
+        let figs = figures.filter { selectedFigure == nil || $0.persistentModelID != selectedFigure!.figure.persistentModelID }
+        return searchFigures(figs, query: figureSearchText)
     }
 
     private var filteredPlaces: [Place] {
@@ -319,7 +317,7 @@ struct AddFigurePlaceAssociationForm: View {
                 Section("Figure") {
                     if let fig = selectedFigure {
                         HStack(spacing: 6) {
-                            Text("\(fig.gender.symbol) \(fig.name)")
+                            Text("\(fig.figure.gender.symbol) \(fig.displayName)")
                                 .fontWeight(.medium)
                             Spacer()
                             Button { selectedFigure = nil } label: {
@@ -352,12 +350,12 @@ struct AddFigurePlaceAssociationForm: View {
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 6)
                                 } else {
-                                    ForEach(filteredFigures) { fig in
+                                    ForEach(filteredFigures, id: \.id) { result in
                                         Button {
-                                            selectedFigure = fig
+                                            selectedFigure = result
                                             figureSearchText = ""
                                         } label: {
-                                            Text("\(fig.gender.symbol) \(fig.name)")
+                                            Text("\(result.figure.gender.symbol) \(result.displayName)")
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -461,7 +459,7 @@ struct AddFigurePlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = FigurePlaceAssociation(figure: selectedFigure, place: selectedPlace, roleType: selectedRoleType, source: source, comments: comments.isEmpty ? nil : comments)
+        let assoc = FigurePlaceAssociation(figure: selectedFigure?.figure, place: selectedPlace, roleType: selectedRoleType, source: source, comments: comments.isEmpty ? nil : comments, displayName: selectedFigure?.matchedAlternateName)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -684,7 +682,7 @@ struct EditFigurePlaceAssociationForm: View {
     @Query(sort: \FigurePlaceRoleType.name) private var roleTypes: [FigurePlaceRoleType]
     let assoc: FigurePlaceAssociation
 
-    @State private var selectedFigure: Figure?
+    @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var source = ""
@@ -692,12 +690,10 @@ struct EditFigurePlaceAssociationForm: View {
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
 
-    private var filteredFigures: [Figure] {
+    private var filteredFigures: [FigureSearchResult] {
         guard !figureSearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (selectedFigure == nil || fig.persistentModelID != selectedFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(figureSearchText)
-        }
+        let figs = figures.filter { selectedFigure == nil || $0.persistentModelID != selectedFigure!.figure.persistentModelID }
+        return searchFigures(figs, query: figureSearchText)
     }
 
     private var filteredPlaces: [Place] {
@@ -717,7 +713,7 @@ struct EditFigurePlaceAssociationForm: View {
                 Section("Figure") {
                     if let fig = selectedFigure {
                         HStack(spacing: 6) {
-                            Text("\(fig.gender.symbol) \(fig.name)")
+                            Text("\(fig.figure.gender.symbol) \(fig.displayName)")
                                 .fontWeight(.medium)
                             Spacer()
                             Button { selectedFigure = nil } label: {
@@ -750,12 +746,12 @@ struct EditFigurePlaceAssociationForm: View {
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 6)
                                 } else {
-                                    ForEach(filteredFigures) { fig in
+                                    ForEach(filteredFigures, id: \.id) { result in
                                         Button {
-                                            selectedFigure = fig
+                                            selectedFigure = result
                                             figureSearchText = ""
                                         } label: {
-                                            Text("\(fig.gender.symbol) \(fig.name)")
+                                            Text("\(result.figure.gender.symbol) \(result.displayName)")
                                                 .padding(.horizontal, 8)
                                                 .padding(.vertical, 4)
                                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -857,7 +853,9 @@ struct EditFigurePlaceAssociationForm: View {
         }
         .frame(width: 450, height: 560)
         .onAppear {
-            selectedFigure = assoc.figure
+            if let fig = assoc.figure {
+                selectedFigure = FigureSearchResult(figure: fig, matchedAlternateName: assoc.displayName)
+            }
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
             source = assoc.source
@@ -866,7 +864,8 @@ struct EditFigurePlaceAssociationForm: View {
     }
 
     private func save() {
-        assoc.figure = selectedFigure
+        assoc.figure = selectedFigure?.figure
+        assoc.displayName = selectedFigure?.matchedAlternateName
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
         assoc.source = source
@@ -1023,28 +1022,24 @@ struct EditRelationshipForm: View {
     @Query private var figures: [Figure]
     let relationship: Relationship
 
-    @State private var fromFigure: Figure?
-    @State private var toFigure: Figure?
+    @State private var fromFigure: FigureSearchResult?
+    @State private var toFigure: FigureSearchResult?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
     @Query private var allRelationTypes: [RelationshipType]
     @State private var selectedType: RelationshipType?
     @State private var source = ""
 
-    private var filteredFromFigures: [Figure] {
+    private var filteredFromFigures: [FigureSearchResult] {
         guard !fromSearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (fromFigure == nil || fig.persistentModelID != fromFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(fromSearchText)
-        }
+        let figs = figures.filter { fromFigure == nil || $0.persistentModelID != fromFigure!.figure.persistentModelID }
+        return searchFigures(figs, query: fromSearchText)
     }
 
-    private var filteredToFigures: [Figure] {
+    private var filteredToFigures: [FigureSearchResult] {
         guard !toSearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (toFigure == nil || fig.persistentModelID != toFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(toSearchText)
-        }
+        let figs = figures.filter { toFigure == nil || $0.persistentModelID != toFigure!.figure.persistentModelID }
+        return searchFigures(figs, query: toSearchText)
     }
 
     var body: some View {
@@ -1088,8 +1083,12 @@ struct EditRelationshipForm: View {
         }
         .frame(width: 450, height: 520)
         .onAppear {
-            fromFigure = relationship.fromFigure
-            toFigure = relationship.toFigure
+            if let fig = relationship.fromFigure {
+                fromFigure = FigureSearchResult(figure: fig, matchedAlternateName: nil)
+            }
+            if let fig = relationship.toFigure {
+                toFigure = FigureSearchResult(figure: fig, matchedAlternateName: nil)
+            }
             selectedType = relationship.relationshipType
             source = relationship.source
         }
@@ -1097,15 +1096,15 @@ struct EditRelationshipForm: View {
     }
 
     private func save() {
-        relationship.fromFigure = fromFigure
-        relationship.toFigure = toFigure
+        relationship.fromFigure = fromFigure?.figure
+        relationship.toFigure = toFigure?.figure
         relationship.relationshipType = selectedType
         relationship.source = source
         dismiss()
     }
 
     private func inferType() {
-        switch fromFigure?.gender {
+        switch fromFigure?.figure.gender {
         case .female: selectedType = allRelationTypes.first(where: { $0.name == "Mother" })
         case .male: selectedType = allRelationTypes.first(where: { $0.name == "Father" })
         default: break

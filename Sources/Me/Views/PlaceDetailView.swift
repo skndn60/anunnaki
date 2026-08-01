@@ -15,7 +15,7 @@ struct PlaceDetailView: View {
     @State private var showAddAltSheet = false
     @State private var showFigureLinkPopover = false
     @State private var figureSearchText = ""
-    @State private var selectedFigureForLink: Figure?
+    @State private var selectedFigureForLink: FigureSearchResult?
     @State private var selectedFigureRole: FigurePlaceRoleType?
     @State private var showEventLinkPopover = false
     @State private var eventSearchText = ""
@@ -326,6 +326,13 @@ struct PlaceDetailView: View {
                     return result
                 }()
 
+                let figureDisplayNames: [PersistentIdentifier: String] = Dictionary(
+                    uniqueKeysWithValues: place.figureAssociations.compactMap { assoc in
+                        guard let fig = assoc.figure, let name = assoc.displayName, !name.isEmpty else { return nil }
+                        return (fig.persistentModelID, name)
+                    }
+                )
+
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
@@ -364,7 +371,7 @@ struct PlaceDetailView: View {
                                     HStack(spacing: 3) {
                                         Text(figure.gender.symbol)
                                             .font(.system(size: 9))
-                                        Text(figure.name)
+                                        Text(figureDisplayNames[figure.persistentModelID].map { "\(figure.name) as \($0)" } ?? figure.name)
                                             .font(.caption)
                                     }
                                     .padding(.horizontal, 6)
@@ -541,7 +548,7 @@ struct FlowLayout: Layout {
 private struct PlaceFigureLinkPopover: View {
     let place: Place
     @Binding var searchText: String
-    @Binding var selectedFigure: Figure?
+    @Binding var selectedFigure: FigureSearchResult?
     @Binding var selectedRole: FigurePlaceRoleType?
     @Binding var isPresented: Bool
 
@@ -553,11 +560,10 @@ private struct PlaceFigureLinkPopover: View {
         (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
     }
 
-    private var filteredFigures: [Figure] {
+    private var filteredFigures: [FigureSearchResult] {
         let linked = Set(place.figureAssociations.compactMap { $0.figure?.persistentModelID })
         let available = allFigures.filter { !linked.contains($0.persistentModelID) }
-        if searchText.isEmpty { return available }
-        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return searchFigures(available, query: searchText)
     }
 
     var body: some View {
@@ -570,17 +576,17 @@ private struct PlaceFigureLinkPopover: View {
                     .foregroundStyle(.tertiary)
                     .padding(.vertical, 20)
             } else {
-                List(filteredFigures, id: \.persistentModelID) { figure in
-                    Button(action: { selectedFigure = figure }) {
+                List(filteredFigures) { result in
+                    Button(action: { selectedFigure = result }) {
                         HStack(spacing: 10) {
-                            Text(figure.gender.symbol)
+                            Text(result.figure.gender.symbol)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 14)
-                            Text(figure.name)
+                            Text(result.displayName)
                                 .font(.body)
                             Spacer()
-                            if selectedFigure?.persistentModelID == figure.persistentModelID {
+                            if selectedFigure?.figure.persistentModelID == result.figure.persistentModelID {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(Color.accentColor)
                             }
@@ -643,8 +649,9 @@ private struct PlaceFigureLinkPopover: View {
     }
 
     private func createAssociation() {
-        guard let figure = selectedFigure, let role = selectedRole else { return }
+        guard let figure = selectedFigure?.figure, let role = selectedRole else { return }
         let assoc = FigurePlaceAssociation(comments: comments.isEmpty ? nil : comments)
+        assoc.displayName = selectedFigure?.matchedAlternateName
         modelContext.insert(assoc)
         place.figureAssociations.append(assoc)
         figure.placeAssociations.append(assoc)

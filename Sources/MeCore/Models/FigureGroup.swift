@@ -107,6 +107,15 @@ package final class FigureGroup {
         figureAssociations.compactMap { $0.thing }
     }
 
+    package func displayName(for id: PersistentIdentifier) -> String? {
+        figureAssociations.first { assoc in
+            assoc.figure?.persistentModelID == id
+                || assoc.place?.persistentModelID == id
+                || assoc.event?.persistentModelID == id
+                || assoc.thing?.persistentModelID == id
+        }?.displayName
+    }
+
     package var decodedFilter: GroupMemberFilter? {
         get {
             guard let data = memberFilter?.data(using: .utf8) else { return nil }

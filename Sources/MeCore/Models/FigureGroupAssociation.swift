@@ -9,6 +9,8 @@ package final class FigureGroupAssociation {
     package var thing: Thing?
     package var group: FigureGroup?
     package var note: String
+    /// Override the display name for this member in this group's context (e.g. "Noah" for Ziusudra)
+    package var displayName: String?
 
     package init(
         figure: Figure? = nil,
@@ -16,7 +18,8 @@ package final class FigureGroupAssociation {
         event: Event? = nil,
         thing: Thing? = nil,
         group: FigureGroup? = nil,
-        note: String = ""
+        note: String = "",
+        displayName: String? = nil
     ) {
         self.figure = figure
         self.place = place
@@ -24,5 +27,6 @@ package final class FigureGroupAssociation {
         self.thing = thing
         self.group = group
         self.note = note
+        self.displayName = displayName
     }
 }

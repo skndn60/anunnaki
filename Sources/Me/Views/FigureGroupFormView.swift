@@ -16,7 +16,7 @@ struct FigureGroupFormView: View {
     @State private var isPublished = true
     @State private var parentGroupID: PersistentIdentifier?
     @State private var searchText = ""
-    @State private var selectedMemberIDs: Set<PersistentIdentifier> = []
+    @State private var selectedMemberAliases: [PersistentIdentifier: String] = [:]
 
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
@@ -56,19 +56,19 @@ struct FigureGroupFormView: View {
 
     private var allCandidates: [GroupMemberItem] {
         switch entityType {
-        case .figure: return allFigures.map(GroupMemberItem.figure)
-        case .place: return allPlaces.map(GroupMemberItem.place)
-        case .event: return allEvents.map(GroupMemberItem.event)
-        case .thing: return allThings.map(GroupMemberItem.thing)
+        case .figure: return allFigures.map { GroupMemberItem.figure($0, nil) }
+        case .place: return allPlaces.map { GroupMemberItem.place($0, nil) }
+        case .event: return allEvents.map { GroupMemberItem.event($0, nil) }
+        case .thing: return allThings.map { GroupMemberItem.thing($0, nil) }
         }
     }
 
     private var filteredCandidates: [GroupMemberItem] {
-        searchText.isEmpty ? allCandidates : allCandidates.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        searchText.isEmpty ? allCandidates : allCandidates.filter { $0.matches(searchText) }
     }
 
     private var memberCountLabel: String {
-        "\(selectedMemberIDs.count) \(entityType.pluralName.lowercased()) selected"
+        "\(selectedMemberAliases.count) \(entityType.pluralName.lowercased()) selected"
     }
 
     @Query(sort: \FigureGroup.orderIndex) private var allGroups: [FigureGroup]
@@ -186,7 +186,7 @@ struct FigureGroupFormView: View {
         .onChange(of: entityType) { _, newType in
             if newType != .figure { kind = .standard }
             if newType != loadedEntityType {
-                selectedMemberIDs.removeAll()
+                selectedMemberAliases.removeAll()
             }
         }
     }
@@ -202,7 +202,7 @@ struct FigureGroupFormView: View {
             }
             .padding(.horizontal)
 
-            Text(selectedMemberIDs.isEmpty ? "No \(entityType.pluralName.lowercased()) selected" : memberCountLabel)
+            Text(selectedMemberAliases.isEmpty ? "No \(entityType.pluralName.lowercased()) selected" : memberCountLabel)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -212,7 +212,7 @@ struct FigureGroupFormView: View {
                         .font(.caption)
                         .foregroundStyle(candidate.color)
                         .frame(width: 16)
-                    Text(candidate.name)
+                    Text(candidate.displayName(matching: searchText))
                         .font(.body)
                     if !candidate.subtitle.isEmpty {
                         Text(candidate.subtitle)
@@ -220,17 +220,17 @@ struct FigureGroupFormView: View {
                             .foregroundStyle(.secondary)
                     }
                     Spacer()
-                    if selectedMemberIDs.contains(candidate.id) {
+                    if selectedMemberAliases[candidate.id] != nil {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundStyle(Color.accentColor)
                     }
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    if selectedMemberIDs.contains(candidate.id) {
-                        selectedMemberIDs.remove(candidate.id)
+                    if selectedMemberAliases[candidate.id] != nil {
+                        selectedMemberAliases.removeValue(forKey: candidate.id)
                     } else {
-                        selectedMemberIDs.insert(candidate.id)
+                        selectedMemberAliases[candidate.id] = candidate.matchedAlternateName(for: searchText) ?? ""
                     }
                 }
             }
@@ -250,11 +250,14 @@ struct FigureGroupFormView: View {
         entityType = group.entityType
         isPublished = group.isPublished
         parentGroupID = group.parentGroup?.persistentModelID
-        selectedMemberIDs = Set(group.figureAssociations.compactMap { memberID($0, of: entityType) })
+        selectedMemberAliases = Dictionary(uniqueKeysWithValues: group.figureAssociations.compactMap { assoc in
+            guard let id = memberID(assoc, of: entityType) else { return nil }
+            return (id, assoc.displayName ?? "")
+        })
     }
 
     private func save() {
-        let newMemberIDs = selectedMemberIDs
+        let newMemberAliases = selectedMemberAliases
         let newParent = allGroups.first { $0.persistentModelID == parentGroupID }
         let effectiveKind: GroupKind = entityType == .figure ? kind : .standard
 
@@ -268,14 +271,14 @@ struct FigureGroupFormView: View {
             group.entityType = entityType
             group.isPublished = isPublished
             setParent(group, parent: newParent)
-            syncMembers(group: group, newIDs: newMemberIDs)
+            syncMembers(group: group, newAliases: newMemberAliases)
         } else {
             let newGroup = FigureGroup(name: name, groupDescription: groupDescription, icon: icon, colorHex: colorHex, kind: effectiveKind, entityType: entityType)
             newGroup.richDescription = richDescription
             newGroup.isPublished = isPublished
             modelContext.insert(newGroup)
             setParent(newGroup, parent: newParent)
-            syncMembers(group: newGroup, newIDs: newMemberIDs)
+            syncMembers(group: newGroup, newAliases: newMemberAliases)
         }
         try? modelContext.save()
         showSuccessAlert = true
@@ -306,9 +309,10 @@ struct FigureGroupFormView: View {
         allCandidates.first { $0.id == id }
     }
 
-    private func syncMembers(group: FigureGroup, newIDs: Set<PersistentIdentifier>) {
+    private func syncMembers(group: FigureGroup, newAliases: [PersistentIdentifier: String]) {
         let existing = group.figureAssociations
         let existingIDs = Set(existing.compactMap { memberID($0, of: entityType) })
+        let newIDs = Set(newAliases.keys)
 
         let toRemove = existing.filter { assoc in
             guard let id = memberID(assoc, of: entityType) else { return false }
@@ -322,6 +326,7 @@ struct FigureGroupFormView: View {
         for id in toAdd {
             guard let candidate = candidate(for: id) else { continue }
             let assoc = makeAssociation(for: candidate)
+            assoc.displayName = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
             modelContext.insert(assoc)
             group.figureAssociations.append(assoc)
         }

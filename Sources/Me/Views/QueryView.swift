@@ -998,7 +998,7 @@ private struct ThingDossierView: View {
             if !thing.figureAssociations.isEmpty {
                 label("Associated Figures")
                 ForEach(thing.figureAssociations) { assoc in
-                    Text("\(assoc.figure?.name ?? "?") (\(assoc.roleType?.name ?? "related"))")
+                    Text("\(assoc.displayName.map { "\(assoc.figure?.name ?? "?") as \($0)" } ?? (assoc.figure?.name ?? "?")) (\(assoc.roleType?.name ?? "related"))")
                         .font(.subheadline)
                 }
             }

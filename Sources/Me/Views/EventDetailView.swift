@@ -494,6 +494,7 @@ private struct EventFigureLinkPopover: View {
 
     @Environment(\.modelContext) private var modelContext
     @State private var selectedFigure: Figure?
+    @State private var selectedFigureResult: FigureSearchResult?
     @State private var selectedDisplayName: String = ""
     @State private var isCustomName = false
     @State private var customName = ""
@@ -512,10 +513,9 @@ private struct EventFigureLinkPopover: View {
         return ids
     }
 
-    private var filteredFigures: [Figure] {
+    private var filteredFigures: [FigureSearchResult] {
         let available = allFigures.filter { !linkedFigureIDs.contains($0.persistentModelID) }
-        if searchText.isEmpty { return available }
-        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) || $0.alternateNames.contains { $0.name.localizedCaseInsensitiveContains(searchText) } }
+        return searchFigures(available, query: searchText)
     }
 
     private var displayNameOptions: [String] {
@@ -535,7 +535,7 @@ private struct EventFigureLinkPopover: View {
                         .frame(width: 28, height: 28)
                         .overlay(Text(figure.gender.symbol).font(.system(size: 12)))
                     VStack(alignment: .leading, spacing: 1) {
-                        Text(figure.name).font(.callout).fontWeight(.medium)
+                        Text(selectedFigureResult?.displayName ?? figure.name).font(.callout).fontWeight(.medium)
                         if !figure.title.isEmpty {
                             Text(figure.title).font(.caption).foregroundStyle(.secondary)
                         }
@@ -586,14 +586,14 @@ private struct EventFigureLinkPopover: View {
                         .foregroundStyle(.tertiary)
                         .padding(.vertical, 20)
                 } else {
-                    List(filteredFigures, id: \.persistentModelID) { figure in
-                        Button(action: { selectFigure(figure) }) {
+                    List(filteredFigures) { result in
+                        Button(action: { selectFigure(result.figure) }) {
                             HStack(spacing: 10) {
-                                Text(figure.gender.symbol)
+                                Text(result.figure.gender.symbol)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                                     .frame(width: 14)
-                                Text(figure.name)
+                                Text(result.displayName)
                                     .font(.body)
                                 Spacer()
                             }
@@ -617,7 +617,9 @@ private struct EventFigureLinkPopover: View {
     }
 
     private func selectFigure(_ figure: Figure) {
+        let result = FigureSearchResult(figure: figure, matchedAlternateName: figure.matchedAlternateName(for: searchText))
         selectedFigure = figure
+        selectedFigureResult = result
         selectedDisplayName = figure.name
         isCustomName = false
         customName = ""

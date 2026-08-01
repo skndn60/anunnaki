@@ -12,6 +12,8 @@ package final class ContentAttribution {
     package var url: String?
     package var contentPreview: String
     package var note: String
+    /// Override the display name for the linked entity (e.g. "Noah" for Ziusudra)
+    package var figureDisplayName: String?
 
     package init(
         figure: Figure? = nil,
@@ -22,7 +24,8 @@ package final class ContentAttribution {
         propertyName: String? = nil,
         url: String? = nil,
         contentPreview: String = "",
-        note: String = ""
+        note: String = "",
+        figureDisplayName: String? = nil
     ) {
         self.figure = figure
         self.place = place
@@ -33,5 +36,6 @@ package final class ContentAttribution {
         self.url = url
         self.contentPreview = contentPreview
         self.note = note
+        self.figureDisplayName = figureDisplayName
     }
 }

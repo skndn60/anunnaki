@@ -1001,21 +1001,21 @@ private struct ParentCoupleSheet: View {
 
     @State private var fatherSearchText = ""
     @State private var motherSearchText = ""
-    @State private var selectedFather: Figure?
-    @State private var selectedMother: Figure?
+    @State private var selectedFather: FigureSearchResult?
+    @State private var selectedMother: FigureSearchResult?
 
     private var allFigures: [Figure] {
         (try? modelContext.fetch(FetchDescriptor<Figure>(sortBy: [SortDescriptor(\.name)]))) ?? []
     }
 
-    private var filteredFathers: [Figure] {
-        let figs = allFigures.filter { $0.persistentModelID != selectedMother?.persistentModelID }
-        return fatherSearchText.isEmpty ? figs : figs.filter { $0.name.localizedCaseInsensitiveContains(fatherSearchText) }
+    private var filteredFathers: [FigureSearchResult] {
+        let figs = allFigures.filter { $0.persistentModelID != selectedMother?.figure.persistentModelID }
+        return searchFigures(figs, query: fatherSearchText)
     }
 
-    private var filteredMothers: [Figure] {
-        let figs = allFigures.filter { $0.persistentModelID != selectedFather?.persistentModelID }
-        return motherSearchText.isEmpty ? figs : figs.filter { $0.name.localizedCaseInsensitiveContains(motherSearchText) }
+    private var filteredMothers: [FigureSearchResult] {
+        let figs = allFigures.filter { $0.persistentModelID != selectedFather?.figure.persistentModelID }
+        return searchFigures(figs, query: motherSearchText)
     }
 
     private var canAdd: Bool { selectedFather != nil || selectedMother != nil }
@@ -1067,7 +1067,7 @@ private struct ParentCoupleSheet: View {
         }
     }
 
-    private func searchColumn(label: String, searchText: Binding<String>, selected: Binding<Figure?>, filtered: [Figure]) -> some View {
+    private func searchColumn(label: String, searchText: Binding<String>, selected: Binding<FigureSearchResult?>, filtered: [FigureSearchResult]) -> some View {
         VStack(spacing: 0) {
             Text(label)
                 .font(.caption.bold())
@@ -1084,11 +1084,11 @@ private struct ParentCoupleSheet: View {
             }
             .padding(.horizontal, 8)
 
-            if let fig = selected.wrappedValue {
+            if let result = selected.wrappedValue {
                 HStack(spacing: 4) {
-                    Text(fig.gender.symbol)
+                    Text(result.figure.gender.symbol)
                         .font(.caption)
-                    Text(fig.name)
+                    Text(result.displayName)
                         .font(.callout)
                     Button { selected.wrappedValue = nil } label: {
                         Image(systemName: "xmark.circle.fill")
@@ -1098,22 +1098,22 @@ private struct ParentCoupleSheet: View {
                     .buttonStyle(.plain)
                 }
                 .padding(6)
-                .background(fig.figureType?.color.opacity(0.12) ?? Color.gray.opacity(0.12))
+                .background(result.figure.figureType?.color.opacity(0.12) ?? Color.gray.opacity(0.12))
                 .cornerRadius(6)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
             } else {
-                List(filtered, id: \.persistentModelID) { fig in
+                List(filtered) { result in
                     Button {
-                        selected.wrappedValue = fig
+                        selected.wrappedValue = result
                         searchText.wrappedValue = ""
                     } label: {
                         HStack(spacing: 10) {
-                            Text(fig.gender.symbol)
+                            Text(result.figure.gender.symbol)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .frame(width: 14)
-                            Text(fig.name)
+                            Text(result.displayName)
                                 .font(.body)
                             Spacer()
                         }
@@ -1144,10 +1144,10 @@ private struct ParentCoupleSheet: View {
         }
 
         if let father = selectedFather {
-            upsertParent(parent: father, typeName: "Father", groupID: groupID)
+            upsertParent(parent: father.figure, typeName: "Father", groupID: groupID)
         }
         if let mother = selectedMother {
-            upsertParent(parent: mother, typeName: "Mother", groupID: groupID)
+            upsertParent(parent: mother.figure, typeName: "Mother", groupID: groupID)
         }
         try? modelContext.save()
         isPresented = false

@@ -8,7 +8,7 @@ struct ContentAttributionFormView: View {
     let attribution: ContentAttribution?
 
     @State private var entityKind = "Figure"
-    @State private var selectedFigure: Figure?
+    @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedEvent: Event?
     @State private var selectedThing: Thing?
@@ -25,7 +25,6 @@ struct ContentAttributionFormView: View {
     private var canSave: Bool {
         selectedFigure != nil || selectedPlace != nil || selectedEvent != nil || selectedThing != nil
     }
-
     var body: some View {
         VStack(spacing: 0) {
             Text(isEditing ? "Edit Attribution" : "Add Attribution")
@@ -104,11 +103,9 @@ struct ContentAttributionFormView: View {
     private var entitySelector: some View {
         switch entityKind {
         case "Figure":
-            entitySearchList(
+            figureSearchList(
                 entities: allFigures,
-                searchKeyPath: \.name,
-                selected: $selectedFigure,
-                filter: { $0.name.localizedCaseInsensitiveContains(searchText) }
+                selected: $selectedFigure
             )
         case "Place":
             entitySearchList(
@@ -133,6 +130,58 @@ struct ContentAttributionFormView: View {
             )
         default:
             EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private func figureSearchList(entities: [Figure], selected: Binding<FigureSearchResult?>) -> some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                    .font(.caption)
+                TextField("Search figures\u{2026}", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            if let figure = selected.wrappedValue {
+                HStack(spacing: 4) {
+                    Text(figure.displayName)
+                        .font(.callout)
+                    Button { selected.wrappedValue = nil } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(6)
+                .background(Color.accentColor.opacity(0.1))
+                .cornerRadius(6)
+            } else {
+                let filtered = searchFigures(entities, query: searchText)
+                if filtered.isEmpty {
+                    Text("No matching figures")
+                        .foregroundStyle(.tertiary)
+                        .padding(.vertical, 10)
+                } else {
+                    List(filtered) { result in
+                        Button(action: {
+                            selected.wrappedValue = result
+                            searchText = ""
+                        }) {
+                            HStack(spacing: 10) {
+                                Text(result.displayName)
+                                    .font(.body)
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .listStyle(.plain)
+                }
+            }
         }
     }
 
@@ -194,7 +243,9 @@ struct ContentAttributionFormView: View {
 
     private func loadIfEditing() {
         guard let attribution else { return }
-        selectedFigure = attribution.figure
+        if let fig = attribution.figure {
+            selectedFigure = FigureSearchResult(figure: fig, matchedAlternateName: attribution.figureDisplayName)
+        }
         selectedPlace = attribution.place
         selectedEvent = attribution.event
         selectedThing = attribution.thing
@@ -211,7 +262,8 @@ struct ContentAttributionFormView: View {
 
     private func save() {
         if let attribution {
-            attribution.figure = selectedFigure
+            attribution.figure = selectedFigure?.figure
+            attribution.figureDisplayName = selectedFigure?.matchedAlternateName
             attribution.place = selectedPlace
             attribution.event = selectedEvent
             attribution.thing = selectedThing
@@ -222,7 +274,7 @@ struct ContentAttributionFormView: View {
             attribution.note = note
         } else {
             let newAttribution = ContentAttribution(
-                figure: selectedFigure,
+                figure: selectedFigure?.figure,
                 place: selectedPlace,
                 event: selectedEvent,
                 thing: selectedThing,
@@ -230,7 +282,8 @@ struct ContentAttributionFormView: View {
                 propertyName: propertyName,
                 url: url.isEmpty ? nil : url,
                 contentPreview: contentPreview,
-                note: note
+                note: note,
+                figureDisplayName: selectedFigure?.matchedAlternateName
             )
             modelContext.insert(newAttribution)
         }

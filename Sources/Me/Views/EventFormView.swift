@@ -58,12 +58,10 @@ struct EventFormView: View {
         figures.filter { selectedFigureIDs.contains($0.persistentModelID) }
     }
 
-    private var filteredFigures: [Figure] {
+    private var filteredFigures: [FigureSearchResult] {
         guard !figureSearchText.isEmpty else { return [] }
-        return figures.filter {
-            !selectedFigureIDs.contains($0.persistentModelID) &&
-            $0.name.localizedCaseInsensitiveContains(figureSearchText)
-        }
+        let figs = figures.filter { !selectedFigureIDs.contains($0.persistentModelID) }
+        return searchFigures(figs, query: figureSearchText)
     }
 
     private var filteredPlaces: [Place] {
@@ -217,16 +215,16 @@ struct EventFormView: View {
                                 }
                                 .buttonStyle(.plain)
                             } else {
-                                ForEach(filteredFigures) { figure in
+                                ForEach(filteredFigures) { result in
                                     Button {
-                                        selectedFigureIDs.insert(figure.persistentModelID)
+                                        selectedFigureIDs.insert(result.figure.persistentModelID)
                                         figureSearchText = ""
                                     } label: {
                                         HStack(spacing: 6) {
-                                            Text(figure.gender.symbol)
+                                            Text(result.figure.gender.symbol)
                                                 .font(.caption)
                                                 .foregroundStyle(.secondary)
-                                            Text(figure.name)
+                                            Text(result.displayName)
                                         }
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 2)

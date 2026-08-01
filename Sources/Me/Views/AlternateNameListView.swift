@@ -220,12 +220,10 @@ struct AlternateNameFormView: View {
     @State private var note = ""
     @State private var entitySearchText = ""
 
-    private var filteredFigures: [Figure] {
+    private var filteredFigures: [FigureSearchResult] {
         guard !entitySearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (selectedFigure == nil || fig.persistentModelID != selectedFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(entitySearchText)
-        }
+        let figs = figures.filter { selectedFigure == nil || $0.persistentModelID != selectedFigure!.persistentModelID }
+        return searchFigures(figs, query: entitySearchText)
     }
 
     private var filteredPlaces: [Place] {
@@ -331,12 +329,12 @@ struct AlternateNameFormView: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
                     } else {
-                        ForEach(filteredFigures) { fig in
+                        ForEach(filteredFigures, id: \.id) { result in
                             Button {
-                                selectedFigure = fig
+                                selectedFigure = result.figure
                                 entitySearchText = ""
                             } label: {
-                                Text("\(fig.gender.symbol) \(fig.name)")
+                                Text("\(result.figure.gender.symbol) \(result.displayName)")
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .frame(maxWidth: .infinity, alignment: .leading)

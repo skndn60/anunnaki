@@ -10,18 +10,22 @@ package final class FigurePlaceAssociation {
     package var roleType: FigurePlaceRoleType?
     package var source: String
     package var comments: String?
+    /// Override the display name for this figure in this place's context (e.g. "Noah" for Ziusudra)
+    package var displayName: String?
 
     package init(
         figure: Figure? = nil,
         place: Place? = nil,
         roleType: FigurePlaceRoleType? = nil,
         source: String = "",
-        comments: String? = nil
+        comments: String? = nil,
+        displayName: String? = nil
     ) {
         self.figure = figure
         self.place = place
         self.roleType = roleType
         self.source = source
         self.comments = comments
+        self.displayName = displayName
     }
 }

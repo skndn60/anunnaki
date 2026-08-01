@@ -325,12 +325,7 @@ struct FigureRow: View {
     var searchText: String = ""
 
     private var matchedAlias: String? {
-        guard !searchText.isEmpty else { return nil }
-        let q = searchText.lowercased()
-        return figure.alternateNames.first(where: {
-            let name = $0.name.lowercased()
-            return name == q || name.contains(q) || q.contains(name)
-        })?.name
+        figure.matchedAlternateName(for: searchText)
     }
 
     var body: some View {
@@ -363,6 +358,11 @@ struct FigureRow: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text(figure.name)
                     .fontWeight(.medium)
+                if let matchedAlias {
+                    Text("as \(matchedAlias)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
                     Text(disambiguation)
                         .font(.caption)

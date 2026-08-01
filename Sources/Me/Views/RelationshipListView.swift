@@ -211,28 +211,24 @@ struct RelationshipFormView: View {
     @Query private var figures: [Figure]
     @Query private var relationships: [Relationship]
 
-    @State private var fromFigure: Figure?
-    @State private var toFigure: Figure?
+    @State private var fromFigure: FigureSearchResult?
+    @State private var toFigure: FigureSearchResult?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
     @Query private var allRelationTypes: [RelationshipType]
     @State private var selectedType: RelationshipType?
     @State private var source = ""
 
-    private var filteredFromFigures: [Figure] {
+    private var filteredFromFigures: [FigureSearchResult] {
         guard !fromSearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (fromFigure == nil || fig.persistentModelID != fromFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(fromSearchText)
-        }
+        let figs = figures.filter { fromFigure == nil || $0.persistentModelID != fromFigure!.figure.persistentModelID }
+        return searchFigures(figs, query: fromSearchText)
     }
 
-    private var filteredToFigures: [Figure] {
+    private var filteredToFigures: [FigureSearchResult] {
         guard !toSearchText.isEmpty else { return [] }
-        return figures.filter { fig in
-            (toFigure == nil || fig.persistentModelID != toFigure!.persistentModelID) &&
-            fig.name.localizedCaseInsensitiveContains(toSearchText)
-        }
+        let figs = figures.filter { toFigure == nil || $0.persistentModelID != toFigure!.figure.persistentModelID }
+        return searchFigures(figs, query: toSearchText)
     }
 
     var body: some View {
@@ -297,12 +293,12 @@ struct RelationshipFormView: View {
             Button("Make Default") { commit(isPreferred: true) }
             Button("Keep Existing as Default") { commit(isPreferred: false) }
         } message: {
-            Text("Should this be the default \(selectedType?.name ?? "relationship") for \(fromFigure?.name ?? "?")?")
+            Text("Should this be the default \(selectedType?.name ?? "relationship") for \(fromFigure?.figure.name ?? "?")?")
         }
     }
 
     private func commit(isPreferred: Bool) {
-        guard let from = fromFigure, let to = toFigure, let type = selectedType else { return }
+        guard let from = fromFigure?.figure, let to = toFigure?.figure, let type = selectedType else { return }
         if isPreferred {
             let existing = relationships.filter {
                 $0.fromFigure?.persistentModelID == from.persistentModelID &&
@@ -322,14 +318,14 @@ struct RelationshipFormView: View {
     }
 
     private var isValid: Bool {
-        guard let from = fromFigure, let to = toFigure else { return false }
+        guard let from = fromFigure?.figure, let to = toFigure?.figure else { return false }
         return from.persistentModelID != to.persistentModelID
     }
 
     @State private var duplicateMessage = ""
 
     private func save() {
-        guard let from = fromFigure, let to = toFigure, let type = selectedType else { return }
+        guard let from = fromFigure?.figure, let to = toFigure?.figure, let type = selectedType else { return }
 
         let existing = relationships.filter {
             $0.fromFigure?.persistentModelID == from.persistentModelID &&
@@ -357,7 +353,7 @@ struct RelationshipFormView: View {
     @State private var showPreferredPrompt = false
 
     private func inferType() {
-        switch fromFigure?.gender {
+        switch fromFigure?.figure.gender {
         case .female: selectedType = allRelationTypes.first(where: { $0.name == "Mother" })
         case .male: selectedType = allRelationTypes.first(where: { $0.name == "Father" })
         default: break
@@ -368,19 +364,19 @@ struct RelationshipFormView: View {
 // MARK: - Figure Search Selector
 
 struct FigureSearchSelector: View {
-    @Binding var selection: Figure?
+    @Binding var selection: FigureSearchResult?
     @Binding var searchText: String
     let figures: [Figure]
-    let filteredFigures: [Figure]
+    let filteredFigures: [FigureSearchResult]
     let placeholder: String
 
     var body: some View {
-        if let fig = selection {
+        if let selection {
             HStack(spacing: 6) {
-                Text("\(fig.gender.symbol) \(fig.name)")
+                Text("\(selection.figure.gender.symbol) \(selection.displayName)")
                     .fontWeight(.medium)
                 Spacer()
-                Button { selection = nil } label: {
+                Button { self.selection = nil } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.secondary)
@@ -410,12 +406,12 @@ struct FigureSearchSelector: View {
                             .padding(.horizontal, 8)
                             .padding(.vertical, 6)
                     } else {
-                        ForEach(filteredFigures) { fig in
+                        ForEach(filteredFigures, id: \.id) { result in
                             Button {
-                                selection = fig
+                                selection = result
                                 searchText = ""
                             } label: {
-                                Text("\(fig.gender.symbol) \(fig.name)")
+                                Text("\(result.figure.gender.symbol) \(result.displayName)")
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                                     .frame(maxWidth: .infinity, alignment: .leading)
