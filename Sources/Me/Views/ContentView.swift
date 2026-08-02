@@ -113,6 +113,7 @@ struct ContentView: View {
     @State private var isSeeding = true
     @State private var globalSearchText = ""
     @State private var showRecoveryAlert = MeApp.recoveryError != nil
+    @State private var showBackupSheet = false
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -292,6 +293,21 @@ struct ContentView: View {
                             .stroke(.separator, lineWidth: 0.5)
                     )
                 }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showBackupSheet = true
+                    } label: {
+                        Image(systemName: "archivebox")
+                    }
+                    .help("Back up or restore the database")
+                }
+            }
+            .sheet(isPresented: $showBackupSheet) {
+                BackupSheet()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showBackupSheet)) { _ in
+                showBackupSheet = true
             }
         }
     }

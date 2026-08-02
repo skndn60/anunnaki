@@ -385,11 +385,11 @@ This is faster and more reliable than reading code to simulate the layout engine
   - **Subgroups added 2026-07-31:** `FigureGroup.parentGroup` / `subgroups` relationship (`.nullify` delete rule, migration-safe), `directFigures` computed property, parent picker in `FigureGroupFormView` (cycle-safe `setParent`), manager list shows subgroup indicator, sidebar shows top-level published groups only, collection view is a unified expandable outline mixing figures + subgroups (recursive `FigureGroupTreeNode`, `MixedItem` enum) with a stateless ancestor breadcrumb trail (derived from `parentGroup` chain) for navigating back up. Navigation between levels uses `navigateToGroup(recordHistory: false)` — no shared-history pollution.
 - [x] **Group collection view: inline detail panel + place members — completed 2026-08-01:** Folded into the Generic EntityGroup system. `EntityGroupCollectionView` now has an inline 320pt detail panel (Edit/Delete per type, EnochView pattern) and groups hold places/events/things via `entityType`.
 - [x] **Generic EntityGroup system (Option A) — completed 2026-08-01:** See session log 2026-08-01. Implemented WITHOUT renaming the stored model (see deviation note there). All 4 entity types get Enoch-style sidebar pages + inline detail panel + per-type bulk-add/sync filters. Note: no default place/event/thing groups are auto-created — users build them via the Groups manager (avoided sidebar clutter); the existing `ensureDefaultFigureGroups`/`ensureFigureGroupKinds` migrations are untouched and figure-only.
-- [ ] **Free-form text blocks in groups (book/story pages):** Let users interleave prose between members/subgroups so a group reads like a book chapter ("create a Story"). Today a group has only one free-text field (`groupDescription`) rendered at the top; members are an alphabetized list. Plan:
+- [ ] **Free-form text blocks in groups (book/story pages):** Let users interleave prose between members/subgroups so a group reads like a book chapter ("create a Story"). Today a group has one free-text field (`groupDescription`) rendered at the top plus an ordered/alphabetized member list. Plan:
   - New `@Model GroupTextBlock`: `group` (cascade), `title: String`, `text: String`, `richText: Data?` (optional, migration-safe; reuse `RichTextEditor`/`RichTextDisplay`), `orderIndex: Int`.
   - "Insert Text" affordance in the group — either per-position ("insert after this member/subgroup") or via a reorderable ordered spine.
   - Collection view: `MixedItem` gains `.textBlock` case, rendered as a styled prose block between members.
-  - Design wrinkle: interleaving requires explicit ordering — members can no longer be purely alphabetized; each item needs `orderIndex` (or text anchors "after item X").
+  - Design wrinkle: interleaving requires explicit ordering — members can no longer be purely alphabetized; each item needs `orderIndex` (or text anchors "after item X"). Note: manual member ordering already landed 2026-08-02 (see session log), so interleaving text only needs to slot into that same per-association `orderIndex` sequence.
   - Two scopes: (a) FigureGroup-first, deliverable sooner on its own; (b) fold into Generic EntityGroup as a unified "page content items" spine (text blocks + entities + subgroups in one ordered list) powering story pages for all 4 types. User leaning toward (b) but wants this concept captured regardless.
 - [x] **FigureGroup system — completed 2026-07-28:**
   - `FigureGroupListView.swift` — Full list-detail split (HStack) with `@AppStorage` resizable divider, add/edit/delete via sheet, empty state, figure members list in detail panel with sidebar navigation
@@ -779,3 +779,63 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/MeCore/Store/Migration.swift`
 - `Tests/MeCoreTests/MeCoreTests.swift`
 - `FigureGroups.md` (updated), `AGENTS.md` (TODO + session log)
+
+### 2026-08-02 — Custom group member ordering: sortMode + orderIndex, reorder UI, SKL reign auto-assign
+
+**Problem:** Group members always rendered alphabetically by name (`MixedItem.name`/`GroupMemberItem.name` sorts in `EntityGroupCollectionView` and `FigureGroupDetailView`). No way to express a sequence determined by something other than the name — e.g. SKL kings whose order follows reign succession, not alphabet.
+
+**Changes made:**
+
+- `Sources/MeCore/Models/FigureGroupAssociation.swift` — Added `orderIndex: Int?` (optional, migration-safe) + init param. `nil` = no explicit position.
+- `Sources/MeCore/Models/FigureGroup.swift`:
+  - New `GroupSortMode` enum (`.alphabetical` default / `.ordered`) with `displayName`; stored as `sortModeRawValue: String?` + computed `sortMode` (nil-safe backward compat). `init` gains `sortMode: GroupSortMode = .alphabetical`.
+  - `sortedAssociations` — the group's member associations in display order: alphabetical, or by `orderIndex` (nil→`Int.max`) with name tie-break when `.ordered`.
+  - `setSortMode(_:)` — switching to `.ordered` seeds every association with sequential `orderIndex` so the current order becomes a stable fine-tunable baseline.
+  - `moveAssociation(_:direction:)` — swaps an association up/down and renumbers 0..n (used by the reorder arrows).
+  - `regnalKey(_:)` / `applyRegnalOrder()` — chronological key = `era.orderIndex * 1_000_000 + figure.orderIndex` (seed's per-era sequence counter, i.e. the SKL reign order); events key on `event.date.sortValue`. `applyRegnalOrder()` writes sequential `orderIndex` over associations sorted by key.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — File-scope `memberItems(for:)` helper builds members from `group.sortedAssociations` (carries `displayName`). `mixedItems` and `EntityGroupTreeNode.children` keep `.ordered` sequence; otherwise alphabetical as before. Subgroups still sort by `(orderIndex, name)`.
+- `Sources/Me/Views/FigureGroupListView.swift` — `FigureGroupDetailView.members` now maps `group.sortedAssociations` (no re-sort). Added a sort-mode menu (Name / Manual Order) in the Actions row, and `MemberReorderButtons` (up/down chevrons) per member row when `.ordered`. `syncMembers()` and `BulkAddMembersSheet.addAllMatching()` call `applyRegnalOrder()` when an ordered figure group syncs new members.
+- `Sources/MeCore/Store/Migration.swift` — `ensureSKLRegnalOrder(context:)`: for every group whose kind (or an ancestor's kind) is `.skl`, orders figure members chronologically and sets `.ordered`. Only runs when **all** members have `orderIndex == nil`, so user-arranged orders are never overwritten. Additive.
+- `Sources/Me/Views/ContentView.swift` — `Migration.ensureSKLRegnalOrder` added to the launch sequence (after `ensureFigureGroupKinds`).
+- `Tests/MeCoreTests/MeCoreTests.swift` — 11 new tests: sortMode default/nil-backcompat/round-trip, alphabetical default, ordered by orderIndex, nil-defers-by-name, `setSortMode` seeding, `moveAssociation` (+no-op at edge), `applyRegnalOrder` across eras, event-date regnal key, association orderIndex round-trip. 75 tests pass.
+
+**Design decisions:**
+- The position lives **on the association** (`FigureGroupAssociation.orderIndex`), not the entity — the same figure can appear in several groups with different positions, and it's migration-safe (optional). Entity-intrinsic date sorting was rejected as too fragile (missing dates) and unable to express a bare user-chosen sequence.
+- `applyRegnalOrder()` intentionally does **not** flip `sortMode` — the migration/UI sets `.ordered` separately, so "reign order" and "manual order mode" stay decoupled.
+- Auto-assign is one-time-and-optional: only SKL chains, only when no positions exist yet; the manual menu/arrows let users override.
+- Members-then-subgroups (not interleaved) in `.ordered` mode — a unified member/subgroup spine is deferred to the text-blocks TODO.
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift`, `FigureGroupAssociation.swift`
+- `Sources/Me/Views/EntityGroupCollectionView.swift`, `FigureGroupListView.swift`, `ContentView.swift`
+- `Sources/MeCore/Store/Migration.swift`
+- `Tests/MeCoreTests/MeCoreTests.swift`
+- `AGENTS.md` (this entry + TODO update)
+
+### 2026-08-02 — Store-level backup & restore (snapshot prototype)
+
+**Goal:** A real safety net for the "never reseed" rule — a way to back up the entire database and recover it — without a lossy JSON codec. Backups are plain copies of the store's backing files, so they cover every model automatically.
+
+**Changes made:**
+- `Sources/Me/Views/BackupService.swift` — NEW. Snapshot helper over the live store at `~/Library/Application Support/Me/Me.store`:
+  - `makeBackup(in:)` copies `Me.store` + `-shm` + `-wal` (whichever exist) into a timestamped `MeBackup-<ISO>` folder.
+  - `chooseAndBackup()` (async, @MainActor) — folder picker (NSOpenPanel) → runs `makeBackup`.
+  - `stageRestore(from:)` writes the chosen backup dir into `UserDefaults` (`com.me.app.pendingRestoreDirectory`).
+  - `applyPendingRestoreIfNeeded()` — on launch, before the container opens: if a pending restore exists, save a `MeBackup-prestore` safety copy of the current store, then swap in the backup's files. Removes the flag regardless.
+  - `isValidBackup(_:)` — true if the folder contains a `Me.store`.
+- `Sources/Me/AnunnakiApp.swift`:
+  - `sharedContainer` init calls `BackupService.applyPendingRestoreIfNeeded()` **after** the `--reseed` block, so an explicit reseed still wins.
+  - New `DatabaseMenuCommands` (Commands scene) — **Database ▸ Back Up Database…** (`⌘⇧B`) and **Restore from Backup…** (`⌘⇧R`), which post `.showBackupSheet`.
+  - `Notification.Name.showBackupSheet`.
+- `Sources/Me/Views/BackupSheet.swift` — NEW sheet UI: "Back Up Now" and "Restore from Backup…", status line, restore-confirm alert ("Yes, Restore & Quit" terminates to relaunch and apply). Notes when a pre-restore safety copy exists.
+- `Sources/Me/Views/ContentView.swift` — `archivebox` toolbar button (primaryAction, right of search) opens `BackupSheet`; also observes `.showBackupSheet` to open it from the menu/`⌘⇧B`/`⌘⇧R`.
+
+**Design decisions:**
+- Chose the **store-file snapshot** over a portable JSON codec: zero schema mirroring (all 30+ models covered), tiny surface, and a genuine full backup. Restore requires a relaunch because it swaps the live SQLite file; the app applies it on the next launch, before the container is created.
+- No MeCore changes — everything lives in the UI layer (`Me`), so tests are unaffected.
+- Backup restore keeps a `MeBackup-prestore` copy so a mistaken restore is never data loss.
+
+**Relevant files:**
+- `Sources/Me/Views/BackupService.swift` (new), `Sources/Me/Views/BackupSheet.swift` (new)
+- `Sources/Me/AnunnakiApp.swift`, `Sources/Me/Views/ContentView.swift`
+- `AGENTS.md` (this entry)

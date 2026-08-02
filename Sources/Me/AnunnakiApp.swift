@@ -35,6 +35,26 @@ package func storeURL() -> URL {
     return appSupport.appendingPathComponent("Me").appendingPathComponent("Me.store")
 }
 
+extension Notification.Name {
+    static let showBackupSheet = Notification.Name("MeShowBackupSheet")
+}
+
+struct DatabaseMenuCommands: Commands {
+    var body: some Commands {
+        CommandMenu("Database") {
+            Button("Back Up Database\u{2026}") {
+                NotificationCenter.default.post(name: .showBackupSheet, object: nil)
+            }
+            .keyboardShortcut("b", modifiers: [.command, .shift])
+
+            Button("Restore from Backup\u{2026}") {
+                NotificationCenter.default.post(name: .showBackupSheet, object: nil)
+            }
+            .keyboardShortcut("r", modifiers: [.command, .shift])
+        }
+    }
+}
+
 @main
 struct MeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
@@ -49,6 +69,9 @@ struct MeApp: App {
         if forceReseed {
             try? FileManager.default.removeItem(at: storeURL)
         }
+
+        // Apply any staged restore now, before the container opens (after force-reseed wins).
+        BackupService.applyPendingRestoreIfNeeded()
 
         try? FileManager.default.createDirectory(at: storeDirectory, withIntermediateDirectories: true)
 
@@ -89,6 +112,9 @@ struct MeApp: App {
         }
         .modelContainer(container)
         .defaultSize(width: 1200, height: 800)
+        .commands {
+            DatabaseMenuCommands()
+        }
 
         WindowGroup("Lineage Explorer", id: "lineage", for: PersistentIdentifier.self) { $figureID in
             LineageExplorerWindow(figureID: figureID)
