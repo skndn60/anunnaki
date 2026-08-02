@@ -839,3 +839,28 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/Me/Views/BackupService.swift` (new), `Sources/Me/Views/BackupSheet.swift` (new)
 - `Sources/Me/AnunnakiApp.swift`, `Sources/Me/Views/ContentView.swift`
 - `AGENTS.md` (this entry)
+
+### 2026-08-02 — Add from Text: single-entity-and-links parser
+
+**Goal:** The daily-driver data-entry step. Type a sentence like `Marduk is the son of Enki and Damkina; consort of Sarpanit; patron of Babylon` and have the app parse a subject figure, its family relationships, and patron/ruler place links into one action.
+
+**Changes made:**
+- `Sources/MeCore/Store/FromTextParser.swift` — NEW. Parses text into a `FromTextResult` (subject + relationships + placeLinks + new figure/place names). Grammar:
+  - Family words mapped to output relationship types: `father`/`mother` (parentOf), `son`/`daughter` (childOf), `brother`/`sister`/`sibling` (siblingOf), `spouse`/`consort`/`wife`/`husband` (partnerOf, `isPreferred`), `creator` (creatorOf).
+  - Place links: `patron of X` → "Patron Deity", `ruler of X` → "Ruler".
+  - Clauses split on semicolons; names split on " and ". Lowercased keyword matching on the lemma text, but original-case values are preserved by re-extracting the tail from the original clause (`originalTail`).
+- `Sources/Me/Views/FromTextSheet.swift` — NEW. Sheet with live parse preview (subject/relationships/place links/new figures/places) and an "Add" button. `FromTextRecognizer` resolves-or-creates figures/places/relationship-types/role-types and inserts the associations/relations using the appendix.
+- `Sources/Me/Views/ContentView.swift` — Added `text.badge.plus` toolbar button + `showFromTextSheet` state + `.sheet(isPresented:)`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 13 new tests (subject-only, son/daughter/father/mother of, consort preferred, creator of, patron/ruler place links, and-splitting, siblings, empty). 88 total pass.
+
+**Key decisions:**
+- Reimplemented, not reused: `QueryEngine`'s lemmatize/tokenize/resolve are `private` and read-only, so `FromTextParser` reimplements a small lemmatizer + resolver.
+- Case preservation: keyword detection runs on lowercased lemmatized text, but entity names (Enki, Babylon) are pulled from the original clause so capitalization is kept.
+- Creates-or-merges by name (case-insensitive exact match) — never reseeds; matches the additive-migration constraint.
+
+**Relevant new/removed files:**
+- `Sources/MeCore/Store/FromTextParser.swift` — Added
+- `Sources/Me/Views/FromTextSheet.swift` — Added
+
+**Relevant files:**
+- `Sources/Me/Views/ContentView.swift` — Updated

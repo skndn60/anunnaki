@@ -1554,4 +1554,106 @@ final class MeCoreTests: XCTestCase {
         try? context.save()
         XCTAssertEqual(assoc.orderIndex, 3)
     }
+
+    func testFromTextSubjectOnly() {
+        let result = FromTextParser.parse("Marduk")
+        XCTAssertEqual(result.subject, "Marduk")
+        XCTAssertTrue(result.relationships.isEmpty)
+        XCTAssertTrue(result.placeLinks.isEmpty)
+    }
+
+    func testFromTextSubjectCouldNotResolve() {
+        let result = FromTextParser.parse("is a deity")
+        XCTAssertNil(result.subject)
+    }
+
+    func testFromTextSonOfCreatesChildRelationships() {
+        let result = FromTextParser.parse("Marduk the son of Enki and Damkina")
+        XCTAssertEqual(result.subject, "Marduk")
+        XCTAssertEqual(result.relationships.count, 2)
+        let rel = result.relationships.first { $0.fromFigure == "Enki" }
+        XCTAssertNotNil(rel)
+        XCTAssertEqual(rel?.toFigure, "Marduk")
+        XCTAssertEqual(result.newFigures.sorted(), ["Damkina", "Enki"])
+    }
+
+    func testFromTextDaughterOfCreatesMotherRelation() {
+        let result = FromTextParser.parse("Inanna the daughter of Nanna")
+        XCTAssertEqual(result.relationships.count, 1)
+        XCTAssertEqual(result.relationships.first?.fromFigure, "Nanna")
+        XCTAssertEqual(result.relationships.first?.toFigure, "Inanna")
+        XCTAssertEqual(result.relationships.first?.relationshipType, "Mother")
+    }
+
+    func testFromTextFatherOfCreatesFatherRelation() {
+        let result = FromTextParser.parse("Enki the father of Marduk")
+        XCTAssertEqual(result.relationships.count, 1)
+        XCTAssertEqual(result.relationships.first?.fromFigure, "Enki")
+        XCTAssertEqual(result.relationships.first?.toFigure, "Marduk")
+        XCTAssertEqual(result.relationships.first?.relationshipType, "Father")
+    }
+
+    func testFromTextConsortOfCreatesPreferredSpouse() {
+        let result = FromTextParser.parse("Marduk the consort of Sarpanit")
+        XCTAssertEqual(result.subject, "Marduk")
+        XCTAssertEqual(result.relationships.count, 1)
+        XCTAssertEqual(result.relationships.first?.toFigure, "Sarpanit")
+        XCTAssertEqual(result.relationships.first?.relationshipType, "Spouse")
+        XCTAssertTrue(result.relationships.first?.isPreferred == true)
+    }
+
+    func testFromTextCreatorOf() {
+        let result = FromTextParser.parse("Marduk the creator of humans")
+        XCTAssertEqual(result.relationships.count, 1)
+        XCTAssertEqual(result.relationships.first?.relationshipType, "Creator")
+        XCTAssertEqual(result.relationships.first?.fromFigure, "humans")
+        XCTAssertEqual(result.relationships.first?.toFigure, "Marduk")
+    }
+
+    func testFromTextPatronPlaceLink() {
+        let result = FromTextParser.parse("Marduk patron of Babylon")
+        XCTAssertEqual(result.subject, "Marduk")
+        XCTAssertEqual(result.placeLinks.count, 1)
+        XCTAssertEqual(result.placeLinks.first?.place, "Babylon")
+        XCTAssertEqual(result.placeLinks.first?.role.displayName, "Patron Deity")
+        XCTAssertEqual(result.newPlaces, ["Babylon"])
+    }
+
+    func testFromTextRulerPlaceLink() {
+        let result = FromTextParser.parse("Marduk ruler of Babylon")
+        XCTAssertEqual(result.placeLinks.first?.role.displayName, "Ruler")
+        XCTAssertEqual(result.newPlaces, ["Babylon"])
+    }
+
+    func testFromTextMultipleRelationshipsWithAnd() {
+        let result = FromTextParser.parse("Marduk brother of Ishtar and Ereshkigal")
+        XCTAssertEqual(result.relationships.count, 2)
+        XCTAssertEqual(result.newFigures, ["Ereshkigal", "Ishtar"])
+        let first = result.relationships.first
+        XCTAssertEqual(first?.toFigure, "Ishtar")
+        XCTAssertEqual(first?.relationshipType, "Sibling")
+    }
+
+    func testFromTextPartnerSiblingRelationDirection() {
+        let partnerResult = FromTextParser.parse("Marduk consort of Sarpanit")
+        XCTAssertEqual(partnerResult.relationships.first?.fromFigure, "Marduk")
+        XCTAssertEqual(partnerResult.relationships.first?.toFigure, "Sarpanit")
+
+        let parentResult = FromTextParser.parse("Enki father of Marduk")
+        XCTAssertEqual(parentResult.relationships.first?.fromFigure, "Enki")
+        XCTAssertEqual(parentResult.relationships.first?.toFigure, "Marduk")
+    }
+
+    func testFromTextEmptyYieldsNothing() {
+        let result = FromTextParser.parse("")
+        XCTAssertNil(result.subject)
+        XCTAssertTrue(result.relationships.isEmpty)
+        XCTAssertTrue(result.placeLinks.isEmpty)
+    }
+
+    func testFromTextSiblingRelationAppearsInNewFigures() {
+        let result = FromTextParser.parse("Ishtar sister of Ereshkigal")
+        XCTAssertEqual(result.relationships.first?.relationshipType, "Sibling")
+        XCTAssertEqual(result.newFigures, ["Ereshkigal"])
+    }
 }

@@ -114,6 +114,7 @@ struct ContentView: View {
     @State private var globalSearchText = ""
     @State private var showRecoveryAlert = MeApp.recoveryError != nil
     @State private var showBackupSheet = false
+    @State private var showFromTextSheet = false
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -296,12 +297,24 @@ struct ContentView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        showFromTextSheet = true
+                    } label: {
+                        Image(systemName: "text.badge.plus")
+                    }
+                    .help("Add figures and connections from text")
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
                         showBackupSheet = true
                     } label: {
                         Image(systemName: "archivebox")
                     }
                     .help("Back up or restore the database")
                 }
+            }
+            .sheet(isPresented: $showFromTextSheet) {
+                FromTextSheet()
             }
             .sheet(isPresented: $showBackupSheet) {
                 BackupSheet()
