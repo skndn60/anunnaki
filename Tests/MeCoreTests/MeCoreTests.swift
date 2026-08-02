@@ -1357,4 +1357,201 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(child.parentGroup?.persistentModelID, parent.persistentModelID)
         XCTAssertTrue((parent.subgroups ?? []).contains { $0.persistentModelID == child.persistentModelID })
     }
+
+    // MARK: - Group ordering (sortMode / orderIndex)
+
+    func testGroupSortModeDefaultsToAlphabetical() {
+        let group = FigureGroup(name: "Council")
+        XCTAssertEqual(group.sortMode, .alphabetical)
+    }
+
+    func testGroupSortModeBackwardsCompatibleNil() {
+        let group = FigureGroup(name: "Council", sortMode: .ordered)
+        group.sortModeRawValue = nil
+        XCTAssertEqual(group.sortMode, .alphabetical)
+    }
+
+    func testGroupSortModeRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Kings", sortMode: .ordered)
+        context.insert(group)
+        try? context.save()
+        XCTAssertEqual(group.sortMode, .ordered)
+        XCTAssertEqual(group.sortModeRawValue, "ordered")
+    }
+
+    private func makeFigureGroupWithMembers(context: ModelContext, names: [String]) -> FigureGroup {
+        let group = FigureGroup(name: "Test")
+        context.insert(group)
+        for name in names {
+            let f = Figure(name: name)
+            context.insert(f)
+            let assoc = FigureGroupAssociation(figure: f)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        return group
+    }
+
+    func testSortedAssociationsAlphabeticalByDefault() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = makeFigureGroupWithMembers(context: context, names: ["Ziusudra", "Enki", "Abzu"])
+        try? context.save()
+
+        XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name }, ["Abzu", "Enki", "Ziusudra"])
+    }
+
+    func testSortedAssociationsOrderedByOrderIndex() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Kings", sortMode: .ordered)
+        context.insert(group)
+        let alulu = Figure(name: "Alulim")
+        let alalgar = Figure(name: "Alalgar")
+        let ziusudra = Figure(name: "Ziusudra")
+        for f in [alulu, alalgar, ziusudra] { context.insert(f) }
+        for (i, f) in [alalgar, ziusudra, alulu].enumerated() {
+            let assoc = FigureGroupAssociation(figure: f, orderIndex: i)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name }, ["Alalgar", "Ziusudra", "Alulim"])
+    }
+
+    func testSortedAssociationsOrderIndexDefersToNameWhenNil() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Kings", sortMode: .ordered)
+        context.insert(group)
+        // C has an explicit high orderIndex; A and B are nil (tie-break by name).
+        let a = Figure(name: "A")
+        let b = Figure(name: "B")
+        let c = Figure(name: "C")
+        for f in [a, b, c] { context.insert(f) }
+        for assoc in [
+            FigureGroupAssociation(figure: a),
+            FigureGroupAssociation(figure: b),
+            FigureGroupAssociation(figure: c, orderIndex: 99)
+        ] {
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name }, ["C", "A", "B"])
+    }
+
+    func testSetSortModeOrderedSeedsSequentialIndexes() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Kings")
+        context.insert(group)
+        let a = Figure(name: "Ziu")
+        let b = Figure(name: "Anu")
+        for f in [a, b] { context.insert(f) }
+        for assoc in [FigureGroupAssociation(figure: a), FigureGroupAssociation(figure: b)] {
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        group.setSortMode(.ordered)
+        let indexes = group.figureAssociations.compactMap(\.orderIndex).sorted()
+        XCTAssertEqual(indexes, [0, 1])
+        XCTAssertEqual(group.sortMode, .ordered)
+    }
+
+    func testMoveAssociationSwapsOrder() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Kings", sortMode: .ordered)
+        context.insert(group)
+        let a = Figure(name: "A")
+        let b = Figure(name: "B")
+        let c = Figure(name: "C")
+        for f in [a, b, c] { context.insert(f) }
+        let assocs = [FigureGroupAssociation(figure: a, orderIndex: 0),
+                      FigureGroupAssociation(figure: b, orderIndex: 1),
+                      FigureGroupAssociation(figure: c, orderIndex: 2)]
+        for assoc in assocs { context.insert(assoc); group.figureAssociations.append(assoc) }
+        try? context.save()
+
+        // Move C (at index 2) up by one -> [A, C, B]
+        group.moveAssociation(assocs[2], direction: -1)
+        XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name }, ["A", "C", "B"])
+
+        // Moving top member up is a no-op.
+        group.moveAssociation(assocs[0], direction: -1)
+        XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name }, ["A", "C", "B"])
+    }
+
+    func testApplyRegnalOrderAcrossEras() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let dynastyA = Era(name: "First dynasty of Kish", orderIndex: 1)
+        let dynastyB = Era(name: "First dynasty of Uruk", orderIndex: 2)
+        context.insert(dynastyA)
+        context.insert(dynastyB)
+
+        let group = FigureGroup(name: "SKL", kind: .skl)
+        context.insert(group)
+        // Grouped by era; within each era the in-era sequence is figure.orderIndex.
+        let rulers: [(String, Int, Era)] = [
+            ("Etana", 3, dynastyA),
+            ("Balih", 1, dynastyA),
+            ("Meskiag", 0, dynastyB),
+            ("Enmerkar", 1, dynastyB),
+        ]
+        var assocs: [FigureGroupAssociation] = []
+        for (name, seq, era) in rulers {
+            let f = Figure(name: name, orderIndex: seq)
+            f.era = era
+            context.insert(f)
+            let assoc = FigureGroupAssociation(figure: f)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+            assocs.append(assoc)
+        }
+        try? context.save()
+
+        group.applyRegnalOrder()
+        group.sortMode = .ordered
+        XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name },
+                       ["Balih", "Etana", "Meskiag", "Enmerkar"])
+    }
+
+    func testRegnalKeyOrdersEventsByDate() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Events", entityType: .event)
+        context.insert(group)
+        // sortValue: negative = earlier (BCE).
+        let later = Event(name: "Treaty", date: MythologicalDate(year: -1200))
+        let earlier = Event(name: "Foundation", date: MythologicalDate(year: -1500))
+        context.insert(later)
+        context.insert(earlier)
+        for assoc in [FigureGroupAssociation(event: later), FigureGroupAssociation(event: earlier)] {
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        XCTAssertLessThan(FigureGroup.regnalKey(FigureGroupAssociation(event: earlier)),
+                          FigureGroup.regnalKey(FigureGroupAssociation(event: later)))
+    }
+
+    func testGroupAssociationOrderIndexRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Enki")
+        context.insert(figure)
+        let assoc = FigureGroupAssociation(figure: figure, orderIndex: 3)
+        context.insert(assoc)
+        try? context.save()
+        XCTAssertEqual(assoc.orderIndex, 3)
+    }
 }

@@ -16,6 +16,27 @@ struct FigureGroupListView: View {
         return groups.first { $0.persistentModelID == id }
     }
 
+    private func managerRows() -> [(group: FigureGroup, depth: Int)] {
+        let tops = groups
+            .filter { $0.parentGroup == nil }
+            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
+        var rows: [(FigureGroup, Int)] = []
+        for top in tops {
+            rows.append(contentsOf: managerRows(for: top, depth: 0))
+        }
+        return rows
+    }
+
+    private func managerRows(for group: FigureGroup, depth: Int) -> [(group: FigureGroup, depth: Int)] {
+        var rows: [(FigureGroup, Int)] = [(group, depth)]
+        let subs = (group.subgroups ?? [])
+            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
+        for sub in subs {
+            rows.append(contentsOf: managerRows(for: sub, depth: depth + 1))
+        }
+        return rows
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
@@ -51,9 +72,10 @@ struct FigureGroupListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List(selection: $selectedGroupID) {
-                        ForEach(groups) { group in
-                            FigureGroupRow(group: group)
-                                .tag(group.persistentModelID)
+                        ForEach(managerRows(), id: \.group.persistentModelID) { row in
+                            FigureGroupRow(group: row.group)
+                                .tag(row.group.persistentModelID)
+                                .padding(.leading, CGFloat(row.depth) * 14)
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
@@ -177,9 +199,16 @@ struct FigureGroupDetailView: View {
     @State private var showSyncConfirm = false
 
     private var members: [GroupMemberItem] {
-        group.figureAssociations
-            .compactMap(GroupMemberItem.init(association:))
-            .sorted { $0.name < $1.name }
+        group.sortedAssociations.compactMap(GroupMemberItem.init(association:))
+    }
+
+    private func association(for item: GroupMemberItem) -> FigureGroupAssociation? {
+        group.figureAssociations.first { assoc in
+            (assoc.figure?.persistentModelID == item.id)
+                || (assoc.place?.persistentModelID == item.id)
+                || (assoc.event?.persistentModelID == item.id)
+                || (assoc.thing?.persistentModelID == item.id)
+        }
     }
 
     private var allFigures: [Figure] {
@@ -248,6 +277,21 @@ struct FigureGroupDetailView: View {
 
                     Spacer()
 
+                    Picker("", selection: Binding(
+                        get: { group.sortMode },
+                        set: { newValue in
+                            group.setSortMode(newValue)
+                            try? modelContext.save()
+                        }
+                    )) {
+                        ForEach(GroupSortMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelStyle(.iconOnly)
+                    .help("How members are ordered: by name, or by a manual order you arrange here.")
+
                     Toggle(isOn: Binding(
                         get: { group.isPublished },
                         set: { group.isPublished = $0; try? modelContext.save() }
@@ -270,8 +314,20 @@ struct FigureGroupDetailView: View {
                             .font(.callout)
                             .foregroundStyle(.tertiary)
                     } else {
-                        ForEach(members) { item in
-                            HStack(spacing: 10) {
+                        ForEach(Array(members.enumerated()), id: \.element.id) { index, item in
+                            HStack(spacing: 8) {
+                                if group.sortMode == .ordered {
+                                    MemberReorderButtons(
+                                        canMoveUp: index > 0,
+                                        canMoveDown: index < members.count - 1,
+                                        onMove: { direction in
+                                            if let assoc = association(for: item) {
+                                                group.moveAssociation(assoc, direction: direction)
+                                                try? modelContext.save()
+                                            }
+                                        }
+                                    )
+                                }
                                 Image(systemName: item.icon)
                                     .font(.caption)
                                     .foregroundStyle(item.color)
@@ -329,6 +385,9 @@ struct FigureGroupDetailView: View {
             let assoc = item.makeAssociation()
             modelContext.insert(assoc)
             group.figureAssociations.append(assoc)
+        }
+        if group.sortMode == .ordered, group.entityType == .figure {
+            group.applyRegnalOrder()
         }
         try? modelContext.save()
     }
@@ -609,6 +668,9 @@ private struct BulkAddMembersSheet: View {
             }
             group.decodedFilter = filter
         }
+        if group.sortMode == .ordered, group.entityType == .figure {
+            group.applyRegnalOrder()
+        }
         addedCount = matchingItems.count
         try? modelContext.save()
         showSuccess = true
@@ -621,6 +683,33 @@ private struct TypePill: Identifiable {
     let color: Color
 
     var id: String { name }
+}
+
+private struct MemberReorderButtons: View {
+    let canMoveUp: Bool
+    let canMoveDown: Bool
+    let onMove: (Int) -> Void
+
+    var body: some View {
+        HStack(spacing: 2) {
+            reorderButton("chevron.up", disabled: !canMoveUp, direction: -1)
+            reorderButton("chevron.down", disabled: !canMoveDown, direction: 1)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func reorderButton(_ icon: String, disabled: Bool, direction: Int) -> some View {
+        Button(action: { onMove(direction) }) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .semibold))
+                .foregroundStyle(disabled ? AnyShapeStyle(.tertiary) : AnyShapeStyle(Color.accentColor))
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .pointingHand()
+    }
 }
 
 private extension Color {

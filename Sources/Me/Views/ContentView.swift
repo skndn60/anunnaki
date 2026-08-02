@@ -116,6 +116,10 @@ struct ContentView: View {
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
+    @Query(
+        filter: #Predicate<FigureGroup> { $0.parentGroup == nil },
+        sort: \FigureGroup.orderIndex
+    ) private var topLevelFigureGroups: [FigureGroup]
 
     var body: some View {
         if isSeeding {
@@ -144,6 +148,7 @@ struct ContentView: View {
                     Migration.ensureSKLEventsAndFigures(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
                     Migration.ensureFigureGroupKinds(context: modelContext)
+                    Migration.ensureSKLRegnalOrder(context: modelContext)
 
                     try? modelContext.save()
                 }
@@ -177,12 +182,15 @@ struct ContentView: View {
                         }
                     }
                     ForEach(GroupEntityType.allCases, id: \.self) { type in
-                        let typeGroups = allFigureGroups.filter { $0.isPublished && $0.parentGroup == nil && $0.entityType == type }
+                        let typeGroups = topLevelFigureGroups.filter { $0.isPublished && $0.entityType == type }
                         if !typeGroups.isEmpty {
                             Section(type.sidebarHeader) {
                                 ForEach(typeGroups) { group in
-                                    Label(group.name, systemImage: group.icon)
-                                        .tag(SidebarSelection.group(group.persistentModelID))
+                                    ForEach(sidebarRows(for: group, type: type, depth: 0), id: \.group.persistentModelID) { row in
+                                        Label(row.group.name, systemImage: row.group.icon)
+                                            .tag(SidebarSelection.group(row.group.persistentModelID))
+                                            .padding(.leading, CGFloat(row.depth) * 14)
+                                    }
                                 }
                             }
                         }
@@ -311,25 +319,36 @@ struct ComingSoonView: View {
 }
 
 extension ContentView {
+    private func sidebarRows(for group: FigureGroup, type: GroupEntityType, depth: Int) -> [(group: FigureGroup, depth: Int)] {
+        var rows: [(FigureGroup, Int)] = [(group, depth)]
+        let subs = (group.subgroups ?? [])
+            .filter { $0.entityType == type }
+            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
+        for sub in subs {
+            rows.append(contentsOf: sidebarRows(for: sub, type: type, depth: depth + 1))
+        }
+        return rows
+    }
+
     @ViewBuilder
     private func groupDestination(group: FigureGroup) -> some View {
         switch group.kind {
         case .standard:
             EntityGroupCollectionView(group: group, coordinator: coordinator)
         case .enoch:
-            if group.entityType == .figure {
+            if group.entityType == .figure && (group.subgroups ?? []).isEmpty {
                 EnochView(coordinator: coordinator)
             } else {
                 EntityGroupCollectionView(group: group, coordinator: coordinator)
             }
         case .skl:
-            if group.entityType == .figure {
+            if group.entityType == .figure && (group.subgroups ?? []).isEmpty {
                 SumerianKingListView(coordinator: coordinator)
             } else {
                 EntityGroupCollectionView(group: group, coordinator: coordinator)
             }
         case .flood:
-            if group.entityType == .figure {
+            if group.entityType == .figure && (group.subgroups ?? []).isEmpty {
                 ComingSoonView(title: "The Flood")
             } else {
                 EntityGroupCollectionView(group: group, coordinator: coordinator)

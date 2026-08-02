@@ -20,6 +20,7 @@ struct FigureGroupFormView: View {
 
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
+    @State private var parentSearchText = ""
 
     private let stepLabels = ["Identity", "Members"]
 
@@ -170,10 +171,64 @@ struct FigureGroupFormView: View {
                     ? "Standard groups render their members; Book of Enoch, Sumerian King List, and The Flood use dedicated views."
                     : "Dedicated views are only available for figure groups.")
 
-                Picker("Parent Group", selection: $parentGroupID) {
-                    Text("None (top-level)").tag(nil as PersistentIdentifier?)
-                    ForEach(candidateParents) { parent in
-                        Text(parent.name).tag(parent.persistentModelID as PersistentIdentifier?)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Parent Group")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Toggle("Top-level group (no parent)", isOn: Binding(
+                        get: { parentGroupID == nil },
+                        set: { if $0 { parentGroupID = nil } }
+                    ))
+                    .toggleStyle(.checkbox)
+                    HStack(spacing: 8) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                        TextField("Search groups...", text: $parentSearchText)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                    let filtered = candidateParents.filter {
+                        parentSearchText.isEmpty || $0.name.localizedCaseInsensitiveContains(parentSearchText)
+                    }
+                    if filtered.isEmpty {
+                        Text("No matching groups")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        ScrollView {
+                            LazyVStack(alignment: .leading, spacing: 2) {
+                                ForEach(filtered) { parent in
+                                    Button {
+                                        parentGroupID = parent.persistentModelID
+                                    } label: {
+                                        HStack(spacing: 8) {
+                                            Image(systemName: parent.icon)
+                                                .font(.caption)
+                                                .foregroundStyle(Color(hex: parent.colorHex))
+                                                .frame(width: 16)
+                                            Text(parent.name)
+                                                .font(.callout)
+                                                .lineLimit(1)
+                                            Spacer()
+                                            if parentGroupID == parent.persistentModelID {
+                                                Image(systemName: "checkmark")
+                                                    .foregroundStyle(Color.accentColor)
+                                            }
+                                        }
+                                        .padding(.vertical, 3)
+                                        .padding(.horizontal, 6)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .pointingHand()
+                                }
+                            }
+                        }
+                        .frame(maxHeight: 120)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color(.textBackgroundColor))
+                        )
                     }
                 }
                 .help("Make this group a subgroup of another group. Subgroups appear under their parent in the collection view.")

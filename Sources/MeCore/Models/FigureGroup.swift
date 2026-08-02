@@ -17,6 +17,18 @@ package enum GroupKind: String, Codable, CaseIterable, Hashable {
     }
 }
 
+package enum GroupSortMode: String, Codable, CaseIterable, Hashable {
+    case alphabetical = "alphabetical"
+    case ordered = "ordered"
+
+    package var displayName: String {
+        switch self {
+        case .alphabetical: return "Name"
+        case .ordered: return "Manual Order"
+        }
+    }
+}
+
 package enum GroupEntityType: String, Codable, CaseIterable, Hashable {
     case figure = "figure"
     case place = "place"
@@ -67,6 +79,7 @@ package final class FigureGroup {
     package var kindRawValue: String?
     package var entityTypeRawValue: String?
     package var publishedRawValue: Bool?
+    package var sortModeRawValue: String?
 
     package var isPublished: Bool {
         get { publishedRawValue ?? true }
@@ -81,6 +94,11 @@ package final class FigureGroup {
     package var entityType: GroupEntityType {
         get { GroupEntityType(rawValue: entityTypeRawValue ?? "") ?? .figure }
         set { entityTypeRawValue = newValue.rawValue }
+    }
+
+    package var sortMode: GroupSortMode {
+        get { GroupSortMode(rawValue: sortModeRawValue ?? "") ?? .alphabetical }
+        set { sortModeRawValue = newValue.rawValue }
     }
 
     @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.group)
@@ -105,6 +123,71 @@ package final class FigureGroup {
 
     package var directThings: [Thing] {
         figureAssociations.compactMap { $0.thing }
+    }
+
+    private static func memberName(_ a: FigureGroupAssociation) -> String {
+        a.figure?.name ?? a.place?.name ?? a.event?.name ?? a.thing?.name ?? ""
+    }
+
+    /// This group's member associations in the order they should be displayed:
+    /// alphabetical by name, or by explicit `orderIndex` (with name tie-break) when `sortMode == .ordered`.
+    package var sortedAssociations: [FigureGroupAssociation] {
+        switch sortMode {
+        case .alphabetical:
+            return figureAssociations.sorted {
+                Self.memberName($0).localizedCaseInsensitiveCompare(Self.memberName($1)) == .orderedAscending
+            }
+        case .ordered:
+            return figureAssociations.sorted {
+                let a = $0.orderIndex ?? Int.max
+                let b = $1.orderIndex ?? Int.max
+                if a != b { return a < b }
+                return Self.memberName($0).localizedCaseInsensitiveCompare(Self.memberName($1)) == .orderedAscending
+            }
+        }
+    }
+
+    /// Switch the group's sort mode. Switching to `.ordered` seeds every association with a
+    /// sequential `orderIndex` so the current order becomes a stable, fine-tunable baseline.
+    package func setSortMode(_ mode: GroupSortMode) {
+        sortMode = mode
+        if mode == .ordered {
+            for (i, assoc) in figureAssociations.enumerated() {
+                assoc.orderIndex = i
+            }
+        }
+    }
+
+    /// Move an association up/down one position when the group is in manual order.
+    package func moveAssociation(_ assoc: FigureGroupAssociation, direction: Int) {
+        var sorted = sortedAssociations
+        guard let idx = sorted.firstIndex(where: { $0 === assoc }) else { return }
+        let newIdx = idx + direction
+        guard sorted.indices.contains(newIdx) else { return }
+        sorted.swapAt(idx, newIdx)
+        for (i, a) in sorted.enumerated() { a.orderIndex = i }
+    }
+
+    /// A stable chronological key for a member association. For figures this is
+    /// (era order * scale + position within era); `figure.orderIndex` is the seed's
+    /// sequence counter within its era, i.e. the SKL reign order.
+    package static func regnalKey(_ assoc: FigureGroupAssociation) -> Int64 {
+        if let figure = assoc.figure {
+            let era = min(figure.era?.orderIndex ?? 100_000, 100_000)
+            return Int64(era) * 1_000_000 + Int64(figure.orderIndex)
+        }
+        if let event = assoc.event {
+            let year = min(max(event.date.sortValue, -99_999_999), 99_999_999)
+            return Int64(year) * 10_000_000
+        }
+        return Int64.max
+    }
+
+    /// Order every figure member association by its chronicles key and write sequential
+    /// `orderIndex` values. Used by SKL/migration to auto-assign reign order.
+    package func applyRegnalOrder() {
+        let sorted = figureAssociations.sorted { Self.regnalKey($0) < Self.regnalKey($1) }
+        for (i, assoc) in sorted.enumerated() { assoc.orderIndex = i }
     }
 
     package func displayName(for id: PersistentIdentifier) -> String? {
@@ -138,7 +221,8 @@ package final class FigureGroup {
         orderIndex: Int = 0,
         memberFilter: String? = nil,
         kind: GroupKind = .standard,
-        entityType: GroupEntityType = .figure
+        entityType: GroupEntityType = .figure,
+        sortMode: GroupSortMode = .alphabetical
     ) {
         self.name = name
         self.groupDescription = groupDescription
@@ -148,6 +232,7 @@ package final class FigureGroup {
         self.memberFilter = memberFilter
         self.kindRawValue = kind.rawValue
         self.entityTypeRawValue = entityType.rawValue
+        self.sortModeRawValue = sortMode.rawValue
     }
 }
 

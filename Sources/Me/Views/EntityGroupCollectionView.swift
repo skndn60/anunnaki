@@ -53,6 +53,15 @@ private enum MixedItem: Identifiable {
     }
 }
 
+private func memberItems(for group: FigureGroup) -> [MixedItem] {
+    switch group.entityType {
+    case .figure: return group.sortedAssociations.compactMap { assoc in assoc.figure.map { MixedItem.figure($0, assoc.displayName) } }
+    case .place: return group.sortedAssociations.compactMap { assoc in assoc.place.map { MixedItem.place($0, assoc.displayName) } }
+    case .event: return group.sortedAssociations.compactMap { assoc in assoc.event.map { MixedItem.event($0, assoc.displayName) } }
+    case .thing: return group.sortedAssociations.compactMap { assoc in assoc.thing.map { MixedItem.thing($0, assoc.displayName) } }
+    }
+}
+
 struct EntityGroupCollectionView: View {
     let group: FigureGroup
     var coordinator: NavigationCoordinator?
@@ -75,21 +84,11 @@ struct EntityGroupCollectionView: View {
         (group.subgroups ?? []).sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
     }
 
-    private var directMembers: [MixedItem] {
-        switch entityType {
-        case .figure: return group.directFigures.map { MixedItem.figure($0, group.displayName(for: $0.persistentModelID)) }
-        case .place: return group.directPlaces.map { MixedItem.place($0, group.displayName(for: $0.persistentModelID)) }
-        case .event: return group.directEvents.map { MixedItem.event($0, group.displayName(for: $0.persistentModelID)) }
-        case .thing: return group.directThings.map { MixedItem.thing($0, group.displayName(for: $0.persistentModelID)) }
-        }
-    }
-
     private var mixedItems: [MixedItem] {
-        let all = directMembers + subgroups.map(MixedItem.group)
-        if searchText.isEmpty { return all.sorted { $0.name < $1.name } }
-        return all
-            .filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-            .sorted { $0.name < $1.name }
+        let all = memberItems(for: group) + subgroups.map(MixedItem.group)
+        let filtered = searchText.isEmpty ? all : all.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        if group.sortMode == .ordered { return filtered }
+        return filtered.sorted { $0.name < $1.name }
     }
 
     private var ancestors: [FigureGroup] {
@@ -593,17 +592,16 @@ private struct EntityGroupTreeNode: View {
     }
 
     private var directMembers: [MixedItem] {
-        switch group.entityType {
-        case .figure: return group.directFigures.map { MixedItem.figure($0, group.displayName(for: $0.persistentModelID)) }
-        case .place: return group.directPlaces.map { MixedItem.place($0, group.displayName(for: $0.persistentModelID)) }
-        case .event: return group.directEvents.map { MixedItem.event($0, group.displayName(for: $0.persistentModelID)) }
-        case .thing: return group.directThings.map { MixedItem.thing($0, group.displayName(for: $0.persistentModelID)) }
-        }
+        memberItems(for: group)
     }
 
     private var children: [MixedItem] {
-        let groupItems = (group.subgroups ?? []).map(MixedItem.group)
-        return (directMembers + groupItems).sorted { $0.name < $1.name }
+        let groupItems = (group.subgroups ?? [])
+            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
+            .map(MixedItem.group)
+        let members = directMembers
+        if group.sortMode == .ordered { return members + groupItems }
+        return (members + groupItems).sorted { $0.name < $1.name }
     }
 
     var body: some View {

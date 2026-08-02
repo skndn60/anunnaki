@@ -11,6 +11,9 @@ package final class FigureGroupAssociation {
     package var note: String
     /// Override the display name for this member in this group's context (e.g. "Noah" for Ziusudra)
     package var displayName: String?
+    /// Explicit position of this member within its group when the group uses manual ordering.
+    /// Nil means "no explicit position" (falls back to alphabetical). Optional for migration safety.
+    package var orderIndex: Int?
 
     package init(
         figure: Figure? = nil,
@@ -19,7 +22,8 @@ package final class FigureGroupAssociation {
         thing: Thing? = nil,
         group: FigureGroup? = nil,
         note: String = "",
-        displayName: String? = nil
+        displayName: String? = nil,
+        orderIndex: Int? = nil
     ) {
         self.figure = figure
         self.place = place
@@ -28,5 +32,6 @@ package final class FigureGroupAssociation {
         self.group = group
         self.note = note
         self.displayName = displayName
+        self.orderIndex = orderIndex
     }
 }

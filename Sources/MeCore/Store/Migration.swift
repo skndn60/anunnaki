@@ -1152,4 +1152,30 @@ package struct Migration {
         try? context.save()
     }
 
+    /// Auto-assign reign order for Sumerian King List groups. For any group whose kind (or an
+    /// ancestor's kind) is `.skl`, order its figure members by their chronological key
+    /// (era position then in-era sequence) and enable manual ordering. Only runs when no member
+    /// has an explicit `orderIndex` yet, so user-arranged orders are never overwritten. Additive.
+    package static func ensureSKLRegnalOrder(context: ModelContext) {
+        let allGroups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard !allGroups.isEmpty else { return }
+
+        func partOfSKLChain(_ group: FigureGroup) -> Bool {
+            if group.kind == .skl { return true }
+            if let parent = group.parentGroup { return partOfSKLChain(parent) }
+            return false
+        }
+
+        var changed = false
+        for group in allGroups where partOfSKLChain(group) {
+            guard group.entityType == .figure,
+                  !group.figureAssociations.isEmpty,
+                  group.figureAssociations.allSatisfy({ $0.orderIndex == nil }) else { continue }
+            group.applyRegnalOrder()
+            group.sortMode = .ordered
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
 }
