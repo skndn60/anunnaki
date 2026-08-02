@@ -866,3 +866,9 @@ This is faster and more reliable than reading code to simulate the layout engine
 
 **Relevant files:**
 - `Sources/Me/Views/ContentView.swift` — Updated
+
+**Follow-up — field-oriented result + structured preview (2026-08-02):** The user wanted the parse to feed the **standard Figure form fields**, not just relationships. `FromTextResult` grew into a field-oriented struct (subject, `gender`, `figureKind` (deity/human/primordial/unknown + `.figureTypeName`), `title`, `domain`, `birthYear`/`deathYear`, `description`=whole clip, `parents`, `otherRelationships`, `placeLinks`, `alternateNames`, `newFigures`, `newPlaces`). The preview in `FromTextSheet` now renders those as structured field rows. Detection helpers: `detectGender`/`detectFigureKind` (word-tokenized via `CharacterSet.alphanumerics.inverted`, so "a goddess," with a comma still tokenizes to `goddess`), `detectTitle` ("lord of/king of"), `detectDomain` ("god of X, Y"), `detectYears` (BCE/BC/CE/AD regex → negative BCE). For "son/daughter of X and Y", the two parents alternate Father/Mother (son-of with multiple targets → first Father, rest Mother). `splitNames` strips stopwords ("the", "a", "of", …) so alternate-name clauses don't leak stray words. 94 tests pass.
+
+**Relevant files (follow-up):**
+- `Sources/MeCore/Store/FromTextParser.swift` — Field-oriented result + detection helpers
+- `Sources/Me/Views/FromTextSheet.swift` — Structured field-row preview

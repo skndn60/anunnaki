@@ -13,22 +13,21 @@ struct FromTextSheet: View {
             Text("Add from Text")
                 .font(.title2.bold())
 
-            Text("Describe a figure and its connections in plain language. Use commas, newlines, or nothing to separate clauses. Examples:")
+            Text("Paste a description of a figure. The structured fields below will be filled in; the full clip is kept as the description. Examples:")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\u{2022} Marduk is the son of Enki and Damkina")
-                Text("\u{2022} Sarpanit, consort of Marduk")
-                Text("\u{2022} Marduk patron of Babylon")
+                Text("\u{2022} Marduk is the son of Enki and Damkina, consort of Sarpanit, patron of Babylon")
+                Text("\u{2022} Sarpanit, also known as Zarpanitum, the chief goddess of Babylon")
             }
             .font(.caption)
             .foregroundStyle(.secondary)
 
             TextEditor(text: $input)
                 .font(.body)
-                .frame(height: 90)
+                .frame(height: 100)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
                         .stroke(.separator, lineWidth: 0.5)
@@ -41,7 +40,7 @@ struct FromTextSheet: View {
                     .font(.callout)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .frame(height: 90)
+                    .frame(height: 120)
             }
 
             HStack {
@@ -54,11 +53,11 @@ struct FromTextSheet: View {
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(result == nil)
+                .disabled(result == nil || result?.subject.isEmpty == true)
             }
         }
         .padding(20)
-        .frame(width: 500)
+        .frame(width: 560)
         .onChange(of: input) { _, _ in
             result = FromTextParser.parse(input)
         }
@@ -66,49 +65,105 @@ struct FromTextSheet: View {
 
     @ViewBuilder
     private func preview(_ result: FromTextResult) -> some View {
-        let hasPreview = result.subject != nil || !result.relationships.isEmpty || !result.placeLinks.isEmpty
-        if !hasPreview {
+        let rows = fieldRows(result)
+        if rows.isEmpty && result.alternateNames.isEmpty {
             Text("Nothing recognized yet.")
                 .font(.callout)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: 90)
+                .frame(height: 120)
         } else {
             VStack(alignment: .leading, spacing: 6) {
-                if let subject = result.subject {
-                    Label("Subject: \(subject)", systemImage: "person.crop.circle")
-                        .font(.callout)
-                }
-                if !result.relationships.isEmpty {
-                    Text("Relationships").font(.caption.bold()).foregroundStyle(.secondary)
-                    ForEach(result.relationships, id: \.self) { rel in
-                        let type = rel.relationshipType ?? "Relationship"
-                        Text("\(rel.fromFigure) \u{2192} \(rel.toFigure) (\(type))")
+                Label("\(result.subject)", systemImage: "person.crop.circle")
+                    .font(.headline)
+                ForEach(rows, id: \.0) { label, value in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text(label + ":")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 110, alignment: .leading)
+                        Text(value)
                             .font(.callout)
                     }
                 }
-                if !result.placeLinks.isEmpty {
-                    Text("Place links").font(.caption.bold()).foregroundStyle(.secondary)
-                    ForEach(result.placeLinks, id: \.self) { link in
-                        Text("\(link.figure) \u{2013} \(link.role.displayName) of \(link.place)")
+                if !result.alternateNames.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("AKA:")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 110, alignment: .leading)
+                        Text(result.alternateNames.joined(separator: ", "))
                             .font(.callout)
                     }
                 }
                 if !result.newFigures.isEmpty {
-                    Label("New figures: \(result.newFigures.joined(separator: ", "))", systemImage: "person.badge.plus")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("New figures:")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 110, alignment: .leading)
+                        Text(result.newFigures.joined(separator: ", "))
+                            .font(.callout)
+                    }
                 }
                 if !result.newPlaces.isEmpty {
-                    Label("New places: \(result.newPlaces.joined(separator: ", "))", systemImage: "building.2")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("New places:")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 110, alignment: .leading)
+                        Text(result.newPlaces.joined(separator: ", "))
+                            .font(.callout)
+                    }
                 }
             }
             .padding(10)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color.gray.opacity(0.08), in: RoundedRectangle(cornerRadius: 6))
         }
+    }
+
+    private func fieldRows(_ result: FromTextResult) -> [(String, String)] {
+        var rows: [(String, String)] = []
+        rows.append(("Name", result.subject.isEmpty ? "—" : result.subject))
+        var gender = "Unknown"
+        switch result.gender {
+        case .male: gender = "Male"
+        case .female: gender = "Female"
+        case .unknown: gender = "Unknown"
+        }
+        rows.append(("Gender", gender))
+        if let kind = result.figureKind.figureTypeName { rows.append(("Type", kind)) }
+        if let title = result.title { rows.append(("Title", title.capitalized)) }
+        if let domain = result.domain { rows.append(("Domain", domain)) }
+        var birth = "—"
+        if let by = result.birthYear { birth = formatYear(by) }
+        rows.append(("Birth", birth))
+        var death = "—"
+        if let dy = result.deathYear, result.birthYear != result.deathYear { death = formatYear(dy) }
+        rows.append(("Death", death))
+        if let rs = result.reignStart, let re = result.reignEnd {
+            rows.append(("Reign", "\(formatYear(rs)) \u{2013} \(formatYear(re))"))
+        }
+        var parents = "—"
+        if !result.parents.isEmpty {
+            parents = result.parents.map { "\($0.relationshipType): \($0.fromFigure)" }.joined(separator: ", ")
+        }
+        rows.append(("Parents", parents))
+        if !result.otherRelationships.isEmpty {
+            let others = result.otherRelationships.map { "\($0.relationshipType): \($0.toFigure)" }.joined(separator: ", ")
+            rows.append(("Relations", others))
+        }
+        if !result.placeLinks.isEmpty {
+            let places = result.placeLinks.map { "\($0.roleName) of \($0.place)" }.joined(separator: ", ")
+            rows.append(("Places", places))
+        }
+        return rows
+    }
+
+    private func formatYear(_ year: Int) -> String {
+        if year < 0 { return "\(abs(year)) BCE" }
+        return "\(year) CE"
     }
 
     private func apply(_ result: FromTextResult?) {
@@ -120,30 +175,64 @@ struct FromTextSheet: View {
 
 private enum FromTextRecognizer {
     static func apply(_ result: FromTextResult, in context: ModelContext) {
-        let subject = figure(named: result.subject, in: context)
+        guard !result.subject.isEmpty else { return }
+        let subjectFigure = figure(named: result.subject, in: context)
+        if let subjectFigure {
+            populate(subjectFigure, result, in: context)
+        }
 
         for link in result.placeLinks {
             let place = place(named: link.place, in: context)
-            let role = roleType(named: link.role.displayName, in: context)
-            let assoc = FigurePlaceAssociation(figure: subject, place: place, roleType: role, source: "From text")
+            let role = roleType(named: link.roleName, in: context)
+            let assoc = FigurePlaceAssociation(figure: subjectFigure, place: place, roleType: role, source: "From text")
             context.insert(assoc)
-            subject?.placeAssociations.append(assoc)
+            subjectFigure?.placeAssociations.append(assoc)
             place.figureAssociations.append(assoc)
         }
 
-        for rel in result.relationships {
+        for rel in result.otherRelationships {
             guard let from = figure(named: rel.fromFigure, in: context),
-                  let to = figure(named: rel.toFigure, in: context),
-                  let typeName = rel.relationshipType else { continue }
-            let type = relationType(named: typeName, in: context)
+                  let to = figure(named: rel.toFigure, in: context) else { continue }
+            let type = relationType(named: rel.relationshipType, in: context)
             let relationship = Relationship(fromFigure: from, toFigure: to, relationshipType: type, source: "From text", isPreferred: rel.isPreferred)
             context.insert(relationship)
             from.outgoingRelationships.append(relationship)
         }
+
+        for name in result.alternateNames {
+            guard let subjectFigure, !name.isEmpty else { continue }
+            let alt = AlternateName(figure: subjectFigure, name: name, tradition: .other, nameType: .spelling, note: "")
+            context.insert(alt)
+            subjectFigure.alternateNames.append(alt)
+        }
     }
 
-    private static func figure(named name: String?, in context: ModelContext) -> Figure? {
-        guard let name, !name.isEmpty else { return nil }
+    private static func populate(_ figure: Figure, _ result: FromTextResult, in context: ModelContext) {
+        if result.figureKind != .unknown, let name = result.figureKind.figureTypeName {
+            figure.figureType = figureType(named: name, in: context)
+        }
+        switch result.gender {
+        case .male: figure.gender = .male
+        case .female: figure.gender = .female
+        case .unknown: break
+        }
+        if let title = result.title { figure.title = title.capitalized }
+        if let domain = result.domain { figure.domain = domain }
+        if !result.description.isEmpty, figure.figureDescription.isEmpty {
+            figure.figureDescription = result.description
+        }
+        if let by = result.birthYear {
+            figure.birthDate = MythologicalDate(year: by, isApproximate: true)
+        }
+        if let dy = result.deathYear {
+            figure.deathDate = MythologicalDate(year: dy, isApproximate: true)
+        }
+        if let rs = result.reignStart { figure.reignStartYear = rs }
+        if let re = result.reignEnd { figure.reignEndYear = re }
+    }
+
+    private static func figure(named name: String, in context: ModelContext) -> Figure? {
+        guard !name.isEmpty else { return nil }
         let all: [Figure] = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
         if let existing = all.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) { return existing }
         let figure = Figure(name: name)
@@ -157,6 +246,14 @@ private enum FromTextRecognizer {
         let place = Place(name: name)
         context.insert(place)
         return place
+    }
+
+    private static func figureType(named name: String, in context: ModelContext) -> FigureType? {
+        let all: [FigureType] = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        if let existing = all.first(where: { $0.name == name }) { return existing }
+        let type = FigureType(name: name, icon: "person.fill", colorHex: "007AFF")
+        context.insert(type)
+        return type
     }
 
     private static func relationType(named name: String, in context: ModelContext) -> RelationshipType? {
