@@ -855,8 +855,10 @@ This is faster and more reliable than reading code to simulate the layout engine
 
 **Key decisions:**
 - Reimplemented, not reused: `QueryEngine`'s lemmatize/tokenize/resolve are `private` and read-only, so `FromTextParser` reimplements a small lemmatizer + resolver.
-- Case preservation: keyword detection runs on lowercased lemmatized text, but entity names (Enki, Babylon) are pulled from the original clause so capitalization is kept.
+- Case preservation: keyword detection runs on lowercased text, but entity names (Enki, Babylon) are pulled from the original clause so capitalization is kept.
 - Creates-or-merges by name (case-insensitive exact match) — never reseeds; matches the additive-migration constraint.
+
+**Follow-up — no-semicolon parsing (2026-08-02):** Clauses are now detected by their **keyword** (`son of`, `consort of`, `patron of`, …) anywhere in the text rather than by explicit `;` delimiters, so natural prose with commas/newlines/no punctuation works. `parse` scans for the earliest keyword occurrence, splits each clause's tail at the next keyword, and `cleanSubject` strips leading/trailing connector words only from the leading edge. Added `testFromTextMultipleClausesWithoutSemicolons` (comma-separated) and `testNewlineDelimitedClauses`. 90 tests total.
 
 **Relevant new/removed files:**
 - `Sources/MeCore/Store/FromTextParser.swift` — Added

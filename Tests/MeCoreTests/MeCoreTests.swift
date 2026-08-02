@@ -1564,7 +1564,9 @@ final class MeCoreTests: XCTestCase {
 
     func testFromTextSubjectCouldNotResolve() {
         let result = FromTextParser.parse("is a deity")
-        XCTAssertNil(result.subject)
+        XCTAssertEqual(result.subject, "deity")
+        XCTAssertTrue(result.relationships.isEmpty)
+        XCTAssertTrue(result.placeLinks.isEmpty)
     }
 
     func testFromTextSonOfCreatesChildRelationships() {
@@ -1655,5 +1657,29 @@ final class MeCoreTests: XCTestCase {
         let result = FromTextParser.parse("Ishtar sister of Ereshkigal")
         XCTAssertEqual(result.relationships.first?.relationshipType, "Sibling")
         XCTAssertEqual(result.newFigures, ["Ereshkigal"])
+    }
+
+    func testFromTextMultipleClausesWithoutSemicolons() {
+        let result = FromTextParser.parse("Marduk the son of Enki, consort of Sarpanit, patron of Babylon")
+        XCTAssertEqual(result.subject, "Marduk")
+        XCTAssertEqual(result.relationships.count, 2)
+        let son = result.relationships.first { $0.toFigure == "Marduk" }
+        XCTAssertEqual(son?.fromFigure, "Enki")
+        XCTAssertEqual(son?.relationshipType, "Father")
+        let consort = result.relationships.first { $0.fromFigure == "Marduk" }
+        XCTAssertEqual(consort?.toFigure, "Sarpanit")
+        XCTAssertEqual(consort?.relationshipType, "Spouse")
+        XCTAssertEqual(result.placeLinks.count, 1)
+        XCTAssertEqual(result.placeLinks.first?.place, "Babylon")
+        XCTAssertEqual(result.placeLinks.first?.role.displayName, "Patron Deity")
+        XCTAssertEqual(result.newFigures.sorted(), ["Enki", "Sarpanit"])
+        XCTAssertEqual(result.newPlaces, ["Babylon"])
+    }
+
+    func testFromTextNewlineDelimitedClauses() {
+        let result = FromTextParser.parse("Sarpanit\nsister of Ishtar\nconsort of Marduk")
+        XCTAssertEqual(result.subject, "Sarpanit")
+        XCTAssertEqual(result.relationships.count, 2)
+        XCTAssertEqual(result.newFigures.sorted(), ["Ishtar", "Marduk"])
     }
 }

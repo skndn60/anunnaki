@@ -13,14 +13,14 @@ struct FromTextSheet: View {
             Text("Add from Text")
                 .font(.title2.bold())
 
-            Text("Describe a figure and its connections in plain language. Separate clauses with a semicolon. Examples:")
+            Text("Describe a figure and its connections in plain language. Use commas, newlines, or nothing to separate clauses. Examples:")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text("\u{2022} Marduk is the son of Enki and Damkina")
-                Text("\u{2022} Sarpanit; consort of Marduk")
+                Text("\u{2022} Sarpanit, consort of Marduk")
                 Text("\u{2022} Marduk patron of Babylon")
             }
             .font(.caption)

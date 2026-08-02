@@ -84,24 +84,52 @@ package struct FromTextParser {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return FromTextResult() }
 
-        let clauses = splitClauses(trimmed)
-        let subject = extractSubject(from: clauses.first ?? trimmed)
+        let matches = findClauses(in: trimmed)
 
         var relationships: [FromTextRelationship] = []
         var placeLinks: [FromTextPlaceLink] = []
         var newFigures = Set<String>()
         var newPlaces = Set<String>()
 
-        for clause in clauses {
-            parseClause(clause, subject: subject, relationships: &relationships, placeLinks: &placeLinks, newFigures: &newFigures, newPlaces: &newPlaces)
+        guard let first = matches.first else {
+            return FromTextResult(
+                subject: cleanSubject(trimmed),
+                relationships: relationships,
+                placeLinks: placeLinks,
+                newFigures: newFigures.sorted(),
+                newPlaces: newPlaces.sorted()
+            )
         }
 
-        if let subject {
+        let subject = cleanSubject(String(trimmed[..<first.range.lowerBound]))
+
+        for (index, match) in matches.enumerated() {
+            let start = match.range.upperBound
+            let end = index + 1 < matches.count ? matches[index + 1].range.lowerBound : trimmed.endIndex
+            let tail = String(trimmed[start..<end])
+                .trimmingCharacters(in: CharacterSet(charactersIn: ",;\n"))
+                .trimmingCharacters(in: .whitespaces)
+
+            if let placeRole = match.place {
+                let place = cleanName(tail)
+                if !place.isEmpty {
+                    placeLinks.append(FromTextPlaceLink(figure: subject, place: place, role: placeRole))
+                    newPlaces.insert(place)
+                }
+            } else if let familyEntry = familyEntry(for: match.word) {
+                for target in splitNames(tail) {
+                    relationships.append(makeRelationship(subject: subject, target: target, word: match.word, category: familyEntry.category))
+                    newFigures.insert(target)
+                }
+            }
+        }
+
+        if !subject.isEmpty {
             newFigures.remove(subject)
         }
 
         return FromTextResult(
-            subject: subject,
+            subject: subject.isEmpty ? nil : subject,
             relationships: relationships,
             placeLinks: placeLinks,
             newFigures: newFigures.sorted(),
@@ -109,44 +137,42 @@ package struct FromTextParser {
         )
     }
 
-    private static func parseClause(_ clause: String, subject: String?, relationships: inout [FromTextRelationship], placeLinks: inout [FromTextPlaceLink], newFigures: inout Set<String>, newPlaces: inout Set<String>) {
-        guard let subject else { return }
-        let lower = clause.lowercased()
+    private struct ClauseMatch {
+        let word: String
+        let place: FromTextRoleType?
+        let range: Range<String.Index>
+    }
 
-        for (word, roleType) in placeWords {
-            if let tail = extractTail(lower, prefix: word + " of "),
-               let original = originalTail(in: clause, lowerPrefix: word + " of ", lowerTail: tail) {
-                placeLinks.append(FromTextPlaceLink(figure: subject, place: original, role: roleType))
-                newPlaces.insert(original)
-                return
-            }
-        }
+    private static func findClauses(in text: String) -> [ClauseMatch] {
+        let lower = text.lowercased()
+        let markers: [(word: String, role: FromTextRoleType?)] =
+            familyWords.map { ($0.word, nil) } + placeWords.map { ($0.word, $0.role) }
 
-        for (word, category) in familyWords {
-            if let tail = extractTail(lower, prefix: word + " of "),
-                let original = originalTail(in: clause, lowerPrefix: word + " of ", lowerTail: tail) {
-                let names = splitNames(original)
-                for target in names {
-                    relationships.append(makeRelationship(subject: subject, target: target, word: word, category: category))
-                    newFigures.insert(target)
+        var results: [ClauseMatch] = []
+        var cursor = lower.startIndex
+
+        while cursor < lower.endIndex {
+            var best: (word: String, role: FromTextRoleType?, lowerStart: String.Index, upper: String.Index)? = nil
+
+            for (word, role) in markers {
+                let needle = word + " of "
+                guard let r = lower.range(of: needle, range: cursor..<lower.endIndex) else { continue }
+                if best == nil || r.lowerBound < best!.lowerStart {
+                    best = (word, role, r.lowerBound, r.upperBound)
                 }
-                return
             }
+
+            guard let chosen = best else { break }
+            let start = text.index(text.startIndex, offsetBy: chosen.lowerStart.utf16Offset(in: lower))
+            let end = text.index(text.startIndex, offsetBy: chosen.upper.utf16Offset(in: lower))
+            results.append(ClauseMatch(word: chosen.word, place: chosen.role, range: start..<end))
+            cursor = chosen.upper
         }
+        return results
     }
 
-    private static func extractTail(_ text: String, prefix: String) -> String? {
-        guard let range = text.range(of: prefix) else { return nil }
-        let after = text[range.upperBound...]
-        let cleaned = after
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-            .trimmingCharacters(in: .punctuationCharacters)
-        return cleaned.isEmpty ? nil : cleaned
-    }
-
-    private static func originalTail(in clause: String, lowerPrefix: String, lowerTail: String) -> String? {
-        guard let fullLower = clause.lowercased().range(of: lowerPrefix + lowerTail) else { return nil }
-        return String(clause[fullLower]).dropFirst(lowerPrefix.count).trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
+    private static func familyEntry(for word: String) -> (word: String, category: String)? {
+        familyWords.first { $0.word == word }
     }
 
     private static func makeRelationship(subject: String, target: String, word: String, category: String) -> FromTextRelationship {
@@ -173,54 +199,27 @@ package struct FromTextParser {
         } else {
             parts = [text]
         }
-        return parts.map { $0.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters) }
+        return parts.map { cleanName($0) ?? "" }
             .filter { !$0.isEmpty }
     }
 
-    private static func extractSubject(from clause: String) -> String? {
-        let tokens = tokenize(clause)
-        guard let first = tokens.first else { return nil }
-        let lower = first.lowercased()
-        let connectors: Set<String> = [
-            "is", "was", "are", "were", "the", "a", "an", "who", "and", "son", "daughter",
-            "father", "mother", "brother", "sister", "spouse", "consort", "wife", "husband",
-            "creator", "patron", "ruler",
+    private static func cleanSubject(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: CharacterSet(charactersIn: ",;\n"))
+        let stoppers: Set<String> = [
+            "is", "was", "are", "were", "the", "a", "an", "who", "and", "that", "-",
         ]
-        if connectors.contains(lower) { return nil }
-        return first
+
+        var words = trimmed.split(separator: " ").map(String.init)
+        while let first = words.first, stoppers.contains(first.lowercased()) {
+            words.removeFirst()
+        }
+        while let last = words.last, stoppers.contains(last.lowercased()) {
+            words.removeLast()
+        }
+        return words.joined(separator: " ")
     }
 
-    private static func splitClauses(_ text: String) -> [String] {
-        let bySemicolon = text.components(separatedBy: ";")
-        var out: [String] = []
-        for part in bySemicolon {
-            let trimmed = part.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty { out.append(trimmed) }
-        }
-        return out
-    }
-
-    private static func tokenize(_ text: String) -> [String] {
-        let tokenizer = NLTokenizer(unit: .word)
-        tokenizer.string = text
-        var tokens: [String] = []
-        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
-            tokens.append(String(text[range]))
-            return true
-        }
-        return tokens
-    }
-
-    private static func lemmatize(_ text: String) -> String {
-        let tagger = NLTagger(tagSchemes: [.lemma])
-        tagger.string = text
-        var pieces: [String] = []
-        tagger.enumerateTags(in: text.startIndex..<text.endIndex, unit: .word, scheme: .lemma) { tag, range in
-            let raw = tag?.rawValue ?? String(text[range])
-            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty { pieces.append(trimmed.lowercased()) }
-            return true
-        }
-        return pieces.joined(separator: " ")
+    private static func cleanName(_ text: String) -> String {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
     }
 }
