@@ -6,6 +6,15 @@ A macOS knowledge management app for Sumerian/Mesopotamian mythology. Built with
 
 Product name: **Me** (displayed in window title, executable name in Package.swift). Project codename: **Anunnaki**.
 
+## Project Genesis & Motivation
+
+The app is a **personal hobby project** — no commercial goals, not intended to be sold (at least not actively). Origins: the developer has long been fascinated by the Anunnaki and Sumerian civilization, but the sheer volume of figures and places involved in that mythology was bewildering, and no tool existed to organize it and make it more accessible. That gap, plus a second interest in Mac app development, is the cornerstone of the project.
+
+**What this means for decisions:**
+- It is also a way to stay connected to AI/LLM tooling (pair-programming, natural language querying) — so the AI-facing surface (QueryEngine, natural-language features) matters as much as the data model.
+- No growth/audience pressure: the app is built to be useful to one person. "Niche audience" is not a risk to manage; data-entry speed for personal use is the lever that matters (see `PRODUCT_WEAKNESSES.md`).
+- Data safety and long-term maintainability outrank shipping velocity; the user's existing database is sacred (see Hard Constraints).
+
 ## Tech Stack
 
 - **Language**: Swift 5.9+
@@ -116,6 +125,8 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - `Sources/Me/Views/ContentView.swift` — Sidebar navigation split view, handles loading/seed state
 - `Tests/MeCoreTests/MeCoreTests.swift` — Unit tests for MeCore
 - `/tmp/parse_skl.py` — Python parser for Sumerian King List wikitext, generates seed JSON with UUIDs
+- `PRODUCT_WEAKNESSES.md` — Product-level critique: the app's weak spots and strategy (cold-start data volume, trapped data, contradictory traditions, curation burden, niche risk, no feedback loop) + priorities
+- `ARCHITECTURAL_WEAKNESSES_CRITIQUE.md` — Code-level technical debt review (SwiftData boilerplate, Relationship.source, width persistence, lineage complexity)
 
 ## Session Log
 
@@ -357,6 +368,8 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/Me/Views/ContentView.swift` — Added `.lineage` coordinator branch
 
 ## TODO
+
+- [ ] **Product weaknesses:** See `PRODUCT_WEAKNESSES.md` — priorities are (1) data-entry speed/bulk ingestion, (2) source-discriminated lineage, (3) export/portability, (4) attribution nudging.
 
 - [ ] **Lineage lines broken on recenter:** This issue was in the old overlay-based LineageTreeView and is no longer present in the current Canvas-based implementation. Remove if confirmed fixed.
 - [ ] **Lineage lines: consider PreferenceKey approach:** Named coordinate spaces are fragile. A `PreferenceKey` where each `FigureCardView` reports its frame via `.preference(key:value:)`, collected with `.onPreferenceChange`, would be more robust and avoid coordinate space mismatches entirely.
@@ -872,3 +885,57 @@ This is faster and more reliable than reading code to simulate the layout engine
 **Relevant files (follow-up):**
 - `Sources/MeCore/Store/FromTextParser.swift` — Field-oriented result + detection helpers
 - `Sources/Me/Views/FromTextSheet.swift` — Structured field-row preview
+
+### 2026-08-03 — From-text revert log & history panel; `aka` marker word-boundary fix
+
+**Context:** Two sessions. (1) The user worried an "Add from Text" mistake would contaminate the database and wanted a way to revert it — with "search and destroy" cleanup being too error-prone. (2) A regression report: pasting the Ptah article generated bogus AKA names "Stone", "Twenty-Fifth Dynassts" [Dynasty], and "tongue".
+
+**Changes made — revert log & history:**
+
+- `Sources/MeCore/Store/FromTextRecognizer.swift` — NEW. The `FromTextRecognizer` enum moved out of `FromTextSheet.swift` into MeCore (so tests can drive it). `apply(_:in:)` now returns a `FromTextApplyRecord?` and **persists `result.parents + result.otherRelationships`** (previously `parents` were silently dropped — a pre-existing bug fixed in the rewrite). New `revert(_:in:)` → `FromTextRevertReport`.
+  - Record types (all Codable/Hashable/Identifiable): `FromTextApplyRecord` (id, date, subject, createdFigureNames, createdPlaceNames, createdFigureTypeNames, createdRelationshipTypeNames, createdRoleTypeNames, alternateNames, relationships, placeLinks, figureMutations, revertedAt), `FromTextRecordedRelationship`, `FromTextRecordedPlaceLink`, `FromTextFigureMutation`, `FromTextFieldState`, `FromTextRevertReport`.
+  - Revert deletes only objects created by that add, in dependency order (relationships/links/alternate names/types, then orphaned figures/places via `isOrphaned` checks covering relationships, placeAssociations, alternateNames, thingAssociations, stickies, groupAssociations, images, tags, events, contentAttributions). Pre-existing figures keep their field values; mutations are restored only if the user hasn't edited them since (`skippedMutations`). Requires `try? context.save()` mid-revert before orphan checks so deletions are flushed.
+- `Sources/Me/Views/FromTextLog.swift` — NEW. Append-only JSON persistence at `BackupService.storeDirectory/from_text_log.json` (`load`/`append`/`markReverted`). Best-effort: a failed log write never blocks an add.
+- `Sources/Me/Views/FromTextHistorySheet.swift` — NEW. History list of past adds with per-entry result summary and a Revert button (with confirm); opened from the toolbar clock icon.
+- `Sources/Me/Views/FromTextSheet.swift` — After Add, shows a green "Added X" banner with a red "Undo This Add" button; no longer auto-dismisses; Done closes. `apply` appends to `FromTextLog`; `undo` calls `FromTextRecognizer.revert`, saves, and alerts "Could not undo" if nothing was removed.
+- `Sources/Me/Views/ContentView.swift` — Added `clock.arrow.circlepath` toolbar item + `showFromTextHistorySheet` state + `.sheet`.
+
+**Changes made — `aka` word-boundary fix (2026-08-03):**
+
+- `Sources/MeCore/Store/FromTextParser.swift` — `scanClauses` now requires markers to begin at a word boundary: the character before a marker match must not be a letter/number. Root cause of the Ptah regression: `aka ` matched inside "Shab**aka** Stone", so the alternate-marker clause swallowed "Stone, from the Twenty-Fifth Dynasty, … through this heart and this tongue" as an alias list. Verified against the full Origin-and-symbolism paragraph + epithet list: `alternateNames == []`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 5 new apply/revert tests (`testFromTextApplyCreatesFiguresPlacesAndLinks`, `testFromTextRevertRemovesCreatedData`, `testFromTextApplyReusesExistingFigureAndRevertRestoresIt`, `testFromTextRevertKeepsFigureWithLaterData`, `testFromTextApplyRecordCodableRoundTrip`) + regression `testFromTextAkaMarkerWordBoundary`. 108 tests pass.
+
+**Key decisions:**
+- Log is append-only JSON on disk (not a new `@Model`) so it works even if a restore/relaunch resets the store, and requires no schema migration.
+- Revert is scoped and additive-safe: only the add's own creations are touched; user edits made after the add are preserved via `FromTextFieldState` before/after comparison.
+- The `aka` fix distinguishes a genuine marker from a mid-word substring rather than trying to filter the resulting names — the clause never fires at all.
+
+**Relevant new/removed files:**
+- `Sources/MeCore/Store/FromTextRecognizer.swift` — Added
+- `Sources/Me/Views/FromTextLog.swift` — Added
+- `Sources/Me/Views/FromTextHistorySheet.swift` — Added
+
+**Relevant files:**
+- `Sources/Me/Views/FromTextSheet.swift` — Updated (recognizer moved out; banner + undo)
+- `Sources/Me/Views/ContentView.swift` — Updated (history toolbar item)
+- `Sources/MeCore/Store/FromTextParser.swift` — Updated (word-boundary check)
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-03 — Product-level critique written: PRODUCT_WEAKNESSES.md
+
+**Context:** The user remembered an earlier discussion where the app's weak spots were surveyed, with "data volume" being one. That conversation had never been captured. To avoid losing the reasoning again, this session wrote it down.
+
+**Changes made:**
+- `PRODUCT_WEAKNESSES.md` — NEW. Product-level critique (complements the existing `ARCHITECTURAL_WEAKNESSES_CRITIQUE.md`): six weaknesses (cold-start data problem, single-user trapped data, contradictory traditions not modeled, curation burden, niche-audience risk, no feedback loop), a suggested priority order, and a deliberately-de-prioritized list. Data snapshot at review time: 207 figures / 46 places / 67 events / 30 eras / 14 sources / 114 relationships.
+- `AGENTS.md` — Added both critique docs to Important Files; added a top-of-TODO item pointing at `PRODUCT_WEAKNESSES.md` with the four priorities (data-entry speed, source-discriminated lineage, export/portability, attribution nudging).
+
+**Key decisions:**
+- The critique is grounded in the current codebase (quotes specific features: Add-from-Text, ContentAttribution, backup/restore, the open source-discriminator TODO) rather than being generic.
+- The developer then shared the project's genesis (personal hobby, no commercial goals, fascination with Anunnaki/Sumerian civilization + Mac app development + AI/LLM interest) — this was captured in a new "Project Genesis & Motivation" section at the top of AGENTS.md, and the critique was amended: niche-audience is now framed as a neutral personal-tool stance (not a risk), with data-entry speed and the AI-facing surface as the levers.
+- Attribution is treated as a nudge problem (make it cheap, auto-attach on import/parse) rather than an enforcement problem.
+
+**Relevant new/removed files:**
+- `PRODUCT_WEAKNESSES.md` — Added
+
+**Relevant files:**
+- `AGENTS.md` — Updated (Important Files + TODO)
