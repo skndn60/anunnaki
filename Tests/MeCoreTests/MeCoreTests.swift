@@ -1685,6 +1685,37 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(result.alternateNames, ["Bel", "Merodach"])
     }
 
+    func testFromTextHammurabiWikipediaBio() {
+        let clip = "Hammurabi (also spelled Hammurapi) was the sixth Amorite king of Babylon, reigning from c. 1792 BC to c. 1750 BC. He was a son of Sin-Muballit."
+        let result = FromTextParser.parse(clip)
+        XCTAssertEqual(result.subject, "Hammurabi")
+        XCTAssertEqual(result.gender, .male)
+        XCTAssertEqual(result.figureKind, .human)
+        XCTAssertEqual(result.title, "King")
+        XCTAssertEqual(result.alternateNames, ["Hammurapi"])
+        XCTAssertEqual(result.parents.count, 1)
+        XCTAssertEqual(result.parents.first?.fromFigure, "Sin-Muballit")
+        XCTAssertEqual(result.parents.first?.relationshipType, "Father")
+        XCTAssertTrue(result.placeLinks.contains { $0.place == "Babylon" && $0.roleName == "Ruler" })
+        XCTAssertEqual(result.reignStart, -1792)
+        XCTAssertEqual(result.reignEnd, -1750)
+        XCTAssertFalse(result.newFigures.contains("became"))
+        XCTAssertEqual(result.newFigures, ["Sin-Muballit"])
+    }
+
+    func testFromTextQueenGenderInferred() {
+        let result = FromTextParser.parse("Kubaba was queen of Kish, the wife of Puzur-Suen")
+        XCTAssertEqual(result.gender, .female)
+        XCTAssertEqual(result.figureKind, .human)
+        XCTAssertEqual(result.title, "Queen")
+    }
+
+    func testFromTextAlsoSpelledAlternate() {
+        let result = FromTextParser.parse("Hammurabi, also spelled Hammurapi, king of Babylon")
+        XCTAssertEqual(result.subject, "Hammurabi")
+        XCTAssertEqual(result.alternateNames, ["Hammurapi"])
+    }
+
     func testFromTextGenderDeityDetected() {
         let male = FromTextParser.parse("Marduk is a god of Babylon, the son of Enki")
         XCTAssertEqual(male.gender, .male)

@@ -42,7 +42,6 @@ struct FromTextSheet: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .frame(height: 120)
             }
-
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
@@ -65,56 +64,41 @@ struct FromTextSheet: View {
 
     @ViewBuilder
     private func preview(_ result: FromTextResult) -> some View {
-        let rows = fieldRows(result)
-        if rows.isEmpty && result.alternateNames.isEmpty {
+        let summary = summaryItems(result)
+        if summary.isEmpty {
             Text("Nothing recognized yet.")
                 .font(.callout)
                 .foregroundStyle(.tertiary)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .frame(height: 120)
         } else {
-            VStack(alignment: .leading, spacing: 6) {
-                Label("\(result.subject)", systemImage: "person.crop.circle")
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Will be added: \(result.subject)", systemImage: "person.crop.circle.badge.plus")
                     .font(.headline)
-                ForEach(rows, id: \.0) { label, value in
-                    HStack(alignment: .top, spacing: 8) {
-                        Text(label + ":")
-                            .font(.callout)
+                Divider()
+                ForEach(summary, id: \.0) { section, lines in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(section)
+                            .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
-                            .frame(width: 110, alignment: .leading)
-                        Text(value)
-                            .font(.callout)
+                            .textCase(.uppercase)
+                        ForEach(lines, id: \.self) { line in
+                            HStack(alignment: .top, spacing: 6) {
+                                Image(systemName: "plus.circle")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                Text(line)
+                                    .font(.callout)
+                            }
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if !result.alternateNames.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("AKA:")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 110, alignment: .leading)
-                        Text(result.alternateNames.joined(separator: ", "))
-                            .font(.callout)
-                    }
-                }
-                if !result.newFigures.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("New figures:")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 110, alignment: .leading)
-                        Text(result.newFigures.joined(separator: ", "))
-                            .font(.callout)
-                    }
-                }
-                if !result.newPlaces.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        Text("New places:")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 110, alignment: .leading)
-                        Text(result.newPlaces.joined(separator: ", "))
-                            .font(.callout)
-                    }
+                if !result.description.isEmpty {
+                    Divider()
+                    Text("Description: full pasted text is stored on the figure.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
                 }
             }
             .padding(10)
@@ -123,42 +107,51 @@ struct FromTextSheet: View {
         }
     }
 
-    private func fieldRows(_ result: FromTextResult) -> [(String, String)] {
-        var rows: [(String, String)] = []
-        rows.append(("Name", result.subject.isEmpty ? "—" : result.subject))
-        var gender = "Unknown"
+    private func summaryItems(_ result: FromTextResult) -> [(String, [String])] {
+        var sections: [(String, [String])] = []
+
+        var figure: [String] = []
         switch result.gender {
-        case .male: gender = "Male"
-        case .female: gender = "Female"
-        case .unknown: gender = "Unknown"
+        case .male: figure.append("Gender: Male")
+        case .female: figure.append("Gender: Female")
+        case .unknown: figure.append("Gender: Unknown")
         }
-        rows.append(("Gender", gender))
-        if let kind = result.figureKind.figureTypeName { rows.append(("Type", kind)) }
-        if let title = result.title { rows.append(("Title", title.capitalized)) }
-        if let domain = result.domain { rows.append(("Domain", domain)) }
-        var birth = "—"
-        if let by = result.birthYear { birth = formatYear(by) }
-        rows.append(("Birth", birth))
-        var death = "—"
-        if let dy = result.deathYear, result.birthYear != result.deathYear { death = formatYear(dy) }
-        rows.append(("Death", death))
+        if let kind = result.figureKind.figureTypeName { figure.append("Type: \(kind)") }
+        if let title = result.title { figure.append("Title: \(title.capitalized)") }
+        if let domain = result.domain { figure.append("Domain: \(domain)") }
+        if let by = result.birthYear { figure.append("Birth: \(formatYear(by))") }
+        if let dy = result.deathYear { figure.append("Death: \(formatYear(dy))") }
         if let rs = result.reignStart, let re = result.reignEnd {
-            rows.append(("Reign", "\(formatYear(rs)) \u{2013} \(formatYear(re))"))
+            figure.append("Reign: \(formatYear(rs)) \u{2013} \(formatYear(re))")
         }
-        var parents = "—"
-        if !result.parents.isEmpty {
-            parents = result.parents.map { "\($0.relationshipType): \($0.fromFigure)" }.joined(separator: ", ")
+        if !figure.isEmpty { sections.append(("Figure", figure)) }
+
+        var family: [String] = []
+        for rel in result.parents {
+            family.append("\(rel.relationshipType): \(rel.fromFigure)")
         }
-        rows.append(("Parents", parents))
-        if !result.otherRelationships.isEmpty {
-            let others = result.otherRelationships.map { "\($0.relationshipType): \($0.toFigure)" }.joined(separator: ", ")
-            rows.append(("Relations", others))
+        for rel in result.otherRelationships {
+            let arrow = rel.isPreferred ? " (preferred)" : ""
+            family.append("\(rel.relationshipType): \(rel.fromFigure) \u{2192} \(rel.toFigure)\(arrow)")
         }
-        if !result.placeLinks.isEmpty {
-            let places = result.placeLinks.map { "\($0.roleName) of \($0.place)" }.joined(separator: ", ")
-            rows.append(("Places", places))
+        if !family.isEmpty { sections.append(("Family & Relationships", family)) }
+
+        var places: [String] = []
+        for link in result.placeLinks {
+            places.append("\(link.roleName) of \(link.place)")
         }
-        return rows
+        if !places.isEmpty { sections.append(("Place Links", places)) }
+
+        if !result.alternateNames.isEmpty {
+            sections.append(("Alternate Names", result.alternateNames))
+        }
+        if !result.newFigures.isEmpty {
+            sections.append(("New Figures (created on add)", result.newFigures.sorted()))
+        }
+        if !result.newPlaces.isEmpty {
+            sections.append(("New Places (created on add)", result.newPlaces.sorted()))
+        }
+        return sections
     }
 
     private func formatYear(_ year: Int) -> String {

@@ -142,7 +142,7 @@ package struct FromTextParser {
 
         let lower = trimmed.lowercased()
         let clauses = scanClauses(in: trimmed, lower: lower)
-        let subject = firstSubject(trimmed, clauses: clauses)
+        let subject = firstSubject(trimmed)
 
         var result = FromTextResult(subject: subject)
         result.parents = []
@@ -156,7 +156,10 @@ package struct FromTextParser {
 
         for (index, clause) in clauses.enumerated() {
             let valueStart = clause.range.upperBound
-            let valueEnd = index + 1 < clauses.count ? clauses[index + 1].range.lowerBound : trimmed.endIndex
+            var valueEnd = index + 1 < clauses.count ? clauses[index + 1].range.lowerBound : trimmed.endIndex
+            if let terminator = trimmed.range(of: #"[.;!?\n](?=\s+[A-Z])|\n"#, options: .regularExpression, range: valueStart..<valueEnd) {
+                valueEnd = terminator.lowerBound
+            }
             let rawValue = String(trimmed[valueStart..<valueEnd])
             let value = cleanClauseValue(rawValue)
 
@@ -252,15 +255,51 @@ package struct FromTextParser {
 
     private static let alternateMarkers: [String] = [
         "also known as ", "otherwise known as ", "known as ", "known by the name ",
-        "also called ", "aka ", "named ",
+        "also called ", "aka ", "named ", "also spelled ", "also transliterated ",
+        "sometimes called ", "also written ",
     ]
 
+    private static let nameFunctionWords: Set<String> = [
+        "the", "a", "an", "of", "and", "his", "her", "their", "its",
+        "was", "is", "were", "are", "be", "been", "being", "became", "become",
+        "reigning", "reigned", "reign", "ruling", "ruled", "rules", "calls", "called",
+        "known", "also", "from", "to", "c", "circa", "bc", "bce", "ad", "ce",
+        "king", "queen", "ruler", "lord", "son", "daughter", "the",
+    ]
+
+    private static func extractProperNames(_ value: String) -> [String] {
+        var names: [String] = []
+        for chunk in value.components(separatedBy: " and ").flatMap({ $0.components(separatedBy: ",") }) {
+            let words = chunk.split(separator: " ")
+            guard let firstWord = words.first else { continue }
+            var index = 0
+            while index < words.count, nameFunctionWords.contains(words[index].lowercased().trimmingCharacters(in: .punctuationCharacters)) {
+                index += 1
+            }
+            guard index < words.count else { continue }
+            var kept: [String] = []
+            while index < words.count {
+                let word = words[index]
+                let clean = word.trimmingCharacters(in: .punctuationCharacters)
+                guard !clean.isEmpty else { index += 1; continue }
+                if clean.first?.isUppercase == true {
+                    kept.append(clean)
+                    index += 1
+                } else {
+                    break
+                }
+            }
+            if !kept.isEmpty {
+                names.append(kept.joined(separator: " "))
+            } else if words.count == 1, !words[0].trimmingCharacters(in: .punctuationCharacters).isEmpty {
+                names.append(words[0].trimmingCharacters(in: .punctuationCharacters))
+            }
+        }
+        return names
+    }
+
     private static func splitNames(_ text: String) -> [String] {
-        let stopwords: Set<String> = ["the", "a", "an", "of", "and", "his", "her", "their", "its"]
-        return text.components(separatedBy: " and ")
-            .flatMap { $0.components(separatedBy: ",") }
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters) }
-            .filter { !$0.isEmpty && !stopwords.contains($0.lowercased()) }
+        return extractProperNames(text)
     }
 
     private static func cleanClauseValue(_ value: String) -> String {
@@ -271,40 +310,38 @@ package struct FromTextParser {
             .trimmingCharacters(in: .whitespaces)
     }
 
-    private static func firstSubject(_ text: String, clauses: [ClauseMatch]) -> String {
-        let prefix: String
-        if let first = clauses.first, first.range.lowerBound > text.startIndex {
-            prefix = String(text[text.startIndex..<first.range.lowerBound])
-        } else {
-            prefix = text
-        }
-        var words = prefix.components(separatedBy: .whitespacesAndNewlines)
+    private static func firstSubject(_ text: String) -> String {
+        let noParens = text.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
+        let tokens = noParens.components(separatedBy: .whitespacesAndNewlines)
         let stoppers: Set<String> = ["is", "was", "are", "were", "the", "a", "an", "and", "also", "known", "as"]
-        while let head = words.first, stoppers.contains(head.lowercased()) {
-            words.removeFirst()
+        var name: [String] = []
+        for t in tokens {
+            let clean = t.trimmingCharacters(in: CharacterSet(charactersIn: ",;'\"()"))
+            if clean.isEmpty { continue }
+            if clean.first?.isUppercase == true, !stoppers.contains(clean.lowercased()) {
+                name.append(clean)
+            } else if !name.isEmpty {
+                break
+            }
         }
-        while let tail = words.last, stoppers.contains(tail.lowercased()) || tail.isEmpty {
-            words.removeLast()
-        }
-        let candidate = words.joined(separator: " ").trimmingCharacters(in: CharacterSet(charactersIn: ",;"))
-        guard !candidate.isEmpty else {
-            // fall back: first capitalized token in the whole text
-            let tokens = text.components(separatedBy: .whitespacesAndNewlines)
-            return tokens.first { t in
-                guard let c = t.first, c.isUppercase else { return false }
-                return !stoppers.contains(t.lowercased())
-            } ?? ""
-        }
-        return candidate
+        if !name.isEmpty { return name.joined(separator: " ") }
+        return tokens.first { t in
+            let clean = t.trimmingCharacters(in: CharacterSet(charactersIn: ",;"))
+            return !clean.isEmpty && !stoppers.contains(clean.lowercased())
+        } ?? ""
     }
 
     private static func detectGender(in lower: String, into result: inout FromTextResult) {
-        let tokens = Set(lower.components(separatedBy: CharacterSet.alphanumerics.inverted))
-        if tokens.contains("goddess") || tokens.contains("female") {
-            result.gender = .female
-        } else if tokens.contains("god") || tokens.contains("male") {
-            result.gender = .male
-        }
+        let tokens = lower.components(separatedBy: CharacterSet.alphanumerics.inverted)
+        let male: Set<String> = ["god", "king", "lord", "he", "his", "him", "son", "brother", "husband", "father", "male", "priest", "ruler", "reigned", "ruled", "man"]
+        let female: Set<String> = ["goddess", "queen", "lady", "she", "her", "daughter", "sister", "wife", "mother", "female", "priestess", "woman"]
+        var score = 0
+        for t in tokens where male.contains(t) { score += 1 }
+        for t in tokens where female.contains(t) { score -= 1 }
+        if lower.contains("king of ") || lower.contains("god of ") || lower.contains("lord of ") { score += 3 }
+        if lower.contains("queen of ") || lower.contains("goddess of ") || lower.contains("lady of ") { score -= 3 }
+        if score > 0 { result.gender = .male }
+        else if score < 0 { result.gender = .female }
     }
 
     private static func detectFigureKind(in lower: String, into result: inout FromTextResult) {
@@ -336,15 +373,14 @@ package struct FromTextParser {
     }
 
     private static func detectTitle(in lower: String, into result: inout FromTextResult) {
-        let patterns = ["lord of ", "king of ", "lord over "]
-        for pattern in patterns {
-            if let range = lower.range(of: pattern + " ") ?? lower.range(of: pattern) {
-                let tail = String(lower[range.upperBound...])
-                if let word = tail.components(separatedBy: .whitespaces).first, !word.isEmpty {
-                    result.title = word.capitalized
-                    return
-                }
-            }
+        let roles: [(String, String)] = [
+            ("king of ", "King"), ("queen of ", "Queen"), ("lord of ", "Lord"),
+            ("lord over ", "Lord"), ("ruler of ", "Ruler"), ("god of ", "God"),
+            ("goddess of ", "Goddess"),
+        ]
+        for (phrase, role) in roles where lower.contains(phrase) {
+            result.title = role
+            return
         }
     }
 
@@ -375,8 +411,16 @@ package struct FromTextParser {
             }
             if !years.isEmpty {
                 let sorted = years.sorted()
-                result.birthYear = sorted.first
-                result.deathYear = sorted.last
+                // A reign clause ("reigned/ruling from X to Y") fills reign bounds,
+                // not birth/death.
+                let reignClause = lower.contains("reigned") || lower.contains("reigning") || lower.contains("ruling")
+                if reignClause {
+                    result.reignStart = sorted.first
+                    result.reignEnd = sorted.last
+                } else {
+                    result.birthYear = sorted.first
+                    result.deathYear = sorted.last
+                }
             }
         }
     }
