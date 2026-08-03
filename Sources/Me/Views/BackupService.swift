@@ -47,7 +47,18 @@ enum BackupService {
         FileManager.default.fileExists(atPath: directory.appendingPathComponent(fileName).path)
     }
 
-    /// Request a save panel and create a backup. Runs on the main thread (AppKit panels).
+    /// Present an open panel attached to the key window (as a sheet) so it never fights
+    /// an already-presented SwiftUI sheet. Falls back to runModal if no window is key.
+    @MainActor
+    private static func runSheet(_ panel: NSOpenPanel, completion: @escaping (NSApplication.ModalResponse) -> Void) {
+        if let window = NSApp.keyWindow {
+            panel.beginSheetModal(for: window, completionHandler: completion)
+        } else {
+            completion(panel.runModal())
+        }
+    }
+
+    /// Choose a destination folder and create a backup there.
     @MainActor
     static func chooseAndBackup() async -> Result<URL, BackupError> {
         let panel = NSOpenPanel()
@@ -57,14 +68,34 @@ enum BackupService {
         panel.canChooseDirectories = true
         panel.allowsMultipleSelection = false
         panel.canCreateDirectories = true
-        guard panel.runModal() == .OK, let url = panel.url else {
-            return .failure(.cancelled)
+
+        let url: URL? = await withCheckedContinuation { cont in
+            runSheet(panel) { response in
+                cont.resume(returning: response == .OK ? panel.url : nil)
+            }
         }
+        guard let url else { return .failure(.cancelled) }
         do {
             let folder = try makeBackup(in: url)
             return .success(folder)
         } catch {
             return .failure(error as? BackupError ?? .writeFailed)
+        }
+    }
+
+    /// Let the user pick a backup folder to restore from (validated by the caller).
+    @MainActor
+    static func chooseRestoreSource() async -> URL? {
+        let panel = NSOpenPanel()
+        panel.title = "Choose a Backup Folder"
+        panel.prompt = "Select"
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.allowsMultipleSelection = false
+        return await withCheckedContinuation { cont in
+            runSheet(panel) { response in
+                cont.resume(returning: response == .OK ? panel.url : nil)
+            }
         }
     }
 

@@ -82,21 +82,16 @@ struct BackupSheet: View {
     }
 
     private func chooseRestore() {
-        let panel = NSOpenPanel()
-        panel.title = "Choose a Backup Folder"
-        panel.prompt = "Select"
-        panel.canChooseDirectories = true
-        panel.canChooseFiles = false
-        panel.allowsMultipleSelection = false
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-
-        guard BackupService.isValidBackup(url) else {
-            isFailure = true
-            status = "That folder does not contain a Me.store backup."
-            return
+        Task { @MainActor in
+            guard let url = await BackupService.chooseRestoreSource() else { return }
+            guard BackupService.isValidBackup(url) else {
+                isFailure = true
+                status = "That folder does not contain a Me.store backup."
+                return
+            }
+            selectedRestoreURL = url
+            showRestoreConfirm = true
         }
-        selectedRestoreURL = url
-        showRestoreConfirm = true
     }
 
     private func completeRestore() {
