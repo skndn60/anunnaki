@@ -1761,6 +1761,44 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(result.title, "King")
     }
 
+    func testFromTextSubjectSkipsPrepositionalOpeners() {
+        // Blurbs that open with a prepositional phrase or epithet, not the name.
+        XCTAssertEqual(FromTextParser.parse("In Mesopotamian mythology, Ereshkigal was the queen of the underworld, also known as Allatu.").subject, "Ereshkigal")
+        XCTAssertEqual(FromTextParser.parse("In Sumerian religion, Enki was the god of wisdom, fresh water and magic.").subject, "Enki")
+        XCTAssertEqual(FromTextParser.parse("In the ancient city of Ur, Nanna was the moon god, patron of the city.").subject, "Nanna")
+        XCTAssertEqual(FromTextParser.parse("According to the Sumerian King List, Etana ruled Kish.").subject, "Etana")
+        XCTAssertEqual(FromTextParser.parse("God of the sun and justice, Shamash was worshipped in Sippar and Larsa.").subject, "Shamash")
+        XCTAssertEqual(FromTextParser.parse("Lady of the great temple at Uruk, Inanna was the goddess of love and war.").subject, "Inanna")
+        XCTAssertEqual(FromTextParser.parse("The ruler of the underworld, Nergal was a fearsome deity.").subject, "Nergal")
+        XCTAssertEqual(FromTextParser.parse("A powerful storm god, Ishkur was venerated in Karkar.").subject, "Ishkur")
+    }
+
+    func testFromTextSubjectHandlesPossessiveAndPassive() {
+        // Possessive subject: "Nergal's consort was Ereshkigal" — the figure is
+        // the complement after the copula, not "Nergal".
+        XCTAssertEqual(FromTextParser.parse("Nergal's consort was Ereshkigal, queen of the underworld.").subject, "Ereshkigal")
+        // Pronoun stand-in resolved through the subordinate clause.
+        XCTAssertEqual(FromTextParser.parse("It is said that Ptah created the world").subject, "Ptah")
+        // Passive construction: the figure is the object of "by".
+        XCTAssertEqual(FromTextParser.parse("The Akkadian Empire was founded by Sargon the Great.").subject, "Sargon")
+        XCTAssertEqual(FromTextParser.parse("The city of Uruk was ruled by Gilgamesh.").subject, "Gilgamesh")
+        XCTAssertEqual(FromTextParser.parse("The temple of Eanna was built by Naram-Sin.").subject, "Naram-Sin")
+        XCTAssertEqual(FromTextParser.parse("The state of Lagash was conquered by Eannatum.").subject, "Eannatum")
+        // A person as grammatical subject is preserved (not overridden by "by").
+        XCTAssertEqual(FromTextParser.parse("Hammurabi was preceded by his father, Sin-Muballit.").subject, "Hammurabi")
+        XCTAssertEqual(FromTextParser.parse("Sargon was born in Azupiranu on the banks of the Euphrates.").subject, "Sargon")
+    }
+
+    func testFromTextSubjectTitleCaseHeadingNotWholeSentence() {
+        // Title-cased headings used to swallow the whole first sentence as the name.
+        XCTAssertEqual(FromTextParser.parse("Ptah Lord Of Truth Lord Of Eternity Who Listens To Prayers").subject, "Ptah")
+        XCTAssertEqual(FromTextParser.parse("Inanna Queen Of Heaven And Earth Goddess Of Love And War").subject, "Inanna")
+        XCTAssertEqual(FromTextParser.parse("Ptah Creator God Of Memphis And Patron Of Craftsmen").subject, "Ptah")
+        XCTAssertEqual(FromTextParser.parse("Ereshkigal Queen Of The Underworld Also Known As Allatu").subject, "Ereshkigal")
+        XCTAssertEqual(FromTextParser.parse("Ptah Who Listens to Prayers").subject, "Ptah")
+        XCTAssertEqual(FromTextParser.parse("The Sumerian goddess Inanna was known as Ishtar to the Akkadians.").subject, "Inanna")
+    }
+
     func testFromTextGenderDeityDetected() {
         let male = FromTextParser.parse("Marduk is a god of Babylon, the son of Enki")
         XCTAssertEqual(male.gender, .male)

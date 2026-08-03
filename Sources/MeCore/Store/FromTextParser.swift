@@ -327,15 +327,178 @@ package struct FromTextParser {
             .trimmingCharacters(in: .whitespaces)
     }
 
+    /// The figure's base name is the grammatical subject of the first clause:
+    /// the capitalized run immediately before the main predicate verb, skipping
+    /// comma-delimited appositives ("Ereshkigal, also known as Allatu, was …")
+    /// and leading prepositional phrases. Falls back to the leading capitalized
+    /// run (title-cased headings) rather than swallowing the whole first sentence.
     private static func firstSubject(_ text: String) -> String {
         let noParens = text.replacingOccurrences(of: #"\([^)]*\)"#, with: " ", options: .regularExpression)
-        let tokens = noParens.components(separatedBy: .whitespacesAndNewlines)
-        let stoppers: Set<String> = ["is", "was", "are", "were", "the", "a", "an", "and", "also", "known", "as"]
+        let tokens = noParens.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        guard !tokens.isEmpty else { return "" }
+
+        let stoppers: Set<String> = ["is", "was", "are", "were", "the", "a", "an", "and", "also", "known", "as", "of"]
+        let predicates: Set<String> = ["was", "is", "were", "are", "ruled", "reigned", "reign", "founded", "became", "become", "had", "has", "lived", "born", "died", "created", "called", "rose", "emerged", "appeared"]
+        let appositiveWords: Set<String> = ["also", "known", "called", "named", "spelled", "transliterated", "aka", "as", "often", "sometimes"]
+        let pronouns: Set<String> = ["it", "he", "she", "they", "there", "this", "that", "these", "those", "we", "you"]
+
+        func cleanToken(_ t: String) -> String {
+            t.trimmingCharacters(in: CharacterSet(charactersIn: ",;.'\"()"))
+        }
+
+        // Split tokens into comma-delimited segments; each token carrying a comma
+        // (e.g. "mythology,") ends its segment.
+        var segments: [[String]] = []
+        var current: [String] = []
+        for t in tokens {
+            current.append(t)
+            if t.contains(",") {
+                segments.append(current)
+                current = []
+            }
+        }
+        if !current.isEmpty { segments.append(current) }
+
+        var verbSegment = -1
+        var verbOffsetInSegment = -1
+        for (si, segment) in segments.enumerated() {
+            for (wi, word) in segment.enumerated() where predicates.contains(cleanToken(word).lowercased()) {
+                verbSegment = si
+                verbOffsetInSegment = wi
+                break
+            }
+            if verbSegment != -1 { break }
+        }
+
+        func isCapitalized(_ w: String) -> Bool {
+            let c = cleanToken(w)
+            return c.first?.isUppercase == true && !stoppers.contains(c.lowercased())
+        }
+
+        // Capitalized run at the end of a segment (walking backward).
+        func trailingRun(_ segment: [String]) -> [String] {
+            var run: [String] = []
+            for w in segment.reversed() {
+                let c = cleanToken(w)
+                if c.isEmpty { continue }
+                if isCapitalized(w) {
+                    run.insert(c, at: 0)
+                } else {
+                    break
+                }
+            }
+            return run
+        }
+
+        // Capitalized run at the start of a segment (after skipping function words).
+        func leadingRun(_ segment: [String]) -> [String] {
+            var run: [String] = []
+            var i = 0
+            while i < segment.count {
+                let w = segment[i]
+                let c = cleanToken(w)
+                if c.isEmpty { i += 1; continue }
+                if isCapitalized(w) {
+                    run.append(c)
+                    i += 1
+                } else {
+                    break
+                }
+            }
+            return run
+        }
+
+        // Run immediately before the predicate verb, within the verb segment.
+        func runBeforeVerb(_ segment: [String], _ offset: Int) -> [String] {
+            var run: [String] = []
+            var i = offset - 1
+            while i >= 0 {
+                let w = segment[i]
+                let c = cleanToken(w)
+                if c.isEmpty { i -= 1; continue }
+                if isCapitalized(w), !pronouns.contains(c.lowercased()) {
+                    run.insert(c, at: 0)
+                    i -= 1
+                } else {
+                    break
+                }
+            }
+            return run
+        }
+
+        // Capitalized run right after the predicate verb (the complement), for
+        // possessive subjects like "Nergal's consort was Ereshkigal".
+        func runAfterVerb(_ segment: [String], _ offset: Int) -> [String] {
+            var run: [String] = []
+            var i = offset + 1
+            while i < segment.count {
+                let w = segment[i]
+                let c = cleanToken(w)
+                if c.isEmpty { i += 1; continue }
+                if isCapitalized(w) {
+                    run.append(c)
+                    i += 1
+                } else {
+                    break
+                }
+            }
+            return run
+        }
+
+        if verbSegment != -1 {
+            let verbSeg = segments[verbSegment]
+            var subject = runBeforeVerb(verbSeg, verbOffsetInSegment)
+            if subject.isEmpty {
+                subject = runAfterVerb(verbSeg, verbOffsetInSegment)
+            }
+            if subject.isEmpty {
+                // "It is said that Ptah created the world" — the pronoun is a
+                // stand-in; the name arrives in the subordinate clause after "that".
+                let afterVerb = verbSeg.suffix(from: verbOffsetInSegment + 1)
+                if let thatIdx = afterVerb.firstIndex(where: { cleanToken($0).lowercased() == "that" }) {
+                    let tail = Array(afterVerb.suffix(from: thatIdx + 1))
+                    subject = leadingRun(tail)
+                }
+            }
+            // Passive constructions: "The Akkadian Empire was founded by Sargon
+            // the Great" — the figure is the object of "by", not the subject.
+            // Only override a collective/institutional subject (empire, city,
+            // dynasty, …); a person's name should stay the subject.
+            let collectiveWords: Set<String> = ["empire", "city", "kingdom", "dynasty", "realm", "state", "nation", "land", "temple", "house", "people", "world", "country"]
+            let passiveVerbs: Set<String> = ["founded", "created", "built", "established", "ruled", "conquered", "defeated"]
+            let collectiveBeforeVerb = verbSeg[..<verbOffsetInSegment].contains { collectiveWords.contains(cleanToken($0).lowercased()) }
+            let isPassive = verbSeg[verbOffsetInSegment...].contains { passiveVerbs.contains(cleanToken($0).lowercased()) }
+            if (collectiveBeforeVerb || subject.isEmpty), isPassive,
+               let byIdx = verbSeg[verbOffsetInSegment...].firstIndex(where: { cleanToken($0).lowercased() == "by" }) {
+                let byTarget = leadingRun(Array(verbSeg.suffix(from: byIdx + 1)))
+                if !byTarget.isEmpty {
+                    subject = byTarget
+                }
+            }
+            if subject.isEmpty {
+                // Walk back through preceding segments, skipping appositives like
+                // "also known as Allatu", to reach the actual name.
+                var si = verbSegment - 1
+                while si >= 0 && subject.isEmpty {
+                    let seg = segments[si]
+                    let isAppositive = seg.contains { appositiveWords.contains(cleanToken($0).lowercased()) }
+                    if !isAppositive {
+                        subject = trailingRun(seg)
+                    }
+                    si -= 1
+                }
+            }
+            if !subject.isEmpty { return subject.joined(separator: " ") }
+        }
+
+        // Fallback: leading capitalized run, but stop at role/title words so a
+        // title-cased heading yields just the name, not the whole first sentence.
+        let roleStoppers: Set<String> = stoppers.union(["king", "queen", "god", "goddess", "lord", "lady", "ruler", "who", "creator", "patron", "deity", "son", "daughter", "father", "mother", "husband", "wife", "brother", "sister", "consort", "spouse", "master", "chief", "great"])
         var name: [String] = []
         for t in tokens {
-            let clean = t.trimmingCharacters(in: CharacterSet(charactersIn: ",;'\"()"))
+            let clean = cleanToken(t)
             if clean.isEmpty { continue }
-            if clean.first?.isUppercase == true, !stoppers.contains(clean.lowercased()) {
+            if clean.first?.isUppercase == true, !roleStoppers.contains(clean.lowercased()) {
                 name.append(clean)
             } else if !name.isEmpty {
                 break
