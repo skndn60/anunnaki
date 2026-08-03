@@ -308,12 +308,29 @@ package struct FromTextParser {
     }
 
     private static func detectFigureKind(in lower: String, into result: inout FromTextResult) {
-        let tokens = Set(lower.components(separatedBy: CharacterSet.alphanumerics.inverted))
-        if tokens.contains("primordial") {
+        if lower.contains("primordial") {
             result.figureKind = .primordial
-        } else if tokens.contains("deity") || tokens.contains("god") || tokens.contains("goddess") {
+            return
+        }
+        // Deity only when the subject is predicated as a god — not when "god" merely
+        // appears in a reign line ("successor of the god X") for a human king.
+        let deityPhrases = [
+            " is a god", " is the god", " god of ", "goddess of ", " chief god",
+            " deity of ", " the god of ", " patron god", " god over ",
+        ]
+        if deityPhrases.contains(where: { lower.contains($0) }) {
             result.figureKind = .deity
-        } else if tokens.contains("human") {
+            return
+        }
+        // A king, ruler, or reigned monarch is a human by default even though
+        // their biography may mention deities.
+        let humanPhrases = [" king of ", " king", "queen ", "ruler of ", " ruler ",
+                            " reigned ", " ruled ", "queen of "]
+        if humanPhrases.contains(where: { lower.contains($0) }) {
+            result.figureKind = .human
+            return
+        }
+        if lower.contains("human") {
             result.figureKind = .human
         }
     }

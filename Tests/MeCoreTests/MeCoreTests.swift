@@ -1695,6 +1695,25 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(female.figureKind, .deity)
     }
 
+    func testFromTextKingWithDeityMentionIsHuman() {
+        // A historical king's biography mentions gods (of predecessors, temples)
+        // but must classify as human, not deity.
+        let result = FromTextParser.parse("Hammurabi king of Babylon, reigned 1792 BC, son of Sin-Muballit")
+        XCTAssertEqual(result.figureKind, .human)
+    }
+
+    func testFromTextRulerMentionOfGodIsHuman() {
+        // "successor of the god X" in a reign line must not flip a king to deity.
+        let result = FromTextParser.parse("Ur-Nammu ruler of Ur, the successor of the god Enlil, reigned 2112 BC")
+        XCTAssertEqual(result.figureKind, .human)
+    }
+
+    func testFromTextDeityPredicationStillDetected() {
+        // Subject predicated as a god keeps deity classification.
+        let result = FromTextParser.parse("Marduk is a god of Babylon, the son of Enki")
+        XCTAssertEqual(result.figureKind, .deity)
+    }
+
     func testFromTextDomainAndTitle() {
         let result = FromTextParser.parse("Marduk, the god of creation and wisdom, lord of Babylon")
         XCTAssertEqual(result.domain?.lowercased().contains("creation"), true)
