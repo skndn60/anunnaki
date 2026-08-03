@@ -165,7 +165,7 @@ package struct FromTextParser {
 
             switch clause.kind {
             case .family(let rule):
-                let names = splitNames(value)
+                let names = splitNames(value, skipDescriptives: true)
                 for (i, name) in names.enumerated() {
                     guard !name.isEmpty, name != subject else { continue }
                     var type = rule.outputType
@@ -184,7 +184,7 @@ package struct FromTextParser {
                     newFigures.insert(name)
                 }
             case .place(let rule):
-                if let place = splitNames(value).first, !place.isEmpty, place != subject {
+                if let place = splitNames(value, capitalizedOnly: true).first, !place.isEmpty, place != subject {
                     result.placeLinks.append(FromTextPlaceLink(figure: subject, place: place, roleName: rule.roleName))
                     newPlaces.insert(place)
                 }
@@ -236,6 +236,12 @@ package struct FromTextParser {
             var best: (marker: String, kind: MatchKind, lowerStart: String.Index, upper: String.Index)? = nil
             for (marker, kind) in allMarkers {
                 guard let r = lower.range(of: marker, range: cursor..<lower.endIndex) else { continue }
+                // Markers must begin at a word boundary — "aka " must not match
+                // inside "Shabaka Stone".
+                if r.lowerBound > lower.startIndex {
+                    let prev = lower[lower.index(before: r.lowerBound)]
+                    if prev.isLetter || prev.isNumber { continue }
+                }
                 if best == nil || r.lowerBound < best!.lowerStart {
                         // longer marker wins ties (e.g. "also known as" beats "known as")
                         if let b = best, r.lowerBound == b.lowerStart, marker.count <= b.marker.count { continue }
@@ -243,8 +249,8 @@ package struct FromTextParser {
                     }
             }
             guard let chosen = best else { break }
-            let start = text.index(text.startIndex, offsetBy: chosen.lowerStart.utf16Offset(in: lower))
-            let end = text.index(text.startIndex, offsetBy: chosen.upper.utf16Offset(in: lower))
+            let start = String.Index(utf16Offset: chosen.lowerStart.utf16Offset(in: lower), in: text)
+            let end = String.Index(utf16Offset: chosen.upper.utf16Offset(in: lower), in: text)
             results.append(ClauseMatch(kind: chosen.kind, range: start..<end))
             cursor = chosen.upper
         }
@@ -260,14 +266,16 @@ package struct FromTextParser {
     ]
 
     private static let nameFunctionWords: Set<String> = [
-        "the", "a", "an", "of", "and", "his", "her", "their", "its",
+        "the", "a", "an", "of", "and", "or", "his", "her", "their", "its",
         "was", "is", "were", "are", "be", "been", "being", "became", "become",
         "reigning", "reigned", "reign", "ruling", "ruled", "rules", "calls", "called",
         "known", "also", "from", "to", "c", "circa", "bc", "bce", "ad", "ce",
         "king", "queen", "ruler", "lord", "son", "daughter", "the",
+        "kingdom", "empire", "dynasty", "city", "land", "region", "river",
+        "world", "country", "people", "throne", "rule",
     ]
 
-    private static func extractProperNames(_ value: String) -> [String] {
+    private static func extractProperNames(_ value: String, capitalizedOnly: Bool = false, skipDescriptives: Bool = false) -> [String] {
         var names: [String] = []
         for chunk in value.components(separatedBy: " and ").flatMap({ $0.components(separatedBy: ",") }) {
             let words = chunk.split(separator: " ")
@@ -275,6 +283,15 @@ package struct FromTextParser {
             var index = 0
             while index < words.count, nameFunctionWords.contains(words[index].lowercased().trimmingCharacters(in: .punctuationCharacters)) {
                 index += 1
+            }
+            if !capitalizedOnly, skipDescriptives,
+               words[index...].contains(where: { $0.first?.isUppercase == true }) {
+                // Family values may carry a descriptive lead-in before a capitalized
+                // name ("father of the sage Imhotep"). Only skip to a capital that
+                // actually follows, so a lone lowercase name ("humans") survives.
+                while index < words.count, words[index].first?.isUppercase != true {
+                    index += 1
+                }
             }
             guard index < words.count else { continue }
             var kept: [String] = []
@@ -291,15 +308,15 @@ package struct FromTextParser {
             }
             if !kept.isEmpty {
                 names.append(kept.joined(separator: " "))
-            } else if words.count == 1, !words[0].trimmingCharacters(in: .punctuationCharacters).isEmpty {
+            } else if !capitalizedOnly, words.count == 1, !words[0].trimmingCharacters(in: .punctuationCharacters).isEmpty {
                 names.append(words[0].trimmingCharacters(in: .punctuationCharacters))
             }
         }
         return names
     }
 
-    private static func splitNames(_ text: String) -> [String] {
-        return extractProperNames(text)
+    private static func splitNames(_ text: String, capitalizedOnly: Bool = false, skipDescriptives: Bool = false) -> [String] {
+        return extractProperNames(text, capitalizedOnly: capitalizedOnly, skipDescriptives: skipDescriptives)
     }
 
     private static func cleanClauseValue(_ value: String) -> String {
@@ -390,38 +407,61 @@ package struct FromTextParser {
         let tail = String(lower[range.upperBound...])
         let parts = tail.components(separatedBy: CharacterSet(charactersIn: ".,;")).first?
             .components(separatedBy: .whitespacesAndNewlines)
-            .filter { !$0.isEmpty } ?? []
+            .filter { !$0.isEmpty && !nameFunctionWords.contains($0.lowercased()) } ?? []
         let domain = parts.prefix(3).map { $0.capitalized }.joined(separator: ", ")
         if !domain.isEmpty { result.domain = domain }
     }
 
     private static func detectYears(in lower: String, into result: inout FromTextResult) {
-        // BCE/CE patterns: "born c. 1240 BCE", "reigned 2047–2030 BCE"
-        if let regex = try? NSRegularExpression(pattern: #"\b(\d[\d,]*)\s*(BCE|BC|CE|AD)\b"#, options: [.caseInsensitive]) {
-            let ns = lower as NSString
-            let all = regex.matches(in: lower, range: NSRange(location: 0, length: ns.length))
-            var years: [Int] = []
-            for m in all {
-                guard m.numberOfRanges == 3 else { continue }
-                let numStr = ns.substring(with: m.range(at: 1)).replacingOccurrences(of: ",", with: "")
-                let era = ns.substring(with: m.range(at: 2)).uppercased()
-                guard let magnitude = Int(numStr) else { continue }
-                let signed = (era == "BC" || era == "BCE") ? -magnitude : magnitude
-                years.append(signed)
-            }
-            if !years.isEmpty {
-                let sorted = years.sorted()
-                // A reign clause ("reigned/ruling from X to Y") fills reign bounds,
-                // not birth/death.
-                let reignClause = lower.contains("reigned") || lower.contains("reigning") || lower.contains("ruling")
-                if reignClause {
-                    result.reignStart = sorted.first
-                    result.reignEnd = sorted.last
-                } else {
-                    result.birthYear = sorted.first
-                    result.deathYear = sorted.last
+        // Parse all year tokens with their positions so reign years can be
+        // separated from birth/death years instead of mixing them.
+        struct YearToken {
+            let value: Int
+            let location: Int
+            let length: Int
+        }
+        guard let regex = try? NSRegularExpression(pattern: #"\b(\d[\d,]*)\s*(BCE|BC|CE|AD)\b"#, options: [.caseInsensitive]) else { return }
+        let ns = lower as NSString
+        let matches = regex.matches(in: lower, range: NSRange(location: 0, length: ns.length))
+        var tokens: [YearToken] = []
+        for m in matches {
+            guard m.numberOfRanges == 3 else { continue }
+            let numStr = ns.substring(with: m.range(at: 1)).replacingOccurrences(of: ",", with: "")
+            let era = ns.substring(with: m.range(at: 2)).uppercased()
+            guard let magnitude = Int(numStr) else { continue }
+            let signed = (era == "BC" || era == "BCE") ? -magnitude : magnitude
+            tokens.append(YearToken(value: signed, location: m.range.location, length: m.range.length))
+        }
+        guard !tokens.isEmpty else { return }
+
+        // A reign clause names the reign span explicitly: "reigning from X to Y".
+        let reignClause = lower.contains("reigned") || lower.contains("reigning") || lower.contains("ruling")
+        if reignClause {
+            // Take the two year tokens nearest the reign keyword — that is the
+            // reign start/end. Any earlier/later tokens are birth/death.
+            let keyword = lower.range(of: "reigning") ?? lower.range(of: "reigned") ?? lower.range(of: "ruling")
+            if let kw = keyword {
+                let kwOffset = lower.distance(from: lower.startIndex, to: kw.lowerBound)
+                let sorted = tokens.sorted { abs($0.location - kwOffset) < abs($1.location - kwOffset) }
+                if sorted.count >= 2 {
+                    let span = sorted.prefix(2).map { $0.value }.sorted()
+                    result.reignStart = span.first
+                    result.reignEnd = span.last
+                    // Remaining tokens describe the lifespan.
+                    let lifed = tokens.filter { t in !sorted.prefix(2).contains { $0.location == t.location && $0.length == t.length } }
+                    if !lifed.isEmpty {
+                        let years = lifed.map { $0.value }.sorted()
+                        result.birthYear = years.first
+                        result.deathYear = years.last
+                    }
+                    return
                 }
             }
         }
+
+        // No explicit reign clause: all years are birth/death.
+        let years = tokens.map { $0.value }.sorted()
+        result.birthYear = years.first
+        result.deathYear = years.last
     }
 }

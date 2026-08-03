@@ -7,6 +7,8 @@ struct FromTextSheet: View {
 
     @State private var input = ""
     @State private var result: FromTextResult?
+    @State private var lastRecord: FromTextApplyRecord?
+    @State private var undoError = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -33,7 +35,9 @@ struct FromTextSheet: View {
                         .stroke(.separator, lineWidth: 0.5)
                 )
 
-            if let result {
+            if let lastRecord {
+                addedBanner(lastRecord)
+            } else if let result {
                 preview(result)
             } else {
                 Text("Type something above to see what will be created.")
@@ -46,20 +50,50 @@ struct FromTextSheet: View {
                 Spacer()
                 Button("Cancel") { dismiss() }
                     .buttonStyle(.bordered)
-                Button("Add") {
-                    apply(result)
-                    dismiss()
+                if lastRecord != nil {
+                    Button("Done") { dismiss() }
+                        .buttonStyle(.borderedProminent)
+                        .keyboardShortcut(.defaultAction)
+                } else {
+                    Button("Add") {
+                        apply(result)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(result == nil || result?.subject.isEmpty == true)
                 }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.defaultAction)
-                .disabled(result == nil || result?.subject.isEmpty == true)
             }
         }
         .padding(20)
         .frame(width: 560)
+        .alert("Could not undo", isPresented: $undoError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("The data this add created could not be found, so nothing was removed.")
+        }
         .onChange(of: input) { _, _ in
             result = FromTextParser.parse(input)
         }
+    }
+
+    @ViewBuilder
+    private func addedBanner(_ record: FromTextApplyRecord) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Added \(record.subject)", systemImage: "checkmark.circle.fill")
+                .font(.headline)
+                .foregroundStyle(.green)
+            Text("If this looks wrong, you can undo it. The add is also listed under the history panel (clock icon in the toolbar) in case you want to revert it later.")
+                .font(.callout)
+                .foregroundStyle(.secondary)
+            Button("Undo This Add") {
+                undo(record)
+            }
+            .buttonStyle(.bordered)
+            .tint(.red)
+        }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.green.opacity(0.06), in: RoundedRectangle(cornerRadius: 6))
     }
 
     @ViewBuilder
@@ -161,107 +195,25 @@ struct FromTextSheet: View {
 
     private func apply(_ result: FromTextResult?) {
         guard let result else { return }
-        FromTextRecognizer.apply(result, in: modelContext)
+        guard let record = FromTextRecognizer.apply(result, in: modelContext) else { return }
+        FromTextLog.append(record)
         try? modelContext.save()
+        input = ""
+        self.result = nil
+        lastRecord = record
+    }
+
+    private func undo(_ record: FromTextApplyRecord) {
+        let report = FromTextRecognizer.revert(record, in: modelContext)
+        try? modelContext.save()
+        if report.deletedFigures.isEmpty, report.deletedPlaces.isEmpty,
+           report.deletedRelationships == 0, report.deletedPlaceLinks == 0,
+           report.deletedAlternateNames == 0, report.restoredMutations.isEmpty {
+            undoError = true
+        } else {
+            FromTextLog.markReverted(id: record.id)
+            lastRecord = nil
+        }
     }
 }
 
-private enum FromTextRecognizer {
-    static func apply(_ result: FromTextResult, in context: ModelContext) {
-        guard !result.subject.isEmpty else { return }
-        let subjectFigure = figure(named: result.subject, in: context)
-        if let subjectFigure {
-            populate(subjectFigure, result, in: context)
-        }
-
-        for link in result.placeLinks {
-            let place = place(named: link.place, in: context)
-            let role = roleType(named: link.roleName, in: context)
-            let assoc = FigurePlaceAssociation(figure: subjectFigure, place: place, roleType: role, source: "From text")
-            context.insert(assoc)
-            subjectFigure?.placeAssociations.append(assoc)
-            place.figureAssociations.append(assoc)
-        }
-
-        for rel in result.otherRelationships {
-            guard let from = figure(named: rel.fromFigure, in: context),
-                  let to = figure(named: rel.toFigure, in: context) else { continue }
-            let type = relationType(named: rel.relationshipType, in: context)
-            let relationship = Relationship(fromFigure: from, toFigure: to, relationshipType: type, source: "From text", isPreferred: rel.isPreferred)
-            context.insert(relationship)
-            from.outgoingRelationships.append(relationship)
-        }
-
-        for name in result.alternateNames {
-            guard let subjectFigure, !name.isEmpty else { continue }
-            let alt = AlternateName(figure: subjectFigure, name: name, tradition: .other, nameType: .spelling, note: "")
-            context.insert(alt)
-            subjectFigure.alternateNames.append(alt)
-        }
-    }
-
-    private static func populate(_ figure: Figure, _ result: FromTextResult, in context: ModelContext) {
-        if result.figureKind != .unknown, let name = result.figureKind.figureTypeName {
-            figure.figureType = figureType(named: name, in: context)
-        }
-        switch result.gender {
-        case .male: figure.gender = .male
-        case .female: figure.gender = .female
-        case .unknown: break
-        }
-        if let title = result.title { figure.title = title.capitalized }
-        if let domain = result.domain { figure.domain = domain }
-        if !result.description.isEmpty, figure.figureDescription.isEmpty {
-            figure.figureDescription = result.description
-        }
-        if let by = result.birthYear {
-            figure.birthDate = MythologicalDate(year: by, isApproximate: true)
-        }
-        if let dy = result.deathYear {
-            figure.deathDate = MythologicalDate(year: dy, isApproximate: true)
-        }
-        if let rs = result.reignStart { figure.reignStartYear = rs }
-        if let re = result.reignEnd { figure.reignEndYear = re }
-    }
-
-    private static func figure(named name: String, in context: ModelContext) -> Figure? {
-        guard !name.isEmpty else { return nil }
-        let all: [Figure] = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        if let existing = all.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) { return existing }
-        let figure = Figure(name: name)
-        context.insert(figure)
-        return figure
-    }
-
-    private static func place(named name: String, in context: ModelContext) -> Place {
-        let all: [Place] = (try? context.fetch(FetchDescriptor<Place>())) ?? []
-        if let existing = all.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) { return existing }
-        let place = Place(name: name)
-        context.insert(place)
-        return place
-    }
-
-    private static func figureType(named name: String, in context: ModelContext) -> FigureType? {
-        let all: [FigureType] = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
-        if let existing = all.first(where: { $0.name == name }) { return existing }
-        let type = FigureType(name: name, icon: "person.fill", colorHex: "007AFF")
-        context.insert(type)
-        return type
-    }
-
-    private static func relationType(named name: String, in context: ModelContext) -> RelationshipType? {
-        let all: [RelationshipType] = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
-        if let existing = all.first(where: { $0.name == name }) { return existing }
-        let type = RelationshipType(name: name, icon: "link", colorHex: "007AFF", category: "family")
-        context.insert(type)
-        return type
-    }
-
-    private static func roleType(named name: String, in context: ModelContext) -> FigurePlaceRoleType? {
-        let all: [FigurePlaceRoleType] = (try? context.fetch(FetchDescriptor<FigurePlaceRoleType>())) ?? []
-        if let existing = all.first(where: { $0.name == name }) { return existing }
-        let type = FigurePlaceRoleType(name: name, icon: "star.fill", colorHex: "FF9500")
-        context.insert(type)
-        return type
-    }
-}

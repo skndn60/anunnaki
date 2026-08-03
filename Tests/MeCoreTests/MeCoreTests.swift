@@ -1716,6 +1716,51 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(result.alternateNames, ["Hammurapi"])
     }
 
+    func testFromTextPtahWikipediaLead() {
+        // Verbatim Wikipedia lead with Greek/Coptic/Phoenician scripts and a
+        // descriptive word before a father's name ("father of the sage Imhotep").
+        let clip = "Ptah (/tɑː/ TAH;[2] Ancient Egyptian: ptḥ, reconstructed [piˈtaħ]; Ancient Greek: Φθά, romanized: Phthá; Coptic: ⲡⲧⲁϩ, romanized: Ptah; Phoenician: 𐤐𐤕𐤇, romanized: ptḥ)[3][4][note 1] is an ancient Egyptian deity, a creator god,[5] and a patron deity of craftsmen and architects. In the triad of Memphis, he is the husband of Sekhmet and the father of Nefertem. He was also regarded as the father of the sage Imhotep."
+        let result = FromTextParser.parse(clip)
+        XCTAssertEqual(result.subject, "Ptah")
+        XCTAssertEqual(result.figureKind, .deity)
+        XCTAssertEqual(result.gender, .male)
+        XCTAssertEqual(result.parents.count, 2)
+        XCTAssertEqual(result.parents.map { $0.toFigure }, ["Nefertem", "Imhotep"])
+        XCTAssertEqual(result.parents.map { $0.relationshipType }, ["Father", "Father"])
+        XCTAssertEqual(result.otherRelationships.map { "\($0.relationshipType):\($0.toFigure)" }, ["Spouse:Sekhmet"])
+        XCTAssertEqual(result.newFigures.sorted(), ["Imhotep", "Nefertem", "Sekhmet"])
+        XCTAssertTrue(result.placeLinks.isEmpty)
+    }
+
+    func testFromTextAkaMarkerWordBoundary() {
+        // "aka " must not match inside "Shabaka" — otherwise "Stone" and
+        // "Twenty-Fifth Dynasty" leak in as alternate names. Verify on the
+        // full Origin-and-symbolism paragraph plus the epithet list.
+        let clip = "Ptah is an Egyptian creator god who conceived the world and brought it into being through the creative power of speech. A hymn to Ptah dating to the Twenty-second Dynasty of Egypt says Ptah \"crafted the world in the design of his heart,\" and the Shabaka Stone, from the Twenty-Fifth Dynasty, says Ptah \"gave life to all the gods and their kas as well, through this heart and this tongue.\"[6] Ptah creating the world through heart and tongue, has been subject to comparative interest, in particular with the Jewish conceptions of divine word as a creative process.[7]\n\nHe bears many epithets that describe his role in ancient Egyptian religion and its importance in society at the time:\n\nPtah the begetter of the first beginning\nPtah lord of truth\nPtah lord of eternity\nPtah who listens to prayers\nPtah master of ceremonies\nPtah master of justice\nPtah the God who made himself to be God\nPtah the double being\nPtah the beautiful face"
+        let result = FromTextParser.parse(clip)
+        XCTAssertEqual(result.alternateNames, [])
+        XCTAssertEqual(result.subject, "Ptah")
+    }
+
+    func testFromTextWikipediaLeadWithCuneiform() {
+        // Verbatim Wikipedia lead containing supplementary-plane cuneiform
+        // (surrogate pairs) — must not corrupt UTF-16/grapheme index mapping.
+        let clip = "Hammurabi (/ˌhæmʊˈrɑːbi/; Old Babylonian Akkadian: 𒄩𒄠𒈬𒊏𒁉, romanized: Ḫammu-rāpi;[2][a] Akkadian: [xammuˈraːpʰi]; c. 1810 BC – c. 1750 BC), also spelled Hammurapi,[4][5] was the sixth Amorite king of Babylon, reigning from c. 1792 BC to c. 1750 BC. He was preceded by his father, Sin-Muballit, who abdicated due to failing health. During his reign, he conquered the city-states of Larsa, Eshnunna, and Mari. He ousted Ishme-Dagan I, ruler of the Kingdom of Upper Mesopotamia, bringing almost all of Mesopotamia under Babylonian rule."
+        let result = FromTextParser.parse(clip)
+        XCTAssertEqual(result.subject, "Hammurabi")
+        XCTAssertEqual(result.alternateNames, ["Hammurapi"], "cuneiform must not corrupt the alternate-name value")
+        XCTAssertTrue(result.placeLinks.contains { $0.place == "Babylon" && $0.roleName == "Ruler" })
+        XCTAssertTrue(result.placeLinks.contains { $0.place == "Upper Mesopotamia" && $0.roleName == "Ruler" })
+        XCTAssertFalse(result.placeLinks.contains { $0.place == "on" }, "no bogus 'on' place from UTF-16 corruption")
+        XCTAssertEqual(result.reignStart, -1792)
+        XCTAssertEqual(result.reignEnd, -1750)
+        XCTAssertEqual(result.birthYear, -1810)
+        XCTAssertEqual(result.deathYear, -1750)
+        XCTAssertEqual(result.gender, .male)
+        XCTAssertEqual(result.figureKind, .human)
+        XCTAssertEqual(result.title, "King")
+    }
+
     func testFromTextGenderDeityDetected() {
         let male = FromTextParser.parse("Marduk is a god of Babylon, the son of Enki")
         XCTAssertEqual(male.gender, .male)
@@ -1754,5 +1799,124 @@ final class MeCoreTests: XCTestCase {
         let clip = "Marduk is the patron deity of Babylon and the son of Enki and Damkina."
         let result = FromTextParser.parse(clip)
         XCTAssertEqual(result.description, clip)
+    }
+
+    // MARK: - Apply + revert
+
+    func testFromTextApplyCreatesFiguresPlacesAndLinks() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let result = FromTextParser.parse("Marduk the son of Enki and Damkina, patron of Babylon, also known as Bel")
+        let record = FromTextRecognizer.apply(result, in: context)
+        try? context.save()
+        XCTAssertNotNil(record)
+        let names = ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).map(\.name)
+        XCTAssertEqual(names.sorted(), ["Damkina", "Enki", "Marduk"])
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Place>())) ?? []).map(\.name), ["Babylon"])
+        XCTAssertEqual(record?.createdFigureNames.sorted(), ["Damkina", "Enki", "Marduk"])
+        XCTAssertEqual(record?.createdPlaceNames, ["Babylon"])
+        XCTAssertEqual(record?.alternateNames, ["Bel"])
+        XCTAssertEqual(record?.relationships.count, 2)
+        XCTAssertEqual(record?.placeLinks.count, 1)
+    }
+
+    func testFromTextRevertRemovesCreatedData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let result = FromTextParser.parse("Marduk the son of Enki and Damkina, patron of Babylon, also known as Bel")
+        let record = FromTextRecognizer.apply(result, in: context)!
+        try? context.save()
+
+        let report = FromTextRecognizer.revert(record, in: context)
+        try? context.save()
+
+        XCTAssertEqual(report.deletedFigures.sorted(), ["Damkina", "Enki", "Marduk"])
+        XCTAssertEqual(report.deletedPlaces, ["Babylon"])
+        XCTAssertEqual(report.deletedRelationships, 2)
+        XCTAssertEqual(report.deletedPlaceLinks, 1)
+        XCTAssertEqual(report.deletedAlternateNames, 1)
+        XCTAssertTrue(report.keptFigures.isEmpty)
+        XCTAssertTrue(report.keptPlaces.isEmpty)
+        XCTAssertTrue(((try? context.fetch(FetchDescriptor<Figure>())) ?? []).isEmpty)
+        XCTAssertTrue(((try? context.fetch(FetchDescriptor<Place>())) ?? []).isEmpty)
+        XCTAssertTrue(((try? context.fetch(FetchDescriptor<Relationship>())) ?? []).isEmpty)
+        XCTAssertTrue(((try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? []).isEmpty)
+    }
+
+    func testFromTextApplyReusesExistingFigureAndRevertRestoresIt() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let existing = Figure(name: "Marduk", gender: .unknown)
+        context.insert(existing)
+        try? context.save()
+
+        var result = FromTextResult(subject: "Marduk")
+        result.gender = .male
+        result.title = "King"
+        result.figureKind = .deity
+        let record = FromTextRecognizer.apply(result, in: context)!
+        try? context.save()
+
+        XCTAssertEqual(record.createdFigureNames, [])
+        XCTAssertEqual(record.figureMutations.count, 1)
+        XCTAssertEqual(existing.gender, .male)
+        XCTAssertEqual(existing.title, "King")
+        XCTAssertEqual(existing.figureType?.name, "Deity")
+
+        let report = FromTextRecognizer.revert(record, in: context)
+        try? context.save()
+
+        XCTAssertEqual(existing.gender, .unknown)
+        XCTAssertEqual(existing.title, "")
+        XCTAssertNil(existing.figureType)
+        XCTAssertEqual(report.restoredMutations, ["Marduk"])
+        XCTAssertTrue(report.skippedMutations.isEmpty)
+        XCTAssertTrue(((try? context.fetch(FetchDescriptor<Figure>())) ?? []).count == 1, "reused figure must survive revert")
+    }
+
+    func testFromTextRevertKeepsFigureWithLaterData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        var result = FromTextResult(subject: "Marduk")
+        result.parents = [FromTextRelationship(fromFigure: "Enki", toFigure: "Marduk", relationshipType: "Father")]
+        let record = FromTextRecognizer.apply(result, in: context)!
+        try? context.save()
+
+        // The user later links Enki to another relationship, so Enki has data beyond the add.
+        let enki = ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).first { $0.name == "Enki" }!
+        let marduk = ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).first { $0.name == "Marduk" }!
+        let siblingType = RelationshipType(name: "Sibling", icon: "link", colorHex: "007AFF", category: "family")
+        context.insert(siblingType)
+        let later = Relationship(fromFigure: enki, toFigure: marduk, relationshipType: siblingType, source: "manual")
+        context.insert(later)
+        enki.outgoingRelationships.append(later)
+        try? context.save()
+
+        let report = FromTextRecognizer.revert(record, in: context)
+        try? context.save()
+
+        XCTAssertEqual(report.deletedRelationships, 1, "the add's Father relationship is removed")
+        XCTAssertEqual(report.keptFigures.sorted(), ["Enki", "Marduk"], "figures with later data are kept")
+        XCTAssertTrue(report.deletedFigures.isEmpty)
+        XCTAssertTrue(((try? context.fetch(FetchDescriptor<Figure>())) ?? []).count == 2)
+        let remainingRels = ((try? context.fetch(FetchDescriptor<Relationship>())) ?? []).map(\.source)
+        XCTAssertEqual(remainingRels, ["manual"], "only the add's relationship is removed")
+    }
+
+    func testFromTextApplyRecordCodableRoundTrip() {
+        var record = FromTextApplyRecord(subject: "Marduk")
+        record.createdFigureNames = ["Enki", "Damkina"]
+        record.createdPlaceNames = ["Babylon"]
+        record.alternateNames = ["Bel"]
+        record.relationships = [FromTextRecordedRelationship(fromFigure: "Enki", toFigure: "Marduk", relationshipType: "Father", source: "From text")]
+        record.placeLinks = [FromTextRecordedPlaceLink(figure: "Marduk", place: "Babylon", roleName: "Patron Deity", source: "From text")]
+
+        let data = try! JSONEncoder().encode(record)
+        let decoded = try! JSONDecoder().decode(FromTextApplyRecord.self, from: data)
+        XCTAssertEqual(decoded.id, record.id)
+        XCTAssertEqual(decoded.subject, "Marduk")
+        XCTAssertEqual(decoded.createdFigureNames, record.createdFigureNames)
+        XCTAssertEqual(decoded.relationships, record.relationships)
+        XCTAssertEqual(decoded.placeLinks, record.placeLinks)
     }
 }

@@ -115,6 +115,7 @@ struct ContentView: View {
     @State private var showRecoveryAlert = MeApp.recoveryError != nil
     @State private var showBackupSheet = false
     @State private var showFromTextSheet = false
+    @State private var showFromTextHistorySheet = false
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -306,6 +307,15 @@ struct ContentView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        showFromTextHistorySheet = true
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                    }
+                    .help("View and revert past 'Add from Text' operations")
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
                         showBackupSheet = true
                     } label: {
                         Image(systemName: "archivebox")
@@ -315,6 +325,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showFromTextSheet) {
                 FromTextSheet()
+            }
+            .sheet(isPresented: $showFromTextHistorySheet) {
+                FromTextHistorySheet()
             }
             .sheet(isPresented: $showBackupSheet) {
                 BackupSheet()
