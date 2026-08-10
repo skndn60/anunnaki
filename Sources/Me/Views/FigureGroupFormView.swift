@@ -14,6 +14,8 @@ struct FigureGroupFormView: View {
     @State private var kind: GroupKind = .standard
     @State private var entityType: GroupEntityType = .figure
     @State private var isPublished = true
+    @State private var sidebarTarget: GroupSidebarTarget = .auto
+    @State private var customSidebarTargetName = ""
     @State private var parentGroupID: PersistentIdentifier?
     @State private var searchText = ""
     @State private var selectedMemberAliases: [PersistentIdentifier: String] = [:]
@@ -54,6 +56,18 @@ struct FigureGroupFormView: View {
 
     private var saveButtonLabel: String {
         isEditing ? "Finish and Save" : "Finish and Create"
+    }
+
+    /// The sidebar target to persist: `.custom` resolves to the typed section name.
+    private var resolvedSidebarTarget: GroupSidebarTarget {
+        switch sidebarTarget {
+        case .custom:
+            let trimmed = customSidebarTargetName.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return .auto }
+            return .custom(trimmed)
+        default:
+            return sidebarTarget
+        }
     }
 
     private var allFigures: [Figure] {
@@ -374,6 +388,28 @@ struct FigureGroupFormView: View {
 
                 Toggle("Show in sidebar", isOn: $isPublished)
                     .help("Unpublish to hide this group from the sidebar while keeping its data.")
+
+                Picker("Sidebar section", selection: Binding(
+                    get: { sidebarTarget },
+                    set: { newValue in
+                        sidebarTarget = newValue
+                        if case .custom = newValue, customSidebarTargetName.isEmpty {
+                            customSidebarTargetName = name.isEmpty ? "Custom" : name
+                        }
+                    }
+                )) {
+                    Text("Automatic (by type)").tag(GroupSidebarTarget.auto)
+                    Text("History").tag(GroupSidebarTarget.history)
+                    Text("Data").tag(GroupSidebarTarget.data)
+                    Text("Custom section…").tag(GroupSidebarTarget.custom(""))
+                }
+                .help("Where this group appears in the sidebar. Automatic places figures in History and other types in their own \"X Groups\" section.")
+
+                if case .custom = sidebarTarget {
+                    TextField("Section name", text: $customSidebarTargetName)
+                        .textFieldStyle(.roundedBorder)
+                        .help("Name of the custom sidebar section this group appears in.")
+                }
             }
         }
         .formStyle(.grouped)
@@ -627,6 +663,10 @@ struct FigureGroupFormView: View {
         kind = group.kind
         entityType = group.entityType
         isPublished = group.isPublished
+        sidebarTarget = group.sidebarTarget
+        if case .custom(let sectionName) = group.sidebarTarget {
+            customSidebarTargetName = sectionName
+        }
         isSmart = group.isSmart
         parentGroupID = group.parentGroup?.persistentModelID
         memberSingular = group.memberSingular ?? ""
@@ -661,6 +701,7 @@ struct FigureGroupFormView: View {
             group.entityType = entityType
             group.isPublished = isPublished
             group.isSmart = isSmart
+            group.sidebarTarget = resolvedSidebarTarget
             if isSmart {
                 group.decodedFilter = rule
             }
@@ -678,6 +719,7 @@ struct FigureGroupFormView: View {
             )
             newGroup.richDescription = richDescription
             newGroup.isPublished = isPublished
+            newGroup.sidebarTarget = resolvedSidebarTarget
             if isSmart {
                 newGroup.decodedFilter = rule
             }

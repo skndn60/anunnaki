@@ -139,6 +139,44 @@ struct ContentView: View {
         )
     }
 
+    /// Published top-level groups split into custom sidebar sections, grouped by
+    /// section title (alphabetical by title, groups by orderIndex within).
+    private var customSidebarSections: [CustomSidebarSection] {
+        let published = topLevelFigureGroups.filter { $0.isPublished }
+        var byTitle: [String: [FigureGroup]] = [:]
+        for group in published {
+            guard let title = group.customSectionTitle else { continue }
+            byTitle[title, default: []].append(group)
+        }
+        return byTitle
+            .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
+            .map { CustomSidebarSection(title: $0.key, groups: $0.value.sorted { $0.orderIndex < $1.orderIndex }) }
+    }
+
+    @ViewBuilder
+    private var sidebarHistoryGroupRows: some View {
+        ForEach(topLevelFigureGroups.filter { $0.isPublished && $0.rendersInHistory }) { group in
+            SidebarGroupRow(
+                group: group,
+                type: .figure,
+                path: "figure/\(group.name)",
+                expandedPaths: expandedGroupPathsBinding
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var sidebarDataGroupRows: some View {
+        ForEach(topLevelFigureGroups.filter { $0.isPublished && $0.rendersInData }) { group in
+            SidebarGroupRow(
+                group: group,
+                type: group.entityType,
+                path: "data/\(group.name)",
+                expandedPaths: expandedGroupPathsBinding
+            )
+        }
+    }
+
     var body: some View {
         if isSeeding {
             VStack(spacing: 16) {
@@ -202,17 +240,22 @@ struct ContentView: View {
                             Label(item.rawValue, systemImage: item.icon)
                                 .tag(SidebarSelection.item(item))
                         }
-                        ForEach(topLevelFigureGroups.filter { $0.isPublished && $0.entityType == .figure }) { group in
-                            SidebarGroupRow(
-                                group: group,
-                                type: .figure,
-                                path: "figure/\(group.name)",
-                                expandedPaths: expandedGroupPathsBinding
-                            )
+                        sidebarHistoryGroupRows
+                    }
+                    ForEach(customSidebarSections, id: \.self) { section in
+                        Section(section.title) {
+                            ForEach(section.groups) { group in
+                                SidebarGroupRow(
+                                    group: group,
+                                    type: group.entityType,
+                                    path: "\(section.title)/\(group.name)",
+                                    expandedPaths: expandedGroupPathsBinding
+                                )
+                            }
                         }
                     }
                     ForEach(GroupEntityType.allCases.filter { $0 != .figure }, id: \.self) { type in
-                        let typeGroups = topLevelFigureGroups.filter { $0.isPublished && $0.entityType == type }
+                        let typeGroups = topLevelFigureGroups.filter { $0.isPublished && $0.entityType == type && $0.sidebarTarget == .auto }
                         if !typeGroups.isEmpty {
                             Section(type.sidebarHeader) {
                                 ForEach(typeGroups) { group in
@@ -231,6 +274,7 @@ struct ContentView: View {
                             Label(item.rawValue, systemImage: item.icon)
                                 .tag(SidebarSelection.item(item))
                         }
+                        sidebarDataGroupRows
                     }
                 }
                 .navigationSplitViewColumnWidth(min: 180, ideal: 200)
@@ -411,6 +455,11 @@ extension ContentView {
             }
         }
     }
+}
+
+private struct CustomSidebarSection: Hashable {
+    let title: String
+    let groups: [FigureGroup]
 }
 
 private struct SidebarGroupRow: View {

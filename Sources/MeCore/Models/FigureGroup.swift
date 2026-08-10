@@ -67,6 +67,44 @@ package enum GroupEntityType: String, Codable, CaseIterable, Hashable {
     }
 }
 
+/// Where a top-level group appears in the sidebar. Overrides the type-derived
+/// placement (`entityType` → "History" for figures, "X Groups" for others).
+package enum GroupSidebarTarget: Equatable, Hashable {
+    case auto
+    case history
+    case data
+    case custom(String)
+
+    /// "history" / "data" / "custom:<name>" / nil for `.auto`.
+    package var rawValue: String? {
+        switch self {
+        case .auto: return nil
+        case .history: return "history"
+        case .data: return "data"
+        case .custom(let name): return "custom:\(name)"
+        }
+    }
+
+    package init(rawValue: String?) {
+        switch rawValue ?? "" {
+        case "history": self = .history
+        case "data": self = .data
+        case let value where value.hasPrefix("custom:"):
+            self = .custom(String(value.dropFirst("custom:".count)))
+        default: self = .auto
+        }
+    }
+
+    package var displayName: String {
+        switch self {
+        case .auto: return "Automatic (by type)"
+        case .history: return "History"
+        case .data: return "Data"
+        case .custom(let name): return "Custom: \(name)"
+        }
+    }
+}
+
 @Model
 package final class FigureGroup {
     package var name: String
@@ -88,6 +126,7 @@ package final class FigureGroup {
     package var aggregationRawValue: String?
     package var memberSingular: String?
     package var memberPlural: String?
+    package var sidebarTargetRawValue: String?
 
     package var isPublished: Bool {
         get { publishedRawValue ?? true }
@@ -102,6 +141,40 @@ package final class FigureGroup {
     package var entityType: GroupEntityType {
         get { GroupEntityType(rawValue: entityTypeRawValue ?? "") ?? .figure }
         set { entityTypeRawValue = newValue.rawValue }
+    }
+
+    /// Where this group's sidebar entry appears. Defaults to `.auto` (type-derived),
+    /// preserving pre-existing behavior for all existing groups.
+    package var sidebarTarget: GroupSidebarTarget {
+        get { GroupSidebarTarget(rawValue: sidebarTargetRawValue) }
+        set { sidebarTargetRawValue = newValue.rawValue }
+    }
+
+    /// True when this group should render inside the sidebar's "History" section:
+    /// explicitly targeted, or auto-derived for figure groups.
+    package var rendersInHistory: Bool {
+        switch sidebarTarget {
+        case .history: return true
+        case .auto: return entityType == .figure
+        case .data, .custom: return false
+        }
+    }
+
+    /// True when this group should render inside the sidebar's "Data" section.
+    package var rendersInData: Bool {
+        switch sidebarTarget {
+        case .data: return true
+        case .auto, .history, .custom: return false
+        }
+    }
+
+    /// The custom section title when explicitly targeted at one, nil otherwise.
+    package var customSectionTitle: String? {
+        if case .custom(let title) = sidebarTarget {
+            let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : trimmed
+        }
+        return nil
     }
 
     package var isSmart: Bool {
@@ -393,7 +466,8 @@ package final class FigureGroup {
         entityType: GroupEntityType = .figure,
         sortMode: GroupSortMode = .alphabetical,
         memberSingular: String? = nil,
-        memberPlural: String? = nil
+        memberPlural: String? = nil,
+        sidebarTarget: GroupSidebarTarget = .auto
     ) {
         self.name = name
         self.groupDescription = groupDescription
@@ -407,6 +481,7 @@ package final class FigureGroup {
         self.sortModeRawValue = sortMode.rawValue
         self.memberSingular = memberSingular
         self.memberPlural = memberPlural
+        self.sidebarTargetRawValue = sidebarTarget.rawValue
     }
 }
 
