@@ -1041,7 +1041,6 @@ package struct Migration {
              GroupMemberFilter(figureTypeNames: ["Primordial"]), .standard),
             ("SKL Kings", "Kings of the Sumerian King List", "list.star", "007AFF",
              GroupMemberFilter(domainKeywords: ["Kingship"]), .skl),
-            ("The Flood", "The Mesopotamian flood narrative (Atra-Hasis, Epic of Gilgamesh)", "drop", "34C759", nil, .flood),
         ]
 
         for (idx, config) in defaults.enumerated() {
@@ -1073,7 +1072,6 @@ package struct Migration {
             "Book of Enoch": .enoch,
             "SKL Kings": .skl,
             "Sumerian King List": .skl,
-            "The Flood": .flood,
         ]
 
         let iconByName: [String: String] = [
@@ -1083,7 +1081,6 @@ package struct Migration {
             "Book of Enoch": "book",
             "SKL Kings": "list.star",
             "Sumerian King List": "list.star",
-            "The Flood": "drop",
         ]
 
         for group in allGroups {
@@ -1095,19 +1092,24 @@ package struct Migration {
             }
         }
 
-        if !allGroups.contains(where: { $0.name == "The Flood" }) {
-            let maxOrder = allGroups.map(\.orderIndex).max() ?? 0
-            let group = FigureGroup(
-                name: "The Flood",
-                groupDescription: "The Mesopotamian flood narrative (Atra-Hasis, Epic of Gilgamesh)",
-                icon: "drop",
-                colorHex: "34C759",
-                orderIndex: maxOrder + 1,
-                kind: .flood
-            )
-            context.insert(group)
-        }
         try? context.save()
+    }
+
+    /// Remove the legacy empty "The Flood" placeholder group if it is still empty
+    /// (no members, subgroups, or text blocks). Deletes nothing that has content.
+    package static func removeFloodPlaceholder(context: ModelContext) {
+        let allGroups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let group = allGroups.first(where: { $0.name == "The Flood" }) else { return }
+        let hasContent = !group.figureAssociations.isEmpty
+            || !((group.subgroups ?? []).isEmpty)
+            || !((group.textBlocks ?? []).isEmpty)
+        guard !hasContent else { return }
+        try? context.transaction {
+            group.figureAssociations = []
+            group.subgroups = []
+            group.textBlocks = []
+            context.delete(group)
+        }
     }
 
     package static func ensureImportedDeityRelationships(context: ModelContext) {

@@ -169,6 +169,7 @@ struct ContentView: View {
                     Migration.ensureMesopotamianPantheons(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
                     Migration.ensureFigureGroupKinds(context: modelContext)
+                    Migration.removeFloodPlaceholder(context: modelContext)
                     Migration.ensureSKLRegnalOrder(context: modelContext)
 
                     try? modelContext.save()
