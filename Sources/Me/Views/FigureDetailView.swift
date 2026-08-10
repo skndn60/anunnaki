@@ -29,9 +29,14 @@ struct FigureDetailView: View {
     @State private var placeSearchText = ""
     @State private var selectedPlaceForLink: Place?
     @State private var selectedPlaceRole: FigurePlaceRoleType?
+    @State private var showThingLinkPopover = false
+    @State private var thingSearchText = ""
+    @State private var selectedThingForLink: Thing?
+    @State private var selectedThingRole: ThingFigureRoleType?
     @State private var showGroupLinkPopover = false
     @State private var groupSearchText = ""
     @State private var selectedGroupForLink: FigureGroup?
+    @Query(sort: \Pantheon.name) private var allPantheons: [Pantheon]
     @State private var showAddCitation = false
     @State private var editingCommentsID: PersistentIdentifier?
     @State private var editingCommentsText: String = ""
@@ -62,9 +67,53 @@ struct FigureDetailView: View {
         }
     }
 
+    private func markParentKnownUnavailable(_ typeName: String) {
+        let hasExistingSpot = figureBlindSpots.contains {
+            $0.figureName == figure.name &&
+            $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
+            ($0.parentType == nil || $0.parentType == typeName)
+        }
+        if !hasExistingSpot {
+            let spot = BlindSpot(
+                figureName: figure.name,
+                blindSpotType: .missingParent,
+                category: .knownGap,
+                spotDescription: "No recorded \(typeName.lowercased()) for \(figure.name)",
+                suggestedQuery: "Who are the parents of \(figure.name)?",
+                isResolved: true,
+                parentType: typeName
+            )
+            modelContext.insert(spot)
+        }
+        if let sticky = figure.stickies.first(where: {
+            $0.text.hasPrefix("Missing \(typeName.lowercased())")
+        }) {
+            modelContext.delete(sticky)
+        }
+        try? modelContext.save()
+    }
+
+    private func revertParentKnownUnavailable(_ typeName: String) {
+        if let spot = figureBlindSpots.first(where: {
+            $0.figureName == figure.name &&
+            $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
+            $0.isResolved &&
+            $0.categoryEnum == .knownGap &&
+            ($0.parentType == nil || $0.parentType == typeName)
+        }) {
+            modelContext.delete(spot)
+        }
+        try? modelContext.save()
+    }
+
     private var figureAttributions: [ContentAttribution] {
         let all: [ContentAttribution] = modelContext.fetchAll()
         return all.filter { $0.figure == figure }
+    }
+
+    private var isDivineFigure: Bool {
+        guard let name = figure.figureType?.name else { return false }
+        return ["Deity", "Primordial", "Semi-Divine", "Igigi", "Archangel", "Commander"].contains(name)
     }
 
     private var figureCitations: [Citation] {
@@ -138,6 +187,7 @@ struct FigureDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+                FigureEpithetRow(epithet: figure.epithet)
             }
 
             Spacer()
@@ -355,6 +405,244 @@ struct FigureDetailView: View {
         }
     }
 
+    @ViewBuilder
+    private var thingsSection: some View {
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Associated Things")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Button(action: { showThingLinkPopover = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .help("Link a thing")
+                .popover(isPresented: $showThingLinkPopover) {
+                    ThingLinkPopover(
+                        figure: figure,
+                        searchText: $thingSearchText,
+                        selectedThing: $selectedThingForLink,
+                        selectedRole: $selectedThingRole,
+                        isPresented: $showThingLinkPopover
+                    )
+                    .frame(width: 340, height: 400)
+                }
+            }
+
+            if figure.thingAssociations.isEmpty {
+                Text("No things linked")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(figure.thingAssociations) { assoc in
+                    if let thing = assoc.thing {
+                        HStack(spacing: 8) {
+                            Image(systemName: thing.thingType?.icon ?? "shippingbox")
+                                .font(.callout)
+                                .foregroundStyle(thing.thingType?.color ?? .brown)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(assoc.displayName.map { "\(thing.name) as \($0)" } ?? thing.name)
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                HStack(spacing: 4) {
+                                    Text(assoc.roleType?.name ?? "—")
+                                        .font(.caption2)
+                                        .padding(.horizontal, 4)
+                                        .padding(.vertical, 1)
+                                        .background(RoundedRectangle(cornerRadius: 3).fill((thing.thingType?.color ?? .brown).opacity(0.12)))
+                                    if !assoc.source.isEmpty {
+                                        Text(assoc.source)
+                                            .font(.caption2)
+                                            .foregroundStyle(.tertiary)
+                                    }
+                                }
+                            }
+                            Spacer()
+                            Button(action: {
+                                modelContext.delete(assoc)
+                                try? modelContext.save()
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove thing")
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var groupsSection: some View {
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Groups")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Button(action: { showGroupLinkPopover = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .help("Add to group")
+                .popover(isPresented: $showGroupLinkPopover) {
+                    GroupLinkPopover(
+                        figure: figure,
+                        searchText: $groupSearchText,
+                        selectedGroup: $selectedGroupForLink,
+                        isPresented: $showGroupLinkPopover
+                    )
+                    .frame(width: 340, height: 400)
+                }
+            }
+
+            let groups = figure.groupAssociations
+                .sorted { ($0.group?.name ?? "") < ($1.group?.name ?? "") }
+
+            if groups.isEmpty {
+                Text("Not in any group")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(groups) { assoc in
+                    HStack(spacing: 8) {
+                        Image(systemName: assoc.group?.icon ?? "folder")
+                            .font(.caption)
+                            .foregroundStyle(assoc.group.map { Color(hex: $0.colorHex) } ?? .gray)
+                            .frame(width: 16)
+                        Text(assoc.group?.name ?? "?")
+                            .font(.callout)
+                        if !assoc.note.isEmpty {
+                            Text(assoc.note)
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var pantheonsSection: some View {
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Pantheons")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Menu {
+                    ForEach(allPantheons) { pantheon in
+                        let isMember = figure.pantheons.contains { $0.persistentModelID == pantheon.persistentModelID }
+                        Button {
+                            if isMember {
+                                removePantheonMembership(pantheon)
+                            } else {
+                                figure.pantheons.append(pantheon)
+                                try? modelContext.save()
+                            }
+                        } label: {
+                            Label(pantheon.name, systemImage: isMember ? "checkmark" : "")
+                        }
+                    }
+                    if allPantheons.isEmpty {
+                        Text("No pantheons — add them in Type Settings")
+                    }
+                } label: {
+                    Label("\(figure.pantheons.count)", systemImage: "building.columns")
+                        .labelStyle(.titleAndIcon)
+                }
+                .menuStyle(.borderlessButton)
+                .help("Assign pantheons to this figure")
+                .fixedSize()
+            }
+
+            if figure.pantheons.isEmpty {
+                Text("Not assigned to any pantheon")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(figure.pantheons.sorted { $0.name < $1.name }) { pantheon in
+                    HStack(spacing: 8) {
+                        Image(systemName: pantheon.icon)
+                            .font(.caption)
+                            .foregroundStyle(pantheon.color)
+                            .frame(width: 16)
+                        Text(pantheon.name)
+                            .font(.callout)
+                        Text("as")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                        TextField("\(figure.name)", text: pantheonAliasBinding(for: pantheon))
+                            .textFieldStyle(.roundedBorder)
+                            .frame(maxWidth: 160)
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    private func removePantheonMembership(_ pantheon: Pantheon) {
+        figure.pantheons.removeAll { $0.persistentModelID == pantheon.persistentModelID }
+        if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
+            figure.pantheonAssociations?.removeAll { $0.persistentModelID == assoc.persistentModelID }
+            modelContext.delete(assoc)
+        }
+        try? modelContext.save()
+    }
+
+    private func pantheonAliasBinding(for pantheon: Pantheon) -> Binding<String> {
+        Binding(
+            get: {
+                if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }),
+                   let name = assoc.displayName, !name.isEmpty {
+                    return name
+                }
+                return figure.name
+            },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty, trimmed != figure.name else {
+                    if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
+                        assoc.displayName = nil
+                        try? modelContext.save()
+                    }
+                    return
+                }
+                if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
+                    assoc.displayName = trimmed
+                } else {
+                    let assoc = FigurePantheonAssociation(figure: figure, pantheon: pantheon, displayName: trimmed)
+                    modelContext.insert(assoc)
+                    if figure.pantheonAssociations == nil {
+                        figure.pantheonAssociations = []
+                    }
+                    figure.pantheonAssociations?.append(assoc)
+                }
+                try? modelContext.save()
+            }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -417,40 +705,9 @@ struct FigureDetailView: View {
                     parentSearchTypeName = typeName
                     showParentSearch = true
                 }, onMarkKnownUnavailable: { typeName in
-                    let hasExistingSpot = figureBlindSpots.contains {
-                        $0.figureName == figure.name &&
-                        $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
-                        ($0.parentType == nil || $0.parentType == typeName)
-                    }
-                    if !hasExistingSpot {
-                        let spot = BlindSpot(
-                            figureName: figure.name,
-                            blindSpotType: .missingParent,
-                            category: .knownGap,
-                            spotDescription: "No recorded \(typeName.lowercased()) for \(figure.name)",
-                            suggestedQuery: "Who are the parents of \(figure.name)?",
-                            isResolved: true,
-                            parentType: typeName
-                        )
-                        modelContext.insert(spot)
-                    }
-                    if let sticky = figure.stickies.first(where: {
-                        $0.text.hasPrefix("Missing \(typeName.lowercased())")
-                    }) {
-                        modelContext.delete(sticky)
-                    }
-                    try? modelContext.save()
+                    markParentKnownUnavailable(typeName)
                 }, onRevertKnownUnavailable: { typeName in
-                    if let spot = figureBlindSpots.first(where: {
-                        $0.figureName == figure.name &&
-                        $0.blindSpotType == BlindSpotType.missingParent.rawValue &&
-                        $0.isResolved &&
-                        $0.categoryEnum == .knownGap &&
-                        ($0.parentType == nil || $0.parentType == typeName)
-                    }) {
-                        modelContext.delete(spot)
-                    }
-                    try? modelContext.save()
+                    revertParentKnownUnavailable(typeName)
                 })
 
                 // Description
@@ -593,59 +850,15 @@ struct FigureDetailView: View {
                     }
                 }
 
+                // Associated Things
+                thingsSection
+
                 // Figure Groups
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Groups")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        Spacer()
-                        Button(action: { showGroupLinkPopover = true }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Add to group")
-                        .popover(isPresented: $showGroupLinkPopover) {
-                            GroupLinkPopover(
-                                figure: figure,
-                                searchText: $groupSearchText,
-                                selectedGroup: $selectedGroupForLink,
-                                isPresented: $showGroupLinkPopover
-                            )
-                            .frame(width: 340, height: 400)
-                        }
-                    }
+                groupsSection
 
-                    let groups = figure.groupAssociations
-                        .sorted { ($0.group?.name ?? "") < ($1.group?.name ?? "") }
-
-                    if groups.isEmpty {
-                        Text("Not in any group")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .padding(.vertical, 4)
-                    } else {
-                        ForEach(groups) { assoc in
-                            HStack(spacing: 8) {
-                                Image(systemName: assoc.group?.icon ?? "folder")
-                                    .font(.caption)
-                                    .foregroundStyle(assoc.group.map { Color(hex: $0.colorHex) } ?? .gray)
-                                    .frame(width: 16)
-                                Text(assoc.group?.name ?? "?")
-                                    .font(.callout)
-                                if !assoc.note.isEmpty {
-                                    Text(assoc.note)
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
-                                Spacer()
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
+                // Pantheons
+                if isDivineFigure {
+                    pantheonsSection
                 }
 
                 // Associated Events
@@ -1301,6 +1514,113 @@ private struct PlaceLinkPopover: View {
         modelContext.insert(assoc)
         figure.placeAssociations.append(assoc)
         place.figureAssociations.append(assoc)
+        role.associations.append(assoc)
+        try? modelContext.save()
+    }
+}
+
+private struct ThingLinkPopover: View {
+    let figure: Figure
+    @Binding var searchText: String
+    @Binding var selectedThing: Thing?
+    @Binding var selectedRole: ThingFigureRoleType?
+    @Binding var isPresented: Bool
+
+    @Environment(\.modelContext) private var modelContext
+    @State private var allRoles: [ThingFigureRoleType] = []
+
+    private var allThings: [Thing] {
+        (try? modelContext.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+
+    private var filteredThings: [Thing] {
+        let linked = Set(figure.thingAssociations.compactMap { $0.thing?.persistentModelID })
+        let available = allThings.filter { !linked.contains($0.persistentModelID) }
+        if searchText.isEmpty { return available }
+        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search things…", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            if filteredThings.isEmpty {
+                Text("No matching things")
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 20)
+            } else {
+                List(filteredThings, id: \.persistentModelID) { thing in
+                    Button(action: { selectedThing = thing }) {
+                        HStack(spacing: 10) {
+                            Image(systemName: thing.thingType?.icon ?? "shippingbox")
+                                .font(.caption)
+                                .foregroundStyle(thing.thingType?.color ?? .brown)
+                                .frame(width: 16)
+                            Text(thing.name)
+                                .font(.body)
+                            Spacer()
+                            if selectedThing?.persistentModelID == thing.persistentModelID {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .listStyle(.plain)
+            }
+
+            Divider()
+
+            VStack(spacing: 8) {
+                HStack {
+                    Text("Role:")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Picker("Role", selection: $selectedRole) {
+                        Text("Select…").tag(nil as ThingFigureRoleType?)
+                        ForEach(allRoles, id: \.persistentModelID) { role in
+                            HStack(spacing: 6) {
+                                Image(systemName: role.icon)
+                                Text(role.name)
+                            }
+                            .tag(role as ThingFigureRoleType?)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                }
+
+                HStack {
+                    Spacer()
+                    Button("Cancel") { isPresented = false }
+                        .buttonStyle(.bordered)
+                    Button("Link") {
+                        createAssociation()
+                        isPresented = false
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(selectedThing == nil || selectedRole == nil)
+                }
+            }
+        }
+        .padding()
+        .onAppear {
+            allRoles = (try? modelContext.fetch(FetchDescriptor<ThingFigureRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
+        }
+    }
+
+    private func createAssociation() {
+        guard let thing = selectedThing, let role = selectedRole else { return }
+        let assoc = ThingFigureAssociation(figure: figure)
+        modelContext.insert(assoc)
+        figure.thingAssociations.append(assoc)
+        thing.figureAssociations.append(assoc)
         role.associations.append(assoc)
         try? modelContext.save()
     }

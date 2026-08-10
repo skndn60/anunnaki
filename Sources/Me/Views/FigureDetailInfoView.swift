@@ -78,6 +78,26 @@ struct FigureTitleRow: View {
     }
 }
 
+// MARK: - Figure Epithet Row
+
+struct FigureEpithetRow: View {
+    let epithet: String?
+
+    var body: some View {
+        if let epithet, !epithet.isEmpty {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("EPITHET")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .textCase(.uppercase)
+                Text("\u{201C}\(epithet)\u{201D}")
+                    .font(.subheadline.italic())
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
 // MARK: - Figure Header
 
 struct FigureHeaderView: View {
@@ -94,6 +114,7 @@ struct FigureHeaderView: View {
                     disambiguation: figure.disambiguation
                 )
                 FigureTitleRow(title: figure.title)
+                FigureEpithetRow(epithet: figure.epithet)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {

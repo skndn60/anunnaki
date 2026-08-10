@@ -54,8 +54,8 @@ struct SumerianKingListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
         .onChange(of: selectedFigureID) { _, newValue in
             if newValue == nil { selectedFigureID = nil }
         }
@@ -130,7 +130,7 @@ struct SumerianKingListView: View {
                         }
                         if dynasty.totalYears > 0 {
                             Text("Duration: \(dynasty.totalYears.formatted()) years")
-                                .font(.subheadline)
+                                .font(.headline)
                                 .foregroundStyle(.secondary)
                         }
                     }
@@ -190,7 +190,17 @@ private struct KingRow: View {
     private var figure: Figure { reign.figure }
 
     private var reignLength: ReignLength? {
-        ReignLength.parse(from: figure.figureDescription)
+        if let years = figure.reignYears {
+            return ReignLength(years: years, display: "\(Self.yearString(years)) years")
+        }
+        return ReignLength.parse(from: figure.figureDescription)
+    }
+
+    private static func yearString(_ years: Int) -> String {
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .decimal
+        fmt.locale = Locale(identifier: "en_US")
+        return fmt.string(from: NSNumber(value: years)) ?? "\(years)"
     }
 
     var body: some View {

@@ -22,6 +22,14 @@ package final class Figure {
     package var coverageReviewedAt: Date?
     package var reignStartYear: Int?
     package var reignEndYear: Int?
+    /// Listed reign duration in years (e.g. the SKL's own figure). Distinct from
+    /// `reignStartYear`/`reignEndYear`, which are a chronological date range.
+    package var reignYears: Int?
+
+    /// An epithet (praise-title) attached to the figure, e.g. Etana's
+    /// "the shepherd who ascended to heaven and consolidated all the foreign countries".
+    /// A title, not an alias, so it lives on the figure rather than as an AlternateName.
+    package var epithet: String?
 
     @Relationship
     package var era: Era?
@@ -65,6 +73,14 @@ package final class Figure {
     /// Groups this figure belongs to
     @Relationship(deleteRule: .cascade, inverse: \FigureGroupAssociation.figure)
     package var groupAssociations: [FigureGroupAssociation] = []
+
+    /// Pantheons this figure belongs to (many-to-many).
+    @Relationship(deleteRule: .nullify, inverse: \Pantheon.figures)
+    package var pantheons: [Pantheon] = []
+
+    /// Per-pantheon display-name overrides (e.g. Enki appearing as "Ptah" in the Egyptian pantheon).
+    @Relationship(deleteRule: .cascade, inverse: \FigurePantheonAssociation.figure)
+    package var pantheonAssociations: [FigurePantheonAssociation]? = nil
 
     @Relationship(inverse: \ContentAttribution.figure)
     package var contentAttributions: [ContentAttribution]? = nil

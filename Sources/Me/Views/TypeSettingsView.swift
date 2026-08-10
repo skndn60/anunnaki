@@ -45,6 +45,14 @@ struct TypeSettingsView: View {
 
                 GroupBox {
                     VStack(alignment: .leading, spacing: 16) {
+                        sectionHeader("Pantheons")
+                        PantheonSubSection()
+                    }
+                    .padding()
+                }
+
+                GroupBox {
+                    VStack(alignment: .leading, spacing: 16) {
                         sectionHeader("Association Role Types")
                         RoleTypeSubSection<FigurePlaceRoleType>(
                             title: "Figure ↔ Place",
@@ -650,5 +658,152 @@ extension EventPlaceRoleType: RoleTypeProtocol {
     var uiColor: Color { color }
     static func make(name: String, icon: String, colorHex: String) -> EventPlaceRoleType? {
         EventPlaceRoleType(name: name, icon: icon, colorHex: colorHex)
+    }
+}
+
+// MARK: - Pantheon Sub-Section
+
+private struct PantheonSubSection: View {
+    @Environment(\.modelContext) private var modelContext
+    @State private var items: [Pantheon] = []
+    @State private var editingItem: Pantheon?
+    @State private var showingAdd = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: "building.columns.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.teal)
+                Text("Pantheons")
+                    .font(.callout.bold())
+                Spacer()
+                Text("\(items.count)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button(action: { showingAdd = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.teal)
+                }
+                .buttonStyle(.plain)
+                .help("Add pantheon")
+            }
+
+            if items.isEmpty {
+                Text("No pantheons")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.leading, 4)
+            } else {
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(items, id: \.persistentModelID) { item in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(item.color)
+                                .frame(width: 14, height: 14)
+                            Image(systemName: item.icon)
+                                .font(.caption2)
+                                .foregroundStyle(item.color)
+                                .frame(width: 12)
+                            Text(item.name)
+                                .font(.caption)
+                            if !item.pantheonDescription.isEmpty {
+                                Text(item.pantheonDescription)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                            }
+                            Text("(\(item.figures.count) figures)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            Spacer()
+                            Button("Edit") { editingItem = item }
+                                .buttonStyle(.plain)
+                                .font(.caption)
+                                .foregroundColor(.accentColor)
+                        }
+                        .padding(.vertical, 3)
+                        .padding(.horizontal, 6)
+                        .background(.quaternary.opacity(0.15))
+                        .cornerRadius(4)
+                    }
+                }
+            }
+        }
+        .onAppear { reload() }
+        .onChange(of: editingItem) { _, _ in if editingItem == nil { reload() } }
+        .onChange(of: showingAdd) { _, _ in if !showingAdd { reload() } }
+        .sheet(item: $editingItem) { item in
+            PantheonEditSheetView(item: item)
+        }
+        .sheet(isPresented: $showingAdd) {
+            PantheonEditSheetView(item: nil)
+        }
+    }
+
+    private func reload() {
+        items = (try? modelContext.fetch(FetchDescriptor<Pantheon>(sortBy: [SortDescriptor(\.name)]))) ?? []
+    }
+}
+
+private struct PantheonEditSheetView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) var dismiss
+    let item: Pantheon?
+
+    @State private var name = ""
+    @State private var pantheonDescription = ""
+    @State private var icon = ""
+    @State private var color: Color = .gray
+
+    private var isEditing: Bool { item != nil }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(isEditing ? "Edit Pantheon" : "Add Pantheon")
+                .font(.title3.bold())
+                .padding()
+            Form {
+                TextField("Name", text: $name, prompt: Text("e.g. Mesopotamian, Greek"))
+                TextField("Description", text: $pantheonDescription, prompt: Text("e.g. Gods of ancient Sumer and Akkad"))
+                TextField("SF Symbol", text: $icon, prompt: Text("e.g. building.columns.circle.fill"))
+                ColorPicker("Color", selection: $color, supportsOpacity: false)
+            }
+            .formStyle(.grouped)
+            .padding()
+            HStack {
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Spacer()
+                Button(isEditing ? "Save" : "Add") { save() }
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(name.isEmpty || icon.isEmpty)
+            }
+            .padding()
+        }
+        .frame(width: 380, height: 360)
+        .onAppear { loadIfEditing() }
+    }
+
+    private func loadIfEditing() {
+        guard let item else { return }
+        name = item.name
+        pantheonDescription = item.pantheonDescription
+        icon = item.icon
+        color = item.color
+    }
+
+    private func save() {
+        if let item {
+            item.name = name
+            item.pantheonDescription = pantheonDescription
+            item.icon = icon
+            item.colorHex = color.hex
+        } else {
+            let newItem = Pantheon(name: name, pantheonDescription: pantheonDescription, icon: icon, colorHex: color.hex)
+            modelContext.insert(newItem)
+        }
+        try? modelContext.save()
+        dismiss()
     }
 }

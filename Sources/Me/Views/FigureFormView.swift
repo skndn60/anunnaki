@@ -8,13 +8,16 @@ struct FigureFormView: View {
     let figure: Figure?
     @Query private var figureTypes: [FigureType]
     @Query(sort: \Source.name) private var sources: [Source]
+    @Query(sort: \Pantheon.name) private var pantheons: [Pantheon]
 
     @State private var name = ""
     @State private var disambiguation = ""
     @State private var title = ""
+    @State private var epithet = ""
     @State private var selectedFigureType: FigureType? = nil
     @State private var gender: Figure.Gender = .unknown
     @State private var domain = ""
+    @State private var selectedPantheons: [Pantheon] = []
     @State private var figureDescription = ""
     @State private var richDescription: Data? = nil
     @State private var birthDate: MythologicalDate = .unknown
@@ -24,6 +27,7 @@ struct FigureFormView: View {
     @State private var causeOfDeath = ""
     @State private var reignStartText = ""
     @State private var reignEndText = ""
+    @State private var reignYearsText = ""
     @State private var selectedTags: [Tag] = []
 
     @State private var currentStep = 0
@@ -96,6 +100,9 @@ struct FigureFormView: View {
                     .help("Optional context to distinguish from other figures with the same name")
                 TextField("Title", text: $title, prompt: Text("e.g. King of the Gods"))
                     .textFieldStyle(.roundedBorder)
+                TextField("Epithet", text: $epithet, prompt: Text("e.g. the shepherd who ascended to heaven"))
+                    .textFieldStyle(.roundedBorder)
+                    .help("A title or praise-phrase, e.g. Etana's 'the shepherd who ascended to heaven'. Not an alternate name.")
                 Picker("Type", selection: $selectedFigureType) {
                     Text("None").tag(nil as FigureType?)
                     ForEach(figureTypes) { type in
@@ -110,6 +117,37 @@ struct FigureFormView: View {
                 TextField("Domain", text: $domain, prompt: Text("e.g. Sky, Wisdom, War"))
                     .textFieldStyle(.roundedBorder)
                     .help("Comma-separated list of domains this figure governs")
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pantheons")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    if pantheons.isEmpty {
+                        Text("No pantheons yet — create them in Type Settings")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        Menu {
+                            ForEach(pantheons) { pantheon in
+                                let isSelected = selectedPantheons.contains { $0.persistentModelID == pantheon.persistentModelID }
+                                Button {
+                                    if isSelected {
+                                        selectedPantheons.removeAll { $0.persistentModelID == pantheon.persistentModelID }
+                                    } else {
+                                        selectedPantheons.append(pantheon)
+                                    }
+                                } label: {
+                                    Label(pantheon.name, systemImage: isSelected ? "checkmark" : "")
+                                }
+                            }
+                        } label: {
+                            Label("\(selectedPantheons.count)", systemImage: "building.columns")
+                                .labelStyle(.titleAndIcon)
+                        }
+                        .menuStyle(.borderlessButton)
+                        .help("Assign pantheons to this figure")
+                        .fixedSize()
+                    }
+                }
             }
         }
         .formStyle(.grouped)
@@ -126,6 +164,9 @@ struct FigureFormView: View {
                         .textFieldStyle(.roundedBorder)
                         .help("Negative = BCE, positive = CE")
                 }
+                TextField("Duration (years)", text: $reignYearsText, prompt: Text("e.g. 35"))
+                    .textFieldStyle(.roundedBorder)
+                    .help("Listed reign length in years (e.g. the SKL's own figure). Leave empty if unknown.")
             }
         }
         .formStyle(.grouped)
@@ -194,6 +235,7 @@ struct FigureFormView: View {
         name = figure.name
         disambiguation = figure.disambiguation ?? ""
         title = figure.title
+        epithet = figure.epithet ?? ""
         selectedFigureType = figure.figureType
         gender = figure.gender
         domain = figure.domain
@@ -205,7 +247,9 @@ struct FigureFormView: View {
         causeOfDeath = figure.causeOfDeath ?? ""
         reignStartText = figure.reignStartYear.map(String.init) ?? ""
         reignEndText = figure.reignEndYear.map(String.init) ?? ""
+        reignYearsText = figure.reignYears.map(String.init) ?? ""
         selectedTags = figure.tags
+        selectedPantheons = figure.pantheons
     }
 
     private func save() {
@@ -213,6 +257,7 @@ struct FigureFormView: View {
             figure.name = name
             figure.disambiguation = disambiguation.isEmpty ? nil : disambiguation
             figure.title = title
+            figure.epithet = epithet.isEmpty ? nil : epithet
             figure.figureType = selectedFigureType
             figure.gender = gender
             figure.domain = domain
@@ -225,7 +270,10 @@ struct FigureFormView: View {
             figure.isConcept = false
             figure.reignStartYear = Int(reignStartText)
             figure.reignEndYear = Int(reignEndText)
+            figure.reignYears = Int(reignYearsText)
             figure.tags = selectedTags
+            figure.pantheons = selectedPantheons
+            pruneOrphanedPantheonAssociations(figure)
             RecentEditStore.trackEdit(entityType: "Figure", entityName: figure.name)
         } else {
             let newFigure = Figure(
@@ -234,14 +282,29 @@ struct FigureFormView: View {
                 birthDate: birthDate, deathDate: deathDate, source: source,
                 causeOfDeath: causeOfDeath.isEmpty ? nil : causeOfDeath
             )
+            newFigure.epithet = epithet.isEmpty ? nil : epithet
             newFigure.reignStartYear = Int(reignStartText)
             newFigure.reignEndYear = Int(reignEndText)
+            newFigure.reignYears = Int(reignYearsText)
             newFigure.richDescription = richDescription
             newFigure.tags = selectedTags
+            newFigure.pantheons = selectedPantheons
             modelContext.insert(newFigure)
             RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
         }
         try? modelContext.save()
         showSuccessAlert = true
+    }
+
+    private func pruneOrphanedPantheonAssociations(_ figure: Figure) {
+        let memberIDs = Set(figure.pantheons.map(\.persistentModelID))
+        let orphans = (figure.pantheonAssociations ?? []).filter {
+            guard let pantheon = $0.pantheon else { return true }
+            return !memberIDs.contains(pantheon.persistentModelID)
+        }
+        for assoc in orphans {
+            figure.pantheonAssociations?.removeAll { $0.persistentModelID == assoc.persistentModelID }
+            modelContext.delete(assoc)
+        }
     }
 }

@@ -22,7 +22,9 @@ package struct SKLDatePropagator {
         package var startBCE: Int? { reigns.first?.startBCE }
         package var endBCE: Int? { reigns.last?.endBCE }
         package var totalYears: Int {
-            reigns.reduce(0) { $0 + (ReignLength.parse(from: $1.figure.figureDescription)?.years ?? 0) }
+            reigns.reduce(0) {
+                $0 + ($1.figure.reignYears ?? ReignLength.parse(from: $1.figure.figureDescription)?.years ?? 0)
+            }
         }
     }
 
