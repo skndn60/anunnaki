@@ -202,8 +202,16 @@ struct ContentView: View {
                             Label(item.rawValue, systemImage: item.icon)
                                 .tag(SidebarSelection.item(item))
                         }
+                        ForEach(topLevelFigureGroups.filter { $0.isPublished && $0.entityType == .figure }) { group in
+                            SidebarGroupRow(
+                                group: group,
+                                type: .figure,
+                                path: "figure/\(group.name)",
+                                expandedPaths: expandedGroupPathsBinding
+                            )
+                        }
                     }
-                    ForEach(GroupEntityType.allCases, id: \.self) { type in
+                    ForEach(GroupEntityType.allCases.filter { $0 != .figure }, id: \.self) { type in
                         let typeGroups = topLevelFigureGroups.filter { $0.isPublished && $0.entityType == type }
                         if !typeGroups.isEmpty {
                             Section(type.sidebarHeader) {
