@@ -1211,6 +1211,71 @@ package struct Migration {
         if changed { try? context.save() }
     }
 
+    /// Reconciles `Figure.era` links so they always mirror the canonical era
+    /// name (the `birthDate.era` string first, else the "Ruler from/in/of …"
+    /// description prefix as a fallback). Runs every launch; idempotent and
+    /// additive — `figure.era` is pure derived data, never hand-edited.
+    package static func ensureFigureEraLinks(context: ModelContext) {
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let eraByName = eras.reduce(into: [:]) { $0[$1.name] = $1 }
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for figure in figures {
+            if let name = Self.birthEraNameFromDescriptionIfEmpty(figure), figure.birthDate.era != name {
+                figure.birthDate.era = name
+                changed = true
+            }
+            let target = Self.resolveEraTarget(for: figure, eraByName: eraByName)
+            if figure.era?.persistentModelID != target?.persistentModelID {
+                figure.era = target
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
+    }
+
+    /// If a figure's birth-era string is empty, derive the era name from the
+    /// "Ruler from/in/of …" description prefix and write it into the string, so
+    /// the string stays the complete source of truth (the description-derived
+    /// era was historically only visible via a separate EraDetailView heuristic).
+    private static func birthEraNameFromDescriptionIfEmpty(_ figure: Figure) -> String? {
+        guard figure.birthDate.era.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return Self.eraName(fromDescription: figure.figureDescription)
+    }
+
+    private static func eraName(fromDescription desc: String) -> String? {
+        let prefixes = ["Ruler from the ", "Ruler in the ", "Ruler of "]
+        for prefix in prefixes where desc.hasPrefix(prefix) {
+            let remainder = desc.dropFirst(prefix.count)
+            let endChars: [Character] = [".", "(", "—", "\n"]
+            let name = String(remainder.prefix { !endChars.contains($0) }).trimmingCharacters(in: .whitespaces)
+            if !name.isEmpty {
+                return name == "Sumerian King List" ? "Antediluvian Period" : name
+            }
+        }
+        return nil
+    }
+
+    private static func resolveEraTarget(for figure: Figure, eraByName: [String: Era]) -> Era? {
+        let raw = figure.birthDate.era.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !raw.isEmpty {
+            let name = raw == "Before the Flood" ? "Age of the Watchers" : raw
+            return eraByName[name]
+        }
+        return eraByName[Self.eraName(fromDescription: figure.figureDescription).map { $0 } ?? ""]
+    }
+
+    /// Resolves a single figure's era link from its birth-era string (alias-aware).
+    /// Used by the figure form so an edit reflects immediately, not at next launch.
+    package static func era(named text: String, context: ModelContext) -> Era? {
+        let raw = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return nil }
+        let name = raw == "Before the Flood" ? "Age of the Watchers" : raw
+        return (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == name })))?.first
+    }
+
     private static func extractEpithet(from text: String) -> String? {
         // Matches `Epithet: ''"the boatman"''` (seed JSON-escaped quotes) and
         // `Epithet: 'the shepherd'` (single-quoted prose).

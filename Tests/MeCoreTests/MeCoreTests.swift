@@ -2462,6 +2462,119 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertNil(figure.epithet)
     }
 
+    // MARK: - Figure era links
+
+    func testEnsureFigureEraLinksLinksByBirthEraString() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 390)
+        context.insert(era)
+        let figure = Figure(name: "Sargon", birthDate: MythologicalDate(year: -2334, era: "Dynasty of Akkad"))
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertEqual(figure.era?.persistentModelID, era.persistentModelID)
+    }
+
+    func testEnsureFigureEraLinksAliasMapsBeforeTheFlood() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Age of the Watchers", orderIndex: 1)
+        context.insert(era)
+        let figure = Figure(name: "Shamhazai", birthDate: MythologicalDate(year: nil, era: "Before the Flood"))
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertEqual(figure.era?.persistentModelID, era.persistentModelID)
+    }
+
+    func testEnsureFigureEraLinksFallsBackToDescriptionPrefix() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Antediluvian Period", orderIndex: 5)
+        context.insert(era)
+        let figure = Figure(name: "Ubara-Tutu", figureDescription: "Ruler from the Antediluvian Period. Father of Ziusudra.")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertEqual(figure.era?.persistentModelID, era.persistentModelID)
+    }
+
+    func testEnsureFigureEraLinksBackfillsBirthEraStringFromDescriptionPrefix() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Antediluvian Period", orderIndex: 5)
+        context.insert(era)
+        let figure = Figure(name: "Alalngar", figureDescription: "Ruler from the Antediluvian Period.")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertEqual(figure.era?.persistentModelID, era.persistentModelID)
+        XCTAssertEqual(figure.birthDate.era, "Antediluvian Period")
+    }
+
+    func testEnsureFigureEraLinksDoesNotOverwriteExistingBirthEraString() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Antediluvian", orderIndex: 6)
+        context.insert(era)
+        let figure = Figure(name: "Alalngar", figureDescription: "Ruler from the Antediluvian Period.", birthDate: MythologicalDate(year: nil, era: "Antediluvian"))
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertEqual(figure.birthDate.era, "Antediluvian")
+        XCTAssertEqual(figure.era?.persistentModelID, era.persistentModelID)
+    }
+
+    func testEnsureFigureEraLinksResyncsStaleLink() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let oldEra = Era(name: "Gutian rule", orderIndex: 392)
+        let newEra = Era(name: "Dynasty of Isin", orderIndex: 395)
+        context.insert(oldEra)
+        context.insert(newEra)
+        let figure = Figure(name: "Ishbi-Erra", birthDate: MythologicalDate(year: -2017, era: "Dynasty of Isin"))
+        figure.era = oldEra
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertEqual(figure.era?.persistentModelID, newEra.persistentModelID)
+    }
+
+    func testEnsureFigureEraLinksClearsLinkWhenStringEmptyAndNoPrefix() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Creation", orderIndex: 0)
+        context.insert(era)
+        let figure = Figure(name: "Tiamat", figureDescription: "Primordial goddess of the salt sea.")
+        figure.era = era
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureFigureEraLinks(context: context)
+        XCTAssertNil(figure.era)
+    }
+
+    func testEraNamedHelper() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Age of the Watchers", orderIndex: 1)
+        context.insert(era)
+        try? context.save()
+
+        XCTAssertEqual(Migration.era(named: "Before the Flood", context: context)?.persistentModelID, era.persistentModelID)
+        XCTAssertEqual(Migration.era(named: "Age of the Watchers", context: context)?.persistentModelID, era.persistentModelID)
+        XCTAssertNil(Migration.era(named: "", context: context))
+        XCTAssertNil(Migration.era(named: "  ", context: context))
+        XCTAssertNil(Migration.era(named: "Nonexistent", context: context))
+    }
+
     func testFromTextSubjectOnly() {
         let result = FromTextParser.parse("Marduk")
         XCTAssertEqual(result.subject, "Marduk")

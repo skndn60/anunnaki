@@ -197,6 +197,7 @@ struct ContentView: View {
                     Migration.ensureCoverageExemptFlags(context: modelContext)
                     Migration.ensureSKLDomain(context: modelContext)
                     Migration.enrichSKLData(context: modelContext)
+                    Migration.ensureFigureEraLinks(context: modelContext)
                     Migration.ensureSKLEventTypesExist(context: modelContext)
                     Migration.ensureMissingCitiesAndAssociations(context: modelContext)
                     Migration.ensureImportedDeityRelationships(context: modelContext)

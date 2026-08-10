@@ -10,7 +10,7 @@ struct EraDetailView: View {
     private var eraFigures: [Figure] {
         var seen = Set<String>()
         return allFigures.filter {
-            guard figureEraName(for: $0) == era.name else { return false }
+            guard $0.era?.persistentModelID == era.persistentModelID else { return false }
             return seen.insert($0.name).inserted
         }
     }
@@ -181,56 +181,4 @@ private struct FigureQuicklookContent: View {
         }
         .padding(16)
     }
-}
-
-private let mythologicalFigureEraMap: [String: String] = [
-    "Tiamat": "Creation",
-    "Apsu": "Creation",
-    "Anshar": "Creation",
-    "Kishar": "Creation",
-    "Anu": "Age of the First Gods",
-    "Antu": "Age of the First Gods",
-    "Enlil": "Anunnaki on Earth",
-    "Ninlil": "Anunnaki on Earth",
-    "Enki": "Anunnaki on Earth",
-    "Ninhursag": "Anunnaki on Earth",
-    "Nanna/Sin": "Anunnaki on Earth",
-    "Ningal": "Anunnaki on Earth",
-    "Utu/Shamash": "Anunnaki on Earth",
-    "Inanna/Ishtar": "Anunnaki on Earth",
-    "Marduk": "Anunnaki on Earth",
-    "Nabu": "Anunnaki on Earth",
-    "Nergal": "Anunnaki on Earth",
-    "Ninurta": "Anunnaki on Earth",
-    "Dumuzi/Tammuz": "Anunnaki on Earth",
-    "Sarpanit": "Anunnaki on Earth",
-    "Adapa": "Creation of Mankind",
-    "Enkidu": "Creation of Mankind",
-    "Ziusudra/Utnapishtim": "The Great Flood",
-    "Etana": "Post-Flood Kingdoms",
-    "Ninsun": "Early Dynastic Period",
-    "Lugalbanda": "Early Dynastic Period",
-    "Gilgamesh": "Early Dynastic Period",
-]
-
-private func figureEraName(for figure: Figure) -> String? {
-    let desc = figure.figureDescription
-
-    if let mapped = mythologicalFigureEraMap[figure.name] {
-        return mapped
-    }
-
-    let prefixes = ["Ruler from the ", "Ruler in the ", "Ruler of "]
-    for prefix in prefixes {
-        if desc.hasPrefix(prefix) {
-            let remainder = desc.dropFirst(prefix.count)
-            let endChars: [Character] = [".", "(", "—", "\n"]
-            let name = remainder.prefix { !endChars.contains($0) }.trimmingCharacters(in: .whitespaces)
-            if !name.isEmpty {
-                return name == "Sumerian King List" ? "Antediluvian Period" : name
-            }
-        }
-    }
-
-    return nil
 }

@@ -26,7 +26,7 @@ enum SwimlaneMode {
 
 func figuresInEra(_ era: Era, from figures: [Figure]) -> [Figure] {
     figures
-        .filter { $0.birthDate.era == era.name }
+        .filter { $0.era?.persistentModelID == era.persistentModelID }
         .sorted { $0.birthDate.sortValue < $1.birthDate.sortValue }
 }
 

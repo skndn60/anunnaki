@@ -18,7 +18,7 @@ struct TimelinePostView: View {
 
     private var postFloodErasWithFigures: [Era] {
         postFloodEras.filter { era in
-            figures.contains { $0.birthDate.era == era.name }
+            figures.contains { $0.era?.persistentModelID == era.persistentModelID }
         }
     }
 

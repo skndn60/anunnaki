@@ -265,6 +265,7 @@ struct FigureFormView: View {
             figure.richDescription = richDescription
             figure.birthDate = birthDate
             figure.deathDate = deathDate
+            figure.era = Migration.era(named: birthDate.era, context: modelContext)
             figure.source = source
             figure.causeOfDeath = causeOfDeath.isEmpty ? nil : causeOfDeath
             figure.isConcept = false
@@ -289,6 +290,7 @@ struct FigureFormView: View {
             newFigure.richDescription = richDescription
             newFigure.tags = selectedTags
             newFigure.pantheons = selectedPantheons
+            newFigure.era = Migration.era(named: birthDate.era, context: modelContext)
             modelContext.insert(newFigure)
             RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
         }
