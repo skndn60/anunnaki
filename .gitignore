@@ -76,3 +76,6 @@ playground.xcworkspace/
 
 # Optional: if you want to ignore large resources, uncomment and adjust
 # Resources/large-file.dat
+
+# Scratch / debug artifacts
+tmp/
