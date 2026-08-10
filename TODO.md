@@ -1,0 +1,70 @@
+# TODO
+
+- [ ] **Product weaknesses:** See `PRODUCT_WEAKNESSES.md` — priorities are (1) data-entry speed/bulk ingestion, (2) source-discriminated lineage, (3) export/portability, (4) attribution nudging.
+
+- [ ] **Ollama context retrieval — expand `mentions` beyond exact `name`:** `OllamaResolver.buildContext` now includes RELEVANT *<TYPE>* sections (full untruncated records) for any figures/places/events whose name the query mentions, plus a truncated overview. But matching is exact-name-substring only, so aliases, paraphrases, and partial names ("the deluge", "kings list", "Enki" using an alternate name) still won't surface the record — reproducing the original "Great Flood" hallucination for differently-worded queries. Expand matching to also check:
+  - `AlternateName.name` (cross-cultural/aka aliases)
+  - `sortName` / `sortStart` display names
+  - single-token substring fallback (e.g. "flood" → "The Great Flood"), guarded against false positives.
+- [ ] **Retrieval divergence between QueryEngine and OllamaResolver:** The deterministic `QueryEngine` path and the Ollama fallback each build their own lookup/context entirely independently — fixes on one side don't propagate to the other. Consider a single shared retrieval layer (entity-matching helper) used by both so name/alias matching and contextual context stay consistent.
+
+- [ ] **Query date-range matcher (deterministic) — keep or remove:** Added `matchDateRangeQuery` to `QueryEngine` so "Was X between A and B BCE?" answers from the DB without Ollama. Now largely redundant for exact phrasing since Ollama answers correctly, but it's a deterministic fast path when Ollama is down. Leave in place unless it causes divergence/confusion.
+
+- [ ] **Lineage lines broken on recenter:** This issue was in the old overlay-based LineageTreeView and is no longer present in the current Canvas-based implementation. Remove if confirmed fixed.
+- [ ] **Lineage lines: consider PreferenceKey approach:** Named coordinate spaces are fragile. A `PreferenceKey` where each `FigureCardView` reports its frame via `.preference(key:value:)`, collected with `.onPreferenceChange`, would be more robust and avoid coordinate space mismatches entirely.
+
+- [ ] Lineage source discriminator: Decide whether to add source picker to lineage views
+- [ ] Lineage source discriminator: Promote Relationship.source from free-text to @Relationship with Source model
+- [ ] Lineage source discriminator: Implement display for contradictory traditions (e.g., Enuma Elish vs Atra-Hasis)
+- [ ] Lineage source discriminator: Add source discrimination to QueryEngine/natural language queries
+- [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
+- [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
+- [ ] **Backfill descriptions for Buzi & Haziana:** Imported SKL-era figures from interrupted batch — Buzi (has Wikipedia page, father of Ezekiel) and Haziana (no Wikipedia page, needs manual description) have empty `figureDescription`. Low priority.
+- [ ] **Catch-all annotation slot for un-attributable snippets (deferred 2026-08-08):** A medium for parking factoids clipped from Wikipedia/websites — with source URL, searchable, distinct from descriptions. Framing (refined 2026-08-08): NOT a "commenting system" (threaded/dated/collaborative — overkill for a personal tool), and NOT "research notes" — rather a *catch-all slot for information that fits no existing attribute* (a fact that isn't a title, reign, relationship, domain, etc.). Currently the only way to store such a snippet is `figureDescription`, which pollutes the curated biography prose.
+  - **The deciding question before building:** "does this snippet need an attribute or can [is it a] snippet?" — if a fact recurs across enough figures (e.g. "temple X built here", "ancestor of Y"), **promote it to a real field/association** instead of a loose snippet. The snippet slot should be structured enough (title, URL, optional topic tag) that a recurring cluster can later be migrated into a real attribute — it must NOT become a dump that prevents good attribution.
+  - Deliberately NOT StickyNote: sticky notes are throwaway remind→resolve→delete to-dos and must not hold valuable information. Notes and Stickies stay separate concepts.
+  - Design sketch: lightweight note model polymorphically linked to figure/place/event/thing (like StickyNote already is), `title`, `text`, `url: String?`, `createdAt`; global-search integration + a search field in the notes list; keep the model name migration-safe if reusing StickyNote's polymorphic joins.
+- [ ] **Content attribution on text blocks (deferred 2026-08-08):** Text blocks in groups (`GroupTextBlockSheet`) currently have no way to attach `ContentAttribution`s — the model links only to Figure/Place/Event/Thing. Plan: add `groupTextBlock: GroupTextBlock?` to `ContentAttribution` (migration-safe optional) + inverse relationship on `GroupTextBlock`; add an attribution section to the sheet reusing the `ContentAttributionFormView` / `ContentAttributionSection` pattern.
+- [ ] **Write tests for Migration.swift:** 15% coverage, 368 lines, runs on every launch — highest risk for subtle bugs.
+- [ ] **Write tests for SKLDatePropagator.swift:** 0% coverage, 53 lines, BCE year math with edge cases (mythological reigns, negative years).
+- [ ] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView):**
+  - FigureFormView is done (3 steps, using WizardContainer)
+  - Replicate WizardContainer + step split for the other 3 form views
+- [ ] **Mixed-type groups (rulers + places in one group):** A group is currently locked to a single `entityType` — the Members picker and all views branch on `group.entityType`. User wants the first Sumerian King List dynasty group to hold both the rulers (figures) and the place ruled from. The data model already supports it (`FigureGroupAssociation` holds optional `figure`/`place`/`event`/`thing` refs, and `syncMembers` leaves other-type members untouched); only the UI blocks it. Needed:
+  - Members step in `FigureGroupFormView`: allow selecting more than one entity type into the same group
+  - `EntityGroupCollectionView`: render mixed members (it reads each association's actual type, but counts/detail panel branch on `entityType`)
+  - Relax sidebar + group-link filtering that matches `entityType == .figure` only
+- [x] **FigureGroup kind/type system — completed 2026-07-31:**
+  - `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`) on `FigureGroup` as `kindRawValue: String?` (migration-safe) + computed `kind`. Default `.standard`.
+  - Sidebar "Groups" section driven by `@Query(sort: \FigureGroup.orderIndex)` — new groups appear in the sidebar with zero code.
+  - `SidebarSelection` type (`.item(NavigationItem)` / `.group(PersistentIdentifier)`) replaces `selectedItem: NavigationItem?` in `NavigationCoordinator`. Selection binding in `ContentView` updated; `navigateToGroup` now sets `.group(id)`.
+  - `ContentView.groupDestination(group:)` dispatches by kind: `.standard` → `FigureGroupCollectionView`, `.enoch` → `EnochView`, `.skl` → `SumerianKingListView`, `.flood` → ComingSoon.
+  - Removed hardcoded `.enoch`, `.sumerianKingList`, `.flood` cases from `NavigationItem` (icon/section/destination) — they are now data-driven groups.
+  - `FigureGroupCollectionView.swift` — New clean read-oriented collection view (header, search, adaptive member grid → figure detail) for `.standard` groups. Group editing stays in Figure Group manager.
+  - `FigureGroupFormView` — Added Kind picker to Identity step.
+  - `Migration.ensureFigureGroupKinds` — Backfills kinds by group name (Book of Enoch→.enoch, SKL Kings/Sumerian King List→.skl, The Flood→.flood) and creates "The Flood" group if missing. `ensureDefaultFigureGroups` now includes kinds + a 7th "The Flood" default. Wired into ContentView launch after `ensureDefaultFigureGroups`.
+  - **Subgroups added 2026-07-31:** `FigureGroup.parentGroup` / `subgroups` relationship (`.nullify` delete rule, migration-safe), `directFigures` computed property, parent picker in `FigureGroupFormView` (cycle-safe `setParent`), manager list shows subgroup indicator, sidebar shows top-level published groups only, collection view is a unified expandable outline mixing figures + subgroups (recursive `FigureGroupTreeNode`, `MixedItem` enum) with a stateless ancestor breadcrumb trail (derived from `parentGroup` chain) for navigating back up. Navigation between levels uses `navigateToGroup(recordHistory: false)` — no shared-history pollution.
+- [x] **Group collection view: inline detail panel + place members — completed 2026-08-01:** Folded into the Generic EntityGroup system. `EntityGroupCollectionView` now has an inline 320pt detail panel (Edit/Delete per type, EnochView pattern) and groups hold places/events/things via `entityType`.
+- [x] **Generic EntityGroup system (Option A) — completed 2026-08-01:** See session log 2026-08-01. Implemented WITHOUT renaming the stored model (see deviation note there). All 4 entity types get Enoch-style sidebar pages + inline detail panel + per-type bulk-add/sync filters. Note: no default place/event/thing groups are auto-created — users build them via the Groups manager (avoided sidebar clutter); the existing `ensureDefaultFigureGroups`/`ensureFigureGroupKinds` migrations are untouched and figure-only.
+- [x] **Free-form text blocks in groups (book/story pages) — phase 1 completed 2026-08-07 (figure-groups, members+text unified spine):**
+  - `GroupTextBlock` @Model (title, text, richText RTF, orderIndex, cascade group relationship). Registered in app + test schemas. Unannotated `group` side per SwiftData relationship convention.
+  - `FigureGroup.textBlocks` relationship; `sortedTextBlocks`; unified `memberTextSpine` (members + text blocks share one `orderIndex` domain) + `GroupContentItem` enum (`.member`/`.text`); `moveMemberTextItem(_:direction:)` renumbers the whole spine; `setSortMode(.ordered)` now also seeds text-block indexes.
+  - Collection view (`EntityGroupCollectionView`): `MixedItem` gained `.text(GroupTextBlock)`; in Manual Order mode `spineItems(for:)` interleaves prose with members (subgroups stay grouped at the end); alphabetical mode ignores prose (by design). "Add Text Block" header button, `TextBlockRow` (title + RichTextDisplay prose + pencil/trash + context menu), edit/delete wired.
+  - Manager (`FigureGroupListView`): Text Blocks section with add/edit/delete + reorder arrows; member reorder arrows now route through the unified spine (`moveMemberTextItem(.member)`).
+  - `GroupTextBlockSheet` — shared title + rich-text editor sheet used by both views.
+  - Tests: `testGroupTextBlockSpineInterleavesMembersAndText`, `testGroupMemberTextSpineMoveRenumbers`, `testGroupMemberTextSpineNilOrderDefersByName`. 138 total pass.
+  - **Remaining (phase 2):** fold into the Generic EntityGroup "page content items" spine (text blocks + entities + subgroups as one ordered list for all 4 entity types) — i.e. scope (b) from the original item. Subgroups are still NOT part of the shared spine (they remain grouped at the end). Reordering text within alphabetical mode is unsupported (prose hidden there).
+- [x] **FigureGroup system — completed 2026-07-28:**
+  - `FigureGroupListView.swift` — Full list-detail split (HStack) with `@AppStorage` resizable divider, add/edit/delete via sheet, empty state, figure members list in detail panel with sidebar navigation
+  - `FigureGroupFormView.swift` — 2-step wizard (Identity → Figures) using `WizardContainer`, SF Symbol icon field, ColorPicker, searchable figure selector with multi-select
+  - `ContentView.swift` — Added `.figureGroups` NavigationItem with folder icon in Data section, coordinator-aware branch in detail chain
+  - `NavigationCoordinator.swift` — Added `pendingGroupID`, `navigateToGroup(_:)`, `consumePendingGroupID()`, and `.figureGroups` branch in `navigateToHistory`
+  - `FigureDetailView.swift` — "Groups" section with membership list, `+` button → `GroupLinkPopover` (searchable group list + optional note), follows PlaceLinkPopover pattern
+  - `Migration.swift` — `ensureDefaultFigureGroups` creates 6 default groups (Divine Council, Sumerian Pantheon, Akkadian/East Semitic, Book of Enoch, Primordial Beings, SKL Kings) with orderIndex, wired into ContentView.swift launch sequence
+- [x] **ContentAttribution model — completed 2026-07-30:**
+  - `ContentAttribution` model with `figure/place/event/thing`, `source`, `propertyName`, `url`, `contentPreview`, `note` (all properties optional for migration safety)
+  - `ContentAttributionFormView` — add/edit form with search-based entity selectors, property picker (context-sensitive per entity type), source picker, URL field
+  - `ContentAttributionSection` — displays source → property → preview → note per row with edit pencil and delete buttons
+  - All 4 detail views (Figure, Place, Event, Thing) — filtered attributions, add/edit/delete sheets
+  - `AttributedPropertyView` — reusable inline source badge displayed below descriptions and titles when matching `ContentAttribution` exists (book icon + source name + clickable link)
+  - `url: String?` on model for linking back to the source, displayed as clickable hostname in section and badge

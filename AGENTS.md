@@ -127,6 +127,7 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - `/tmp/parse_skl.py` — Python parser for Sumerian King List wikitext, generates seed JSON with UUIDs
 - `PRODUCT_WEAKNESSES.md` — Product-level critique: the app's weak spots and strategy (cold-start data volume, trapped data, contradictory traditions, curation burden, niche risk, no feedback loop) + priorities
 - `ARCHITECTURAL_WEAKNESSES_CRITIQUE.md` — Code-level technical debt review (SwiftData boilerplate, Relationship.source, width persistence, lineage complexity)
+- `TODO.md` — Open/backlog work items and completed feature checklists (the todo list previously inline in AGENTS.md)
 
 ## Session Log
 
@@ -366,58 +367,6 @@ This is faster and more reliable than reading code to simulate the layout engine
 - `Sources/Me/Views/NavigationCoordinator.swift` — Extended
 - `Sources/Me/Views/FigureListView.swift` — Updated tree icon handler
 - `Sources/Me/Views/ContentView.swift` — Added `.lineage` coordinator branch
-
-## TODO
-
-- [ ] **Product weaknesses:** See `PRODUCT_WEAKNESSES.md` — priorities are (1) data-entry speed/bulk ingestion, (2) source-discriminated lineage, (3) export/portability, (4) attribution nudging.
-
-- [ ] **Lineage lines broken on recenter:** This issue was in the old overlay-based LineageTreeView and is no longer present in the current Canvas-based implementation. Remove if confirmed fixed.
-- [ ] **Lineage lines: consider PreferenceKey approach:** Named coordinate spaces are fragile. A `PreferenceKey` where each `FigureCardView` reports its frame via `.preference(key:value:)`, collected with `.onPreferenceChange`, would be more robust and avoid coordinate space mismatches entirely.
-
-- [ ] Lineage source discriminator: Decide whether to add source picker to lineage views
-- [ ] Lineage source discriminator: Promote Relationship.source from free-text to @Relationship with Source model
-- [ ] Lineage source discriminator: Implement display for contradictory traditions (e.g., Enuma Elish vs Atra-Hasis)
-- [ ] Lineage source discriminator: Add source discrimination to QueryEngine/natural language queries
-- [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
-- [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
-- [ ] **Backfill descriptions for Buzi & Haziana:** Imported SKL-era figures from interrupted batch — Buzi (has Wikipedia page, father of Ezekiel) and Haziana (no Wikipedia page, needs manual description) have empty `figureDescription`. Low priority.
-- [ ] **Write tests for Migration.swift:** 15% coverage, 368 lines, runs on every launch — highest risk for subtle bugs.
-- [ ] **Write tests for SKLDatePropagator.swift:** 0% coverage, 53 lines, BCE year math with edge cases (mythological reigns, negative years).
-- [ ] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView):**
-  - FigureFormView is done (3-step: Identity → Details → Source & Tags), using WizardContainer
-  - Replicate WizardContainer + step split for the other 3 form views
-- [x] **FigureGroup kind/type system — completed 2026-07-31:**
-  - `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`) on `FigureGroup` as `kindRawValue: String?` (migration-safe) + computed `kind`. Default `.standard`.
-  - Sidebar "Groups" section driven by `@Query(sort: \FigureGroup.orderIndex)` — new groups appear in the sidebar with zero code.
-  - `SidebarSelection` type (`.item(NavigationItem)` / `.group(PersistentIdentifier)`) replaces `selectedItem: NavigationItem?` in `NavigationCoordinator`. Selection binding in `ContentView` updated; `navigateToGroup` now sets `.group(id)`.
-  - `ContentView.groupDestination(group:)` dispatches by kind: `.standard` → `FigureGroupCollectionView`, `.enoch` → `EnochView`, `.skl` → `SumerianKingListView`, `.flood` → ComingSoon.
-  - Removed hardcoded `.enoch`, `.sumerianKingList`, `.flood` cases from `NavigationItem` (icon/section/destination) — they are now data-driven groups.
-  - `FigureGroupCollectionView.swift` — New clean read-oriented collection view (header, search, adaptive member grid → figure detail) for `.standard` groups. Group editing stays in Figure Group manager.
-  - `FigureGroupFormView` — Added Kind picker to Identity step.
-  - `Migration.ensureFigureGroupKinds` — Backfills kinds by group name (Book of Enoch→.enoch, SKL Kings/Sumerian King List→.skl, The Flood→.flood) and creates "The Flood" group if missing. `ensureDefaultFigureGroups` now includes kinds + a 7th "The Flood" default. Wired into ContentView launch after `ensureDefaultFigureGroups`.
-  - **Subgroups added 2026-07-31:** `FigureGroup.parentGroup` / `subgroups` relationship (`.nullify` delete rule, migration-safe), `directFigures` computed property, parent picker in `FigureGroupFormView` (cycle-safe `setParent`), manager list shows subgroup indicator, sidebar shows top-level published groups only, collection view is a unified expandable outline mixing figures + subgroups (recursive `FigureGroupTreeNode`, `MixedItem` enum) with a stateless ancestor breadcrumb trail (derived from `parentGroup` chain) for navigating back up. Navigation between levels uses `navigateToGroup(recordHistory: false)` — no shared-history pollution.
-- [x] **Group collection view: inline detail panel + place members — completed 2026-08-01:** Folded into the Generic EntityGroup system. `EntityGroupCollectionView` now has an inline 320pt detail panel (Edit/Delete per type, EnochView pattern) and groups hold places/events/things via `entityType`.
-- [x] **Generic EntityGroup system (Option A) — completed 2026-08-01:** See session log 2026-08-01. Implemented WITHOUT renaming the stored model (see deviation note there). All 4 entity types get Enoch-style sidebar pages + inline detail panel + per-type bulk-add/sync filters. Note: no default place/event/thing groups are auto-created — users build them via the Groups manager (avoided sidebar clutter); the existing `ensureDefaultFigureGroups`/`ensureFigureGroupKinds` migrations are untouched and figure-only.
-- [ ] **Free-form text blocks in groups (book/story pages):** Let users interleave prose between members/subgroups so a group reads like a book chapter ("create a Story"). Today a group has one free-text field (`groupDescription`) rendered at the top plus an ordered/alphabetized member list. Plan:
-  - New `@Model GroupTextBlock`: `group` (cascade), `title: String`, `text: String`, `richText: Data?` (optional, migration-safe; reuse `RichTextEditor`/`RichTextDisplay`), `orderIndex: Int`.
-  - "Insert Text" affordance in the group — either per-position ("insert after this member/subgroup") or via a reorderable ordered spine.
-  - Collection view: `MixedItem` gains `.textBlock` case, rendered as a styled prose block between members.
-  - Design wrinkle: interleaving requires explicit ordering — members can no longer be purely alphabetized; each item needs `orderIndex` (or text anchors "after item X"). Note: manual member ordering already landed 2026-08-02 (see session log), so interleaving text only needs to slot into that same per-association `orderIndex` sequence.
-  - Two scopes: (a) FigureGroup-first, deliverable sooner on its own; (b) fold into Generic EntityGroup as a unified "page content items" spine (text blocks + entities + subgroups in one ordered list) powering story pages for all 4 types. User leaning toward (b) but wants this concept captured regardless.
-- [x] **FigureGroup system — completed 2026-07-28:**
-  - `FigureGroupListView.swift` — Full list-detail split (HStack) with `@AppStorage` resizable divider, add/edit/delete via sheet, empty state, figure members list in detail panel with sidebar navigation
-  - `FigureGroupFormView.swift` — 2-step wizard (Identity → Figures) using `WizardContainer`, SF Symbol icon field, ColorPicker, searchable figure selector with multi-select
-  - `ContentView.swift` — Added `.figureGroups` NavigationItem with folder icon in Data section, coordinator-aware branch in detail chain
-  - `NavigationCoordinator.swift` — Added `pendingGroupID`, `navigateToGroup(_:)`, `consumePendingGroupID()`, and `.figureGroups` branch in `navigateToHistory`
-  - `FigureDetailView.swift` — "Groups" section with membership list, `+` button → `GroupLinkPopover` (searchable group list + optional note), follows PlaceLinkPopover pattern
-  - `Migration.swift` — `ensureDefaultFigureGroups` creates 6 default groups (Divine Council, Sumerian Pantheon, Akkadian/East Semitic, Book of Enoch, Primordial Beings, SKL Kings) with orderIndex, wired into ContentView.swift launch sequence
-- [x] **ContentAttribution model — completed 2026-07-30:**
-  - `ContentAttribution` model with `figure/place/event/thing`, `source`, `propertyName`, `url`, `contentPreview`, `note` (all properties optional for migration safety)
-  - `ContentAttributionFormView` — add/edit form with search-based entity selectors, property picker (context-sensitive per entity type), source picker, URL field
-  - `ContentAttributionSection` — displays source → property → preview → note per row with edit pencil and delete buttons
-  - All 4 detail views (Figure, Place, Event, Thing) — filtered attributions, add/edit/delete sheets
-  - `AttributedPropertyView` — reusable inline source badge displayed below descriptions and titles when matching `ContentAttribution` exists (book icon + source name + clickable link)
-  - `url: String?` on model for linking back to the source, displayed as clickable hostname in section and badge
 
 ### 2026-07-27 — SKL events, figures & places enrichment; JSON decode debugging
 
@@ -939,3 +888,315 @@ This is faster and more reliable than reading code to simulate the layout engine
 
 **Relevant files:**
 - `AGENTS.md` — Updated (Important Files + TODO)
+
+### 2026-08-05 — Split TODO out of AGENTS.md into TODO.md
+
+**Changes made:**
+- `TODO.md` — NEW. The entire `## TODO` checklist was moved out of AGENTS.md into its own `TODO.md` (AGENTS.md was ~53 lines lighter). Kept content verbatim: open items, completed feature checkboxes (FigureGroup kind/type system, Generic EntityGroup, ContentAttribution, etc.), each with its historical notes.
+- `AGENTS.md` — Removed the inline `## TODO` section; added `TODO.md` to the Important Files list. README-style forward reference so future sessions know where the backlog lives.
+
+**Key decisions:**
+- TODO is now a standalone driving document; AGENTS.md keeps only durable reference material (project identity/constraints/architecture/conventions/session log). This keeps AGENTS.md from growing unboundedly.
+- Session log entries that mentioned "AGENTS.md TODO" now conceptually point at TODO.md.
+
+**Relevant new/removed files:**
+- `TODO.md` — Added
+
+### 2026-08-05 — Collapsible sidebar groups with persisted expand state
+
+**Problem:** The sidebar flattened every group *and* all of its subgroups into one always-expanded list (`sidebarRows(for:type:depth:)` in ContentView). Any curated hierarchy (e.g., Book of Enoch with its Watchers/Commanders/Archangels/Humans subgroups) rendered fully expanded, letting the sidebar grow enormous.
+
+**Changes made:**
+- `Sources/Me/Views/ContentView.swift` — Replaced the flat `sidebarRows` recursion with a new nested `SidebarGroupRow` view:
+  - Groups with no subgroups render as a plain selectable `Label`.
+  - Groups with subgroups render as a `DisclosureGroup` (recursive — each subgroup that itself has children gets its own disclosure), so any depth is collapsible.
+  - Expand/collapse state persisted via `@AppStorage("sidebarExpandedGroupPaths")` keyed by a path string (`"figure/Book of Enoch/Watchers"`), exposed through a `@Binding<Set<String>>` and written back as a semicolon-joined sorted string.
+  - Default state is **collapsed on first launch** (empty set) — only top-level published groups show until the user expands them.
+- Removed the now-unused `sidebarRows(for:type:depth:)` helper.
+
+**Design decisions:**
+- Path key (not `PersistentIdentifier`) chosen so the persisted state survives across launches/store resets and is human-readable in UserDefaults. Trade-off: renaming a group changes its path key, resetting just that group's expansion state to collapsed.
+- Subgroups are rendered by the same recursive `SidebarGroupRow`, so arbitrarily deep "pages" (Book of Enoch → subgroup → sub‑subgroup) all collapse cleanly.
+
+**Relevant files:**
+- `Sources/Me/Views/ContentView.swift` — Updated
+
+### 2026-08-05 — Subgroup ordering: orderIndex on FigureGroup + reorder UI
+
+**Context:** Follow-on to the 2026-08-02 member-ordering work — subgroups had no manual ordering, only `orderIndex`-then-name sorting. The user wanted to manually sequence subgroups (e.g. dynasty subpages within the Sumerian King List) exactly like members. Still uncommitted at time of writing.
+
+**Changes made:**
+- `Sources/MeCore/Models/FigureGroup.swift` — Added `sortedSubgroups` (order-by-`orderIndex`, name tie-break). `setSortMode(.ordered)` now also seeds sequential `orderIndex` across `sortedSubgroups` (not just members). Added `moveSubgroup(_:direction:)` — swaps a subgroup up/down and renumbers 0..n.
+- `Sources/Me/Views/FigureGroupListView.swift` — `FigureGroupDetailView` gained a "Subgroups" section: folder icon + name per row, with up/down `MemberReorderButtons` (chevrons) when the group's `sortMode == .ordered`; tapping calls `group.moveSubgroup` + save.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 84 new lines covering subgroup order seeding, `moveSubgroup` (incl. edge no-ops), and sorted ordering.
+
+**Design decisions:**
+- Reuses the same `orderIndex` + `.ordered` sort mode mechanism as member ordering — one concept for "manual sequence" across both members and subgroups.
+- Subgroup positions live on the subgroup `FigureGroup` itself (each group has its own `orderIndex`); not stored on the parent association.
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift`, `Sources/Me/Views/FigureGroupListView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`
+
+> **Note:** This session also produced the TODO split, collapsible sidebar, and subnet-in-`groupDestination` changes above. All uncommitted as of end of 2026-08-05 session.
+
+### 2026-08-05 — Subgroup routing: legacy kind views only dispatch at the root
+
+**Problem:** The user had a subgroup "Antedeluvian Kings" under "Sumerian King List" whose `kind` was `.skl`. Clicking it routed to the legacy `SumerianKingListView` — a pre-FigureGroups hand-coded dynasty cruncher that re-derives the whole king list from `source contains "Sumerian King List"` and ignores group membership entirely. So the subgroup showed the "old" edition instead of its curated members.
+
+**Root cause:** `ContentView.groupDestination(group:)` dispatched `.enoch`/`.skl`/`.flood` kinds to their dedicated legacy views whenever the group had no subgroups — regardless of whether the group was a top-level dedicated root or a normal subgroup.
+
+**Changes made:**
+- `Sources/Me/Views/ContentView.swift` — `groupDestination` now gates the legacy-view dispatch behind `isDedicatedRoot = group.parentGroup == nil`. Only top-level `.enoch`/`.skl`/`.flood` figure groups with no subgroups still route to `EnochView` / `SumerianKingListView` / `ComingSoonView`. Every subgroup falls through to the normal `EntityGroupCollectionView`, showing its own members.
+
+**Design decisions:**
+- `kind` on a subgroup is now effectively inert for routing — only the root drives which dedicated view (if any) renders.
+- No database changes were made. The subgroup's `kind` still reads `.skl` but is harmless.
+
+**Investigation notes (open, user to continue tomorrow):** The user is investigating whether the pre-Groups-era "Sumerian King List" top-level group (DB PK 3) + its 4 dynasty subgroups are redundant/old and can be deleted, given the Groups system seeds a group named "SKL Kings" instead. Pending user decision — **no deletions performed.** The routing fix stands regardless.
+
+**Relevant files:**
+- `Sources/Me/Views/ContentView.swift` — Updated
+
+### 2026-08-06 — Group aggregation summaries (sum/average over members)
+
+**Context:** The user wanted to compute a dynasty's total duration ("sum operation of all members in a group"). Chose option 2: a user-defined aggregation config stored on the group (like `memberFilter`), rendered in the collection-view header.
+
+**Changes made:**
+- `Sources/MeCore/Models/FigureGroup.swift` — Added `aggregationRawValue: String?` (migration-safe optional) + computed `decodedAggregation` (JSON, mirroring `decodedFilter`). New types: `GroupAggregationOperation` (`.sum`/`.average`), `GroupAggregationTarget` (`.reignYears`/`.reignSpan`/`.lifespan`/`.birthYear`/`.deathYear`/`.eventYear`, each with `displayName`, `shortName`, `isDuration`, `supportedEntityTypes`, and `value(for:)` extraction), `GroupAggregation` (operation + target + optional label; `title`, `compute(in:)`, `formattedValue(for:)`), `GroupAggregationResult` (count/sum/average).
+- `Sources/Me/Views/FigureGroupFormView.swift` — New "Summary" section in Identity step: enable toggle + operation/target pickers + optional label. Target list filtered to the group's entity type (figures: reign/reign-span/lifespan/birth/death year; events: event year; places/things: none → note shown, toggle disabled). Loaded/saved via `decodedAggregation`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Header renders the aggregation next to the member/subgroup counts: "Total listed reign: 141 years" with a `sum` icon, plus a "(N of M members have data)" hint when some members lack values.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 8 tests: codable round-trip, nil back-compat, reign-sum, average lifespan, event-year sum (BCE formatting), missing-data filtering, all-nil → nil, custom label wins. 123 tests pass.
+
+**Key decisions:**
+- `.count` is NOT an aggregation operation — member count is already always shown in the header; adding it as a config would duplicate it.
+- Reign years use the existing `ReignLength.parse` (matches literal "Reigned X years"). Kings written as "reigned for around X years" or "c. X–Y BC" are silently skipped (with the "N of M" hint showing partial coverage). Widening the parser is a separate task.
+- Aggregation runs over **direct members** only (subgroups are separate pages and excluded).
+- BCE year targets format as "4,400 BCE"; duration targets as "141 years"; averages round to the nearest integer.
+- Store is JSON in a new optional attribute — lightweight migration safe, no schema changes to the container.
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift` — Updated
+- `Sources/Me/Views/FigureGroupFormView.swift` — Updated
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-06 — Figure reign duration as an explicit attribute (`reignYears`)
+
+**Context:** Reign length was only ever derived by regex-parsing `figureDescription` (`ReignLength.parse`, matching literal uppercase "Reigned X years"), so it was fragile and couldn't follow the SKL's actual listed numbers. The user wanted it as a first-class attribute on `Figure` so the SKL data is explicit and aggregation-friendly. (Confirmed there was NO existing stored field — only `reignStartYear`/`reignEndYear` date ranges, `ReignLength` as a parse helper, and the aggregation target name.)
+
+**Changes made:**
+- `Sources/MeCore/Models/Figure.swift` — Added `reignYears: Int?` (migration-safe optional), explicitly documented as distinct from `reignStartYear`/`reignEndYear` (duration vs chronological date range).
+- `Sources/MeCore/Models/SKLReignLength.swift` — Widened `ReignLength.parse` to try, in order: `(Listed reign: X years.)` suffix, then `Reigned/Ruled X years` (case-insensitive, optional "for"/"around"). Added explicit `package init`. This covers the seed's varied phrasings ("ruled for 28,800 years", "reigned for around 670 years", etc.).
+- `Sources/MeCore/Store/Migration.swift` — New `ensureReignYears(context:)`: for every figure with `reignYears == nil`, parse the description and write it. Additive + idempotent — never overwrites a user-entered value. Called every launch after figure-creating migrations (`enrichSKLData`, `ensureSKLEventsAndFigures`) so newly seeded figures backfill on the same launch.
+- `Sources/Me/Views/ContentView.swift` — Added `Migration.ensureReignYears` to the launch sequence (after `ensureSKLEventsAndFigures`).
+- `Sources/Me/Views/FigureFormView.swift` — Added "Duration (years)" field to the Reign step (load/save for both edit and create).
+- Read sites now prefer the field with a parse fallback: `FigureGroup.swift` aggregation `.reignYears` target, `SKLDatePropagator.DynastyTimeline.totalYears`, `SumerianKingListView.KingRow.reignLength` (with a `NumberFormatter` for comma grouping).
+
+**Key decisions:**
+- The field is the source of truth once set; `ReignLength.parse` remains only as a fallback for figures where it's still nil (pre-backfill or unparseable). Descriptions stay untouched historical prose.
+- Backfill is additive + non-overwriting per the sacred-data rule — no reseed, no `clearAll`.
+- Kings written with date ranges ("c. X–Y BC") or that can't be parsed get no auto value; the user fills them in via the form (the "follow the SKL data" use case).
+- No seed_data.json edits needed — the backfill migration reads existing descriptions.
+
+**Relevant files:**
+- `Sources/MeCore/Models/Figure.swift`, `Sources/MeCore/Models/SKLReignLength.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/MeCore/Store/SKLDatePropagator.swift`, `Sources/MeCore/Models/FigureGroup.swift`
+- `Sources/Me/Views/FigureFormView.swift`, `Sources/Me/Views/SumerianKingListView.swift`, `Sources/Me/Views/ContentView.swift`
+- `Tests/MeCoreTests/MeCoreTests.swift` — 6 new tests (parser variants, backfill, no-overwrite, aggregation-precedes-field). 129 tests pass.
+
+### 2026-08-07 — NSTableView reentrancy warning: List→ScrollView exploration, then partial revert
+
+**Context:** Three list views (Figures, Relationships, Associations) logged "Application performed a reentrant operation in its NSTableView delegate" on macOS. Initially suspected inline SwiftData mutations in row buttons; those were deferred via `Task { @MainActor }` but the warning persisted on *open* (no interaction).
+
+**Diagnosis:** For Figure/Relationship/Associations, the probe confirmed the warning fires on opening the view with zero interaction — the known macOS-only SwiftUI `List` (NSTableView-backed) behavior where rows are inserted asynchronously (from `@Query`) while the table is measuring. This is harmless console noise but unavoidable with `List`.
+
+**Changes made (Phase 1 — migrate to ScrollView):**
+- `Sources/Me/Views/FigureListView.swift`, `RelationshipListView.swift`, `AssociationsView.swift` — Replaced `List(...)`/`List(selection:)` with `ScrollView` + `LazyVStack`. FigureListView lost native selection, so selection highlight + `onTapGesture` were added to `FigureRow`, and the `.onDelete` in RelationshipListView was dropped.
+- Deferred inline row mutations via `Task { @MainActor }`: 5 `modelContext.delete(assoc)` in AssociationsView, the RelationshipListView star toggle (`isPreferred` + save), and `FigureListView.deleteFigure` (removed `withAnimation`).
+
+**Phase 2 — keyboard regression + revert:** The user lost figure-list arrow-key navigation. A fix using `.focusable()`/`.focused()` + `onKeyPress` restored it but drew a 3px blue focus ring the user disliked; that approach was reverted. Then became apparent the manual implementation diverged from other lists.
+
+**Phase 3 — uniformity + rollback (final state):**
+- Added `Sources/Me/Views/AlternatingRowBackground.swift` — `.alternatingRowBackground(index:)` using `Color(nsColor: .alternatingContentBackgroundColors[1])` to reproduce the native `alternatesRowBackgrounds` striping in ScrollView lists.
+- Applied the modifier to FigureListView (running `figureRowOffsets` index across grouped sections), RelationshipListView, and all 5 AssociationsView tabs.
+- `ThingListView` was still a `List` but missing the stripe style — added `.listStyle(.inset(alternatesRowBackgrounds: true))`.
+- **FigureListView reverted to native `List(selection:)`** (selection color + arrow keys match Places/Events/Things). Removed all ScrollView remnants: `figureRowOffsets`, FigureRow `isSelected`/`onSelect`, `figureGroupSection` restored.
+
+**Design decision:** The user accepted the reentrancy warning ("annoying but doesn't cost anything"). Final state: **FigureListView = native `List`** (consistent selection + keyboard, warning may return on open); **Relationship/Associations remain `ScrollView`** (no row-selection to lose, manual striping retained) — left as-is per user.
+
+**Relevant files:**
+- `Sources/Me/Views/FigureListView.swift`, `RelationshipListView.swift`, `AssociationsView.swift`, `ThingListView.swift`, `AlternatingRowBackground.swift` (new)
+
+### 2026-08-07 — Figure↔Thing association visible on figure detail
+
+**Context:** The `ThingFigureAssociation` model existed and was fully rendered on the Thing side (ThingDetailView "Associated Figures" section + AddThingFigureAssociationForm), but `FigureDetailView` had no section for `figure.thingAssociations` — so a figure's associated things were invisible from the person's sidebar detail.
+
+**Changes made:**
+- `Sources/Me/Views/FigureDetailView.swift` — Added an "Associated Things" section (after the Places section, before Groups): lists `figure.thingAssociations` showing thing icon, name (honoring the `displayName` override as "X as Y"), role badge, source, and a trash button; shows "No things linked" when empty. Added state vars (`showThingLinkPopover`, `thingSearchText`, `selectedThingForLink`, `selectedThingRole`).
+- Added `ThingLinkPopover` private struct mirroring `PlaceLinkPopover`: search field, filtered thing list (excluding already-linked), role picker over `ThingFigureRoleType`, and Link that creates `ThingFigureAssociation` set on both `figure.thingAssociations` and `thing.figureAssociations`.
+
+**Design decisions:**
+- Followed the existing `PlaceLinkPopover` pattern (popover + `+` header button), so the interaction is consistent with places/groups.
+- Partly observable via `assets.roleType?.icon/color` fallback to `.brown`/`shippingbox` for things without a type, same as EventDetailView's thing rows.
+
+**Relevant files:**
+- `Sources/Me/Views/FigureDetailView.swift` — Updated (`Associated Things` section + `ThingLinkPopover`)
+
+### 2026-08-08 — Text block ordering: unified spine in manager; max width; alignment
+
+**Context:** Continuation of the "Book of Enoch–style story pages" work. Three parts: (1) finish the manager's reorder support for text blocks so the "can't move it" bug is actually fixed and visible, (2) give a text block a max width, (3) give a text block left/center/right alignment — both for the prose inside the box and for where the box sits in the page column.
+
+**Part 1 — Manager now renders the unified spine (reorder visibility fix):**
+
+**Problem:** The user had a text block under "Antedeluvian Kings" that appeared pinned below the kings in the manager (as if at the bottom) and couldn't move up. Debugging via sqlite (`~/Library/Application Support/Me/Me.store`) showed the block actually had `orderIndex = 0` — the *top* of the member+text spine — while the group's 8 members had `orderIndex` 1–8. The up arrow was legitimately disabled (nothing above it). The UI lied because the manager rendered Members / Subgroups / Text Blocks as three separate sections, so the block always *looked* bottom-pinned no matter its real spine position, and reordering was invisible.
+
+**Changes made:**
+- `Sources/Me/Views/FigureGroupListView.swift` — In Manual Order mode the manager now renders a single interleaved "ORDERLABEL & Text" section from `group.memberTextSpine` (members + text in one list), with `MemberReorderButtons` on every row. Alphabetical mode keeps the separate Members + Text Blocks sections (no arrows). New `SpineEntry` enum (`.member(GroupMemberItem, FigureGroupAssociation)` / `.text(GroupTextBlock)`, `id` via `hashValue`), `spineRow(_:)`, `memberRow(_:group:showReorder:)`, `canSpineMove(_:direction:)`, `moveSpine(_:direction:)` helpers. Old standalone Text Blocks section removed.
+- `Sources/MeCore/Models/FigureGroup.swift` — added `appendTextBlock(_:)` (appends to the END of the spine — max `memberTextOrder` index + 1). Fixes a latent bug where `addTextBlock` assigned `orderIndex = textBlocks.count` (text-only count), putting a new block at the *top* of the spine when text blocks were the only thing in its `orderIndex` domain.
+- `Sources/MeCore/Models/FigureGroup.swift` — `canMoveMemberTextItem(_:direction:)` now computes enablement from the unified spine position (not the per-type array index), so a sole text block between members can move up *and* down.
+- `Tests/MeCoreTests/MeCoreTests.swift` — `testGroupMemberTextSpineCanMoveUsesSpinePosition` (spine-aware enablement; first member can't move up, sole text block can move both ways).
+
+**Part 2 — max width on a text block:**
+
+- `Sources/MeCore/Models/GroupTextBlock.swift` — Added `maxWidth: Double?` (optional, migration-safe) + init param.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `TextBlockRow` now applies `.frame(maxWidth: block.maxWidth.map { CGFloat($0) } ?? .infinity)`. `GroupTextBlockSheet` gained a "Max width:" segmented picker (Full / 420 / 560 / 700) loaded/saved via the new state var.
+
+**Part 3 — alignment (two distinct capsule concerns separated):**
+
+- `Sources/MeCore/Models/GroupTextBlock.swift` — Added `TextBlockAlignment` enum (`.left` / `.center` / `.right`) stored as `alignmentRawValue: String?` (optional, migration-safe) with computed `alignment` defaulting to `.left`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `TextBlockRow` now uses the alignment in two places: (a) the box's position within the page column, and (b) text-line alignment inside the box. `GroupTextBlockSheet` gained an "Align:" segmented picker.
+
+**The "it doesn't work" bug (card always centered):** The bordered box itself was being centered by the surrounding `LazyVStack` (default `.center` alignment), so the capped-width box floated center regardless of the picker. Fixed by wrapping the `.frame(maxWidth:)` box in an outer `.frame(maxWidth: .infinity, alignment: block.maxWidth == nil ? .leading : frameAlignment)`, so the *box* is positioned left/center/right within the full row — the inner `RichTextDisplay` still applies `multilineTextAlignment` separately.
+
+**Design decisions:**
+- `SpineEntry.id` uses `hashValue` because `PersistentIdentifier` exposes no stable string on macOS 14 — matches the existing `TagCloudView` pattern.
+- Alignment and width are stored as optional raw fields (migration-safe), consistent with `sortModeRawValue` / `kindRawValue`.
+- The `LazyVStack` centering trap was found via the layered-`.background()` debugging procedure (AGENTS.md Debugging Visual Layout Issues).
+
+**Verify:** `swift build` + `swift test` — 139 tests pass (no new tests this session; existing suite green). Manual: Antedeluvian Kings → Manual Order → block visible at its true spine position, arrows move it visibly; edit sheet has Max width + Align pickers; the box and its text respect both.
+
+**Relevant files:**
+- `Sources/MeCore/Models/GroupTextBlock.swift` — Updated (`maxWidth`, `TextBlockAlignment`/`alignmentRawValue`)
+- `Sources/Me/Views/FigureGroupListView.swift` — Updated (unified spine section + reorder helpers)
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated (maxWidth + alignment rendering, sheet pickers)
+- `Tests/MeCoreTests/MeCoreTests.swift` — updated only indirectly from previous session (139 passing)
+
+### 2026-08-09 — Drag-and-drop spine reordering finalized; Figure epithet attribute + migration; deferred research-notes & text-block attribution planning
+
+**Part 1 — Drag-and-drop spine reordering (gap-dead-zone bug):**
+
+**Problem:** Per-row drop targets in the manual-order spine had dead zones — the 8pt spacing between rows, plus the slivers above the first and below the last row, belonged to no row, so edge drops silently failed ("first/last don't work", middle "often fails"). A first attempt switched from `NSItemProvider.loadObject(ofClass: String.self)` (which never delivers — `String` isn't `NSItemProviderReading`) to row-level `.dropDestination`, but edge drops still failed because of the target-rect gaps.
+
+**Fix:** Single container-level drop target on the entire spine `VStack` in `FigureGroupListView.swift`. Each row publishes its frame (via `SpineDropFrameReader` publishing `SpineEntryDropFrame` through the `SpineDropFrameKey` preference, measured in the shared `SpineDropSpaceName` coordinate space). `insertionIndex(for:in:)` maps a drop location to the spine index by finding the first row whose `midY` is below the drop point — so drops in gaps, above the first row (prepend), and past the last row (append) all resolve. `isSpineDropTargeted` tints the whole container so the drop zone is obvious. Frames are accumulated (not overwritten) in `SpineDropFrameKey.reduce` (an initial `value = nextValue()` bug left only one frame). Removed now-dead `SpineDropRow`/`SpineDropDelegate`/`SpineDropFrame`/`SpineRowHeightKey`/`SpineEntry.dragPayload`.
+
+**Part 2 — Figure epithet as a first-class attribute:**
+
+**Context:** User pointed out that an epithet (e.g. Etana's "the shepherd who ascended to heaven and consolidated all the foreign countries") isn't an alternate name — storing it as `AlternateName(nameType: .epithet)` mischaracterizes a title as an alias (confirmed: most seed epithets weren't even in that table, they're prose *inside* `figureDescription`, e.g. `Epithet: ''"the boatman"''.`).
+
+**Changes made:**
+- `Sources/MeCore/Models/Figure.swift` — Added `epithet: String?` (migration-safe optional, same pattern as `reignYears`; not in the `init`, set post-construction).
+- `Sources/MeCore/Store/Migration.swift` — `ensureEpithets`: backfills `Figure.epithet` from `figureDescription` by regex-extracting `Epithet: ''"X"''` or `Epithet: 'X'` prose (both seed formats). Additive + idempotent, never overwrites user-entered values. Wired into `ContentView` launch sequence after `ensureReignYears`.
+- `Sources/Me/Views/FigureFormView.swift` — "Epithet" field in Identity step (between Title and Type picker).
+- `Sources/Me/Views/FigureDetailInfoView.swift` — New `FigureEpithetRow` shared component (italic, quoted, with "EPITHET" caption label); added to `FigureHeaderView`.
+- `Sources/Me/Views/FigureDetailView.swift` — `FigureEpithetRow` after the title row.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 4 new tests: double-quoted prose backfill, single-quoted prose backfill, no-overwrite, ignore-figures-without-epithet. 144 tests pass. **Existing `AlternateName` rows with `nameType: .epithet` (e.g. Enki's "Nudimmud") left untouched — those read like genuine aliases.**
+
+**Part 3 — Research-notes discussion (no code):**
+
+The user wants a place to park Wikipedia factoids that fit no existing attribute. Determined this is NOT a "commenting system" and NOT StickyNotes — sticky notes are throwaway remind→resolve→delete to-dos and must never hold valuable info. Framed as a **catch-all annotation slot** with a driven decision rule: if a snippet recurs across many figures, promote it to a real field; otherwise a structured snippet slot (title/url/topic). Recorded in TODO.md with the design sketch (polymorphic link like StickyNote's, `title`/`text`/`url`/`createdAt`, global-search integration).
+
+**Part 4 — Text-block ContentAttribution deferred:**
+
+User asked whether group text blocks support content attributions — **no**: `ContentAttribution` only self-link to Figure/Place/Event/Thing, and `GroupTextBlockSheet` has no attribution UI. Recorded in TODO.md: add `groupTextBlock: GroupTextBlock?` to `ContentAttribution` + inverse, reuse `ContentAttributionFormView`/`ContentAttributionSection` in the sheet.
+
+**Relevant files:**
+- `Sources/Me/Views/FigureGroupListView.swift` — Updated (container-level drop, `spineDropFrames`/`isSpineDropTargeted` state, `insertionIndex(for:in:)`, `SpineDropFrameReader`, `SpineDropFrameKey`, `SpineEntryDropFrame`, `SpineDropSpaceName`; removed per-row drop structs + dead `dragPayload`)
+- `Sources/MeCore/Models/Figure.swift` — Updated (`epithet: String?`)
+- `Sources/MeCore/Store/Migration.swift` — Updated (`ensureEpithets` + `extractEpithet`)
+- `Sources/Me/Views/ContentView.swift` — Updated (launch sequence gains `Migration.ensureEpithets`)
+- `Sources/Me/Views/FigureFormView.swift` — Updated (Epithet field)
+- `Sources/Me/Views/FigureDetailInfoView.swift` — Updated (`FigureEpithetRow`)
+- `Sources/Me/Views/FigureDetailView.swift` — Updated (epithet in header)
+- `Tests/MeCoreTests/MeCoreTests.swift` — 4 new epithet tests
+- `TODO.md` — Added "Catch-all annotation slot for un-attributable snippets" (refined framing) + "Content attribution on text blocks" items
+
+### 2026-08-09 — Smart groups: membership rule evaluated live
+
+**Context:** The user's "Sumerian Pantheon" group is hand-curated via the wizard, which is a maintenance burden — every new figure has to be added to every group it belongs to. The ask: define an *expression* as the membership (e.g. all figures whose domain is Sumerian) and have it **evaluated live before the group is displayed** so new figures appear automatically. Chosen semantics: **strict smart** — while smart is on, manual picking/ordering is disabled and stored associations are hidden (kept in DB, restored if smart is turned back off).
+
+**Design decisions:**
+- The "expression" **is** the existing `GroupMemberFilter` (figure/place/event/thing type names, domain keywords, name match) — the same rule Bulk Add/Sync persists. "WHERE PANTHEON = 'Sumer'" maps to a domain-keyword rule. No new query language.
+- `isSmart` (evaluation switch) and `memberFilter` (the expression) stay decoupled. A manual group can keep a stored filter for Sync; flipping smart on just makes that filter live.
+- Smart groups always render name-sorted; the manual-order spine, Bulk Add, Sync, and reorder UI are hidden/disabled while smart.
+- `liveMatchIDs(in:)` does a full fetch + in-memory filter per evaluation (DB is small — fine, matches the Bulk Add sheet's pattern).
+- No auto-flip of existing groups (user's DB is sacred; converting is a deliberate roundtrip in the form). Only fresh-install default groups that carry a filter are seeded smart.
+
+**Changes made:**
+- `Sources/MeCore/Models/FigureGroup.swift` — New migration-safe `isSmartRawValue: Bool?` + computed `isSmart` (default false; `init` param). New `liveMatchIDs(in context:)` returning the entity types' PersistentIdentifiers that match `decodedFilter` (the tested, MeCore-pure core). `GroupAggregationResult` gained a `package init`.
+- `Sources/Me/Views/FigureGroupSmartMembers.swift` — NEW Me-layer extension: `effectiveMemberItems(in:)` (smart → live matches sorted by name; manual → `sortedAssociations`), `effectiveMemberCount(in:)`, plus `GroupAggregation.compute(items:)` / `GroupAggregationTarget.value(for: GroupMemberItem)` mirroring the association/contentated variants so aggregation works over live members.
+- `Sources/Me/Views/FigureGroupListView.swift` — manager rows show `bolt` badge + **live** member count; detail view hides Bulk Add / Sync / manual-order spine when smart and shows the rule summary as a teal "Smart" line; alphabetical members section shows an "Automatic membership — evaluated live" note; members read `effectiveMemberItems`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `memberItems(for:in:)` built from `effectiveMemberItems`; `mixedItems` and `EntityGroupTreeNode.children` force the alphabetical path when smart; header count, aggregation hint, and `reignTower`/`heroStats` compute from effective members; `EntityGroupTreeNode` gained `@Environment(\.modelContext)` to read live counts.
+- `Sources/Me/Views/FigureGroupFormView.swift` — Members step toggles between the existing picker and a new **rule builder** when "Smart group — membership comes from a rule" is checked: entity-type-aware type pills + keywords (figures only) + name match, and a live "N currently match" preview with the first 15 names. `load`/`save` carry `isSmart` + the stored filter; `syncMembers` is skipped when smart.
+- `Sources/MeCore/Store/Migration.swift` — `ensureDefaultFigureGroups` seeds the filter-carrying default groups (Sumerian Pantheon, Akkadian/East Semitic, Primordial Beings, SKL Kings) as smart on a fresh install. Existing DBs are left manual.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 6 new tests: `isSmart` default/round-trip/init, `liveMatchIDs` for figure (domain-only and type-only OR semantics), manual group → empty, place group smart, group-is-smart gating. 150 tests pass; `swift build` clean.
+
+**Known limitation:** the entity detail "Groups" sections list only stored associations, so a figure that is a *live* member of a smart group won't be listed there (only on the group's own page). Worth a future TODO.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/FigureGroupSmartMembers.swift` — Added
+
+**Relevant files:**
+- `Sources/MeCore/Models/FigureGroup.swift`, `Sources/Me/Views/FigureGroupListView.swift`, `Sources/Me/Views/EntityGroupCollectionView.swift`, `Sources/Me/Views/FigureGroupFormView.swift`, `Sources/MeCore/Store/Migration.swift`, `Tests/MeCoreTests/MeCoreTests.swift`
+
+### 2026-08-09 — Pantheon as a first-class entity
+
+**Context:** There was no way to filter "Sumerian deities" — the `domain` field is sphere-of-influence (e.g. "Sky, Kingship, Authority"), not a culture marker. The ask: a `Pantheon` model (Mesopotamian, Greek, Hebrew, …) with many-to-many membership to `Figure`, its own management UI, a smart-group filter rule, and an additive default migration. User decisions: many-to-many membership; migration assigns **all** currently-unassigned figures to a single new "Mesopotamian" pantheon.
+
+**Changes made:**
+- `Sources/MeCore/Models/Pantheon.swift` — NEW `@Model`: `name`, `pantheonDescription`, `icon`, `colorHex`, `color` (via `Color(hex:)`), `figures: [Figure]`. Inverse relationship declared only on the Figure side (bare `@Relationship` here) to avoid the "circular reference resolving attached macro 'Relationship'" error.
+- `Sources/MeCore/Models/Figure.swift` — Added `pantheons: [Pantheon] = []` with `@Relationship(deleteRule: .nullify, inverse: \Pantheon.figures)`.
+- `Sources/MeCore/Models/FigureGroup.swift` — `GroupMemberFilter` gained `pantheonNames: [String]?` (declaration, init, `matches(_ figure:)` OR-semantics by name, `summary` → "Pantheon: …").
+- `Sources/MeCore/Store/Migration.swift` — `ensureMesopotamianPantheons(context:)`: creates "Mesopotamian" if absent, then appends it to figures with empty `pantheons`. Additive + idempotent, never reassigns existing membership.
+- `Sources/Me/Views/ContentView.swift` — added `Migration.ensureMesopotamianPantheons` after `ensureEpithets` in the launch sequence.
+- `Sources/Me/Views/FigureDetailView.swift` — New "Pantheons" section (icon/name/description rows, remove `minus.circle` button, `+` header button) + `PantheonLinkPopover` (search + filtered list + Link), mirroring the Groups section pattern.
+- `Sources/Me/Views/FigureFormView.swift` — Identity step gained a Pantheons multi-select pill grid (`@Query(sort: \Pantheon.name)`); loaded in `loadIfEditing`, saved in `save()` for both edit and create.
+- `Sources/Me/Views/FigureGroupFormView.swift` — Smart-group rule builder gained "By Pantheon" pills (figures only) → `rulePantheonNames` carried through `buildSmartRule`/`loadRule`/`hasSmartRule`.
+- `Sources/Me/Views/TypeSettingsView.swift` — New "Pantheons" GroupBox with a dedicated `PantheonSubSection` + `PantheonEditSheetView` (name/description/icon/color, add + edit, figure count badge).
+- `Tests/MeCoreTests/MeCoreTests.swift` — 7 new tests: defaults, many-to-many, filter match + summary, migration create + idempotency + keeps-existing-membership. 157 tests pass.
+
+**Design decisions:**
+- Many-to-many, not one-to-many: a figure like Enki legitimately belongs to both Mesopotamian and (via syncretism literature) Greek-adjacent discussions. `Figure.pantheons` is the owning side for setting/list mutation; `Pantheon.figures` is the non-annotated inverse (per the 2026-06-27 SwiftData relationship-setting rule, assign via `figure.pantheons`).
+- Smart-group pantheon rule reuses `GroupMemberFilter` OR semantics — no new DSL.
+- The migration is deliberately coarse: on a fresh DB or one with zero pantheon data, all figures get the Mesopotamian pantheon by default. Users refine per-figure via the form or the popover. Existing user pantheon memberships are untouched.
+
+**Known limitation:** the entity detail "Groups" sections list only stored associations, so a figure that is a *live* member of a smart group won't be listed there (only on the group's own page). Worth a future TODO.
+
+**Relevant new/removed files:**
+- `Sources/MeCore/Models/Pantheon.swift` — Added
+
+**Relevant files:**
+- `Sources/MeCore/Models/Figure.swift`, `Sources/MeCore/Models/FigureGroup.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/FigureFormView.swift`, `Sources/Me/Views/FigureGroupFormView.swift`, `Sources/Me/Views/TypeSettingsView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`
+
+### 2026-08-09 — Group deletion crash: macOS 26 SwiftData cascade fault
+
+**Problem:** Deleting the "Sumerian Pantheon" smart group beachballed/crashed on every attempt. `_assertionFailure` inside SwiftData's own cascade `Sequence.forEach` faulting `FigureGroupAssociation.persistentBackingData` synchronously from `modelContext.delete(group)` (confirmed via `~/Library/Logs/DiagnosticReports/Me-2026-08-09-*.ips`, register x22 = `type metadata for FigureGroupAssociation`, x26 = `persistentBackingData` conformance).
+
+**Root cause:** macOS 26 SwiftData bug (Apple Dev Forums #822241, StackOverflow #79742362): when a model with `@Relationship(deleteRule: .cascade)` children is deleted while live `@Query` views still reference those children, SwiftData tears down the children's backing data and a still-rendering view faults a deleted child's backing data → fatal assert. This app made it worse: `FigureGroupAssociation` is cascade-owned from **five** sides (`FigureGroup.figureAssociations`, `Figure.groupAssociations`, plus Thing/Place/Event group associations). The join model's own `group`/`figure`/`thing` to-ones are un-annotated and optional — the inverse arrays on every owner carry `.cascade`.
+
+**Why plain unit tests couldn't reproduce:** model-level deletes pass in every config (disk/in-memory, autosave on/off, explicit child-deletion, fresh copy of the live store with all relationships faulted). The trigger requires SwiftUI coexisting with the delete — no live `@Query` observation exists in `MeCoreTests`.
+
+**Fix (the one that works):**
+- `Sources/Me/Views/FigureGroupListView.swift` — `deleteGroup(_:)` now wraps the deletion in `modelContext.transaction { }` AND empties the observed children arrays (`group.figureAssociations = []`, `group.textBlocks = []`) **before** `modelContext.delete(group)`. Emptying the arrays lets the observation layer react to the collection change (views drop the children) before SwiftData cascade-deletes them; the transaction batches it so no re-entrant fault can fire mid-delete.
+- Earlier attempts that did NOT work: deferring via `Task { @MainActor }` + `withAnimation` removal; loop-deleting each association child before deleting the group (this *moved* the crash into the loop — same fault path). The empty-array + transaction combination is the documented macOS 26 remedy.
+
+**Lessons:**
+- macOS 26 SwiftData asserts (not returns nils) when a live view faults a cascade-deleted child's backing data. Deleting a parent whose children are observed = must empty the observed arrays first.
+- When a `@Model` is cascade-owned from multiple inverse relationships (join models) AND observed live, prefer letting SwiftUI detach from the children via array mutation instead of raw `modelContext.delete(child)` loops.
+- Unit tests prove model correctness but canNOT reproduce SwiftUI-coexistence crashes; crash reports (`DiagnosticReports/*.ips`) are the ground truth for these.
+- `ModelConfiguration`'s autosave parameter was renamed `isAutosaveEnabled:` → `allowsSave` in the macOS 26 SDK.
+
+**Tests:** 163 pass (incl. hermetic `testGroupDeleteRealStoreCopy`, `testGroupDeleteRealStoreAutosaveNoManualSave`, `testGroupDeleteRealStoreExplicitChildDeletion` — all skip cleanly when the live store isn't present).
+
+**Relevant files:**
+- `Sources/Me/Views/FigureGroupListView.swift` — Updated (`deleteGroup`)
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated (3 real-store diagnostic tests)
+- Crash reports: `~/Library/Logs/DiagnosticReports/Me-2026-08-09-{221737,222531,224256,230314}.ips`
