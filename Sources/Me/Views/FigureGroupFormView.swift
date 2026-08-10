@@ -21,6 +21,23 @@ struct FigureGroupFormView: View {
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
     @State private var parentSearchText = ""
+    @State private var aggregationEnabled = false
+    @State private var aggregationOperation: GroupAggregationOperation = .sum
+    @State private var aggregationTarget: GroupAggregationTarget = .reignYears
+    @State private var aggregationLabel = ""
+    @State private var memberSingular = ""
+    @State private var memberPlural = ""
+    @State private var isSmart = false
+    @State private var ruleTypeNames: Set<String> = []
+    @State private var rulePantheonNames: Set<String> = []
+    @State private var ruleDomainText = ""
+    @State private var ruleNameMatch = ""
+
+    @Query(sort: \FigureType.name) private var figureTypes: [FigureType]
+    @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
+    @Query(sort: \EventType.name) private var eventTypes: [EventType]
+    @Query(sort: \ThingType.name) private var thingTypes: [ThingType]
+    @Query(sort: \Pantheon.name) private var pantheons: [Pantheon]
 
     private let stepLabels = ["Identity", "Members"]
 
@@ -70,6 +87,88 @@ struct FigureGroupFormView: View {
 
     private var memberCountLabel: String {
         "\(selectedMemberAliases.count) \(entityType.pluralName.lowercased()) selected"
+    }
+
+    private var availableAggregationTargets: [GroupAggregationTarget] {
+        GroupAggregationTarget.allCases.filter { $0.supportedEntityTypes.contains(entityType) }
+    }
+
+    private var typePills: [RuleTypePill] {
+        switch entityType {
+        case .figure: return figureTypes.map { RuleTypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        case .place: return placeTypes.map { RuleTypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        case .event: return eventTypes.map { RuleTypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        case .thing: return thingTypes.map { RuleTypePill(name: $0.name, icon: $0.icon, color: $0.color) }
+        }
+    }
+
+    private var ruleDomainKeywords: [String] {
+        ruleDomainText.split(separator: ",").map(String.init).map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    private var hasSmartRule: Bool {
+        !ruleTypeNames.isEmpty || !rulePantheonNames.isEmpty || !ruleDomainKeywords.isEmpty || !ruleNameMatch.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    /// Live preview of how many entities currently match the smart rule.
+    private var smartMatchingItems: [GroupMemberItem] {
+        guard let rule = buildSmartRule() else { return [] }
+        switch entityType {
+        case .figure: return allFigures.filter { rule.matches($0) }.map { GroupMemberItem.figure($0, nil) }
+        case .place: return allPlaces.filter { rule.matchesPlace($0) }.map { GroupMemberItem.place($0, nil) }
+        case .event: return allEvents.filter { rule.matchesEvent($0) }.map { GroupMemberItem.event($0, nil) }
+        case .thing: return allThings.filter { rule.matchesThing($0) }.map { GroupMemberItem.thing($0, nil) }
+        }
+    }
+
+    /// Build the `GroupMemberFilter` from the rule builder fields, or nil when empty.
+    private func buildSmartRule() -> GroupMemberFilter? {
+        guard hasSmartRule else { return nil }
+        switch entityType {
+        case .figure:
+            return GroupMemberFilter(
+                figureTypeNames: ruleTypeNames.isEmpty ? nil : Array(ruleTypeNames),
+                domainKeywords: ruleDomainKeywords.isEmpty ? nil : ruleDomainKeywords,
+                pantheonNames: rulePantheonNames.isEmpty ? nil : Array(rulePantheonNames),
+                nameMatch: ruleNameMatch.trimmingCharacters(in: .whitespaces).isEmpty ? nil : ruleNameMatch.trimmingCharacters(in: .whitespaces)
+            )
+        case .place:
+            return GroupMemberFilter(
+                placeTypeNames: ruleTypeNames.isEmpty ? nil : Array(ruleTypeNames),
+                nameMatch: ruleNameMatch.trimmingCharacters(in: .whitespaces).isEmpty ? nil : ruleNameMatch.trimmingCharacters(in: .whitespaces)
+            )
+        case .event:
+            return GroupMemberFilter(
+                eventTypeNames: ruleTypeNames.isEmpty ? nil : Array(ruleTypeNames),
+                nameMatch: ruleNameMatch.trimmingCharacters(in: .whitespaces).isEmpty ? nil : ruleNameMatch.trimmingCharacters(in: .whitespaces)
+            )
+        case .thing:
+            return GroupMemberFilter(
+                thingTypeNames: ruleTypeNames.isEmpty ? nil : Array(ruleTypeNames),
+                nameMatch: ruleNameMatch.trimmingCharacters(in: .whitespaces).isEmpty ? nil : ruleNameMatch.trimmingCharacters(in: .whitespaces)
+            )
+        }
+    }
+
+    /// Load a stored filter into the rule builder fields (entity-type aware).
+    private func loadRule(from filter: GroupMemberFilter?) {
+        guard let filter else {
+            ruleTypeNames = []
+            rulePantheonNames = []
+            ruleDomainText = ""
+            ruleNameMatch = ""
+            return
+        }
+        switch entityType {
+        case .figure:
+            ruleTypeNames = Set(filter.figureTypeNames ?? [])
+            rulePantheonNames = Set(filter.pantheonNames ?? [])
+            ruleDomainText = (filter.domainKeywords ?? []).joined(separator: ", ")
+        case .place: ruleTypeNames = Set(filter.placeTypeNames ?? [])
+        case .event: ruleTypeNames = Set(filter.eventTypeNames ?? [])
+        case .thing: ruleTypeNames = Set(filter.thingTypeNames ?? [])
+        }
+        ruleNameMatch = filter.nameMatch ?? ""
     }
 
     @Query(sort: \FigureGroup.orderIndex) private var allGroups: [FigureGroup]
@@ -141,6 +240,20 @@ struct FigureGroupFormView: View {
                 }
                 .help("What kind of entity this group holds.")
 
+                Section("Member Labels") {
+                    TextField("Singular", text: $memberSingular, prompt: Text("ruler"))
+                        .textFieldStyle(.roundedBorder)
+                        .help("What to call one member of this group. Leave empty to use \"member\".")
+                    TextField("Plural", text: $memberPlural, prompt: Text("rulers"))
+                        .textFieldStyle(.roundedBorder)
+                        .help("What to call multiple members of this group. Leave empty to use \"members\".")
+                    if !memberSingular.isEmpty || !memberPlural.isEmpty {
+                        Text("\(memberSingular.isEmpty ? "1 member" : "1 \(memberSingular)") / \(memberPlural.isEmpty ? "7 members" : "7 \(memberPlural)")")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Section("Description") {
                     RichTextEditorSection(richData: $richDescription, plainText: $groupDescription)
                         .frame(minHeight: 120)
@@ -170,6 +283,32 @@ struct FigureGroupFormView: View {
                 .help(entityType == .figure
                     ? "Standard groups render their members; Book of Enoch, Sumerian King List, and The Flood use dedicated views."
                     : "Dedicated views are only available for figure groups.")
+
+                Section("Summary") {
+                    Toggle("Show aggregated summary", isOn: $aggregationEnabled)
+                        .help("Compute a sum or average over member values and display it in the group header.")
+                    if aggregationEnabled {
+                        if availableAggregationTargets.isEmpty {
+                            Text("No aggregateable fields for \(entityType.pluralName.lowercased()).")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Picker("Operation", selection: $aggregationOperation) {
+                                ForEach(GroupAggregationOperation.allCases, id: \.self) { operation in
+                                    Text(operation.displayName).tag(operation)
+                                }
+                            }
+                            Picker("Target", selection: $aggregationTarget) {
+                                ForEach(availableAggregationTargets, id: \.self) { target in
+                                    Text(target.displayName).tag(target)
+                                }
+                            }
+                            TextField("Label (optional)", text: $aggregationLabel, prompt: Text("e.g. Total dynasty reign"))
+                                .textFieldStyle(.roundedBorder)
+                                .help("Custom text shown before the value; leave empty for an auto-generated label.")
+                        }
+                    }
+                }
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Parent Group")
@@ -243,10 +382,36 @@ struct FigureGroupFormView: View {
             if newType != loadedEntityType {
                 selectedMemberAliases.removeAll()
             }
+            ruleTypeNames.removeAll()
+            if availableAggregationTargets.isEmpty {
+                aggregationEnabled = false
+            }
         }
     }
 
     private var membersStep: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: isSmart ? "bolt.fill" : "magnifyingglass")
+                    .foregroundStyle(isSmart ? Color.teal : .secondary)
+                    .font(.caption)
+                Toggle("Smart group — members come from a rule", isOn: $isSmart)
+                    .font(.callout)
+                    .toggleStyle(.checkbox)
+                Spacer()
+            }
+            .padding(.horizontal)
+
+            if isSmart {
+                smartRuleStep
+            } else {
+                manualPickerStep
+            }
+        }
+        .padding(.vertical)
+    }
+
+    private var manualPickerStep: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
@@ -282,16 +447,174 @@ struct FigureGroupFormView: View {
                 }
                 .contentShape(Rectangle())
                 .onTapGesture {
-                    if selectedMemberAliases[candidate.id] != nil {
-                        selectedMemberAliases.removeValue(forKey: candidate.id)
-                    } else {
-                        selectedMemberAliases[candidate.id] = candidate.matchedAlternateName(for: searchText) ?? ""
+                    Task { @MainActor in
+                        toggleMember(candidate)
                     }
                 }
             }
             .listStyle(.plain)
         }
-        .padding(.vertical)
+    }
+
+    private var smartRuleStep: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Every \(entityType.displayName.lowercased()) that matches the rule below is a member — re-evaluated live whenever the group is shown. New ones appear automatically; no manual picking.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("By \(entityType.displayName) Type")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    let columns = [GridItem(.adaptive(minimum: 140))]
+                    LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
+                        ForEach(typePills) { pill in
+                            ruleTypeFilterButton(pill)
+                        }
+                    }
+                }
+
+                if entityType == .figure {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("By Domain Keyword")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("e.g. Sumerian, Akkadian, Kingship", text: $ruleDomainText)
+                            .textFieldStyle(.roundedBorder)
+                    }
+                }
+
+                if entityType == .figure && !pantheons.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("By Pantheon")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        let columns = [GridItem(.adaptive(minimum: 140))]
+                        LazyVGrid(columns: columns, alignment: .leading, spacing: 6) {
+                            ForEach(pantheons) { pantheon in
+                                let isSelected = rulePantheonNames.contains(pantheon.name)
+                                Button {
+                                    if isSelected { rulePantheonNames.remove(pantheon.name) }
+                                    else { rulePantheonNames.insert(pantheon.name) }
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: pantheon.icon)
+                                            .font(.caption)
+                                            .foregroundStyle(pantheon.color)
+                                        Text(pantheon.name)
+                                            .font(.caption)
+                                            .lineLimit(1)
+                                    }
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .fill(isSelected ? pantheon.color.opacity(0.15) : Color(.textBackgroundColor))
+                                    )
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(isSelected ? pantheon.color : Color.gray.opacity(0.3), lineWidth: isSelected ? 1.5 : 0.5)
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("By Name")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    TextField("e.g. Enki, Gilgamesh", text: $ruleNameMatch)
+                        .textFieldStyle(.roundedBorder)
+                }
+
+                Divider()
+
+                if let rule = buildSmartRule() {
+                    HStack(spacing: 8) {
+                        Text("\(smartMatchingItems.count) \(entityType.pluralName.lowercased()) currently match")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        if smartMatchingItems.count > 0 {
+                            Text(rule.summary)
+                                .font(.caption2)
+                                .foregroundStyle(.teal)
+                        }
+                    }
+                    if !smartMatchingItems.isEmpty {
+                        LazyVStack(alignment: .leading, spacing: 2) {
+                            ForEach(smartMatchingItems.prefix(15), id: \.id) { item in
+                                HStack(spacing: 10) {
+                                    Image(systemName: item.icon)
+                                        .font(.caption)
+                                        .foregroundStyle(item.color)
+                                        .frame(width: 16)
+                                    Text(item.name)
+                                        .font(.callout)
+                                }
+                            }
+                            if smartMatchingItems.count > 15 {
+                                Text("... and \(smartMatchingItems.count - 15) more")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                    }
+                } else {
+                    HStack(spacing: 6) {
+                        Image(systemName: "line.3.horizontal.decrease.circle")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.secondary)
+                        Text("Define at least one criterion — the group starts empty until you do.")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 8)
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+
+    private func ruleTypeFilterButton(_ pill: RuleTypePill) -> some View {
+        let isSelected = ruleTypeNames.contains(pill.name)
+        return Button(action: {
+            if isSelected { ruleTypeNames.remove(pill.name) }
+            else { ruleTypeNames.insert(pill.name) }
+        }) {
+            HStack(spacing: 6) {
+                Image(systemName: pill.icon)
+                    .font(.caption)
+                    .foregroundStyle(pill.color)
+                Text(pill.name)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .semibold : .regular)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? pill.color.opacity(0.15) : Color(.textBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(isSelected ? pill.color : Color.gray.opacity(0.3), lineWidth: isSelected ? 1.5 : 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .pointingHand()
+    }
+
+    private func toggleMember(_ candidate: GroupMemberItem) {
+        if selectedMemberAliases[candidate.id] != nil {
+            selectedMemberAliases.removeValue(forKey: candidate.id)
+        } else {
+            selectedMemberAliases[candidate.id] = candidate.matchedAlternateName(for: searchText) ?? ""
+        }
     }
 
     private func loadIfEditing() {
@@ -304,17 +627,29 @@ struct FigureGroupFormView: View {
         kind = group.kind
         entityType = group.entityType
         isPublished = group.isPublished
+        isSmart = group.isSmart
         parentGroupID = group.parentGroup?.persistentModelID
+        memberSingular = group.memberSingular ?? ""
+        memberPlural = group.memberPlural ?? ""
+        loadRule(from: group.decodedFilter)
         selectedMemberAliases = Dictionary(uniqueKeysWithValues: group.figureAssociations.compactMap { assoc in
             guard let id = memberID(assoc, of: entityType) else { return nil }
             return (id, assoc.displayName ?? "")
         })
+        if let agg = group.decodedAggregation {
+            aggregationEnabled = true
+            aggregationOperation = agg.operation
+            aggregationTarget = agg.target
+            aggregationLabel = agg.label ?? ""
+        }
     }
 
     private func save() {
         let newMemberAliases = selectedMemberAliases
         let newParent = allGroups.first { $0.persistentModelID == parentGroupID }
         let effectiveKind: GroupKind = entityType == .figure ? kind : .standard
+        let newAggregation = buildAggregation()
+        let rule = buildSmartRule()
 
         if let group {
             group.name = name
@@ -325,18 +660,47 @@ struct FigureGroupFormView: View {
             group.kind = effectiveKind
             group.entityType = entityType
             group.isPublished = isPublished
+            group.isSmart = isSmart
+            if isSmart {
+                group.decodedFilter = rule
+            }
+            group.memberSingular = memberSingular.isEmpty ? nil : memberSingular
+            group.memberPlural = memberPlural.isEmpty ? nil : memberPlural
+            group.decodedAggregation = newAggregation
             setParent(group, parent: newParent)
-            syncMembers(group: group, newAliases: newMemberAliases)
+            if !isSmart {
+                syncMembers(group: group, newAliases: newMemberAliases)
+            }
         } else {
-            let newGroup = FigureGroup(name: name, groupDescription: groupDescription, icon: icon, colorHex: colorHex, kind: effectiveKind, entityType: entityType)
+            let newGroup = FigureGroup(
+                name: name, groupDescription: groupDescription, icon: icon, colorHex: colorHex,
+                isSmart: isSmart, kind: effectiveKind, entityType: entityType
+            )
             newGroup.richDescription = richDescription
             newGroup.isPublished = isPublished
+            if isSmart {
+                newGroup.decodedFilter = rule
+            }
+            newGroup.memberSingular = memberSingular.isEmpty ? nil : memberSingular
+            newGroup.memberPlural = memberPlural.isEmpty ? nil : memberPlural
+            newGroup.decodedAggregation = newAggregation
             modelContext.insert(newGroup)
             setParent(newGroup, parent: newParent)
-            syncMembers(group: newGroup, newAliases: newMemberAliases)
+            if !isSmart {
+                syncMembers(group: newGroup, newAliases: newMemberAliases)
+            }
         }
         try? modelContext.save()
         showSuccessAlert = true
+    }
+
+    private func buildAggregation() -> GroupAggregation? {
+        guard aggregationEnabled, availableAggregationTargets.contains(aggregationTarget) else { return nil }
+        return GroupAggregation(
+            operation: aggregationOperation,
+            target: aggregationTarget,
+            label: aggregationLabel.isEmpty ? nil : aggregationLabel
+        )
     }
 
     private func setParent(_ group: FigureGroup, parent: FigureGroup?) {
@@ -390,6 +754,14 @@ struct FigureGroupFormView: View {
     private func makeAssociation(for candidate: GroupMemberItem) -> FigureGroupAssociation {
         candidate.makeAssociation()
     }
+}
+
+private struct RuleTypePill: Identifiable {
+    let name: String
+    let icon: String
+    let color: Color
+
+    var id: String { name }
 }
 
 private extension Color {

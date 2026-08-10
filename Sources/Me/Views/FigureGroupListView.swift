@@ -123,7 +123,6 @@ struct FigureGroupListView: View {
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedGroupID)
         .sheet(isPresented: $showingAddSheet) {
             FigureGroupFormView(group: nil)
         }
@@ -155,12 +154,19 @@ struct FigureGroupListView: View {
 
     private func deleteGroup(_ group: FigureGroup) {
         if selectedGroupID == group.persistentModelID { selectedGroupID = nil }
-        withAnimation { modelContext.delete(group) }
+        Task { @MainActor in
+            try? modelContext.transaction {
+                group.figureAssociations = []
+                group.textBlocks = []
+                modelContext.delete(group)
+            }
+        }
     }
 }
 
 struct FigureGroupRow: View {
     let group: FigureGroup
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         HStack(spacing: 10) {
@@ -176,12 +182,18 @@ struct FigureGroupRow: View {
             Text(group.name)
                 .fontWeight(.medium)
             Spacer()
+            if group.isSmart {
+                Image(systemName: "bolt.fill")
+                    .font(.caption2)
+                    .foregroundStyle(.teal)
+                    .help("Smart group — members are evaluated live from a rule")
+            }
             if !(group.subgroups ?? []).isEmpty {
                 Image(systemName: "folder.fill")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
-            Text("\(group.figureAssociations.count)")
+            Text("\(group.effectiveMemberCount(in: modelContext))")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 6)
@@ -197,9 +209,34 @@ struct FigureGroupDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var showBulkAdd = false
     @State private var showSyncConfirm = false
+    @State private var editingTextBlock: GroupTextBlock?
+    @State private var deletingTextBlock: GroupTextBlock?
+    @State private var showDeleteTextBlockConfirm = false
+    @State private var spineDropFrames: [SpineEntryDropFrame] = []
+    @State private var isSpineDropTargeted = false
+
+    private var textBlocks: [GroupTextBlock] {
+        group.sortedTextBlocks
+    }
+
+    private func addTextBlock() {
+        let block = GroupTextBlock(title: "", text: "")
+        modelContext.insert(block)
+        group.appendTextBlock(block)
+        editingTextBlock = block
+        try? modelContext.save()
+    }
+
+    private func deleteTextBlock() {
+        if let block = deletingTextBlock {
+            modelContext.delete(block)
+        }
+        deletingTextBlock = nil
+        try? modelContext.save()
+    }
 
     private var members: [GroupMemberItem] {
-        group.sortedAssociations.compactMap(GroupMemberItem.init(association:))
+        group.effectiveMemberItems(in: modelContext)
     }
 
     private func association(for item: GroupMemberItem) -> FigureGroupAssociation? {
@@ -209,6 +246,128 @@ struct FigureGroupDetailView: View {
                 || (assoc.event?.persistentModelID == item.id)
                 || (assoc.thing?.persistentModelID == item.id)
         }
+    }
+
+    private var spineContents: [SpineEntry] {
+        group.memberTextSpine.compactMap { content in
+            switch content {
+            case .member(let assoc):
+                guard let item = GroupMemberItem(association: assoc) else { return nil }
+                return .member(item, assoc)
+            case .text(let block):
+                return .text(block)
+            }
+        }
+    }
+
+    private func canSpineMove(_ entry: SpineEntry, direction: Int) -> Bool {
+        switch entry {
+        case .member(_, let assoc): return group.canMoveMemberTextItem(.member(assoc), direction: direction)
+        case .text(let block): return group.canMoveMemberTextItem(.text(block), direction: direction)
+        }
+    }
+
+    private func moveSpine(_ entry: SpineEntry, direction: Int) {
+        switch entry {
+        case .member(_, let assoc): group.moveMemberTextItem(.member(assoc), direction: direction)
+        case .text(let block): group.moveMemberTextItem(.text(block), direction: direction)
+        }
+        try? modelContext.save()
+    }
+
+    private func moveSpine(_ entry: SpineEntry, toIndex: Int) {
+        switch entry {
+        case .member(_, let assoc): group.moveMemberTextItem(.member(assoc), toIndex: toIndex)
+        case .text(let block): group.moveMemberTextItem(.text(block), toIndex: toIndex)
+        }
+        try? modelContext.save()
+    }
+
+    /// Maps a drop location (in `SpineDropSpaceName` coordinates) to the insertion
+    /// index within the current spine, from the frame it falls into.
+    private func insertionIndex(for location: CGPoint, in entries: [SpineEntry]) -> Int {
+        guard !spineDropFrames.isEmpty else { return entries.count }
+        let ordered: [(id: String, frame: CGRect)] = spineDropFrames
+            .map { (id: $0.id, frame: $0.frame) }
+            .sorted { $0.frame.midY < $1.frame.midY }
+        for entry in ordered where location.y < entry.frame.midY {
+            if let index = entries.firstIndex(where: { $0.id == entry.id }) {
+                return index
+            }
+        }
+        return entries.count
+    }
+
+    @ViewBuilder
+    private func spineRow(_ entry: SpineEntry) -> some View {
+        switch entry {
+        case .member(let item, _):
+            memberRow(item, group: group, showReorder: true)
+        case .text(let block):
+            HStack(spacing: 8) {
+                MemberReorderButtons(
+                    canMoveUp: canSpineMove(entry, direction: -1),
+                    canMoveDown: canSpineMove(entry, direction: 1),
+                    onMove: { moveSpine(entry, direction: $0) }
+                )
+                Image(systemName: "text.quote")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+                Button(action: { editingTextBlock = block }) {
+                    Text(block.title.isEmpty ? "Untitled text block" : block.title)
+                        .font(.callout)
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .pointingHand()
+                Spacer()
+                Button(action: { deletingTextBlock = block; showDeleteTextBlockConfirm = true }) {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .help("Delete text block")
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func memberRow(_ item: GroupMemberItem, group: FigureGroup, showReorder: Bool = false) -> some View {
+        HStack(spacing: 8) {
+            if showReorder {
+                if let assoc = association(for: item) {
+                    MemberReorderButtons(
+                        canMoveUp: group.canMoveMemberTextItem(.member(assoc), direction: -1),
+                        canMoveDown: group.canMoveMemberTextItem(.member(assoc), direction: 1),
+                        onMove: { direction in
+                            group.moveMemberTextItem(.member(assoc), direction: direction)
+                            try? modelContext.save()
+                        }
+                    )
+                }
+            }
+            Image(systemName: item.icon)
+                .font(.caption)
+                .foregroundStyle(item.color)
+                .frame(width: 16)
+            Button(action: { onOpenMember?(item) }) {
+                Text(item.displayName)
+                    .font(.callout)
+                    .foregroundStyle(Color.accentColor)
+                    .underline()
+            }
+            .buttonStyle(.plain)
+            .pointingHand()
+            if !item.subtitle.isEmpty {
+                Text(item.subtitle)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 2)
     }
 
     private var allFigures: [Figure] {
@@ -245,7 +404,16 @@ struct FigureGroupDetailView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
-                        if let filter = group.decodedFilter {
+                        if group.isSmart {
+                            HStack(spacing: 4) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.caption2)
+                                Text(group.decodedFilter?.summary ?? "Smart group")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(.teal)
+                            .padding(.top, 2)
+                        } else if let filter = group.decodedFilter {
                             HStack(spacing: 4) {
                                 Image(systemName: "repeat")
                                     .font(.caption2)
@@ -263,16 +431,18 @@ struct FigureGroupDetailView: View {
 
                 // Actions
                 HStack(spacing: 8) {
-                    Button(action: { showBulkAdd = true }) {
-                        Label("Bulk Add", systemImage: "plus.rectangle.on.rectangle")
-                    }
-                    .buttonStyle(.bordered)
-
-                    if group.memberFilter != nil {
-                        Button(action: { showSyncConfirm = true }) {
-                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                    if !group.isSmart {
+                        Button(action: { showBulkAdd = true }) {
+                            Label("Bulk Add", systemImage: "plus.rectangle.on.rectangle")
                         }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.bordered)
+
+                        if group.memberFilter != nil {
+                            Button(action: { showSyncConfirm = true }) {
+                                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
                     }
 
                     Spacer()
@@ -290,7 +460,10 @@ struct FigureGroupDetailView: View {
                     }
                     .pickerStyle(.menu)
                     .labelStyle(.iconOnly)
-                    .help("How members are ordered: by name, or by a manual order you arrange here.")
+                    .disabled(group.isSmart)
+                    .help(group.isSmart
+                        ? "Smart groups always display members in name order."
+                        : "How members are ordered: by name, or by a manual order you arrange here.")
 
                     Toggle(isOn: Binding(
                         get: { group.isPublished },
@@ -302,49 +475,161 @@ struct FigureGroupDetailView: View {
                     .help("Hide this group from the sidebar while keeping its data")
                 }
 
-                // Members
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Members (\(members.count))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
+                if group.sortMode == .ordered && !group.isSmart {
+                    // Unified member+text spine (reorder arrows are meaningful relative to each other).
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Text("\(group.memberPluralLabel.capitalized) & Text (\(spineContents.count))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            Spacer()
+                            Button(action: addTextBlock) {
+                                Image(systemName: "plus")
+                            }
+                            .buttonStyle(.plain)
+                            .help("Add text block")
+                        }
 
-                    if members.isEmpty {
-                        Text("No \(group.entityType.pluralName.lowercased()) in this group")
-                            .font(.callout)
-                            .foregroundStyle(.tertiary)
-                    } else {
-                        ForEach(Array(members.enumerated()), id: \.element.id) { index, item in
+                        if spineContents.isEmpty {
+                            Text("No \(group.entityType.pluralName.lowercased()) or prose in this group")
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(spineContents, id: \.id) { entry in
+                                    spineRow(entry)
+                                        .contentShape(Rectangle())
+                                        .draggable(entry.id)
+                                        .background(SpineDropFrameReader(id: entry.id))
+                                }
+                            }
+                            .coordinateSpace(name: SpineDropSpaceName)
+                            .onPreferenceChange(SpineDropFrameKey.self) { spineDropFrames = $0 }
+                            .dropDestination(for: String.self) { items, location in
+                                guard let draggedID = items.first,
+                                      let draggedEntry = spineContents.first(where: { $0.id == draggedID }) else { return false }
+                                let targetIndex = insertionIndex(for: location, in: spineContents)
+                                if targetIndex != spineContents.firstIndex(where: { $0.id == draggedID }) {
+                                    moveSpine(draggedEntry, toIndex: targetIndex)
+                                }
+                                return true
+                            } isTargeted: { targeted in
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    isSpineDropTargeted = targeted
+                                }
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(isSpineDropTargeted ? Color.accentColor.opacity(0.08) : Color.clear)
+                            )
+                        }
+                    }
+                } else {
+                    // Members (alphabetical mode — reorder is inactive, text blocks pinned below).
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("\(group.memberPluralLabel.capitalized) (\(members.count))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        if group.isSmart {
+                            HStack(spacing: 4) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.caption2)
+                                Text("Automatic membership — evaluated live. Edit the rule in the group form.")
+                                    .font(.caption2)
+                            }
+                            .foregroundStyle(.teal)
+                        }
+
+                        if members.isEmpty {
+                            Text("No \(group.entityType.pluralName.lowercased()) in this group")
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            ForEach(members, id: \.id) { item in
+                                memberRow(item, group: group)
+                            }
+                        }
+                    }
+
+                    // Text blocks (prose pinned below members in alphabetical mode).
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(spacing: 8) {
+                            Text("Text Blocks (\(textBlocks.count))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            Spacer()
+                            Button(action: addTextBlock) {
+                                Image(systemName: "plus")
+                            }
+                            .buttonStyle(.plain)
+                            .help("Add text block")
+                        }
+
+                        if textBlocks.isEmpty {
+                            Text("No text blocks")
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                        } else {
+                            ForEach(textBlocks, id: \.persistentModelID) { block in
+                                HStack(spacing: 8) {
+                                    Image(systemName: "text.quote")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 16)
+                                    Button(action: { editingTextBlock = block }) {
+                                        Text(block.title.isEmpty ? "Untitled text block" : block.title)
+                                            .font(.callout)
+                                            .foregroundStyle(Color.accentColor)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .pointingHand()
+                                    Spacer()
+                                    Button(action: { deletingTextBlock = block; showDeleteTextBlockConfirm = true }) {
+                                        Image(systemName: "trash")
+                                            .font(.caption)
+                                            .foregroundStyle(.red.opacity(0.7))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Delete text block")
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+                    }
+                }
+
+                // Subgroups
+                if let subgroups = group.subgroups, !subgroups.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Subgroups (\(subgroups.count))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+
+                        ForEach(Array(group.sortedSubgroups.enumerated()), id: \.element.persistentModelID) { index, sub in
                             HStack(spacing: 8) {
                                 if group.sortMode == .ordered {
                                     MemberReorderButtons(
                                         canMoveUp: index > 0,
-                                        canMoveDown: index < members.count - 1,
+                                        canMoveDown: index < subgroups.count - 1,
                                         onMove: { direction in
-                                            if let assoc = association(for: item) {
-                                                group.moveAssociation(assoc, direction: direction)
-                                                try? modelContext.save()
-                                            }
+                                            group.moveSubgroup(sub, direction: direction)
+                                            try? modelContext.save()
                                         }
                                     )
                                 }
-                                Image(systemName: item.icon)
+                                Image(systemName: "folder.fill")
                                     .font(.caption)
-                                    .foregroundStyle(item.color)
+                                    .foregroundStyle(Color(hex: sub.colorHex))
                                     .frame(width: 16)
-                                Button(action: { onOpenMember?(item) }) {
-                                    Text(item.displayName)
-                                        .font(.callout)
-                                        .foregroundStyle(Color.accentColor)
-                                        .underline()
-                                }
-                                .buttonStyle(.plain)
-                                .pointingHand()
-                                if !item.subtitle.isEmpty {
-                                    Text(item.subtitle)
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                }
+                                Text(sub.name)
+                                    .font(.callout)
                                 Spacer()
                             }
                             .padding(.vertical, 2)
@@ -358,6 +643,15 @@ struct FigureGroupDetailView: View {
         }
         .sheet(isPresented: $showBulkAdd) {
             BulkAddMembersSheet(group: group)
+        }
+        .sheet(item: $editingTextBlock) { block in
+            GroupTextBlockSheet(group: group, block: block)
+        }
+        .alert("Delete Text Block?", isPresented: $showDeleteTextBlockConfirm) {
+            Button("Delete", role: .destructive) { deleteTextBlock() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(deletingTextBlock.map { "Delete \"\($0.title.isEmpty ? "Untitled" : $0.title)\"? This cannot be undone." } ?? "Delete this text block?")
         }
         .alert("Sync Group Members?", isPresented: $showSyncConfirm) {
             Button("Sync") { syncMembers() }
@@ -674,6 +968,51 @@ private struct BulkAddMembersSheet: View {
         addedCount = matchingItems.count
         try? modelContext.save()
         showSuccess = true
+    }
+}
+
+private enum SpineEntry: Identifiable {
+    case member(GroupMemberItem, FigureGroupAssociation)
+    case text(GroupTextBlock)
+
+    var id: String {
+        switch self {
+        case .member(let item, _): return "member:\(item.id.hashValue)"
+        case .text(let block): return "text:\(block.persistentModelID.hashValue)"
+        }
+    }
+}
+
+/// Frame of a single spine row as measured in `SpineDropSpaceName` coordinates,
+/// published via `SpineDropFrameKey` so the drop handler can map a drop
+/// location to an insertion index.
+private struct SpineEntryDropFrame: Hashable {
+    let id: String
+    let frame: CGRect
+}
+
+private let SpineDropSpaceName = "spineDrop"
+
+private struct SpineDropFrameKey: PreferenceKey {
+    static var defaultValue: [SpineEntryDropFrame] = []
+    static func reduce(value: inout [SpineEntryDropFrame], nextValue: () -> [SpineEntryDropFrame]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+/// Invisible background that reports the row's frame (in `SpineDropSpaceName`
+/// coordinates) so the container's drop handler can compute insertion indices.
+private struct SpineDropFrameReader: View {
+    let id: String
+
+    var body: some View {
+        GeometryReader { proxy in
+            let frame = proxy.frame(in: .named(SpineDropSpaceName))
+            Color.clear.preference(
+                key: SpineDropFrameKey.self,
+                value: [.init(id: id, frame: frame)]
+            )
+        }
     }
 }
 

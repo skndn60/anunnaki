@@ -7,6 +7,7 @@ private enum MixedItem: Identifiable {
     case event(Event, String?)
     case thing(Thing, String?)
     case group(FigureGroup)
+    case text(GroupTextBlock)
 
     var id: PersistentIdentifier {
         switch self {
@@ -15,6 +16,7 @@ private enum MixedItem: Identifiable {
         case .event(let entity, _): return entity.persistentModelID
         case .thing(let entity, _): return entity.persistentModelID
         case .group(let entity): return entity.persistentModelID
+        case .text(let entity): return entity.persistentModelID
         }
     }
 
@@ -25,7 +27,13 @@ private enum MixedItem: Identifiable {
         case .event(let entity, _): return entity.name
         case .thing(let entity, _): return entity.name
         case .group(let entity): return entity.name
+        case .text(let entity): return entity.title
         }
+    }
+
+    var isProse: Bool {
+        if case .text = self { return true }
+        return false
     }
 
     var alias: String? {
@@ -34,7 +42,7 @@ private enum MixedItem: Identifiable {
         case .place(_, let alias): return alias
         case .event(_, let alias): return alias
         case .thing(_, let alias): return alias
-        case .group: return nil
+        case .group, .text: return nil
         }
     }
 
@@ -48,18 +56,40 @@ private enum MixedItem: Identifiable {
     var canOpenInWindow: Bool {
         switch self {
         case .figure, .place, .event: return true
-        case .thing, .group: return false
+        case .thing, .group, .text: return false
         }
     }
 }
 
-private func memberItems(for group: FigureGroup) -> [MixedItem] {
-    switch group.entityType {
-    case .figure: return group.sortedAssociations.compactMap { assoc in assoc.figure.map { MixedItem.figure($0, assoc.displayName) } }
-    case .place: return group.sortedAssociations.compactMap { assoc in assoc.place.map { MixedItem.place($0, assoc.displayName) } }
-    case .event: return group.sortedAssociations.compactMap { assoc in assoc.event.map { MixedItem.event($0, assoc.displayName) } }
-    case .thing: return group.sortedAssociations.compactMap { assoc in assoc.thing.map { MixedItem.thing($0, assoc.displayName) } }
+private func memberItems(for group: FigureGroup, in context: ModelContext) -> [MixedItem] {
+    group.effectiveMemberItems(in: context).map { item in
+        switch item {
+        case .figure(let figure, let alias): return MixedItem.figure(figure, alias)
+        case .place(let place, let alias): return MixedItem.place(place, alias)
+        case .event(let event, let alias): return MixedItem.event(event, alias)
+        case .thing(let thing, let alias): return MixedItem.thing(thing, alias)
+        }
     }
+}
+
+/// The group's members + text blocks as a unified spine (shared orderIndex), used
+/// when the group is in manual order so prose interleaves with the member list.
+private func spineItems(for group: FigureGroup) -> [MixedItem] {
+    var result: [MixedItem] = []
+    for item in group.memberTextSpine {
+        switch item {
+        case .member(let assoc):
+            switch group.entityType {
+            case .figure: if let f = assoc.figure { result.append(.figure(f, assoc.displayName)) }
+            case .place: if let p = assoc.place { result.append(.place(p, assoc.displayName)) }
+            case .event: if let e = assoc.event { result.append(.event(e, assoc.displayName)) }
+            case .thing: if let t = assoc.thing { result.append(.thing(t, assoc.displayName)) }
+            }
+        case .text(let block):
+            result.append(.text(block))
+        }
+    }
+    return result
 }
 
 struct EntityGroupCollectionView: View {
@@ -70,12 +100,17 @@ struct EntityGroupCollectionView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
     @State private var expandedGroups: Set<PersistentIdentifier> = []
+    @State private var hoveredFigureID: PersistentIdentifier?
     @State private var selectedMemberID: PersistentIdentifier?
+    @State private var revealedBars: Set<Int> = []
     @State private var editingFigure: Figure?
     @State private var editingPlace: Place?
     @State private var editingEvent: Event?
     @State private var editingThing: Thing?
+    @State private var editingTextBlock: GroupTextBlock?
+    @State private var deletingTextBlock: GroupTextBlock?
     @State private var showDeleteConfirm = false
+    @State private var showDeleteTextBlockConfirm = false
     @State private var imageDetailImage: ImageAsset?
 
     private var entityType: GroupEntityType { group.entityType }
@@ -85,10 +120,21 @@ struct EntityGroupCollectionView: View {
     }
 
     private var mixedItems: [MixedItem] {
-        let all = memberItems(for: group) + subgroups.map(MixedItem.group)
-        let filtered = searchText.isEmpty ? all : all.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        if group.sortMode == .ordered { return filtered }
-        return filtered.sorted { $0.name < $1.name }
+        if group.sortMode == .ordered && !group.isSmart {
+            let spine = spineItems(for: group) + subgroups.map(MixedItem.group)
+            if searchText.isEmpty { return spine }
+            return spine.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        }
+        // Alphabetical mode: members + subgroups sorted by name, prose pinned below.
+        // Smart groups always land here (their membership is evaluated live by name).
+        let membersAndSubs = memberItems(for: group, in: modelContext) + subgroups.map(MixedItem.group)
+        let sortedBase = searchText.isEmpty
+            ? membersAndSubs.sorted { $0.name < $1.name }
+            : membersAndSubs.filter { $0.name.localizedCaseInsensitiveContains(searchText) }.sorted { $0.name < $1.name }
+        let prose = group.sortedTextBlocks.map(MixedItem.text)
+        if searchText.isEmpty { return sortedBase + prose }
+        let filteredProse = prose.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+        return sortedBase + filteredProse
     }
 
     private var ancestors: [FigureGroup] {
@@ -140,6 +186,8 @@ struct EntityGroupCollectionView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     ancestorTrail
                     header
+                    heroStats
+                    reignTower
                     searchBar
                     if mixedItems.isEmpty {
                         emptyState
@@ -160,10 +208,24 @@ struct EntityGroupCollectionView: View {
                                             coordinator?.navigateToGroup(sub.persistentModelID, name: sub.name, recordHistory: false)
                                         }
                                     )
+                                case .text(let block):
+                                    TextBlockRow(
+                                        block: block,
+                                        onEdit: { editingTextBlock = block },
+                                        onDelete: { deletingTextBlock = block }
+                                    )
                                 default:
                                     MemberRow(
                                         item: item,
                                         isSelected: selectedMemberID == item.id,
+                                        isHoverLinked: hoveredFigureID == item.id,
+                                        onHoverLink: { hovering in
+                                            if case .figure = item {
+                                                hoveredFigureID = hovering ? item.id : nil
+                                            } else if !hovering {
+                                                hoveredFigureID = nil
+                                            }
+                                        },
                                         onSelect: { selectedMemberID = item.id },
                                         onOpenInSidebar: { openInSidebar(item) },
                                         onOpenInWindow: { openInWindow(item) },
@@ -179,18 +241,35 @@ struct EntityGroupCollectionView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            if selectedMemberID != nil {
-                Divider()
-                detailPanel
-                    .frame(width: 320)
-                    .frame(maxHeight: .infinity)
-                    .background(.thinMaterial)
+            Group {
+                if selectedMemberID != nil {
+                    Divider()
+                    detailPanel
+                        .id(selectedMemberID)
+                        .frame(width: 320)
+                        .frame(maxHeight: .infinity)
+                        .background(.thinMaterial)
+                }
             }
+            .transition(.asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            ))
         }
+        .animation(.easeInOut(duration: 0.3), value: selectedMemberID)
         .sheet(item: $editingFigure) { FigureFormView(figure: $0) }
         .sheet(item: $editingPlace) { PlaceFormView(place: $0) }
         .sheet(item: $editingEvent) { EventFormView(event: $0) }
         .sheet(item: $editingThing) { ThingFormView(thing: $0) }
+        .sheet(item: $editingTextBlock) { block in
+            GroupTextBlockSheet(group: group, block: block)
+        }
+        .alert("Delete Text Block?", isPresented: $showDeleteTextBlockConfirm) {
+            Button("Delete", role: .destructive) { deleteTextBlock() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(deletingTextBlock.map { "Delete \"\($0.title.isEmpty ? "Untitled" : $0.title)\"? This cannot be undone." } ?? "Delete this text block?")
+        }
         .alert("Delete Member?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) { deleteSelected() }
             Button("Cancel", role: .cancel) {}
@@ -331,7 +410,8 @@ struct EntityGroupCollectionView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .top, spacing: 16) {
+        let effectiveItems = group.effectiveMemberItems(in: modelContext)
+        return HStack(alignment: .top, spacing: 16) {
             Image(systemName: group.icon)
                 .font(.system(size: 28))
                 .foregroundStyle(Color(hex: group.colorHex))
@@ -347,18 +427,205 @@ struct EntityGroupCollectionView: View {
                     GroupDescriptionDisplay(group: group)
                 }
                 HStack(spacing: 8) {
-                    Text("\(group.figureAssociations.count) member\(group.figureAssociations.count == 1 ? "" : "s")")
+                    Text(group.memberCountText(count: effectiveItems.count))
                         .font(.caption)
                         .foregroundStyle(.tertiary)
+                    if group.isSmart {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.fill")
+                                .font(.caption2)
+                            Text("Smart — live rule")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.teal)
+                    }
                     if !subgroups.isEmpty {
                         Text("\(subgroups.count) subgroup\(subgroups.count == 1 ? "" : "s")")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     }
                 }
+                if let aggregation = group.decodedAggregation, let result = aggregation.compute(items: effectiveItems) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sum")
+                            .font(.caption)
+                            .foregroundStyle(Color(hex: group.colorHex))
+                        Text("\(aggregation.title): \(aggregation.formattedValue(for: result))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if result.count < effectiveItems.count {
+                            Text("(\(result.count) of \(effectiveItems.count) \(group.memberPluralLabel) have data)")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
             }
             Spacer()
+            VStack(alignment: .trailing, spacing: 8) {
+                Button(action: addTextBlock) {
+                    Label("Add Text Block", systemImage: "plus")
+                }
+                .font(.caption)
+                .help("Insert a prose block into this page")
+                if group.sortMode != .ordered {
+                    Text("Switch to Manual Order to interleave text")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+            }
         }
+    }
+
+    /// Figure members in display order with their reign value (stored `reignYears`
+    /// field, falling back to the description parser). Members without a reign value
+    /// are excluded. Empty for non-figure groups.
+    private var reignEntries: [(name: String, years: Int, id: PersistentIdentifier)] {
+        guard entityType == .figure else { return [] }
+        return group.effectiveMemberItems(in: modelContext).compactMap { item in
+            guard let figure = item.figure else { return nil }
+            let years = figure.reignYears ?? ReignLength.parse(from: figure.figureDescription)?.years
+            guard let years else { return nil }
+            return (figure.name, years, figure.persistentModelID)
+        }
+    }
+
+    private static func formattedNumber(_ value: Int) -> String {
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .decimal
+        fmt.locale = Locale(identifier: "en_US")
+        return fmt.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+
+    /// Compact headline statistics row shown above the member list (figure groups only).
+    @ViewBuilder
+    private var heroStats: some View {
+        let entries = reignEntries
+        if entries.count >= 2 {
+            let total = entries.reduce(0) { $0 + $1.years }
+            let longest = entries.max { $0.years < $1.years }!
+            let color: Color = Color(hex: group.colorHex)
+            HStack(spacing: 12) {
+                statTile(icon: "hourglass.circle.fill", value: Self.formattedNumber(total), note: "years", color: color)
+                statTile(icon: "arrow.up.circle.fill", value: longest.name, note: Self.formattedNumber(longest.years) + " years", color: color)
+                statTile(icon: "person.3.fill", value: "\(entries.count)", note: "", color: color)
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(hex: group.colorHex).opacity(0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color(hex: group.colorHex).opacity(0.12), lineWidth: 1)
+            )
+        }
+    }
+
+    private func statTile(icon: String, value: String, note: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 14))
+                .foregroundStyle(color)
+            Text(value)
+                .font(.system(.title3, design: .rounded).weight(.bold))
+                .foregroundStyle(.primary)
+            if !note.isEmpty {
+                Text(note)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Relative bar plot of reign lengths (figure groups only). Long reigns dwarf
+    /// shorter ones, which is exactly the mythology — Alulim's 28,800 years next to
+    /// his successor's much shorter stint reads as a wall of lead.
+    @ViewBuilder
+    private var reignTower: some View {
+        let entries = reignEntries
+        if entries.count >= 2 {
+            let maxYears = entries.map(\.years).max() ?? 1
+            let color: Color = Color(hex: group.colorHex)
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Reign lengths")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
+                        let isLinked = hoveredFigureID == entry.id
+                        HStack(spacing: 10) {
+                            Text(entry.name)
+                                .font(.callout)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .frame(width: 170, alignment: .leading)
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule()
+                                        .fill(Color.gray.opacity(0.12))
+                                    Capsule()
+                                        .fill(
+                                            LinearGradient(
+                                                colors: [color, color.opacity(0.5)],
+                                                startPoint: .leading,
+                                                endPoint: .trailing
+                                            )
+                                        )
+                                        .frame(width: max(8, geo.size.width * CGFloat(entry.years) / CGFloat(maxYears) * (revealedBars.contains(index) ? 1 : 0.001)))
+                                        .shadow(color: color.opacity(isLinked ? 0.5 : 0), radius: isLinked ? 4 : 0)
+                                        .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.08), value: revealedBars.contains(index))
+                                }
+                            }
+                            .frame(height: 10)
+                            Text(Self.formattedNumber(entry.years) + " yrs")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                                .frame(width: 90, alignment: .trailing)
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(isLinked ? color.opacity(0.10) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                        .onHover { hovering in
+                            hoveredFigureID = hovering ? entry.id : nil
+                        }
+                        .animation(.easeInOut(duration: 0.15), value: hoveredFigureID)
+                    }
+                }
+            }
+            .padding(14)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color(.textBackgroundColor))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            .onAppear {
+                revealedBars = []
+                Task { @MainActor in
+                    for index in entries.indices {
+                        revealedBars.insert(index)
+                        try? await Task.sleep(nanoseconds: 80_000_000)
+                    }
+                }
+            }
+        }
+    }
+
+    private func addTextBlock() {
+        let block = GroupTextBlock(title: "", text: "")
+        modelContext.insert(block)
+        group.appendTextBlock(block)
+        editingTextBlock = block
+        try? modelContext.save()
     }
 
     private var searchBar: some View {
@@ -404,7 +671,7 @@ struct EntityGroupCollectionView: View {
         case .thing(let thing, _):
             coordinator?.pushHistory(id: group.persistentModelID, name: group.name, item: .figureGroups)
             coordinator?.navigateToThing(thing.persistentModelID, name: thing.name, recordHistory: false)
-        case .group:
+        case .group, .text:
             break
         }
     }
@@ -417,7 +684,7 @@ struct EntityGroupCollectionView: View {
             openWindow(id: "place-quickview", value: place.persistentModelID)
         case .event(let event, _):
             openWindow(id: "event-quickview", value: event.persistentModelID)
-        default:
+        case .thing, .group, .text:
             break
         }
     }
@@ -429,12 +696,26 @@ struct EntityGroupCollectionView: View {
         case .event(let event, _): editingEvent = event
         case .thing(let thing, _): editingThing = thing
         case .group: break
+        case .text(let block): editingTextBlock = block
         }
     }
 
     private func beginDelete(_ item: MixedItem) {
+        if case .text(let block) = item {
+            deletingTextBlock = block
+            showDeleteTextBlockConfirm = true
+            return
+        }
         selectedMemberID = item.id
         showDeleteConfirm = true
+    }
+
+    private func deleteTextBlock() {
+        if let block = deletingTextBlock {
+            modelContext.delete(block)
+        }
+        deletingTextBlock = nil
+        try? modelContext.save()
     }
 
     private func deleteSelected() {
@@ -476,6 +757,8 @@ private struct GroupDescriptionDisplay: View {
 private struct MemberRow: View {
     let item: MixedItem
     let isSelected: Bool
+    var isHoverLinked: Bool = false
+    var onHoverLink: ((Bool) -> Void)? = nil
     let onSelect: () -> Void
     let onOpenInSidebar: () -> Void
     let onOpenInWindow: () -> Void
@@ -489,6 +772,7 @@ private struct MemberRow: View {
         case .event(let event, _): return event.eventType?.icon ?? "bolt.fill"
         case .thing(let thing, _): return thing.thingType?.icon ?? "cube.box"
         case .group(let group): return group.icon
+        case .text: return "text.quote"
         }
     }
 
@@ -499,6 +783,7 @@ private struct MemberRow: View {
         case .event(let event, _): return event.eventType?.color ?? .orange
         case .thing(let thing, _): return thing.thingType?.color ?? .purple
         case .group(let group): return Color(hex: group.colorHex)
+        case .text: return .secondary
         }
     }
 
@@ -509,12 +794,31 @@ private struct MemberRow: View {
         case .event(let event, _): return event.eventType?.name ?? ""
         case .thing(let thing, _): return thing.thingType?.name ?? ""
         case .group: return ""
+        case .text: return ""
         }
     }
 
     private var genderSymbol: String? {
         if case .figure(let figure, _) = item { return figure.gender.symbol }
         return nil
+    }
+
+    private var reignDisplay: String? {
+        guard case .figure(let figure, _) = item else { return nil }
+        if let years = figure.reignYears {
+            return "Reigned \(Self.yearString(years)) years"
+        }
+        if let reign = ReignLength.parse(from: figure.figureDescription) {
+            return reign.display
+        }
+        return nil
+    }
+
+    private static func yearString(_ years: Int) -> String {
+        let fmt = NumberFormatter()
+        fmt.numberStyle = .decimal
+        fmt.locale = Locale(identifier: "en_US")
+        return fmt.string(from: NSNumber(value: years)) ?? "\(years)"
     }
 
     var body: some View {
@@ -535,6 +839,12 @@ private struct MemberRow: View {
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
+                if let reignDisplay {
+                    Text(reignDisplay)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
                 if let genderSymbol {
                     Text(genderSymbol)
                         .font(.callout)
@@ -545,13 +855,17 @@ private struct MemberRow: View {
             .padding(.horizontal, 10)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor.opacity(0.12) : Color(.textBackgroundColor))
+                    .fill(isSelected ? Color.accentColor.opacity(0.12) : isHoverLinked ? Color.accentColor.opacity(0.08) : Color(.textBackgroundColor))
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 6)
                     .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.gray.opacity(0.2), lineWidth: 0.5)
             )
             .contentShape(Rectangle())
+            .onHover { hovering in
+                onHoverLink?(hovering)
+            }
+            .animation(.easeInOut(duration: 0.15), value: isHoverLinked)
         }
         .buttonStyle(.plain)
         .pointingHand()
@@ -577,6 +891,7 @@ private struct MemberRow: View {
 
 private struct EntityGroupTreeNode: View {
     let group: FigureGroup
+    @Environment(\.modelContext) private var modelContext
     @Binding var expanded: Set<PersistentIdentifier>
     var onSelectMember: (MixedItem) -> Void
     var onOpenInSidebar: (MixedItem) -> Void
@@ -592,16 +907,26 @@ private struct EntityGroupTreeNode: View {
     }
 
     private var directMembers: [MixedItem] {
-        memberItems(for: group)
+        memberItems(for: group, in: modelContext)
+    }
+
+    private var aggregatedReign: String? {
+        guard group.entityType == .figure else { return nil }
+        let agg = GroupAggregation(operation: .sum, target: .reignYears)
+        let items = group.effectiveMemberItems(in: modelContext)
+        guard let result = agg.compute(items: items), result.count > 0 else { return nil }
+        return "\(agg.title): \(agg.formattedValue(for: result))"
     }
 
     private var children: [MixedItem] {
         let groupItems = (group.subgroups ?? [])
             .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
             .map(MixedItem.group)
-        let members = directMembers
-        if group.sortMode == .ordered { return members + groupItems }
-        return (members + groupItems).sorted { $0.name < $1.name }
+        if group.sortMode == .ordered && !group.isSmart {
+            return spineItems(for: group) + groupItems
+        }
+        let sortedMembers = (directMembers + groupItems).sorted { $0.name < $1.name }
+        return sortedMembers + group.sortedTextBlocks.map(MixedItem.text)
     }
 
     var body: some View {
@@ -635,9 +960,15 @@ private struct EntityGroupTreeNode: View {
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
-                    Text("\(group.figureAssociations.count) member\(group.figureAssociations.count == 1 ? "" : "s")")
+                    Text(group.memberCountText(count: group.effectiveMemberCount(in: modelContext)))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                    if let aggregatedReign {
+                        Text(aggregatedReign)
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+                    }
                     Spacer(minLength: 0)
                 }
                 .padding(.leading, 8)
@@ -682,6 +1013,12 @@ private struct EntityGroupTreeNode: View {
                                 onDeleteMember: onDeleteMember,
                                 onOpenGroup: onOpenGroup
                             )
+                        case .text(let block):
+                            TextBlockRow(
+                                block: block,
+                                onEdit: { onEditMember(item) },
+                                onDelete: { onDeleteMember(item) }
+                            )
                         default:
                             MemberRow(
                                 item: item,
@@ -697,6 +1034,183 @@ private struct EntityGroupTreeNode: View {
                 }
                 .padding(.leading, 28)
             }
+        }
+    }
+}
+
+private struct TextBlockRow: View {
+    let block: GroupTextBlock
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+
+    var body: some View {
+        let alignment = block.alignment
+        let textAlignment: TextAlignment = alignment == .center ? .center : (alignment == .right ? .trailing : .leading)
+        let frameAlignment: Alignment = alignment == .center ? .center : (alignment == .right ? .trailing : .leading)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "text.quote")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                if !block.title.isEmpty {
+                    Text(block.title)
+                        .font(block.titleSize.font)
+                        .foregroundStyle(.primary)
+                } else {
+                    Text("Untitled text block")
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer(minLength: 0)
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Edit text block")
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red.opacity(0.7))
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Delete text block")
+            }
+            RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .multilineTextAlignment(textAlignment)
+                .frame(maxWidth: .infinity, alignment: frameAlignment)
+        }
+        .padding(10)
+        .frame(maxWidth: block.maxWidth.map { CGFloat($0) } ?? .infinity, alignment: frameAlignment)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.textBackgroundColor).opacity(0.6))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(Color.gray.opacity(0.25), lineWidth: 0.5)
+        )
+        .frame(maxWidth: .infinity, alignment: block.maxWidth == nil ? .leading : frameAlignment)
+        .contextMenu {
+            Button("Edit Text Block") { onEdit() }
+            Button("Delete", role: .destructive) { onDelete() }
+        }
+    }
+}
+
+struct GroupTextBlockSheet: View {
+    let group: FigureGroup
+    let block: GroupTextBlock
+
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title: String
+    @State private var text: String
+    @State private var richText: Data?
+    @State private var maxWidth: Double?
+    @State private var alignment: GroupTextBlock.TextBlockAlignment
+    @State private var titleSize: GroupTextBlock.TextBlockTitleSize
+
+    init(group: FigureGroup, block: GroupTextBlock) {
+        self.group = group
+        self.block = block
+        _title = State(initialValue: block.title)
+        _text = State(initialValue: block.text)
+        _richText = State(initialValue: block.richText)
+        _maxWidth = State(initialValue: block.maxWidth)
+        _alignment = State(initialValue: block.alignment)
+        _titleSize = State(initialValue: block.titleSize)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Text Block")
+                .font(.headline)
+            TextField("Title (optional)", text: $title)
+                .textFieldStyle(.roundedBorder)
+            RichTextEditorSection(richData: $richText, plainText: $text)
+                .frame(minHeight: 200)
+            HStack(spacing: 8) {
+                Text("Title size:")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Picker("Title size", selection: $titleSize) {
+                    ForEach(GroupTextBlock.TextBlockTitleSize.allCases, id: \.self) { size in
+                        Text(size.displayName).tag(size)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            HStack(spacing: 8) {
+                Text("Max width:")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Picker("Max width", selection: $maxWidth) {
+                    Text("Full").tag(Double?.none)
+                    Text("420").tag(Double?.some(420))
+                    Text("560").tag(Double?.some(560))
+                    Text("700").tag(Double?.some(700))
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            HStack(spacing: 8) {
+                Text("Align:")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                Picker("Align", selection: $alignment) {
+                    Text("Left").tag(GroupTextBlock.TextBlockAlignment.left)
+                    Text("Center").tag(GroupTextBlock.TextBlockAlignment.center)
+                    Text("Right").tag(GroupTextBlock.TextBlockAlignment.right)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
+            }
+            HStack {
+                Spacer()
+                Button("Cancel", role: .cancel) { dismiss() }
+                Button("Save") {
+                    block.title = title
+                    block.text = text
+                    block.richText = richText
+                    block.maxWidth = maxWidth
+                    block.alignmentRawValue = alignment.rawValue
+                    block.titleSizeRawValue = titleSize.rawValue
+                    if group.sortMode == .ordered, block.orderIndex == nil {
+                        block.orderIndex = (group.textBlocks ?? []).count
+                    }
+                    try? modelContext.save()
+                    dismiss()
+                }
+                .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(20)
+        .frame(width: 520, height: 420)
+    }
+}
+
+private extension GroupTextBlock.TextBlockTitleSize {
+    var font: Font {
+        switch self {
+        case .small: return .callout.weight(.semibold)
+        case .medium: return .title3.weight(.semibold)
+        case .large: return .title2.weight(.bold)
+        case .xlarge: return .largeTitle.weight(.bold)
         }
     }
 }

@@ -123,6 +123,21 @@ struct ContentView: View {
         filter: #Predicate<FigureGroup> { $0.parentGroup == nil },
         sort: \FigureGroup.orderIndex
     ) private var topLevelFigureGroups: [FigureGroup]
+    @AppStorage("sidebarExpandedGroupPaths") private var expandedGroupPathsRaw = ""
+
+    private var expandedGroupPaths: Set<String> {
+        get { Set(expandedGroupPathsRaw.split(separator: ";").map(String.init)) }
+        set { expandedGroupPathsRaw = newValue.sorted().joined(separator: ";") }
+    }
+
+    private var expandedGroupPathsBinding: Binding<Set<String>> {
+        Binding(
+            get: { expandedGroupPaths },
+            set: { newValue in
+                $expandedGroupPathsRaw.wrappedValue = newValue.sorted().joined(separator: ";")
+            }
+        )
+    }
 
     var body: some View {
         if isSeeding {
@@ -149,6 +164,9 @@ struct ContentView: View {
                     Migration.ensureImportedDeityRelationships(context: modelContext)
                     Migration.ensureEventCitations(context: modelContext)
                     Migration.ensureSKLEventsAndFigures(context: modelContext)
+                    Migration.ensureReignYears(context: modelContext)
+                    Migration.ensureEpithets(context: modelContext)
+                    Migration.ensureMesopotamianPantheons(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
                     Migration.ensureFigureGroupKinds(context: modelContext)
                     Migration.ensureSKLRegnalOrder(context: modelContext)
@@ -189,11 +207,12 @@ struct ContentView: View {
                         if !typeGroups.isEmpty {
                             Section(type.sidebarHeader) {
                                 ForEach(typeGroups) { group in
-                                    ForEach(sidebarRows(for: group, type: type, depth: 0), id: \.group.persistentModelID) { row in
-                                        Label(row.group.name, systemImage: row.group.icon)
-                                            .tag(SidebarSelection.group(row.group.persistentModelID))
-                                            .padding(.leading, CGFloat(row.depth) * 14)
-                                    }
+                                    SidebarGroupRow(
+                                        group: group,
+                                        type: type,
+                                        path: "\(type.rawValue)/\(group.name)",
+                                        expandedPaths: expandedGroupPathsBinding
+                                    )
                                 }
                             }
                         }
@@ -277,23 +296,19 @@ struct ContentView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 4) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                        TextField("Search all entities\u{2026}", text: $globalSearchText)
-                            .textFieldStyle(.roundedBorder)
-                            .focused($searchFocused)
-                            .frame(width: 180)
-                            .onSubmit { searchFocused = true }
-                    }
-                    .padding(.leading, 4)
-                    .padding(.trailing, 8)
-                    .padding(.vertical, 2)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(.separator, lineWidth: 0.5)
-                    )
+                    TextField("Search all entities\u{2026}", text: $globalSearchText)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($searchFocused)
+                        .frame(width: 220)
+                        .overlay(alignment: .leading) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .padding(.leading, 6)
+                                .allowsHitTesting(false)
+                        }
+                        .onSubmit { searchFocused = true }
+                        .padding(.vertical, 2)
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -361,41 +376,78 @@ struct ComingSoonView: View {
 }
 
 extension ContentView {
-    private func sidebarRows(for group: FigureGroup, type: GroupEntityType, depth: Int) -> [(group: FigureGroup, depth: Int)] {
-        var rows: [(FigureGroup, Int)] = [(group, depth)]
-        let subs = (group.subgroups ?? [])
-            .filter { $0.entityType == type }
-            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
-        for sub in subs {
-            rows.append(contentsOf: sidebarRows(for: sub, type: type, depth: depth + 1))
-        }
-        return rows
-    }
-
     @ViewBuilder
     private func groupDestination(group: FigureGroup) -> some View {
+        let isDedicatedRoot = group.parentGroup == nil
         switch group.kind {
         case .standard:
             EntityGroupCollectionView(group: group, coordinator: coordinator)
         case .enoch:
-            if group.entityType == .figure && (group.subgroups ?? []).isEmpty {
+            if isDedicatedRoot && group.entityType == .figure && (group.subgroups ?? []).isEmpty {
                 EnochView(coordinator: coordinator)
             } else {
                 EntityGroupCollectionView(group: group, coordinator: coordinator)
             }
         case .skl:
-            if group.entityType == .figure && (group.subgroups ?? []).isEmpty {
+            if isDedicatedRoot && group.entityType == .figure && (group.subgroups ?? []).isEmpty {
                 SumerianKingListView(coordinator: coordinator)
             } else {
                 EntityGroupCollectionView(group: group, coordinator: coordinator)
             }
         case .flood:
-            if group.entityType == .figure && (group.subgroups ?? []).isEmpty {
+            if isDedicatedRoot && group.entityType == .figure && (group.subgroups ?? []).isEmpty {
                 ComingSoonView(title: "The Flood")
             } else {
                 EntityGroupCollectionView(group: group, coordinator: coordinator)
             }
         }
+    }
+}
+
+private struct SidebarGroupRow: View {
+    let group: FigureGroup
+    let type: GroupEntityType
+    let path: String
+    @Binding var expandedPaths: Set<String>
+
+    private var subgroups: [FigureGroup] {
+        (group.subgroups ?? [])
+            .filter { $0.entityType == type }
+            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
+    }
+
+    var body: some View {
+        if subgroups.isEmpty {
+            Label(group.name, systemImage: group.icon)
+                .tag(SidebarSelection.group(group.persistentModelID))
+        } else {
+            DisclosureGroup(isExpanded: isExpanded) {
+                ForEach(subgroups) { sub in
+                    SidebarGroupRow(
+                        group: sub,
+                        type: type,
+                        path: path + "/" + sub.name,
+                        expandedPaths: $expandedPaths
+                    )
+                }
+            } label: {
+                Label(group.name, systemImage: group.icon)
+            }
+            .tag(SidebarSelection.group(group.persistentModelID))
+        }
+    }
+
+    private var isExpanded: Binding<Bool> {
+        Binding(
+            get: { expandedPaths.contains(path) },
+            set: { newValue in
+                if newValue {
+                    expandedPaths.insert(path)
+                } else {
+                    expandedPaths.remove(path)
+                }
+            }
+        )
     }
 }
 

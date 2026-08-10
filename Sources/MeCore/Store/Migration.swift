@@ -1058,6 +1058,7 @@ package struct Migration {
                 colorHex: config.colorHex,
                 orderIndex: idx,
                 memberFilter: filterJSON,
+                isSmart: config.filter != nil,
                 kind: config.kind
             )
             context.insert(group)
@@ -1176,6 +1177,86 @@ package struct Migration {
             changed = true
         }
         if changed { try? context.save() }
+    }
+
+    /// Backfill `Figure.reignYears` from each figure's description ("Listed reign" /
+    /// "Reigned X years" phrasing) when the field isn't set yet. Additive + idempotent —
+    /// never overwrites a value the user typed. Runs after figure-creating migrations so
+    /// newly seeded figures get populated on the same launch.
+    package static func ensureReignYears(context: ModelContext) {
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for figure in figures where figure.reignYears == nil {
+            guard let reign = ReignLength.parse(from: figure.figureDescription) else { continue }
+            figure.reignYears = reign.years
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    /// Backfills `Figure.epithet` from the `Epithet: ...` prose embedded in
+    /// `figureDescription` (our seed writes e.g. `Epithet: ''"the boatman"''.` or
+    /// `Epithet: 'the shepherd'`). Additive + idempotent — never overwrites a
+    /// user-entered value.
+    package static func ensureEpithets(context: ModelContext) {
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for figure in figures where figure.epithet == nil {
+            guard let epithet = Self.extractEpithet(from: figure.figureDescription) else { continue }
+            figure.epithet = epithet
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    private static func extractEpithet(from text: String) -> String? {
+        // Matches `Epithet: ''"the boatman"''` (seed JSON-escaped quotes) and
+        // `Epithet: 'the shepherd'` (single-quoted prose).
+        let patterns = [
+            #"Epithet:\s*''"(.+?)"''"#,
+            #"Epithet:\s*'(.+?)'"#,
+        ]
+        for pattern in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { continue }
+            if let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+               match.numberOfRanges > 1,
+               let range = Range(match.range(at: 1), in: text) {
+                let epithet = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !epithet.isEmpty { return epithet }
+            }
+        }
+        return nil
+    }
+
+    /// Create the default "Mesopotamian" pantheon if missing, and add every figure
+    /// that doesn't yet belong to any pantheon to it. Additive + idempotent — never
+    /// removes or re-assigns an existing pantheon membership.
+    package static func ensureMesopotamianPantheons(context: ModelContext) {
+        let existing = (try? context.fetch(FetchDescriptor<Pantheon>(predicate: #Predicate { $0.name == "Mesopotamian" })))?.first
+        let pantheon: Pantheon
+        if let existing {
+            pantheon = existing
+        } else {
+            let new = Pantheon(
+                name: "Mesopotamian",
+                pantheonDescription: "Deities of Sumerian, Akkadian, Babylonian, and Assyrian tradition",
+                icon: "building.columns.circle.fill",
+                colorHex: "8E5E3C"
+            )
+            context.insert(new)
+            try? context.save()
+            pantheon = new
+        }
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for figure in figures where figure.pantheons.isEmpty {
+            figure.pantheons.append(pantheon)
+            changed = true
+        }
+        if changed {
+            try? context.save()
+        }
     }
 
 }
