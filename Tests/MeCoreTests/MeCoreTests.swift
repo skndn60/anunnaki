@@ -5,6 +5,14 @@ import SwiftData
 @MainActor
 final class MeCoreTests: XCTestCase {
     private func makeContainer() -> ModelContainer {
+        _makeContainer(isDisk: false)
+    }
+
+    private func makeDiskContainer() -> ModelContainer {
+        _makeContainer(isDisk: true)
+    }
+
+    private func _makeContainer(isDisk: Bool) -> ModelContainer {
         let schema = Schema([
             Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self,
             Place.self, PlaceType.self, Event.self, EventType.self,
@@ -21,8 +29,19 @@ final class MeCoreTests: XCTestCase {
             ThingEventAssociation.self, ThingEventRoleType.self,
             Agent.self, CollectedDatum.self, BlindSpot.self,
             BlockedSource.self, DictionaryEntry.self,
-            FigureGroup.self, FigureGroupAssociation.self
+            FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
+            Pantheon.self, FigurePantheonAssociation.self
         ])
+        if isDisk {
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("MeTests-\(UUID().uuidString).store")
+            let config = ModelConfiguration(schema: schema, url: url)
+            do {
+                return try ModelContainer(for: schema, configurations: [config])
+            } catch {
+                fatalError("Failed to create disk test container: \(error)")
+            }
+        }
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         do {
             return try ModelContainer(for: schema, configurations: [config])
@@ -279,6 +298,60 @@ final class MeCoreTests: XCTestCase {
         default:
             XCTFail("Expected answer string, got \(result)")
         }
+    }
+
+    func testQueryEngineEventDateRangeYes() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let flood = Event(name: "The Great Flood", date: MythologicalDate(startYear: -30000, endYear: -24000))
+        context.insert(flood)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("Was the Great Flood between 30000 and 24000 BCE?")
+        guard case .answer(let text) = result else {
+            XCTFail("Expected answer string, got \(result)")
+            return
+        }
+        XCTAssertTrue(text.hasPrefix("Yes"))
+    }
+
+    func testQueryEngineEventDateRangeNo() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let flood = Event(name: "The Great Flood", date: MythologicalDate(startYear: -30000, endYear: -24000))
+        context.insert(flood)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("Was the Great Flood between 1000 and 500 BCE?")
+        guard case .answer(let text) = result else {
+            XCTFail("expected answer string, got \(result)")
+            return
+        }
+        XCTAssertTrue(text.hasPrefix("No"))
+    }
+
+    func testQueryEngineFigureDateRangeFrom() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let figure = Figure(name: "Gilgamesh", gender: .male, birthDate: MythologicalDate(startYear: -2900, endYear: -2700))
+        context.insert(figure)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("Was Gilgamesh alive from 2500 to 2100 BCE?")
+        guard case .answer(let text) = result else {
+            XCTFail("expected answer string, got \(result)")
+            return
+        }
+        XCTAssertTrue(text.hasPrefix("No"))
     }
 
     func testQueryEngineUnknownReturnsNoMatch() {
@@ -1250,6 +1323,35 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(group.entityTypeRawValue, "place")
     }
 
+    func testFigureGroupMemberLabelsDefaultToMember() {
+        let group = FigureGroup(name: "Council")
+        XCTAssertEqual(group.memberSingularLabel, "member")
+        XCTAssertEqual(group.memberPluralLabel, "members")
+        XCTAssertEqual(group.memberCountText(count: 1), "1 member")
+        XCTAssertEqual(group.memberCountText(count: 7), "7 members")
+    }
+
+    func testFigureGroupMemberLabelsRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Dynasty of Akkad", memberSingular: "ruler", memberPlural: "rulers")
+        context.insert(group)
+        try? context.save()
+        XCTAssertEqual(group.memberSingular, "ruler")
+        XCTAssertEqual(group.memberPlural, "rulers")
+        XCTAssertEqual(group.memberSingularLabel, "ruler")
+        XCTAssertEqual(group.memberPluralLabel, "rulers")
+        XCTAssertEqual(group.memberCountText(count: 1), "1 ruler")
+        XCTAssertEqual(group.memberCountText(count: 7), "7 rulers")
+    }
+
+    func testFigureGroupMemberLabelsFallbackWhenEmpty() {
+        let group = FigureGroup(name: "Council", memberSingular: "", memberPlural: "")
+        XCTAssertEqual(group.memberSingularLabel, "member")
+        XCTAssertEqual(group.memberPluralLabel, "members")
+        XCTAssertEqual(group.memberCountText(count: 2), "2 members")
+    }
+
     func testGroupMemberFilterMatchesPlaceType() {
         let container = makeContainer()
         let context = container.mainContext
@@ -1306,6 +1408,106 @@ final class MeCoreTests: XCTestCase {
         XCTAssertFalse(filter.matchesThing(plain))
     }
 
+    func testSmartFlagDefaultsOffAndRoundTrips() {
+        let group = FigureGroup(name: "G")
+        XCTAssertFalse(group.isSmart)
+        XCTAssertNil(group.isSmartRawValue)
+        group.isSmart = true
+        XCTAssertTrue(group.isSmart)
+        group.isSmart = false
+        XCTAssertFalse(group.isSmart)
+        XCTAssertNil(group.isSmartRawValue)
+    }
+
+    func testSmartFlagInitParameter() {
+        let manual = FigureGroup(name: "Manual")
+        XCTAssertFalse(manual.isSmart)
+        let smart = FigureGroup(name: "Smart", isSmart: true)
+        XCTAssertTrue(smart.isSmart)
+    }
+
+    func testLiveMatchIDsSmartFigureGroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        SeedData.ensureTypesExist(context: context)
+        let deityType = (try? context.fetch(FetchDescriptor<FigureType>()))?.first { $0.name == "Deity" }
+        let humanType = (try? context.fetch(FetchDescriptor<FigureType>()))?.first { $0.name == "Human" }
+
+        let enlil = Figure(name: "Enlil", figureType: deityType, domain: "Sumerian")
+        let marduk = Figure(name: "Marduk", figureType: deityType, domain: "Babylonian")
+        let gilgamesh = Figure(name: "Gilgamesh", figureType: humanType, domain: "Kingship")
+        let ilabrat = Figure(name: "Ilabrat", figureType: humanType, domain: "Sumerian")
+        context.insert(enlil)
+        context.insert(marduk)
+        context.insert(gilgamesh)
+        context.insert(ilabrat)
+
+        let group = FigureGroup(name: "Sumerian Pantheon", isSmart: true)
+        context.insert(group)
+        try? context.save()
+
+        // Domain-only rule: Enlil and Ilabrat match; Marduk/Gilgamesh don't.
+        group.decodedFilter = GroupMemberFilter(domainKeywords: ["Sumerian"])
+        let domainIDs = group.liveMatchIDs(in: context)
+        XCTAssertEqual(Set(domainIDs), Set([enlil.persistentModelID, ilabrat.persistentModelID]))
+
+        // Type-only rule (OR semantics): all Deities match regardless of domain.
+        group.decodedFilter = GroupMemberFilter(figureTypeNames: ["Deity"])
+        let typeIDs = group.liveMatchIDs(in: context)
+        XCTAssertEqual(Set(typeIDs), Set([enlil.persistentModelID, marduk.persistentModelID]))
+        XCTAssertFalse(typeIDs.contains(gilgamesh.persistentModelID))
+        XCTAssertFalse(typeIDs.contains(ilabrat.persistentModelID))
+    }
+
+    func testLiveMatchIDsManualGroupReturnsEmpty() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Enki", domain: "Sumerian")
+        context.insert(figure)
+        let group = FigureGroup(name: "Manual", isSmart: false)
+        group.decodedFilter = GroupMemberFilter(domainKeywords: ["Sumerian"])
+        context.insert(group)
+        try? context.save()
+
+        XCTAssertTrue(group.liveMatchIDs(in: context).isEmpty)
+    }
+
+    func testLiveMatchIDsSmartPlaceGroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let templeType = PlaceType(name: "Temple", icon: "building.columns", colorHex: "5856D6")
+        let cityType = PlaceType(name: "City", icon: "building", colorHex: "8E8E93")
+        context.insert(templeType)
+        context.insert(cityType)
+        let ekur = Place(name: "Ekur", placeType: templeType)
+        let ur = Place(name: "Ur", placeType: cityType)
+        context.insert(ekur)
+        context.insert(ur)
+
+        let group = FigureGroup(name: "Temples", isSmart: true, entityType: .place)
+        group.decodedFilter = GroupMemberFilter(placeTypeNames: ["Temple"])
+        context.insert(group)
+        try? context.save()
+
+        XCTAssertEqual(group.liveMatchIDs(in: context), [ekur.persistentModelID])
+    }
+
+    func testSmartGroupIgnoresFilterWhenSmartOff() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Enki", domain: "Sumerian")
+        context.insert(figure)
+        let group = FigureGroup(name: "G", isSmart: false)
+        group.decodedFilter = GroupMemberFilter(domainKeywords: ["Sumerian"])
+        context.insert(group)
+        try? context.save()
+
+        group.isSmart = true
+        XCTAssertEqual(group.liveMatchIDs(in: context), [figure.persistentModelID])
+        group.isSmart = false
+        XCTAssertTrue(group.liveMatchIDs(in: context).isEmpty)
+    }
+
     func testGroupDirectMembersAcrossTypes() {
         let container = makeContainer()
         let context = container.mainContext
@@ -1338,6 +1540,240 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(place.groupAssociations.count, 1)
         XCTAssertEqual(event.groupAssociations.count, 1)
         XCTAssertEqual(thing.groupAssociations.count, 1)
+    }
+
+    func testGroupDeleteWithFigureAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Enki")
+        context.insert(figure)
+        let group = FigureGroup(name: "Sumerian Pantheon")
+        context.insert(group)
+        let assoc = FigureGroupAssociation(figure: figure)
+        context.insert(assoc)
+        group.figureAssociations.append(assoc)
+        try? context.save()
+
+        XCTAssertEqual(figure.groupAssociations.count, 1)
+
+        context.delete(group)
+        try? context.save()
+
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testGroupDeleteSmartGroupWithManyAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Sumerian Pantheon")
+        group.isSmart = true
+        context.insert(group)
+        for i in 0..<72 {
+            let figure = Figure(name: "Deity \(i)")
+            context.insert(figure)
+            let assoc = FigureGroupAssociation(figure: figure)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        XCTAssertEqual(group.figureAssociations.count, 72)
+
+        context.delete(group)
+        try? context.save()
+
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
+    func testGroupDeleteSharedFiguresDiskStore() {
+        let container = makeDiskContainer()
+        let context = container.mainContext
+        let pantheon = FigureGroup(name: "Sumerian Pantheon")
+        pantheon.isSmart = true
+        context.insert(pantheon)
+        let other = FigureGroup(name: "Divine Council")
+        context.insert(other)
+        for i in 0..<72 {
+            let figure = Figure(name: "Deity \(i)")
+            context.insert(figure)
+            let a1 = FigureGroupAssociation(figure: figure)
+            context.insert(a1)
+            pantheon.figureAssociations.append(a1)
+            if i % 2 == 0 {
+                let a2 = FigureGroupAssociation(figure: figure)
+                context.insert(a2)
+                other.figureAssociations.append(a2)
+            }
+        }
+        try? context.save()
+
+        XCTAssertEqual(pantheon.figureAssociations.count, 72)
+
+        context.delete(pantheon)
+        try? context.save()
+
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertEqual(remaining.count, 36)
+    }
+
+    func testGroupDeleteRealStoreCopy() throws {
+        let live = URL(fileURLWithPath: NSString(string: "~/Library/Application Support/Me/Me.store").expandingTildeInPath)
+        guard FileManager.default.fileExists(atPath: live.path) else {
+            throw XCTSkip("Live store not present — diagnostic test only")
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MeRealStore-\(UUID().uuidString).store")
+        try? FileManager.default.copyItem(at: live, to: url)
+        let schema = Schema([
+            Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self,
+            Place.self, PlaceType.self, Event.self, EventType.self,
+            Source.self, Citation.self, AlternateName.self, Attachment.self,
+            ImageAsset.self, Tag.self, DataVersion.self,
+            FigurePlaceAssociation.self, FigurePlaceRoleType.self,
+            PlacePlaceAssociation.self, PlacePlaceRoleType.self,
+            EventEventAssociation.self, EventEventRoleType.self,
+            EventPlaceAssociation.self, EventPlaceRoleType.self,
+            StickyNote.self,
+            Thing.self, ThingType.self,
+            ThingFigureAssociation.self, ThingFigureRoleType.self,
+            ThingPlaceAssociation.self, ThingPlaceRoleType.self,
+            ThingEventAssociation.self, ThingEventRoleType.self,
+            Agent.self, CollectedDatum.self, BlindSpot.self,
+            BlockedSource.self, DictionaryEntry.self,
+            FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
+            Pantheon.self, FigurePantheonAssociation.self
+        ])
+        let config = ModelConfiguration(schema: schema, url: url)
+        guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
+            XCTFail("Could not open real store copy")
+            return
+        }
+        let context = container.mainContext
+        let all = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let group = all.first(where: { $0.name == "Sumerian Pantheon" }) else {
+            XCTFail("Group not found")
+            return
+        }
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for figure in allFigures {
+            _ = figure.groupAssociations
+        }
+        for g in all {
+            _ = g.figureAssociations
+        }
+        for assoc in group.figureAssociations {
+            _ = assoc.figure
+        }
+        context.delete(group)
+        try? context.save()
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertFalse(remaining.contains { $0.group?.name == "Sumerian Pantheon" })
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    func testGroupDeleteRealStoreAutosaveNoManualSave() throws {
+        let live = URL(fileURLWithPath: NSString(string: "~/Library/Application Support/Me/Me.store").expandingTildeInPath)
+        guard FileManager.default.fileExists(atPath: live.path) else {
+            throw XCTSkip("Live store not present — diagnostic test only")
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MeRealStoreAutosave-\(UUID().uuidString).store")
+        try? FileManager.default.copyItem(at: live, to: url)
+        let schema = Schema([
+            Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self,
+            Place.self, PlaceType.self, Event.self, EventType.self,
+            Source.self, Citation.self, AlternateName.self, Attachment.self,
+            ImageAsset.self, Tag.self, DataVersion.self,
+            FigurePlaceAssociation.self, FigurePlaceRoleType.self,
+            PlacePlaceAssociation.self, PlacePlaceRoleType.self,
+            EventEventAssociation.self, EventEventRoleType.self,
+            EventPlaceAssociation.self, EventPlaceRoleType.self,
+            StickyNote.self,
+            Thing.self, ThingType.self,
+            ThingFigureAssociation.self, ThingFigureRoleType.self,
+            ThingPlaceAssociation.self, ThingPlaceRoleType.self,
+            ThingEventAssociation.self, ThingEventRoleType.self,
+            Agent.self, CollectedDatum.self, BlindSpot.self,
+            BlockedSource.self, DictionaryEntry.self,
+            FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
+            Pantheon.self, FigurePantheonAssociation.self
+        ])
+        let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
+        guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
+            XCTFail("Could not open real store copy")
+            return
+        }
+        let context = container.mainContext
+        let all = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let group = all.first(where: { $0.name == "Sumerian Pantheon" }) else {
+            XCTFail("Group not found")
+            return
+        }
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for figure in allFigures {
+            _ = figure.groupAssociations
+        }
+        for g in all {
+            _ = g.figureAssociations
+        }
+        for assoc in group.figureAssociations {
+            _ = assoc.figure
+        }
+        context.delete(group)
+        try? context.save()
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertFalse(remaining.contains { $0.group?.name == "Sumerian Pantheon" })
+        try? FileManager.default.removeItem(at: url)
+    }
+
+    func testGroupDeleteRealStoreExplicitChildDeletion() throws {
+        let live = URL(fileURLWithPath: NSString(string: "~/Library/Application Support/Me/Me.store").expandingTildeInPath)
+        guard FileManager.default.fileExists(atPath: live.path) else {
+            throw XCTSkip("Live store not present — diagnostic test only")
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("MeRealStoreExplicit-\(UUID().uuidString).store")
+        try? FileManager.default.copyItem(at: live, to: url)
+        let schema = Schema([
+            Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self,
+            Place.self, PlaceType.self, Event.self, EventType.self,
+            Source.self, Citation.self, AlternateName.self, Attachment.self,
+            ImageAsset.self, Tag.self, DataVersion.self,
+            FigurePlaceAssociation.self, FigurePlaceRoleType.self,
+            PlacePlaceAssociation.self, PlacePlaceRoleType.self,
+            EventEventAssociation.self, EventEventRoleType.self,
+            EventPlaceAssociation.self, EventPlaceRoleType.self,
+            StickyNote.self,
+            Thing.self, ThingType.self,
+            ThingFigureAssociation.self, ThingFigureRoleType.self,
+            ThingPlaceAssociation.self, ThingPlaceRoleType.self,
+            ThingEventAssociation.self, ThingEventRoleType.self,
+            Agent.self, CollectedDatum.self, BlindSpot.self,
+            BlockedSource.self, DictionaryEntry.self,
+            FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
+            Pantheon.self, FigurePantheonAssociation.self
+        ])
+        let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
+        guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
+            XCTFail("Could not open real store copy")
+            return
+        }
+        let context = container.mainContext
+        let all = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let group = all.first(where: { $0.name == "Sumerian Pantheon" }) else {
+            XCTFail("Group not found")
+            return
+        }
+        for assoc in group.figureAssociations {
+            context.delete(assoc)
+        }
+        context.delete(group)
+        try? context.save()
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertFalse(remaining.contains { $0.group?.name == "Sumerian Pantheon" })
+        try? FileManager.default.removeItem(at: url)
     }
 
     func testGroupReparentTopLevelGroupAfterSave() {
@@ -1392,6 +1828,11 @@ final class MeCoreTests: XCTestCase {
             group.figureAssociations.append(assoc)
         }
         return group
+    }
+
+    private func addSubgroup(_ sub: FigureGroup, to group: FigureGroup) {
+        if group.subgroups == nil { group.subgroups = [] }
+        group.subgroups?.append(sub)
     }
 
     func testSortedAssociationsAlphabeticalByDefault() {
@@ -1489,6 +1930,85 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(group.sortedAssociations.compactMap { $0.figure?.name }, ["A", "C", "B"])
     }
 
+    func testSortedSubgroupsOrderedByOrderIndex() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Page", sortMode: .ordered)
+        context.insert(group)
+        let one = FigureGroup(name: "One", orderIndex: 1)
+        let zero = FigureGroup(name: "Zero", orderIndex: 0)
+        let two = FigureGroup(name: "Two", orderIndex: 2)
+        for sub in [two, zero, one] {
+            context.insert(sub)
+            addSubgroup(sub, to: group)
+        }
+        try? context.save()
+
+        XCTAssertEqual(group.sortedSubgroups.map(\.name), ["Zero", "One", "Two"])
+    }
+
+    func testSortedSubgroupsNameTieBreakWhenNil() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Page", sortMode: .ordered)
+        context.insert(group)
+        // No explicit orderIndex: tie-break by name.
+        let b = FigureGroup(name: "Beta")
+        let a = FigureGroup(name: "Alpha")
+        for sub in [b, a] {
+            context.insert(sub)
+            addSubgroup(sub, to: group)
+        }
+        try? context.save()
+
+        XCTAssertEqual(group.sortedSubgroups.map(\.name), ["Alpha", "Beta"])
+    }
+
+    func testSetSortModeOrderedSeedsSubgroupIndexes() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Page")
+        context.insert(group)
+        let zeta = FigureGroup(name: "Zeta")
+        let alpha = FigureGroup(name: "Alpha")
+        for sub in [zeta, alpha] {
+            context.insert(sub)
+            addSubgroup(sub, to: group)
+        }
+        try? context.save()
+
+        group.setSortMode(.ordered)
+        XCTAssertEqual(group.sortedSubgroups.map(\.name), ["Alpha", "Zeta"])
+        XCTAssertEqual(alpha.orderIndex, 0)
+        XCTAssertEqual(zeta.orderIndex, 1)
+    }
+
+    func testMoveSubgroupSwapsOrder() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Page", sortMode: .ordered)
+        context.insert(group)
+        let a = FigureGroup(name: "A", orderIndex: 0)
+        let b = FigureGroup(name: "B", orderIndex: 1)
+        let c = FigureGroup(name: "C", orderIndex: 2)
+        for sub in [a, b, c] {
+            context.insert(sub)
+            addSubgroup(sub, to: group)
+        }
+        try? context.save()
+
+        // Move C (at index 2) up by one -> [A, C, B]
+        group.moveSubgroup(c, direction: -1)
+        XCTAssertEqual(group.sortedSubgroups.map(\.name), ["A", "C", "B"])
+
+        // Moving top subgroup up is a no-op.
+        group.moveSubgroup(a, direction: -1)
+        XCTAssertEqual(group.sortedSubgroups.map(\.name), ["A", "C", "B"])
+
+        // Renumbering is contiguous after the swap.
+        XCTAssertEqual(group.sortedSubgroups.map(\.orderIndex), [0, 1, 2])
+    }
+
     func testApplyRegnalOrderAcrossEras() {
         let container = makeContainer()
         let context = container.mainContext
@@ -1524,12 +2044,142 @@ final class MeCoreTests: XCTestCase {
                        ["Balih", "Etana", "Meskiag", "Enmerkar"])
     }
 
-    func testRegnalKeyOrdersEventsByDate() {
+    func testGroupTextBlockSpineInterleavesMembersAndText() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter", sortMode: .ordered)
+        context.insert(group)
+        let a = Figure(name: "Alpha")
+        let b = Figure(name: "Beta")
+        context.insert(a); context.insert(b)
+        let ass1 = FigureGroupAssociation(figure: a, orderIndex: 0)
+        let ass2 = FigureGroupAssociation(figure: b, orderIndex: 2)
+        context.insert(ass1); context.insert(ass2)
+        group.figureAssociations.append(ass1); group.figureAssociations.append(ass2)
+        // A prose block sits between member 0 and member 2.
+        let block = GroupTextBlock(title: "Aside", text: "Prose", orderIndex: 1)
+        context.insert(block)
+        group.textBlocks = [block]
+        try? context.save()
+
+        let spine = group.memberTextSpine
+        XCTAssertEqual(spine.count, 3)
+        switch spine[0] { case .member(let m): XCTAssertEqual(m.figure?.name, "Alpha"); case .text: XCTFail("expected member") }
+        switch spine[1] { case .text(let t): XCTAssertEqual(t.title, "Aside"); case .member: XCTFail("expected text") }
+        switch spine[2] { case .member(let m): XCTAssertEqual(m.figure?.name, "Beta"); case .text: XCTFail("expected member") }
+    }
+
+    func testGroupMemberTextSpineMoveRenumbers() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter", sortMode: .ordered)
+        context.insert(group)
+        let a = Figure(name: "Alpha")
+        let b = Figure(name: "Beta")
+        context.insert(a); context.insert(b)
+        let ass1 = FigureGroupAssociation(figure: a, orderIndex: 0)
+        let ass2 = FigureGroupAssociation(figure: b, orderIndex: 2)
+        context.insert(ass1); context.insert(ass2)
+        group.figureAssociations.append(ass1); group.figureAssociations.append(ass2)
+        let block = GroupTextBlock(title: "Aside", text: "Prose", orderIndex: 1)
+        context.insert(block)
+        group.textBlocks = [block]
+        try? context.save()
+
+        // Move the text block up so it precedes Alpha entirely.
+        let item = group.memberTextSpine[1] // text
+        group.moveMemberTextItem(item, direction: -1)
+        XCTAssertEqual(block.orderIndex, 0)
+        XCTAssertEqual(ass1.orderIndex, 1)
+        XCTAssertEqual(ass2.orderIndex, 2)
+        XCTAssertEqual(group.memberTextSpine.compactMap { $0.name },
+                       ["Aside", "Alpha", "Beta"])
+    }
+
+    func testGroupMemberTextSpineMoveToIndex() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter", sortMode: .ordered)
+        context.insert(group)
+        let a = Figure(name: "Alpha")
+        let b = Figure(name: "Beta")
+        let c = Figure(name: "Gamma")
+        context.insert(a); context.insert(b); context.insert(c)
+        let ass1 = FigureGroupAssociation(figure: a, orderIndex: 0)
+        let ass2 = FigureGroupAssociation(figure: b, orderIndex: 1)
+        let ass3 = FigureGroupAssociation(figure: c, orderIndex: 2)
+        context.insert(ass1); context.insert(ass2); context.insert(ass3)
+        group.figureAssociations.append(ass1); group.figureAssociations.append(ass2); group.figureAssociations.append(ass3)
+        try? context.save()
+
+        // Move Alpha (index 0) to the end (index 2).
+        group.moveMemberTextItem(.member(ass1), toIndex: 2)
+        XCTAssertEqual(group.memberTextSpine.compactMap { $0.name }, ["Beta", "Gamma", "Alpha"])
+        XCTAssertEqual([ass2.orderIndex, ass3.orderIndex, ass1.orderIndex], [0, 1, 2])
+
+        // Move Gamma (now index 1) to the front (index 0).
+        group.moveMemberTextItem(.member(ass3), toIndex: 0)
+        XCTAssertEqual(group.memberTextSpine.compactMap { $0.name }, ["Gamma", "Beta", "Alpha"])
+        XCTAssertEqual([ass3.orderIndex, ass2.orderIndex, ass1.orderIndex], [0, 1, 2])
+    }
+
+    func testGroupMemberTextSpineCanMoveUsesSpinePosition() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter", sortMode: .ordered)
+        context.insert(group)
+        let a = Figure(name: "Alpha")
+        let b = Figure(name: "Beta")
+        context.insert(a); context.insert(b)
+        let ass1 = FigureGroupAssociation(figure: a, orderIndex: 0)
+        let ass2 = FigureGroupAssociation(figure: b, orderIndex: 2)
+        context.insert(ass1); context.insert(ass2)
+        group.figureAssociations.append(ass1); group.figureAssociations.append(ass2)
+        let block = GroupTextBlock(title: "Aside", text: "Prose", orderIndex: 1)
+        context.insert(block)
+        group.textBlocks = [block]
+        try? context.save()
+
+        // The text block has spine index 1 (between Alpha and Beta). Even though it's the
+        // ONLY text block (text-only arrows would be disabled), it can move up and down
+        // within the unified spine.
+        XCTAssertEqual(group.memberTextSpine.map { $0.name }, ["Alpha", "Aside", "Beta"])
+        XCTAssertTrue(group.canMoveMemberTextItem(.text(block), direction: -1))
+        XCTAssertTrue(group.canMoveMemberTextItem(.text(block), direction: 1))
+        // First member can't move up (anyshift), last member can't move down.
+        XCTAssertFalse(group.canMoveMemberTextItem(.member(ass1), direction: -1))
+        XCTAssertTrue(group.canMoveMemberTextItem(.member(ass1), direction: 1))
+        XCTAssertFalse(group.canMoveMemberTextItem(.member(ass2), direction: 1))
+        // Out-of-spine items report false.
+        let other = GroupTextBlock(title: "Elsewhere", text: "")
+        context.insert(other)
+        XCTAssertFalse(group.canMoveMemberTextItem(.text(other), direction: -1))
+    }
+
+    func testGroupMemberTextSpineNilOrderDefersByName() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Page", sortMode: .ordered)
+        context.insert(group)
+        let z = Figure(name: "Zed")
+        context.insert(z)
+        let ass = FigureGroupAssociation(figure: z, orderIndex: nil)
+        context.insert(ass)
+        group.figureAssociations.append(ass)
+        let block = GroupTextBlock(title: "Alpha", text: "P", orderIndex: nil)
+        context.insert(block)
+        group.textBlocks = [block]
+        try? context.save()
+
+        // Nil orderIndex ties break by name ("Alpha" < "Zed").
+        XCTAssertEqual(group.memberTextSpine.map { $0.name }, ["Alpha", "Zed"])
+    }
+
+func testRegnalKeyOrdersEventsByDate() {
         let container = makeContainer()
         let context = container.mainContext
         let group = FigureGroup(name: "Events", entityType: .event)
         context.insert(group)
-        // sortValue: negative = earlier (BCE).
         let later = Event(name: "Treaty", date: MythologicalDate(year: -1200))
         let earlier = Event(name: "Foundation", date: MythologicalDate(year: -1500))
         context.insert(later)
@@ -1553,6 +2203,263 @@ final class MeCoreTests: XCTestCase {
         context.insert(assoc)
         try? context.save()
         XCTAssertEqual(assoc.orderIndex, 3)
+    }
+
+    // MARK: - Group aggregation
+
+    func testGroupAggregationCodableRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "First Dynasty of Ur")
+        context.insert(group)
+        group.decodedAggregation = GroupAggregation(
+            operation: .sum,
+            target: .reignYears,
+            label: "Total listed reign"
+        )
+        try? context.save()
+
+        XCTAssertEqual(group.decodedAggregation?.operation, .sum)
+        XCTAssertEqual(group.decodedAggregation?.target, .reignYears)
+        XCTAssertEqual(group.decodedAggregation?.label, "Total listed reign")
+        XCTAssertNotNil(group.aggregationRawValue)
+    }
+
+    func testGroupAggregationBackwardsCompatibleNil() {
+        let group = FigureGroup(name: "Council")
+        XCTAssertNil(group.decodedAggregation)
+        group.decodedAggregation = nil
+        XCTAssertNil(group.aggregationRawValue)
+    }
+
+    func testGroupAggregationSumReignYears() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "First Dynasty of Ur")
+        context.insert(group)
+        let kings = [
+            Figure(name: "Mesannepada", figureDescription: "Reigned 80 years. (Listed reign: 80 years.)"),
+            Figure(name: "Meshkiang-nanna", figureDescription: "Reigned 36 years."),
+            Figure(name: "Elulu", figureDescription: "Reigned 25 years."),
+        ]
+        for king in kings {
+            context.insert(king)
+            let assoc = FigureGroupAssociation(figure: king)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        let agg = GroupAggregation(operation: .sum, target: .reignYears)
+        let result = agg.compute(in: group)
+        XCTAssertEqual(result?.count, 3)
+        XCTAssertEqual(result?.sum, 141)
+        XCTAssertNil(result?.average)
+        XCTAssertEqual(agg.title, "Total listed reign")
+        XCTAssertEqual(agg.formattedValue(for: result!), "141 years")
+    }
+
+    func testGroupAggregationAverageLifespan() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Long-lived Rulers")
+        context.insert(group)
+        let a = Figure(name: "A", birthDate: MythologicalDate(year: -2400), deathDate: MythologicalDate(year: -2300))
+        let b = Figure(name: "B", birthDate: MythologicalDate(year: -2000), deathDate: MythologicalDate(year: -1960))
+        context.insert(a)
+        context.insert(b)
+        for figure in [a, b] {
+            let assoc = FigureGroupAssociation(figure: figure)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        let agg = GroupAggregation(operation: .average, target: .lifespan)
+        let result = agg.compute(in: group)
+        XCTAssertEqual(result?.count, 2)
+        XCTAssertEqual(result?.average ?? 0, 70, accuracy: 0.001)
+        XCTAssertEqual(agg.title, "Average lifespan")
+        XCTAssertEqual(agg.formattedValue(for: result!), "70 years")
+    }
+
+    func testGroupAggregationEventYearSum() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Akkad Battles", entityType: .event)
+        context.insert(group)
+        let events = [
+            Event(name: "Fall of Kish", date: MythologicalDate(year: -2300)),
+            Event(name: "Fall of Uruk", date: MythologicalDate(year: -2100)),
+        ]
+        for event in events {
+            context.insert(event)
+            let assoc = FigureGroupAssociation(event: event)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        let agg = GroupAggregation(operation: .sum, target: .eventYear)
+        let result = agg.compute(in: group)
+        XCTAssertEqual(result?.sum, -4400)
+        XCTAssertEqual(agg.formattedValue(for: result!), "4,400 BCE")
+        XCTAssertEqual(agg.title, "Total event date")
+    }
+
+    func testGroupAggregationIgnoresMissingData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Kings")
+        context.insert(group)
+        let withReign = Figure(name: "Meskiag", figureDescription: "Reigned 900 years.")
+        let withoutReign = Figure(name: "Naram-Sin", figureDescription: "Ruled c. 2255–2218 BC.")
+        context.insert(withReign)
+        context.insert(withoutReign)
+        for figure in [withReign, withoutReign] {
+            let assoc = FigureGroupAssociation(figure: figure)
+            context.insert(assoc)
+            group.figureAssociations.append(assoc)
+        }
+        try? context.save()
+
+        let agg = GroupAggregation(operation: .sum, target: .reignYears)
+        let result = agg.compute(in: group)
+        XCTAssertEqual(result?.count, 1)
+        XCTAssertEqual(result?.sum, 900)
+        XCTAssertNil(GroupAggregation(operation: .sum, target: .reignSpan).compute(in: group))
+    }
+
+    func testGroupAggregationNoDataReturnsNil() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Empty")
+        context.insert(group)
+        let figure = Figure(name: "Nobody", figureDescription: "No reign recorded.")
+        context.insert(figure)
+        let assoc = FigureGroupAssociation(figure: figure)
+        context.insert(assoc)
+        group.figureAssociations.append(assoc)
+        try? context.save()
+
+        XCTAssertNil(GroupAggregation(operation: .sum, target: .reignYears).compute(in: group))
+    }
+
+    func testGroupAggregationCustomLabelWins() {
+        let agg = GroupAggregation(operation: .sum, target: .reignYears, label: "Dynasty total")
+        XCTAssertEqual(agg.title, "Dynasty total")
+    }
+
+    // MARK: - Figure reign duration (reignYears)
+
+    func testReignLengthParsesListedReignSuffix() {
+        XCTAssertEqual(ReignLength.parse(from: "…place him in Eridu and assign a reign to him lasting tens of thousands of years. (Listed reign: 28,800 years.)")?.years, 28800)
+        XCTAssertEqual(ReignLength.parse(from: "…(Listed reign: 1,200 years.)")?.years, 1200)
+    }
+
+    func testReignLengthParsesLowercaseAndAroundVariants() {
+        XCTAssertEqual(ReignLength.parse(from: "he reigned for around 670 years according to some versions")?.years, 670)
+        XCTAssertEqual(ReignLength.parse(from: "he reigned for 25 years.")?.years, 25)
+        XCTAssertEqual(ReignLength.parse(from: "He was said to have reigned for 18,600 years (5 sars and 1 ner).")?.years, 18600)
+        XCTAssertEqual(ReignLength.parse(from: "Ruler from the First dynasty of Kish. Reigned 840 years (mythological length).")?.years, 840)
+    }
+
+    func testReignLengthParsesNone() {
+        XCTAssertNil(ReignLength.parse(from: "No reign recorded."))
+        XCTAssertNil(ReignLength.parse(from: "Ruled c. 2255–2218 BC."))
+    }
+
+    func testEnsureReignYearsBackfillsFromDescription() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let a = Figure(name: "Kullassina-bel", figureDescription: "…(Listed reign: 960 years.)")
+        let b = Figure(name: "En-men-gal-ana", figureDescription: "…ruled for 28,800 years…")
+        let c = Figure(name: "Naram-Sin", figureDescription: "Ruled c. 2255–2218 BC.")
+        context.insert(a)
+        context.insert(b)
+        context.insert(c)
+        try? context.save()
+
+        Migration.ensureReignYears(context: context)
+        XCTAssertEqual(a.reignYears, 960)
+        XCTAssertEqual(b.reignYears, 28800)
+        XCTAssertNil(c.reignYears)
+    }
+
+    func testEnsureReignYearsDoesNotOverwrite() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Mesannepada", figureDescription: "Reigned 80 years. (Listed reign: 80 years.)")
+        figure.reignYears = 9999  // user-entered value
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureReignYears(context: context)
+        XCTAssertEqual(figure.reignYears, 9999)
+    }
+
+    func testGroupAggregationPrefersReignYearsField() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Dynasty")
+        context.insert(group)
+        let figure = Figure(name: "Mesannepada", figureDescription: "Reigned 80 years.")
+        figure.reignYears = 120  // field wins over the parseable description
+        context.insert(figure)
+        let assoc = FigureGroupAssociation(figure: figure)
+        context.insert(assoc)
+        group.figureAssociations.append(assoc)
+        try? context.save()
+
+        let result = GroupAggregation(operation: .sum, target: .reignYears).compute(in: group)
+        XCTAssertEqual(result?.sum, 120)
+    }
+
+    // MARK: - Figure epithet
+
+    func testEnsureEpithetsBackfillsFromDoubleQuotedProse() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Etana", figureDescription: "Etana was the thirteenth king of Kish. Epithet: ''\"the shepherd who ascended to heaven\"''.")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureEpithets(context: context)
+        XCTAssertEqual(figure.epithet, "the shepherd who ascended to heaven")
+    }
+
+    func testEnsureEpithetsBackfillsFromSingleQuotedProse() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Nergal", figureDescription: "Patron of Kutha. Epithet: 'the one who comes forth from Meslam'.")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureEpithets(context: context)
+        XCTAssertEqual(figure.epithet, "the one who comes forth from Meslam")
+    }
+
+    func testEnsureEpithetsDoesNotOverwrite() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Etana", figureDescription: "Epithet: ''\"the boatman\"''.")
+        figure.epithet = "user entered epithet"
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureEpithets(context: context)
+        XCTAssertEqual(figure.epithet, "user entered epithet")
+    }
+
+    func testEnsureEpithetsIgnoresFiguresWithoutEpithetProse() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Marduk", figureDescription: "No epithet mentioned here.")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureEpithets(context: context)
+        XCTAssertNil(figure.epithet)
     }
 
     func testFromTextSubjectOnly() {
@@ -1956,5 +2863,120 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(decoded.createdFigureNames, record.createdFigureNames)
         XCTAssertEqual(decoded.relationships, record.relationships)
         XCTAssertEqual(decoded.placeLinks, record.placeLinks)
+    }
+
+    // MARK: - Pantheon
+
+    func testPantheonDefaults() {
+        let pantheon = Pantheon(name: "Mesopotamian")
+        XCTAssertEqual(pantheon.icon, "building.columns.circle.fill")
+        XCTAssertEqual(pantheon.colorHex, "8E8E93")
+        XCTAssertEqual(pantheon.figures.count, 0)
+    }
+
+    func testPantheonFigureManyToMany() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let meso = Pantheon(name: "Mesopotamian")
+        let greek = Pantheon(name: "Greek")
+        context.insert(meso)
+        context.insert(greek)
+        let enki = Figure(name: "Enki")
+        let marduk = Figure(name: "Marduk")
+        context.insert(enki)
+        context.insert(marduk)
+        try? context.save()
+
+        enki.pantheons.append(meso)
+        enki.pantheons.append(greek)
+        marduk.pantheons.append(meso)
+        try? context.save()
+
+        XCTAssertEqual(meso.figures.count, 2)
+        XCTAssertEqual(greek.figures.count, 1)
+        XCTAssertTrue((enki.pantheons.contains { $0.name == "Mesopotamian" }))
+        XCTAssertTrue((enki.pantheons.contains { $0.name == "Greek" }))
+        XCTAssertTrue((marduk.pantheons.contains { $0.name == "Mesopotamian" }))
+    }
+
+    func testGroupMemberFilterMatchesPantheon() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let meso = Pantheon(name: "Mesopotamian")
+        let greek = Pantheon(name: "Greek")
+        context.insert(meso)
+        context.insert(greek)
+        let enki = Figure(name: "Enki")
+        let marduk = Figure(name: "Marduk")
+        context.insert(enki)
+        context.insert(marduk)
+        try? context.save()
+        enki.pantheons.append(meso)
+        marduk.pantheons.append(greek)
+        try? context.save()
+
+        let filter = GroupMemberFilter(pantheonNames: ["Mesopotamian"])
+        XCTAssertTrue(filter.matches(enki))
+        XCTAssertFalse(filter.matches(marduk))
+    }
+
+    func testGroupMemberFilterPantheonSummary() {
+        let filter = GroupMemberFilter(pantheonNames: ["Mesopotamian", "Greek"])
+        XCTAssertTrue(filter.summary.contains("Pantheon: Mesopotamian, Greek"))
+    }
+
+    func testEnsureMesopotamianPantheonsMigration() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let enki = Figure(name: "Enki")
+        let marduk = Figure(name: "Marduk")
+        context.insert(enki)
+        context.insert(marduk)
+        try? context.save()
+
+        Migration.ensureMesopotamianPantheons(context: context)
+
+        let pantheons = (try? context.fetch(FetchDescriptor<Pantheon>())) ?? []
+        XCTAssertEqual(pantheons.count, 1)
+        XCTAssertEqual(pantheons.first?.name, "Mesopotamian")
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for figure in figures {
+            XCTAssertEqual(figure.pantheons.count, 1)
+            XCTAssertEqual(figure.pantheons.first?.name, "Mesopotamian")
+        }
+    }
+
+    func testEnsureMesopotamianPantheonsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let enki = Figure(name: "Enki")
+        context.insert(enki)
+        try? context.save()
+
+        Migration.ensureMesopotamianPantheons(context: context)
+        Migration.ensureMesopotamianPantheons(context: context)
+
+        let pantheons = (try? context.fetch(FetchDescriptor<Pantheon>())) ?? []
+        XCTAssertEqual(pantheons.count, 1)
+        XCTAssertEqual(enki.pantheons.count, 1)
+    }
+
+    func testEnsureMesopotamianPantheonsKeepsExistingMembership() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let meso = Pantheon(name: "Mesopotamian")
+        let greek = Pantheon(name: "Greek")
+        context.insert(meso)
+        context.insert(greek)
+        let enki = Figure(name: "Enki")
+        context.insert(enki)
+        try? context.save()
+        enki.pantheons.append(greek)
+        try? context.save()
+
+        Migration.ensureMesopotamianPantheons(context: context)
+
+        XCTAssertEqual(enki.pantheons.count, 1)
+        XCTAssertEqual(enki.pantheons.first?.name, "Greek", "figures with existing membership are not reassigned")
     }
 }
