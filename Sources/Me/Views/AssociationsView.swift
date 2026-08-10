@@ -127,24 +127,31 @@ struct AssociationsView: View {
             if relationships.isEmpty {
                 emptyState("No figure relationships", "Add family connections between figures.")
             } else {
-                List(relationships) { rel in
-                    HStack(spacing: 10) {
-                        Text(rel.fromFigure?.name ?? "?").fontWeight(.medium)
-                        Image(systemName: rel.relationshipType?.icon ?? "questionmark").font(.caption).foregroundStyle(rel.relationshipType?.color ?? .gray)
-                        Text(rel.relationshipType?.name ?? "").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 3).fill((rel.relationshipType?.color ?? .gray).opacity(0.12)))
-                        Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
-                        Text(rel.toFigure?.name ?? "?").fontWeight(.medium)
-                        Spacer()
-                        Text(rel.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingRelationship = rel })
-                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: {
-                            relToDelete = rel
-                            showDeleteRelConfirm = true
-                        })
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(relationships.enumerated()), id: \.element.id) { index, rel in
+                            HStack(spacing: 10) {
+                                Text(rel.fromFigure?.name ?? "?").fontWeight(.medium)
+                                Image(systemName: rel.relationshipType?.icon ?? "questionmark").font(.caption).foregroundStyle(rel.relationshipType?.color ?? .gray)
+                                Text(rel.relationshipType?.name ?? "").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill((rel.relationshipType?.color ?? .gray).opacity(0.12)))
+                                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
+                                Text(rel.toFigure?.name ?? "?").fontWeight(.medium)
+                                Spacer()
+                                Text(rel.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingRelationship = rel })
+                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: {
+                                    relToDelete = rel
+                                    showDeleteRelConfirm = true
+                                })
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .alternatingRowBackground(index: index)
+                            Divider()
+                        }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
     }
@@ -156,22 +163,29 @@ struct AssociationsView: View {
             if figurePlaceAssocs.isEmpty {
                 emptyState("No figure-place associations", "Add patron deity, ruler, or other connections.")
             } else {
-                List(figurePlaceAssocs) { assoc in
-                    HStack(spacing: 10) {
-                        Circle().fill(assoc.figure?.figureType?.color ?? .gray).frame(width: 8, height: 8)
-                        Text(assoc.displayName.map { "\(assoc.figure?.name ?? "?") as \($0)" } ?? (assoc.figure?.name ?? "?")).fontWeight(.medium)
-                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.teal.opacity(0.12)))
-                        Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
-                        Image(systemName: assoc.place?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
-                        Text(assoc.place?.name ?? "?").fontWeight(.medium)
-                        Spacer()
-                        Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingFigurePlaceAssoc = assoc })
-                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(figurePlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
+                            HStack(spacing: 10) {
+                                Circle().fill(assoc.figure?.figureType?.color ?? .gray).frame(width: 8, height: 8)
+                                Text(assoc.displayName.map { "\(assoc.figure?.name ?? "?") as \($0)" } ?? (assoc.figure?.name ?? "?")).fontWeight(.medium)
+                                Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.teal.opacity(0.12)))
+                                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
+                                Image(systemName: assoc.place?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
+                                Text(assoc.place?.name ?? "?").fontWeight(.medium)
+                                Spacer()
+                                Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingFigurePlaceAssoc = assoc })
+                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: { Task { @MainActor in modelContext.delete(assoc) } })
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .alternatingRowBackground(index: index)
+                            Divider()
+                        }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
     }
@@ -183,22 +197,29 @@ struct AssociationsView: View {
             if placePlaceAssocs.isEmpty {
                 emptyState("No place-place associations", "Add containment or proximity relationships.")
             } else {
-                List(placePlaceAssocs) { assoc in
-                    HStack(spacing: 10) {
-                        Image(systemName: assoc.fromPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
-                        Text(assoc.fromPlace?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.green.opacity(0.12)))
-                        Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
-                        Image(systemName: assoc.toPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
-                        Text(assoc.toPlace?.name ?? "?").fontWeight(.medium)
-                        Spacer()
-                        Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingPlacePlaceAssoc = assoc })
-                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(placePlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
+                            HStack(spacing: 10) {
+                                Image(systemName: assoc.fromPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
+                                Text(assoc.fromPlace?.name ?? "?").fontWeight(.medium)
+                                Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.green.opacity(0.12)))
+                                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
+                                Image(systemName: assoc.toPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
+                                Text(assoc.toPlace?.name ?? "?").fontWeight(.medium)
+                                Spacer()
+                                Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingPlacePlaceAssoc = assoc })
+                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: { Task { @MainActor in modelContext.delete(assoc) } })
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .alternatingRowBackground(index: index)
+                            Divider()
+                        }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
     }
@@ -210,22 +231,29 @@ struct AssociationsView: View {
             if eventPlaceAssocs.isEmpty {
                 emptyState("No event-place associations", "Add location associations to events.")
             } else {
-                List(eventPlaceAssocs) { assoc in
-                    HStack(spacing: 10) {
-                        Image(systemName: assoc.event?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.event?.eventType?.color ?? .gray)
-                        Text(assoc.event?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.indigo.opacity(0.12)))
-                        Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
-                        Image(systemName: assoc.place?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
-                        Text(assoc.place?.name ?? "?").fontWeight(.medium)
-                        Spacer()
-                        Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingEventPlaceAssoc = assoc })
-                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(eventPlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
+                            HStack(spacing: 10) {
+                                Image(systemName: assoc.event?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.event?.eventType?.color ?? .gray)
+                                Text(assoc.event?.name ?? "?").fontWeight(.medium)
+                                Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.indigo.opacity(0.12)))
+                                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
+                                Image(systemName: assoc.place?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
+                                Text(assoc.place?.name ?? "?").fontWeight(.medium)
+                                Spacer()
+                                Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingEventPlaceAssoc = assoc })
+                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: { Task { @MainActor in modelContext.delete(assoc) } })
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .alternatingRowBackground(index: index)
+                            Divider()
+                        }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
     }
@@ -237,22 +265,29 @@ struct AssociationsView: View {
             if eventEventAssocs.isEmpty {
                 emptyState("No event-event associations", "Add causal or sequential links between events.")
             } else {
-                List(eventEventAssocs) { assoc in
-                    HStack(spacing: 10) {
-                        Image(systemName: assoc.fromEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.fromEvent?.eventType?.color ?? .gray)
-                        Text(assoc.fromEvent?.name ?? "?").fontWeight(.medium)
-                        Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(RoundedRectangle(cornerRadius: 3).fill(Color.orange.opacity(0.12)))
-                        Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
-                        Image(systemName: assoc.toEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.toEvent?.eventType?.color ?? .gray)
-                        Text(assoc.toEvent?.name ?? "?").fontWeight(.medium)
-                        Spacer()
-                        Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
-                        IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingEventEventAssoc = assoc })
-                        IconActionButton(icon: "trash", color: .red, help: "Delete", action: { modelContext.delete(assoc) })
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(eventEventAssocs.enumerated()), id: \.element.id) { index, assoc in
+                            HStack(spacing: 10) {
+                                Image(systemName: assoc.fromEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.fromEvent?.eventType?.color ?? .gray)
+                                Text(assoc.fromEvent?.name ?? "?").fontWeight(.medium)
+                                Text(assoc.roleType?.name ?? "—").font(.caption).padding(.horizontal, 5).padding(.vertical, 2)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.orange.opacity(0.12)))
+                                Image(systemName: "arrow.right").font(.caption2).foregroundStyle(.tertiary)
+                                Image(systemName: assoc.toEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.toEvent?.eventType?.color ?? .gray)
+                                Text(assoc.toEvent?.name ?? "?").fontWeight(.medium)
+                                Spacer()
+                                Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
+                                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingEventEventAssoc = assoc })
+                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: { Task { @MainActor in modelContext.delete(assoc) } })
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .alternatingRowBackground(index: index)
+                            Divider()
+                        }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
     }

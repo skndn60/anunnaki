@@ -128,8 +128,8 @@ struct DictionaryListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedEntryID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedEntryID)
         .sheet(isPresented: $showingAddSheet) {
             DictionaryFormView(entry: nil) { newEntry in
                 modelContext.insert(newEntry)

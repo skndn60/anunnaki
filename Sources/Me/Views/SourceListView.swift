@@ -78,8 +78,8 @@ struct SourceListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedSourceID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedSourceID)
         .sheet(isPresented: $showingAddSheet) {
             SourceFormView(source: nil)
         }

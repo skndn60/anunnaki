@@ -64,7 +64,7 @@ struct PlaceListView: View {
             }
         }
         .sorted { $0.key < $1.key }
-        .map { (key: $0.key, places: $0.value) }
+        .map { (key: $0.key, places: $0.value.sorted { effectiveSortName($0) < effectiveSortName($1) }) }
     }
 
     private func selectPlace(_ id: PersistentIdentifier) {
@@ -147,8 +147,9 @@ struct PlaceListView: View {
                         .listStyle(.inset(alternatesRowBackgrounds: true))
                         .onChange(of: selectedPlaceID) { _, newValue in
                             if let id = newValue {
-                                selectPlace(id)
-                                withAnimation { Task { @MainActor in proxy.scrollTo(id, anchor: .center) } }
+                                DispatchQueue.main.async {
+                                    proxy.scrollTo(id, anchor: .center)
+                                }
                             }
                         }
                     }
@@ -193,8 +194,8 @@ struct PlaceListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedPlaceID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedPlaceID)
         .sheet(isPresented: $showingAddSheet) {
             PlaceFormView(place: nil)
         }
@@ -239,7 +240,9 @@ struct PlaceListView: View {
     private func consumePendingNavigation() {
         guard let id = coordinator?.consumePendingPlaceID() else { return }
         if places.contains(where: { $0.persistentModelID == id }) {
-            selectPlace(id)
+            Task { @MainActor in
+                selectPlace(id)
+            }
         }
     }
 

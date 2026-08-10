@@ -79,8 +79,8 @@ struct EraListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedEraID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedEraID)
         .sheet(isPresented: $showingAddSheet) {
             EraFormView(era: nil)
         }

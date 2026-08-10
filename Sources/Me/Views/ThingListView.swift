@@ -17,7 +17,6 @@ struct ThingListView: View {
     @State private var associationToDelete: (any PersistentModel)?
     @State private var showDeleteAssociationConfirm = false
     @State private var imageDetailImage: ImageAsset?
-    @State private var searchText = ""
     @State private var selectedTypeFilters: Set<String> = []
     @State private var sortOrder: ThingSortOrder = .name
     @Query(sort: \ThingType.name) private var thingTypes: [ThingType]
@@ -35,14 +34,6 @@ struct ThingListView: View {
         if !selectedTypeFilters.isEmpty {
             result = result.filter { selectedTypeFilters.contains($0.thingType?.name ?? "") }
         }
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
-            result = result.filter {
-                $0.name.lowercased().contains(query) ||
-                $0.thingDescription.lowercased().contains(query) ||
-                $0.source.lowercased().contains(query)
-            }
-        }
         switch sortOrder {
         case .name: result.sort { sortName(for: $0.name) < sortName(for: $1.name) }
         case .source: result.sort { $0.source < $1.source }
@@ -58,7 +49,7 @@ struct ThingListView: View {
             }
         }
         .sorted { $0.key < $1.key }
-        .map { (key: $0.key, things: $0.value) }
+        .map { (key: $0.key, things: $0.value.sorted { sortName(for: $0.name) < sortName(for: $1.name) }) }
     }
 
     private var selectedThing: Thing? {
@@ -79,21 +70,6 @@ struct ThingListView: View {
                         }
                     }
                     .frame(width: 120)
-                    TextField("🔍 Search", text: $searchText)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 200)
-                        .overlay(alignment: .trailing) {
-                            if !searchText.isEmpty {
-                                Button(action: { searchText = "" }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.trailing, 6)
-                                .help("Clear search")
-                            }
-                        }
                     Button(action: { showingAddSheet = true }) {
                         Label("Add Thing", systemImage: "plus")
                     }
@@ -163,6 +139,7 @@ struct ThingListView: View {
                             thingGroupSection(group)
                         }
                     }
+                    .listStyle(.inset(alternatesRowBackgrounds: true))
                     .frame(minWidth: 450, maxWidth: .infinity)
                 }
             }
@@ -200,8 +177,8 @@ struct ThingListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedThingID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedThingID)
         .sheet(isPresented: $showingAddSheet) {
             ThingFormView(thing: nil)
         }
@@ -273,7 +250,9 @@ struct ThingListView: View {
 
     private func consumePendingNavigation() {
         guard let id = coordinator?.consumePendingThingID() else { return }
-        selectedThingID = id
+        Task { @MainActor in
+            selectedThingID = id
+        }
     }
 
     private func typeFilterButton(_ type: ThingType) -> some View {

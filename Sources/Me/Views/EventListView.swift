@@ -48,7 +48,7 @@ struct EventListView: View {
             result = result.filter { selectedTypeFilters.contains($0.eventType?.name ?? "") }
         }
         switch sortOrder {
-        case .name: return result.sorted { sortName(for: $0.name) < sortName(for: $1.name) }
+        case .name: return result.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }
         case .type: return result.sorted { $0.eventType?.name ?? "" < $1.eventType?.name ?? "" }
         case .date: return result.sorted { $0.date.sortValue < $1.date.sortValue }
         }
@@ -63,7 +63,7 @@ struct EventListView: View {
             }
         }
         .sorted { $0.key < $1.key }
-        .map { (key: $0.key, events: $0.value) }
+        .map { (key: $0.key, events: $0.value.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }) }
     }
 
     private func selectEvent(_ id: PersistentIdentifier) {
@@ -146,8 +146,9 @@ struct EventListView: View {
                         .listStyle(.inset(alternatesRowBackgrounds: true))
                         .onChange(of: selectedEventID) { _, newValue in
                             if let id = newValue {
-                                selectEvent(id)
-                                withAnimation { Task { @MainActor in proxy.scrollTo(id, anchor: .center) } }
+                                DispatchQueue.main.async {
+                                    proxy.scrollTo(id, anchor: .center)
+                                }
                             }
                         }
                     }
@@ -188,8 +189,8 @@ struct EventListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedEventID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedEventID)
         .sheet(isPresented: $showingAddSheet) {
             EventFormView(event: nil)
         }
@@ -234,7 +235,9 @@ struct EventListView: View {
     private func consumePendingNavigation() {
         guard let id = coordinator?.consumePendingEventID() else { return }
         if events.contains(where: { $0.persistentModelID == id }) {
-            selectEvent(id)
+            Task { @MainActor in
+                selectEvent(id)
+            }
         }
     }
 

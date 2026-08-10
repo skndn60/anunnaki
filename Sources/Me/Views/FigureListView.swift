@@ -8,10 +8,10 @@ struct FigureListView: View {
     @Environment(\.openWindow) private var openWindow
     @Query private var figures: [Figure]
     @Query private var figureTypes: [FigureType]
+    @Query private var allGroups: [FigureGroup]
     @State private var showingAddSheet = false
     @State private var editingFigure: Figure?
     @State private var selectedFigureID: PersistentIdentifier?
-    @State private var searchText = ""
     @State private var sortOrder: FigureSortOrder = .name
     @State private var imageDetailImage: ImageAsset?
     @State private var showDeleteConfirm = false
@@ -19,12 +19,27 @@ struct FigureListView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var selectedDynastyGroup: FigureGroup?
     @AppStorage("figureDetailWidth") private var detailWidth: Double = 320
 
     enum FigureSortOrder: String, CaseIterable {
         case name = "Name"
         case type = "Type"
         case domain = "Domain"
+    }
+
+    /// The dynasties available in the dropdown: the direct subgroups of the Sumerian King List group(s).
+    private var dynasties: [FigureGroup] {
+        allGroups
+            .filter { $0.kind == .skl }
+            .flatMap { $0.subgroups ?? [] }
+            .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
+    }
+
+    /// IDs of the figures that should be drawn red (members of the selected dynasty).
+    private var redFigureIDs: Set<PersistentIdentifier> {
+        guard let selected = selectedDynastyGroup else { return [] }
+        return Set(selected.figureAssociations.compactMap { $0.figure?.persistentModelID })
     }
 
     private var selectedFigure: Figure? {
@@ -36,16 +51,6 @@ struct FigureListView: View {
         var result = figures
         if !selectedTypeFilters.isEmpty {
             result = result.filter { selectedTypeFilters.contains($0.figureType?.name ?? "") }
-        }
-        if !searchText.isEmpty {
-            let query = searchText.lowercased()
-            result = result.filter {
-                $0.name.lowercased().contains(query) ||
-                $0.title.lowercased().contains(query) ||
-                $0.domain.lowercased().contains(query) ||
-                ($0.figureType?.name ?? "").lowercased().contains(query) ||
-                $0.alternateNames.contains { $0.name.lowercased().contains(query) }
-            }
         }
         switch sortOrder {
         case .name: result.sort { sortName(for: $0.name) < sortName(for: $1.name) }
@@ -64,7 +69,7 @@ struct FigureListView: View {
             }
         }
         .sorted { $0.key < $1.key }
-        .map { (key: $0.key, figures: $0.value) }
+        .map { (key: $0.key, figures: $0.value.sorted { sortName(for: $0.name) < sortName(for: $1.name) }) }
     }
 
     private func selectFigure(_ id: PersistentIdentifier) {
@@ -79,27 +84,20 @@ struct FigureListView: View {
                     Text("Figures")
                         .font(.title2.bold())
                     Spacer()
+                    Picker("Highlight dynasty", selection: $selectedDynastyGroup) {
+                        Text("None").tag(FigureGroup?.none)
+                        ForEach(dynasties) { dynasty in
+                            Text(dynasty.name).tag(dynasty as FigureGroup?)
+                        }
+                    }
+                    .frame(width: 180)
+                    .help("Select a dynasty to draw its rulers red in this list.")
                     Picker("Sort", selection: $sortOrder) {
                         ForEach(FigureSortOrder.allCases, id: \.self) { order in
                             Text(order.rawValue).tag(order)
                         }
                     }
                     .frame(width: 130)
-                    TextField("🔍 Search", text: $searchText)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 200)
-                        .overlay(alignment: .trailing) {
-                            if !searchText.isEmpty {
-                                Button(action: { searchText = "" }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.trailing, 6)
-                                .help("Clear filter")
-                            }
-                        }
                     Button(action: { showingAddSheet = true }) {
                         Label("Add Figure", systemImage: "plus")
                     }
@@ -150,7 +148,7 @@ struct FigureListView: View {
                             Image(systemName: "magnifyingglass")
                                 .font(.system(size: 36))
                                 .foregroundStyle(.tertiary)
-                            Text("No results for \"\(searchText)\"")
+                            Text("No figures to display")
                                 .font(.callout)
                                 .foregroundStyle(.secondary)
                         }
@@ -167,9 +165,8 @@ struct FigureListView: View {
                         .listStyle(.inset(alternatesRowBackgrounds: true))
                         .onChange(of: selectedFigureID) { _, newValue in
                             if let id = newValue {
-                                selectFigure(id)
-                                Task { @MainActor in
-                                    withAnimation { proxy.scrollTo(id, anchor: .center) }
+                                DispatchQueue.main.async {
+                                    proxy.scrollTo(id, anchor: .center)
                                 }
                             }
                         }
@@ -221,8 +218,8 @@ struct FigureListView: View {
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
         }
-        .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
         .sheet(isPresented: $showingAddSheet) {
             FigureFormView(figure: nil)
         }
@@ -267,7 +264,9 @@ struct FigureListView: View {
     private func consumePendingNavigation() {
         guard let id = coordinator?.consumePendingFigureID() else { return }
         if figures.contains(where: { $0.persistentModelID == id }) {
-            selectFigure(id)
+            Task { @MainActor in
+                selectFigure(id)
+            }
         }
     }
 
@@ -304,7 +303,7 @@ struct FigureListView: View {
     private func figureGroupSection(_ group: (key: String, figures: [Figure])) -> some View {
         Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
             ForEach(group.figures) { figure in
-                FigureRow(figure: figure, searchText: searchText)
+                FigureRow(figure: figure, isRed: redFigureIDs.contains(figure.persistentModelID))
                     .tag(figure.persistentModelID)
                     .id(figure.persistentModelID)
             }
@@ -315,18 +314,16 @@ struct FigureListView: View {
         if selectedFigureID == figure.persistentModelID {
             selectedFigureID = nil
         }
-        withAnimation { modelContext.delete(figure) }
+        Task { @MainActor in
+            modelContext.delete(figure)
+        }
     }
 }
 
 /// A single row in the figures list.
 struct FigureRow: View {
     let figure: Figure
-    var searchText: String = ""
-
-    private var matchedAlias: String? {
-        figure.matchedAlternateName(for: searchText)
-    }
+    var isRed: Bool = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -357,12 +354,8 @@ struct FigureRow: View {
                 .frame(width: 14)
             VStack(alignment: .leading, spacing: 0) {
                 Text(figure.name)
-                    .fontWeight(.medium)
-                if let matchedAlias {
-                    Text("as \(matchedAlias)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                    .fontWeight(isRed ? .bold : .medium)
+                    .foregroundStyle(isRed ? .red : .primary)
                 if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
                     Text(disambiguation)
                         .font(.caption)
@@ -388,12 +381,6 @@ struct FigureRow: View {
                     .padding(.horizontal, 4)
                     .padding(.vertical, 1)
                     .background(RoundedRectangle(cornerRadius: 3).fill(.orange.opacity(0.12)))
-            }
-            if let alias = matchedAlias {
-                Text("aka \(alias)")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .fontWeight(.medium)
             }
             if figure.stickies.contains(where: { !$0.isResolved }) {
                 Circle()

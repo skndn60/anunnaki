@@ -111,25 +111,22 @@ struct RelationshipListView: View {
                 }
                 .frame(maxWidth: .infinity)
             } else {
-                List {
-                    ForEach(filteredRelationships) { rel in
-                        RelationshipRowView(
-                            relationship: rel,
-                            onEdit: { editingRelationship = rel },
-                            onDelete: {
-                                relToDelete = rel
-                                showDeleteConfirm = true
-                            }
-                        )
-                    }
-                    .onDelete { indexSet in
-                        if let index = indexSet.first {
-                            relToDelete = filteredRelationships[index]
-                            showDeleteConfirm = true
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(filteredRelationships.enumerated()), id: \.element.id) { index, rel in
+                            RelationshipRowView(
+                                relationship: rel,
+                                onEdit: { editingRelationship = rel },
+                                onDelete: {
+                                    relToDelete = rel
+                                    showDeleteConfirm = true
+                                }
+                            )
+                            .alternatingRowBackground(index: index)
+                            Divider()
                         }
                     }
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
             }
         }
         .sheet(isPresented: $showingAddSheet) {
@@ -162,8 +159,10 @@ struct RelationshipRowView: View {
         HStack(spacing: 10) {
             if isPreferred {
                 Button(action: {
-                    relationship.isPreferred = false
-                    try? modelContext.save()
+                    Task { @MainActor in
+                        relationship.isPreferred = false
+                        try? modelContext.save()
+                    }
                 }) {
                     Image(systemName: "star.fill")
                         .font(.system(size: 9))
@@ -199,6 +198,8 @@ struct RelationshipRowView: View {
             IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: onEdit)
             IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
         }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
 
     }
 }
