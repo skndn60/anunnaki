@@ -250,7 +250,8 @@ struct LineageTreeView: View {
         }
 
         if generationsBelow > 0 {
-            collectDescendants(of: center, currentGen: 0, maxGen: generationsBelow, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
+            var slotOwner: [PersistentIdentifier: String] = [center.persistentModelID: centerEntry.id]
+            collectDescendants(of: center, currentGen: 0, maxGen: generationsBelow, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures, slotOwner: &slotOwner)
         }
 
         let levels = levelsMap.sorted(by: { $0.key < $1.key }).map(\.value)
@@ -270,18 +271,17 @@ struct LineageTreeView: View {
         let childID = idFor(figure, gen: currentGen)
 
         if rels.isEmpty {
-            for placeholder in [(name: "Unknown Father", gender: Figure.Gender.male), (name: "Unknown Mother", gender: Figure.Gender.female)] {
-                let parentID = "\(placeholder.name)@\(nextGen)"
-                if entries[parentID] != nil {
-                    parentToChild[parentID, default: []].append(childID)
-                    continue
-                }
-                let placeholderFig = Figure(name: placeholder.name, gender: placeholder.gender)
-                let entry = TreeEntry(primary: placeholderFig, partner: nil, altPartnerCount: 0, generation: nextGen)
+            // No parents defined at all: render a single Unknown couple so the
+            // child centers under the midpoint between them (not per-card).
+            let parentID = "Unknown Father@\(nextGen)"
+            if entries[parentID] == nil {
+                let fatherFig = Figure(name: "Unknown Father", gender: .male)
+                let motherFig = Figure(name: "Unknown Mother", gender: .female)
+                let entry = TreeEntry(primary: fatherFig, partner: motherFig, altPartnerCount: 0, generation: nextGen)
                 entries[parentID] = entry
                 levelsMap[nextGen, default: []].append(entry)
-                parentToChild[parentID, default: []].append(childID)
             }
+            parentToChild[parentID, default: []].append(childID)
             return
         }
 
@@ -327,21 +327,37 @@ struct LineageTreeView: View {
             collectAncestors(of: parentFig, currentGen: nextGen, maxGen: maxGen, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
         }
 
-        if !knownRelationTypes.contains("Father") {
+        let missingPlaceholder: (name: String, gender: Figure.Gender)?
+        if let fatherFig = grouped["Father"]?.first?.fromFigure, !knownRelationTypes.contains("Mother") {
+            missingPlaceholder = ("Unknown Mother", .female)
+        } else if let motherFig = grouped["Mother"]?.first?.fromFigure, !knownRelationTypes.contains("Father") {
+            missingPlaceholder = ("Unknown Father", .male)
+        } else {
+            missingPlaceholder = nil
+        }
+
+        if let placeholder = missingPlaceholder {
+            // Attach the missing parent as a partner of the known parent, mirroring
+            // the descendant-side behavior so the parents render as a single couple.
+            if let knownFig = placeholder.gender == .female ? grouped["Father"]?.first?.fromFigure : grouped["Mother"]?.first?.fromFigure {
+                let knownID = idFor(knownFig, gen: nextGen)
+                if var existing = entries[knownID], existing.partner == nil {
+                    let placeholderFig = Figure(name: placeholder.name, gender: placeholder.gender)
+                    existing = TreeEntry(primary: existing.primary, partner: placeholderFig, altPartnerCount: existing.altPartnerCount, generation: existing.generation)
+                    entries[knownID] = existing
+                    if let idx = levelsMap[nextGen]?.firstIndex(where: { $0.id == knownID }) {
+                        levelsMap[nextGen]?[idx] = existing
+                    }
+                }
+            }
+        } else {
+            // Neither Father nor Mother known: render both as a single unknown couple
+            // so the child centers under the midpoint between them.
             let parentID = "Unknown Father@\(nextGen)"
             if entries[parentID] == nil {
-                let placeholderFig = Figure(name: "Unknown Father", gender: .male)
-                let entry = TreeEntry(primary: placeholderFig, partner: nil, altPartnerCount: 0, generation: nextGen)
-                entries[parentID] = entry
-                levelsMap[nextGen, default: []].append(entry)
-            }
-            parentToChild[parentID, default: []].append(childID)
-        }
-        if !knownRelationTypes.contains("Mother") {
-            let parentID = "Unknown Mother@\(nextGen)"
-            if entries[parentID] == nil {
-                let placeholderFig = Figure(name: "Unknown Mother", gender: .female)
-                let entry = TreeEntry(primary: placeholderFig, partner: nil, altPartnerCount: 0, generation: nextGen)
+                let fatherFig = Figure(name: "Unknown Father", gender: .male)
+                let motherFig = Figure(name: "Unknown Mother", gender: .female)
+                let entry = TreeEntry(primary: fatherFig, partner: motherFig, altPartnerCount: 0, generation: nextGen)
                 entries[parentID] = entry
                 levelsMap[nextGen, default: []].append(entry)
             }
@@ -349,28 +365,48 @@ struct LineageTreeView: View {
         }
     }
 
-    private func collectDescendants(of figure: Figure, currentGen: Int, maxGen: Int, entries: inout [String: TreeEntry], levelsMap: inout [Int: [TreeEntry]], parentToChild: inout [String: [String]], seenFigures: inout Set<PersistentIdentifier>) {
+    private func collectDescendants(of figure: Figure, currentGen: Int, maxGen: Int, entries: inout [String: TreeEntry], levelsMap: inout [Int: [TreeEntry]], parentToChild: inout [String: [String]], seenFigures: inout Set<PersistentIdentifier>, slotOwner: inout [PersistentIdentifier: String]) {
         let nextGen = currentGen + 1
         guard nextGen <= maxGen else { return }
         guard !collapsedIDs.contains(figure.name) else { return }
 
         let rels = relationships.filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
-        let parentID = idFor(figure, gen: currentGen)
+        let parentID = slotOwner[figure.persistentModelID] ?? idFor(figure, gen: currentGen)
         var seen: Set<PersistentIdentifier> = []
 
         // Pass 1: collect all children — register in seenFigures breadth-first
         // so that gen+N entries always win over gen+(N+1) duplicates
-        var children: [(Figure, String)] = []
+        var children: [Figure] = []
         for rel in rels {
             guard let childFig = rel.toFigure,
                   seen.insert(childFig.persistentModelID).inserted,
                   seenFigures.insert(childFig.persistentModelID).inserted else { continue }
-            children.append((childFig, idFor(childFig, gen: nextGen)))
+            children.append(childFig)
         }
 
-        // Pass 2: add all children to the tree
-        for (childFig, childID) in children {
+        // Pass 2: add each child as a couple. `placedChildren` prevents a figure
+        // from appearing twice at this level: if the child (or its preferred
+        // partner) was already claimed, the child is not given its own entry —
+        // it's already represented as the partner of the earlier couple.
+        // `slotOwner` maps every placed figure to the entry that represents it,
+        // so a skipped child's own descendants still hang off the right couple.
+        var placedChildren: Set<PersistentIdentifier> = []
+        var nextOwner: [PersistentIdentifier: String] = [:]
+        for childFig in children {
+            let childID = idFor(childFig, gen: nextGen)
+            if placedChildren.contains(childFig.persistentModelID) {
+                continue
+            }
             let partner = preferredPartner(of: childFig)
+            if let partnerPID = partner?.persistentModelID, placedChildren.contains(partnerPID) {
+                continue
+            }
+            if let partner {
+                placedChildren.insert(partner.persistentModelID)
+                nextOwner[partner.persistentModelID] = childID
+            }
+            placedChildren.insert(childFig.persistentModelID)
+            nextOwner[childFig.persistentModelID] = childID
             let alt = max(0, partnerCount(of: childFig) - (partner != nil ? 1 : 0))
             let entry = TreeEntry(primary: childFig, partner: partner, altPartnerCount: alt, generation: nextGen)
             entries[entry.id] = entry
@@ -379,8 +415,8 @@ struct LineageTreeView: View {
         }
 
         // Pass 3: recurse into each child
-        for (childFig, _) in children {
-            collectDescendants(of: childFig, currentGen: nextGen, maxGen: maxGen, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures)
+        for childFig in children {
+            collectDescendants(of: childFig, currentGen: nextGen, maxGen: maxGen, entries: &entries, levelsMap: &levelsMap, parentToChild: &parentToChild, seenFigures: &seenFigures, slotOwner: &nextOwner)
         }
 
         if !rels.isEmpty,
@@ -505,63 +541,10 @@ struct LineageTreeView: View {
             }
         }
 
-        // Cascading alignment: shift each ancestor generation so its midpoint
-        // aligns with the primary child's midX, processed from center outward
-        for childGen in genKeys.reversed() where childGen <= 0 {
-            for (parentID, childIDs) in data.parentToChild {
-                guard let firstChildID = childIDs.first,
-                      let childEntry = data.entries[firstChildID],
-                      childEntry.generation == childGen,
-                      let parentEntry = data.entries[parentID],
-                      let childFrame = nodeLayouts[childEntry.primary.persistentModelID],
-                      let parentFrame = nodeLayouts[parentEntry.primary.persistentModelID] else { continue }
-
-                let parentEntriesAtGen = data.levels.first(where: { $0.first?.generation == parentEntry.generation }) ?? []
-                guard parentEntriesAtGen.count == 1 else { continue }
-
-                // Skip if parent generation is much narrower than the child generation;
-                // narrow single-entry generations look more balanced when left centered
-                let parentW = genWidths.first(where: { $0.0 == parentEntry.generation })?.1 ?? 0
-                let childW = genWidths.first(where: { $0.0 == childGen })?.1 ?? maxW
-                guard parentW >= childW * 0.5 else { continue }
-
-                let partnerFrame = parentEntry.partner.flatMap { nodeLayouts[$0.persistentModelID] }
-                let trunkX = partnerFrame.map { (parentFrame.midX + $0.midX) / 2 } ?? parentFrame.midX
-
-                let childPartnerFrame = childEntry.partner.flatMap { nodeLayouts[$0.persistentModelID] }
-                let childMidX = childPartnerFrame.map { (childFrame.midX + $0.midX) / 2 } ?? childFrame.midX
-
-                let shift = childMidX - trunkX
-                guard abs(shift) > 2 else { continue }
-
-                let canvasCenter = maxW / 2
-                let newTrunkX = trunkX + shift
-                if newTrunkX < canvasCenter {
-                    let clampedShift = canvasCenter - trunkX
-                    for entry in parentEntriesAtGen {
-                        let ids = [entry.primary.persistentModelID] + (entry.partner.map { [$0.persistentModelID] } ?? [])
-                        for id in ids {
-                            if let frame = nodeLayouts[id] {
-                                nodeLayouts[id] = frame.offsetBy(dx: clampedShift, dy: 0)
-                            }
-                        }
-                    }
-                    continue
-                }
-
-                for entry in parentEntriesAtGen {
-                    let ids = [entry.primary.persistentModelID] + (entry.partner.map { [$0.persistentModelID] } ?? [])
-                    for id in ids {
-                        if let frame = nodeLayouts[id] {
-                            nodeLayouts[id] = frame.offsetBy(dx: shift, dy: 0)
-                        }
-                    }
-                }
-            }
-        }
-
-        // Align descendants under their parents (process from center outward)
-        let descendantGens = genKeys.filter { $0 > 0 }.sorted()
+        // Align each generation under its parents (top generation to bottom):
+        // shift the child generation so its PRIMARY (male) cards sit under the
+        // parent couple's trunk. Runs across all generations, ancestors included.
+        let descendantGens = genKeys.sorted()
         for parentGen in descendantGens {
             let childGen = parentGen + 1
             guard childGen <= (genKeys.max() ?? 0) else { continue }

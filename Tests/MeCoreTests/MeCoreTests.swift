@@ -3092,4 +3092,79 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(enki.pantheons.count, 1)
         XCTAssertEqual(enki.pantheons.first?.name, "Greek", "figures with existing membership are not reassigned")
     }
+
+    // MARK: - Propagator: ignore non-reign prose dates
+
+    func testPropagatorIgnoresMidTextTabletDate() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let alulim = Figure(
+            name: "Alulim",
+            figureDescription: "Alulim was a mythological ruler. The tablet of Old Babylonian period (c. 1900–1600 BC) from Ur describing the divine appointment of Alulim. (Listed reign: 28,800 years.)",
+            birthDate: MythologicalDate(year: nil, era: "", isApproximate: true),
+            deathDate: MythologicalDate(year: nil, era: "", isApproximate: true),
+            orderIndex: 1
+        )
+        context.insert(alulim)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        XCTAssertNil(alulim.reignStartYear, "a mid-text tablet-date must not seed a reign start")
+        XCTAssertNil(alulim.reignEndYear, "a mid-text tablet-date must not seed a reign end")
+    }
+
+    func testPropagatorIgnoresProseDateWithoutReignIntent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(
+            name: "Ili-Ishar",
+            figureDescription: "Iii-Ishar was a ruler of the city of Mari after the fall of Akkad c. 2085-2072 BCE.",
+            birthDate: MythologicalDate(year: nil, era: "", isApproximate: true),
+            deathDate: MythologicalDate(year: nil, era: "", isApproximate: true)
+        )
+        context.insert(figure)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        XCTAssertNil(figure.reignStartYear, "'BCE' prose about an event must not seed a reign")
+        XCTAssertNil(figure.reignEndYear)
+    }
+
+    func testPropagatorKeepsReignIntentDate() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let entemena = Figure(
+            name: "Entemena",
+            figureDescription: "Entemena, son of Eannatum, was a Sumerian king of Lagash who reigned c. 2440–2425 BC.",
+            birthDate: MythologicalDate(year: nil, era: "Early Dynastic Period", isApproximate: true),
+            deathDate: MythologicalDate(year: nil, era: "Early Dynastic Period", isApproximate: true)
+        )
+        context.insert(entemena)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        XCTAssertEqual(entemena.reignStartYear, -2440)
+        XCTAssertEqual(entemena.reignEndYear, -2425)
+    }
+
+    func testPropagatorKeepsTailAnchoredAnchorDate() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(
+            name: "Ur-Namma",
+            figureDescription: "Ruler from the Third dynasty of Ur. Reigned 18 years. c. 2047–2030 BC (short)",
+            birthDate: MythologicalDate(year: nil, era: "Third dynasty of Ur", isApproximate: true),
+            deathDate: MythologicalDate(year: nil, era: "Third dynasty of Ur", isApproximate: true)
+        )
+        context.insert(figure)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        XCTAssertEqual(figure.reignStartYear, -2047)
+        XCTAssertEqual(figure.reignEndYear, -2030)
+    }
 }

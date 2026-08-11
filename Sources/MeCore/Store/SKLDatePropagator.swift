@@ -45,7 +45,7 @@ package struct SKLDatePropagator {
     // MARK: - Private
 
     private static let bcRegex: NSRegularExpression = {
-        try! NSRegularExpression(pattern: "c\\.\\s*(\\d{3,4})[–-](\\d{3,4})\\s*BC")
+        try! NSRegularExpression(pattern: "c\\.\\s*(\\d{3,4})[–-](\\d{3,4})\\s*BC\\b")
     }()
 
     private static func computeReigns(for figures: [Figure]) -> [ComputedReign] {
@@ -75,15 +75,26 @@ package struct SKLDatePropagator {
 
         let desc = figure.figureDescription
         let nsRange = NSRange(desc.startIndex..., in: desc)
-        guard let match = bcRegex.firstMatch(in: desc, range: nsRange),
-              let startRange = Range(match.range(at: 1), in: desc),
-              let endRange = Range(match.range(at: 2), in: desc),
-              let startBCE = Int(desc[startRange]),
-              let endBCE = Int(desc[endRange]) else {
-            return (nil, nil)
+        for match in bcRegex.matches(in: desc, range: nsRange) {
+            guard let matchRange = Range(match.range, in: desc),
+                  let startRange = Range(match.range(at: 1), in: desc),
+                  let endRange = Range(match.range(at: 2), in: desc),
+                  let startBCE = Int(desc[startRange]),
+                  let endBCE = Int(desc[endRange]),
+                  isReignDate(desc: desc, matchRange: matchRange) else { continue }
+            return (-startBCE, -endBCE)
         }
+        return (nil, nil)
+    }
 
-        return (-startBCE, -endBCE)
+    private static func isReignDate(desc: String, matchRange: Range<String.Index>) -> Bool {
+        let before = String(desc[..<matchRange.lowerBound].suffix(40))
+        if before.range(of: #"\b(reigned|ruled|reign|lived)\b"#, options: [.regularExpression, .caseInsensitive]) != nil {
+            return true
+        }
+        let after = String(desc[matchRange.upperBound...]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if after.isEmpty || after == "." || after == "," { return true }
+        return after.hasPrefix("(short)") || after.hasPrefix("(middle")
     }
 
     private static func propagateForward(from anchorIdx: Int, figures: [Figure], result: inout [(startBCE: Int?, endBCE: Int?)]) {

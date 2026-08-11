@@ -111,6 +111,7 @@ struct EntityGroupCollectionView: View {
     @State private var deletingTextBlock: GroupTextBlock?
     @State private var showDeleteConfirm = false
     @State private var showDeleteTextBlockConfirm = false
+    @State private var showTextBlockControls = false
     @State private var imageDetailImage: ImageAsset?
 
     private var entityType: GroupEntityType { group.entityType }
@@ -123,7 +124,10 @@ struct EntityGroupCollectionView: View {
         if group.sortMode == .ordered && !group.isSmart {
             let spine = spineItems(for: group) + subgroups.map(MixedItem.group)
             if searchText.isEmpty { return spine }
-            return spine.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+            return spine.filter { item in
+                if item.isProse { return true }
+                return item.name.localizedCaseInsensitiveContains(searchText)
+            }
         }
         // Alphabetical mode: members + subgroups sorted by name, prose pinned below.
         // Smart groups always land here (their membership is evaluated live by name).
@@ -132,9 +136,7 @@ struct EntityGroupCollectionView: View {
             ? membersAndSubs.sorted { $0.name < $1.name }
             : membersAndSubs.filter { $0.name.localizedCaseInsensitiveContains(searchText) }.sorted { $0.name < $1.name }
         let prose = group.sortedTextBlocks.map(MixedItem.text)
-        if searchText.isEmpty { return sortedBase + prose }
-        let filteredProse = prose.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-        return sortedBase + filteredProse
+        return sortedBase + prose
     }
 
     private var ancestors: [FigureGroup] {
@@ -199,6 +201,7 @@ struct EntityGroupCollectionView: View {
                                     EntityGroupTreeNode(
                                         group: subgroup,
                                         expanded: $expandedGroups,
+                                        showTextBlockControls: showTextBlockControls,
                                         onSelectMember: { selectedMemberID = $0.id },
                                         onOpenInSidebar: { openInSidebar($0) },
                                         onOpenInWindow: { openInWindow($0) },
@@ -211,6 +214,7 @@ struct EntityGroupCollectionView: View {
                                 case .text(let block):
                                     TextBlockRow(
                                         block: block,
+                                        showEditControls: showTextBlockControls,
                                         onEdit: { editingTextBlock = block },
                                         onDelete: { deletingTextBlock = block }
                                     )
@@ -463,11 +467,18 @@ struct EntityGroupCollectionView: View {
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 8) {
-                Button(action: addTextBlock) {
-                    Label("Add Text Block", systemImage: "plus")
+                HStack(spacing: 8) {
+                    Button(action: addTextBlock) {
+                        Label("Add Text Block", systemImage: "plus")
+                    }
+                    .font(.caption)
+                    .help("Insert a prose block into this page")
+                    Button(action: { showTextBlockControls.toggle() }) {
+                        Label(showTextBlockControls ? "Hide Edit Controls" : "Show Edit Controls", systemImage: showTextBlockControls ? "pencil.slash" : "pencil")
+                    }
+                    .font(.caption)
+                    .help("Toggle edit/delete controls on all text blocks")
                 }
-                .font(.caption)
-                .help("Insert a prose block into this page")
                 if group.sortMode != .ordered {
                     Text("Switch to Manual Order to interleave text")
                         .font(.caption2)
@@ -893,6 +904,7 @@ private struct EntityGroupTreeNode: View {
     let group: FigureGroup
     @Environment(\.modelContext) private var modelContext
     @Binding var expanded: Set<PersistentIdentifier>
+    var showTextBlockControls: Bool = false
     var onSelectMember: (MixedItem) -> Void
     var onOpenInSidebar: (MixedItem) -> Void
     var onOpenInWindow: (MixedItem) -> Void
@@ -1006,6 +1018,7 @@ private struct EntityGroupTreeNode: View {
                             EntityGroupTreeNode(
                                 group: child,
                                 expanded: $expanded,
+                                showTextBlockControls: showTextBlockControls,
                                 onSelectMember: onSelectMember,
                                 onOpenInSidebar: onOpenInSidebar,
                                 onOpenInWindow: onOpenInWindow,
@@ -1016,6 +1029,7 @@ private struct EntityGroupTreeNode: View {
                         case .text(let block):
                             TextBlockRow(
                                 block: block,
+                                showEditControls: showTextBlockControls,
                                 onEdit: { onEditMember(item) },
                                 onDelete: { onDeleteMember(item) }
                             )
@@ -1040,13 +1054,17 @@ private struct EntityGroupTreeNode: View {
 
 private struct TextBlockRow: View {
     let block: GroupTextBlock
+    var showEditControls: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
+
+    @State private var isHovered = false
 
     var body: some View {
         let alignment = block.alignment
         let textAlignment: TextAlignment = alignment == .center ? .center : (alignment == .right ? .trailing : .leading)
         let frameAlignment: Alignment = alignment == .center ? .center : (alignment == .right ? .trailing : .leading)
+        let controlsVisible = showEditControls || isHovered
         return VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Image(systemName: "text.quote")
@@ -1062,24 +1080,26 @@ private struct TextBlockRow: View {
                         .foregroundStyle(.tertiary)
                 }
                 Spacer(minLength: 0)
-                Button(action: onEdit) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                        .frame(width: 20, height: 20)
-                        .contentShape(Rectangle())
+                if controlsVisible {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit text block")
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.7))
+                            .frame(width: 20, height: 20)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .help("Delete text block")
                 }
-                .buttonStyle(.plain)
-                .help("Edit text block")
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.red.opacity(0.7))
-                        .frame(width: 20, height: 20)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help("Delete text block")
             }
             RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
                 .font(.callout)
@@ -1100,6 +1120,10 @@ private struct TextBlockRow: View {
                 .stroke(Color.gray.opacity(0.25), lineWidth: 0.5)
         )
         .frame(maxWidth: .infinity, alignment: block.maxWidth == nil ? .leading : frameAlignment)
+        .onHover { hovering in
+            isHovered = hovering
+        }
+        .animation(.easeInOut(duration: 0.15), value: controlsVisible)
         .contextMenu {
             Button("Edit Text Block") { onEdit() }
             Button("Delete", role: .destructive) { onDelete() }
