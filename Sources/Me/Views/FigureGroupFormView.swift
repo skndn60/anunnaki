@@ -783,6 +783,11 @@ struct FigureGroupFormView: View {
             modelContext.delete(assoc)
         }
 
+        for assoc in existing {
+            guard let id = memberID(assoc, of: entityType), newIDs.contains(id) else { continue }
+            assoc.displayName = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
+        }
+
         let toAdd = newIDs.subtracting(existingIDs)
         for id in toAdd {
             guard let candidate = candidate(for: id) else { continue }

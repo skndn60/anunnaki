@@ -208,9 +208,9 @@ struct FigureDetailView: View {
     }
 
     private var filteredAlternateNames: [AlternateName] {
-        filterText.isEmpty ? figure.alternateNames : figure.alternateNames.filter {
+        (filterText.isEmpty ? figure.alternateNames : figure.alternateNames.filter {
             matchesFilter($0.name) || matchesFilter($0.tradition.rawValue) || matchesFilter($0.nameType.rawValue) || matchesFilter($0.note)
-        }
+        }).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     @ViewBuilder
@@ -718,7 +718,7 @@ struct FigureDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
-                            RichTextDisplay(richData: figure.richDescription, fallback: figure.figureDescription)
+                            LinkedDescription(text: figure.figureDescription, richData: figure.richDescription)
                                 .font(.body)
                         }
                     }

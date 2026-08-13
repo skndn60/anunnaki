@@ -1,5 +1,13 @@
 # TODO
 
+- [ ] **Text block summary + expand (scannable story pages, proposed 2026-08-12):** Group text blocks render full prose, which is heavy to scan. Plan: present an optional *summary* by default with a "Show full text…" toggle button beneath it revealing the full block inline.
+  - Add `summary: String?` + `summaryRichText: Data?` to `GroupTextBlock` (both optional, migration-safe; existing blocks without a summary keep current full-text behavior).
+  - `TextBlockRow` in `EntityGroupCollectionView` shows the summary (honoring title/alignment/max-width styling) when present; "Show full text…" toggles the full text below it (simple `@State` per row).
+  - `GroupTextBlockSheet` gains a "Summary" field (plain + rich) alongside the full-text editor.
+  - Optional stretch: persist expansion, or auto-suggest a summary from the full text.
+
+- [ ] **Known bug: breadcrumbs from inline entity links push the target, not the reading context (reported 2026-08-12):** Clicking an inline link (e.g. "Ninurta" in a group page's text block, like the Atrahasis tablet) calls `navigateInSidebar` in `LinkifiedDescription.swift` → `navigateToFigure(targetID, name: targetName)`, which `pushHistory`es a crumb named after the *target* figure ("ninurta"). That crumb is a no-op because the sidebar is already on that figure. Expected: a breadcrumb for where the user *was* reading (e.g. "Atrahasis tablet I"), so the trail returns to the group page. Options to explore: record a "current location" crumb (group page / text block) before navigating away; or push the group context rather than the target when the link is rendered inside a group/text block. Involves `LinkifiedDescription.swift` (link navigation) + `NavigationCoordinator.swift` (crumb semantics) + possibly group-page integration.
+
 - [ ] **Product weaknesses:** See `PRODUCT_WEAKNESSES.md` — priorities are (1) data-entry speed/bulk ingestion, (2) source-discriminated lineage, (3) export/portability, (4) attribution nudging.
 
 - [ ] **Ollama context retrieval — expand `mentions` beyond exact `name`:** `OllamaResolver.buildContext` now includes RELEVANT *<TYPE>* sections (full untruncated records) for any figures/places/events whose name the query mentions, plus a truncated overview. But matching is exact-name-substring only, so aliases, paraphrases, and partial names ("the deluge", "kings list", "Enki" using an alternate name) still won't surface the record — reproducing the original "Great Flood" hallucination for differently-worded queries. Expand matching to also check:

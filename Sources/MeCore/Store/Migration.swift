@@ -1326,4 +1326,51 @@ package struct Migration {
         }
     }
 
+    /// Add the "Divine Collective" FigureType and the Anunnaki and Igigi figures that
+    /// represent it. Collectives are groups of unnamed gods (the Anunnaki are the
+    /// "those who came down" council of great gods; the Igigi are the labourer gods of
+    /// the Atrahasis) that act as single entities in the myths — linkable, queryable,
+    /// and relational — without being individual deities. Additive + idempotent.
+    package static func ensureDivineCollectives(context: ModelContext) {
+        let typePredicate = #Predicate<FigureType> { $0.name == "Divine Collective" }
+        let collectiveType: FigureType
+        if let existing = try? context.fetch(FetchDescriptor<FigureType>(predicate: typePredicate)).first {
+            collectiveType = existing
+        } else {
+            let newType = FigureType(name: "Divine Collective", icon: "person.3.fill", colorHex: "8B5CF6")
+            context.insert(newType)
+            collectiveType = newType
+        }
+
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+
+        let collectiveConfigs: [(name: String, title: String, domain: String, description: String)] = [
+            ("Anunnaki", "The Great Gods of Heaven and Earth",
+             "Sky, Earth, Underworld, Divine Council",
+             "A collective of the great gods of Mesopotamian religion, the primary divine council. Their name is often explained as 'those who came down from heaven to earth'. In the oldest Sumerian tradition they were the chthonic deities of the underworld, numbering fifty; in the canonical lists of Akkadian religion they are usually the seven great gods (Anu, Enlil, Enki, Ninhursag, Nanna, Utu, Inanna). In Atrahasis the Anunnaki are the seven great gods who sit in council and decide the fate of the Igigi."),
+            ("Igigi", "The Gods of Heaven / The Divine Workforce",
+             "Heaven, Labor",
+             "A collective of the gods who in Atrahasis serve as the heavenly workforce, digging the rivers Tigris and Euphrates under the oversight of the Anunnaki. When their labor becomes unbearable they rebel and march on the dwelling of Enlil, prompting the creation of mankind from the clay and the blood of the slain god to take over their work. Sometimes identified with the great gods of heaven, sometimes distinguished from them; the precise rank of the Igigi relative to the Anunnaki varies by tradition."),
+        ]
+
+        let mythicDate = MythologicalDate(year: nil, era: "Creation", isApproximate: true)
+
+        for config in collectiveConfigs {
+            guard !existingNames.contains(config.name) else { continue }
+            let figure = Figure(
+                name: config.name,
+                title: config.title,
+                figureType: collectiveType,
+                gender: .unknown,
+                domain: config.domain,
+                figureDescription: config.description,
+                birthDate: mythicDate,
+                deathDate: MythologicalDate.unknown,
+                source: "Atrahasis"
+            )
+            context.insert(figure)
+        }
+        try? context.save()
+    }
+
 }

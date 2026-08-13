@@ -369,7 +369,7 @@ struct ThingDetailView: View {
                             Text("Description")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            RichTextDisplay(richData: thing.richDescription, fallback: thing.thingDescription)
+                            LinkedDescription(text: thing.thingDescription, richData: thing.richDescription)
                                 .font(.body)
                         }
                     }

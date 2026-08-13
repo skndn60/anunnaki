@@ -137,7 +137,7 @@ struct FigureDescriptionView: View {
 
     var body: some View {
         if !text.isEmpty || richData != nil {
-            RichTextDisplay(richData: richData, fallback: text)
+            LinkedDescription(text: text, richData: richData)
                 .font(.body)
         }
     }

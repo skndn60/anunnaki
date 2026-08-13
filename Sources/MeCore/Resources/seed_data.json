@@ -5302,6 +5302,52 @@
       "source": "Mesilim inscriptions; Lagash border cones",
       "id": "c435aa98-d798-583f-ad86-ade0f2fd0bc2",
       "disambiguation": ""
+    },
+    {
+      "name": "Anunnaki",
+      "title": "The Great Gods of Heaven and Earth",
+      "figureType": "Divine Collective",
+      "gender": "Unknown",
+      "domain": "Sky, Earth, Underworld, Divine Council",
+      "figureDescription": "A collective of the great gods of Mesopotamian religion, the primary divine council. Their name is often explained as 'those who came down from heaven to earth'. In the oldest Sumerian tradition they were the chthonic deities of the underworld, numbering fifty; in the canonical lists of Akkadian religion they are usually the seven great gods (Anu, Enlil, Enki, Ninhursag, Nanna, Utu, Inanna). In Atrahasis the Anunnaki are the seven great gods who sit in council and decide the fate of the Igigi.",
+      "birthDate": {
+        "era": "Creation",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Atrahasis",
+      "id": "DCEA5F4A-1CD0-59B3-9D40-44F321882EA3",
+      "disambiguation": ""
+    },
+    {
+      "name": "Igigi",
+      "title": "The Gods of Heaven / The Divine Workforce",
+      "figureType": "Divine Collective",
+      "gender": "Unknown",
+      "domain": "Heaven, Labor",
+      "figureDescription": "A collective of the gods who in Atrahasis serve as the heavenly workforce, digging the rivers Tigris and Euphrates under the oversight of the Anunnaki. When their labor becomes unbearable they rebel and march on the dwelling of Enlil, prompting the creation of mankind from the clay and the blood of the slain god to take over their work. Sometimes identified with the great gods of heaven, sometimes distinguished from them; the precise rank of the Igigi relative to the Anunnaki varies by tradition.",
+      "birthDate": {
+        "era": "Creation",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "deathDate": {
+        "era": "",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Atrahasis",
+      "id": "D5179AFF-FC53-598F-940D-1751FCAB2D1A",
+      "disambiguation": ""
     }
   ],
   "relationships": [

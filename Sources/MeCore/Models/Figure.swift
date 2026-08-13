@@ -46,6 +46,12 @@ package final class Figure {
     @Relationship(deleteRule: .cascade, inverse: \AlternateName.figure)
     package var alternateNames: [AlternateName] = []
 
+    /// Alternate names ordered alphabetically by name (for display; the stored
+    /// relationship array preserves insertion order).
+    package var sortedAlternateNames: [AlternateName] {
+        alternateNames.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+
     /// Events this figure is involved in
     @Relationship(inverse: \Event.involvedFigures)
     package var events: [Event] = []

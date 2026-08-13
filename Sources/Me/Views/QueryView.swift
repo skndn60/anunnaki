@@ -326,10 +326,10 @@ struct FigureDossierView: View {
                     Text("Also known as:")
                         .font(.callout)
                         .foregroundStyle(.secondary)
-                    ForEach(Array(dossier.figure.alternateNames.enumerated()), id: \.element.id) { i, alt in
+                    ForEach(Array(dossier.figure.sortedAlternateNames.enumerated()), id: \.element.id) { i, alt in
                         EntityLink(name: alt.name, kind: .figure)
                             .font(.callout)
-                        if i < dossier.figure.alternateNames.count - 1 {
+                        if i < dossier.figure.sortedAlternateNames.count - 1 {
                             Text(",")
                                 .foregroundStyle(.secondary)
                         }
@@ -494,7 +494,7 @@ struct PlaceDossierView: View {
             }
 
             if !dossier.place.placeDescription.isEmpty || dossier.place.richDescription != nil {
-                RichTextDisplay(richData: dossier.place.richDescription, fallback: dossier.place.placeDescription)
+                LinkedDescription(text: dossier.place.placeDescription, richData: dossier.place.richDescription)
                     .font(.body)
             }
 
@@ -573,7 +573,7 @@ struct EventDossierView: View {
             }
 
             if !dossier.event.eventDescription.isEmpty || dossier.event.richDescription != nil {
-                RichTextDisplay(richData: dossier.event.richDescription, fallback: dossier.event.eventDescription)
+                LinkedDescription(text: dossier.event.eventDescription, richData: dossier.event.richDescription)
                     .font(.body)
             }
 
@@ -980,7 +980,7 @@ private struct ThingDossierView: View {
                     Text("Description")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    RichTextDisplay(richData: thing.richDescription, fallback: thing.thingDescription)
+                    LinkedDescription(text: thing.thingDescription, richData: thing.richDescription)
                         .font(.body)
                 }
             }

@@ -205,6 +205,7 @@ struct ContentView: View {
                     Migration.ensureSKLEventsAndFigures(context: modelContext)
                     Migration.ensureReignYears(context: modelContext)
                     Migration.ensureEpithets(context: modelContext)
+                    Migration.ensureDivineCollectives(context: modelContext)
                     Migration.ensureMesopotamianPantheons(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
                     Migration.ensureFigureGroupKinds(context: modelContext)
@@ -404,6 +405,7 @@ struct ContentView: View {
             .onReceive(NotificationCenter.default.publisher(for: .showBackupSheet)) { _ in
                 showBackupSheet = true
             }
+            .environment(\.navigationCoordinator, coordinator)
         }
     }
 }

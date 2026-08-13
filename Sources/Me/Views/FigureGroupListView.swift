@@ -400,7 +400,7 @@ struct FigureGroupDetailView: View {
                         Text(group.name)
                             .font(.title2.bold())
                         if !group.groupDescription.isEmpty || group.richDescription != nil {
-                            RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription)
+                            RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription, stripForegroundColor: true)
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }

@@ -84,8 +84,8 @@ final class MeCoreTests: XCTestCase {
         SeedData.ensureTypesExist(context: context)
 
         let figureTypes = (try? context.fetch(FetchDescriptor<FigureType>(sortBy: [SortDescriptor(\.name)]))) ?? []
-        XCTAssertEqual(figureTypes.count, 7)
-        XCTAssertEqual(figureTypes.map(\.name), ["Archangel", "Commander", "Deity", "Human", "Igigi", "Primordial", "Semi-Divine"])
+        XCTAssertEqual(figureTypes.count, 8)
+        XCTAssertEqual(figureTypes.map(\.name), ["Archangel", "Commander", "Deity", "Divine Collective", "Human", "Igigi", "Primordial", "Semi-Divine"])
     }
 
     func testEnsureTypesExistCreatesDefaultPlaceTypes() {
@@ -119,7 +119,7 @@ final class MeCoreTests: XCTestCase {
         let placeTypes = (try? context.fetchCount(FetchDescriptor<PlaceType>())) ?? 0
         let eventTypes = (try? context.fetchCount(FetchDescriptor<EventType>())) ?? 0
 
-        XCTAssertEqual(figureTypes, 7)
+        XCTAssertEqual(figureTypes, 8)
         XCTAssertEqual(placeTypes, 6)
         XCTAssertEqual(eventTypes, 10)
     }
@@ -1005,6 +1005,15 @@ final class MeCoreTests: XCTestCase {
             return XCTFail("Expected .figure, got \(result)")
         }
         XCTAssertEqual(dossier.figure.name, "Enki")
+    }
+
+    func testSortedAlternateNamesAlphabetical() {
+        let f = makeFixture()
+        for name in ["Zag", "ab", "Mami", "Ea"] {
+            f.context.insert(AlternateName(figure: f.enki, name: name))
+        }
+        try? f.context.save()
+        XCTAssertEqual(f.enki.sortedAlternateNames.map(\.name), ["ab", "Ea", "Mami", "Nudimmud", "Zag"])
     }
 
     func testResolvePlaceExact() {
@@ -3091,6 +3100,66 @@ func testRegnalKeyOrdersEventsByDate() {
 
         XCTAssertEqual(enki.pantheons.count, 1)
         XCTAssertEqual(enki.pantheons.first?.name, "Greek", "figures with existing membership are not reassigned")
+    }
+
+    // MARK: - Divine collectives (Anunnaki / Igigi)
+
+    func testEnsureDivineCollectivesCreatesTypeAndFigures() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureDivineCollectives(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        XCTAssertEqual(types.count, 1)
+        XCTAssertEqual(types.first?.name, "Divine Collective")
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 2)
+        XCTAssertEqual(Set(figures.map(\.name)), Set(["Anunnaki", "Igigi"]))
+        for figure in figures {
+            XCTAssertEqual(figure.figureType?.name, "Divine Collective")
+            XCTAssertEqual(figure.gender, .unknown)
+        }
+    }
+
+    func testEnsureDivineCollectivesIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureDivineCollectives(context: context)
+        Migration.ensureDivineCollectives(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        XCTAssertEqual(types.count, 1)
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 2)
+    }
+
+    func testEnsureDivineCollectivesReusesExistingTypeAndKeepsUserData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let existingType = FigureType(name: "Divine Collective", icon: "person.3.fill", colorHex: "111111")
+        context.insert(existingType)
+        let anunnaki = Figure(name: "Anunnaki", gender: .female, figureDescription: "User's own description")
+        context.insert(anunnaki)
+        try? context.save()
+
+        Migration.ensureDivineCollectives(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        XCTAssertEqual(types.count, 1, "no duplicate type")
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 2)
+        let updatedAnunnaki = figures.first { $0.name == "Anunnaki" }
+        XCTAssertEqual(updatedAnunnaki?.figureDescription, "User's own description", "existing figure untouched")
+        XCTAssertEqual(updatedAnunnaki?.gender, .female, "existing figure untouched")
+
+        let igigi = figures.first { $0.name == "Igigi" }
+        XCTAssertEqual(igigi?.figureType?.persistentModelID, existingType.persistentModelID, "Igigi joins the reused type")
     }
 
     // MARK: - Propagator: ignore non-reign prose dates

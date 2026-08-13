@@ -1200,3 +1200,101 @@ User asked whether group text blocks support content attributions — **no**: `C
 - `Sources/Me/Views/FigureGroupListView.swift` — Updated (`deleteGroup`)
 - `Tests/MeCoreTests/MeCoreTests.swift` — Updated (3 real-store diagnostic tests)
 - Crash reports: `~/Library/Logs/DiagnosticReports/Me-2026-08-09-{221737,222531,224256,230314}.ips`
+
+### 2026-08-12 — Group wizard: alias not persisted on remove-then-re-add
+
+**Problem:** User added Ninhursag to an Atrahasis group member list and wanted the membership to display "Ninhursag as Mami" (Mami = her AlternateName). The association's `displayName` stayed empty even after remove-then-re-add in the group wizard. All memberships created outside the wizard (Bulk Add / Sync / the figure's Groups popover) never set a display name.
+
+**Root cause:** `FigureGroupFormView.syncMembers` computed `toAdd = newIDs.subtracting(existingIDs)` against the **pre-removal** `group.figureAssociations`. Remove-then-re-add in one wizard session left the member id in `existingIDs`, so the association was neither deleted nor recreated — the retained association silently kept its stale empty `displayName`, and the `"Mami"` value in `selectedMemberAliases` was never written to any model.
+
+**Fix:** `syncMembers` now also writes `assoc.displayName` from `newAliases` for **retained** existing members (those whose id is in `newIDs`), before computing `toAdd`. Alias capture is no longer add-only: re-toggling an existing member with a matching search term updates the membership alias in place.
+
+**Notes:**
+- The wizard toggle still treats clicking an already-checked member as a *removal* — a single accidental click on an existing member deletes the membership on Save. Unchanged (removal semantics preserved); user should uncheck then re-check.
+- Verified the user's data via sqlite: "Mami" AlternateName present on Ninhursag; `ZFIGUREGROUPASSOCIATION.ZDISPLAYNAME` empty (the Ziusudra→"Noah" row was the only populated alias in the DB).
+
+**Tests:** 175 pass; `swift build` clean. No new tests (the fixed logic lives in a SwiftUI view, not MeCore).
+
+**Relevant files:**
+- `Sources/Me/Views/FigureGroupFormView.swift` — Updated (`syncMembers` writes aliases to retained members)
+
+### 2026-08-12 — Alternate names sorted alphabetically in display views
+
+**Problem:** The "Also Known As" lists rendered `figure.alternateNames` in SwiftData insertion/arrival order (the relationship array preserves insertion order), so names like Ki, Nintu, Hathor, Ninmah, Mami appeared in the order they were added rather than alphabetically. The dedicated `AlternateNameListView` manager already sorted (`filteredNames.sorted { $0.name < $1.name }`), but the three figure-side display sites did not.
+
+**Changes made:**
+- `Sources/MeCore/Models/Figure.swift` — Added `sortedAlternateNames` computed property (case-insensitive sort by name; stored array untouched).
+- `Sources/Me/Views/FigureDetailView.swift` — `filteredAlternateNames` now sorts (both the empty-filter and filtered paths).
+- `Sources/Me/Views/FigureQuicklookView.swift` — "Also Known As" section uses `figure.sortedAlternateNames`.
+- `Sources/Me/Views/QueryView.swift` — FigureDossier "Also known as" uses `dossier.figure.sortedAlternateNames`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — `testSortedAlternateNamesAlphabetical` (insertion order ≠ alphabetical; asserts case-insensitive result). 176 tests pass.
+
+**Relevant files:**
+- `Sources/MeCore/Models/Figure.swift`, `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/FigureQuicklookView.swift`, `Sources/Me/Views/QueryView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`
+
+### 2026-08-12 — Auto-linked entity mentions in descriptions
+
+**Context:** Reading a figure's bio (e.g. Ninhursag's, which references the Atrahasis epic) the prose was "dead text" — mentions like Enki, Mami, Atrahasis weren't navigable. User chose: inline prose auto-links (word-boundary, in-text), opening the entity dossier window (EntityLink's `entity-report` window).
+
+**Changes made:**
+- `Sources/Me/Views/LinkifiedDescription.swift` — NEW. Three pieces:
+  - `LinkedDescription` — drop-in container: RTF `RichTextDisplay` when `richData` present, else `LinkifiedTextView` for plain text.
+  - `LinkifiedTextView`/`LinkifiedParagraph` — builds a vocabulary from `fetchAll()` of figures/places/events **plus their AlternateNames** (so "Mami" links to Ninhursag); matches whole words case-insensitively with a longest-first regex alternation; renders plain text as word tokens and matches as `InlineEntityLink` buttons; splits paragraphs on `\n`; falls back to plain `Text` when a paragraph has no matches. Skips stopwords/common nouns (`an`, `as`, `king`, `goddess`, …) and names < 2 chars.
+  - `WrappingTextFlow` — custom `Layout` that wraps children like wrapped prose lines (needed because Button spans can't live inside a single SwiftUI `Text`).
+  - `InlineEntityLink` — plain-style Button, accent + underline-on-hover, pointing hand, opens `entity-report` window.
+- Wired `RichTextDisplay` → `LinkedDescription` at the bio sites: `FigureDetailView`, `FigureDescriptionView` (covers `FigureQuicklookView` + QueryView figure dossier), `PlaceDetailView`, `EventDetailView`, `ThingListView` (thing detail), `QueryView` place/event/thing dossiers, `TimelinePostView`. Left untouched: `EraDetailView` (uses `.lineLimit(6)` — incompatible with the wrapping layout), group descriptions, text blocks, sticky notes.
+
+**Design decisions:**
+- Navigation via `EntityReportRequest` window (like `EntityLink`) — no sidebar-coordinator plumbing, works in every context. The "History" sidebar section is a UI grouping, not an entity, so it can't be a link target.
+- Longest-first alternation so a multi-word event name ("Gilgamesh Builds the Walls of Uruk") wins over its parts; `\b` boundaries keep "Enki." linking only "Enki".
+- Plain paragraphs with no matches render as normal `Text` (full SwiftUI fidelity); only paragraphs with matches use the wrapping layout.
+
+**Verify:** `swift build` clean; 176 tests pass (existing suite; matching logic validated by scratch script, see below). Manual: Ninhursag bio → "Enki"/"Mami"/"Atrahasis" underlined on hover, click opens dossier.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/LinkifiedDescription.swift` — Added
+
+**Relevant files:**
+- `Sources/Me/Views/FigureDetailView.swift`, `FigureDetailInfoView.swift`, `PlaceDetailView.swift`, `EventDetailView.swift`, `ThingListView.swift`, `QueryView.swift`, `TimelinePostView.swift` — Updated
+
+### 2026-08-12 — Inline entity links navigate the sidebar (breadcrumb back-track)
+
+**Motivation:** The auto-linked prose opened an `entity-report` window. That's nice for background windows but the dossier can look messy, and the user wanted a back-track affordance. Since `NavigationCoordinator` already has `navigateToFigure/Place/Event(id:name:)` (which push a breadcrumb + switch sidebar selection), the links can reuse it.
+
+**Changes made:**
+- `Sources/Me/Views/NavigationCoordinator.swift` — Added `NavigationCoordinatorKey` (EnvironmentKey) + `EnvironmentValues.navigationCoordinator: NavigationCoordinator?` (default nil).
+- `Sources/Me/Views/ContentView.swift` — `.environment(\.navigationCoordinator, coordinator)` on the `NavigationSplitView`.
+- `Sources/Me/Views/LinkifiedDescription.swift`:
+  - `MentionCandidate` gained `targetID: PersistentIdentifier` (captured from the figure/place/event — alternate names point at their owner's ID).
+  - `Run.link` now carries the matching `candidate` alongside the `EntityReportRequest`.
+  - `InlineEntityLink` reads `@Environment(\.navigationCoordinator)`; when present it calls `coordinator.navigateTo<Kind>(candidate.targetID, name: candidate.targetName)` — the sidebar list switches to that entity and the breadcrumb trail lets the user walk back. When absent (separate windows: quicklook/timeline/report), it falls back to `openWindow(id: "entity-report")`.
+
+**Design decisions:**
+- Optional environment, not a parameter: the links are rendered by deep leaf views reachable from many windows and only the main window owns a coordinator. Environment propagates it exactly where it exists, and `nil` elsewhere keeps the old separate-window behavior automatically.
+- Alternate-name links (e.g. "Mami" → Ninhursag) navigate to the canonical entity and use its real name as the breadcrumb label.
+- No communication change in the separate-window contexts — they were already using `EntityReportRequest`, which still works.
+
+**Verify:** `swift build` clean; 176 tests pass. Manual: in a sidebar figure bio, click an inline entity name → sidebar jumps to that figure with a breadcrumb; click another → second breadcrumb; click the trail to go back. Same links inside a quicklook/timeline/report window still open the separate report window.
+
+**Relevant files:**
+- `Sources/Me/Views/NavigationCoordinator.swift` — Updated
+- `Sources/Me/Views/ContentView.swift` — Updated
+- `Sources/Me/Views/LinkifiedDescription.swift` — Updated
+
+### 2026-08-12 — Auto-linked text in group pages
+
+**Context:** Following the entity-bio auto-linking work, the user wanted the same inline entity highlighting in the other free-text snippets — specifically the text blocks and descriptions that live inside figure/entity group pages.
+
+**Changes made:**
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `TextBlockRow` and `GroupDescriptionDisplay` now render `LinkedDescription` instead of `RichTextDisplay` (same `text`/`richData`/`stripForegroundColor` API). Max-width + alignment framing unchanged.
+- `Sources/Me/Views/FigureGroupListView.swift` — Group-manager description row also uses `LinkedDescription`.
+
+**Design decisions:**
+- No new code: `LinkedDescription` is already a drop-in for `RichTextDisplay`, and since group pages render inside the main window, the `navigationCoordinator` environment value is present — so these links get sidebar navigation + breadcrumbs automatically, with the separate-window fallback only where no coordinator exists.
+- `EraDetailView` figure bio still uses `RichTextDisplay` (deliberately — `.lineLimit(6)` conflicts with the wrapping layout; see 2026-08-12 auto-link entry).
+
+**Verify:** `swift build` clean; 176 tests pass.
+
+**Relevant files:**
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated
+- `Sources/Me/Views/FigureGroupListView.swift` — Updated

@@ -126,7 +126,7 @@ struct PlaceDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
-                            RichTextDisplay(richData: place.richDescription, fallback: place.placeDescription)
+                            LinkedDescription(text: place.placeDescription, richData: place.richDescription)
                                 .font(.body)
                         }
                     }

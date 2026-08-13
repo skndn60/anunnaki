@@ -119,7 +119,7 @@ struct FigureQuicklookView: View {
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
 
-            ForEach(figure.alternateNames) { altName in
+            ForEach(figure.sortedAlternateNames) { altName in
                 HStack(spacing: 8) {
                     Text(altName.name)
                         .font(.callout)

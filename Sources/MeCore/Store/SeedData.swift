@@ -898,6 +898,7 @@ package struct SeedData {
                 ("Primordial", "sparkles", "AF52DE"),
                 ("Igigi", "moon.stars", "8B5CF6"),
                 ("Commander", "chevron.left.forwardslash.chevron.right", "EF4444"),
+                ("Divine Collective", "person.3.fill", "8B5CF6"),
             ]
             for config in typeConfig {
                 let type = FigureType(name: config.name, icon: config.icon, colorHex: config.colorHex)

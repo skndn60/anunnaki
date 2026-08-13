@@ -2,6 +2,20 @@ import Foundation
 import SwiftUI
 import SwiftData
 
+/// Optional sidebar coordinator. Set on the main window's content so that
+/// inline entity links can navigate the sidebar (with breadcrumb back-track)
+/// when present, and fall back to a separate window elsewhere.
+private struct NavigationCoordinatorKey: EnvironmentKey {
+    static let defaultValue: NavigationCoordinator? = nil
+}
+
+extension EnvironmentValues {
+    var navigationCoordinator: NavigationCoordinator? {
+        get { self[NavigationCoordinatorKey.self] }
+        set { self[NavigationCoordinatorKey.self] = newValue }
+    }
+}
+
 enum SidebarSelection: Hashable {
     case item(NavigationItem)
     case group(PersistentIdentifier)

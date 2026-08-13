@@ -116,7 +116,7 @@ struct EventDetailView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                                 .textCase(.uppercase)
-                            RichTextDisplay(richData: event.richDescription, fallback: event.eventDescription)
+                            LinkedDescription(text: event.eventDescription, richData: event.richDescription)
                                 .font(.body)
                         }
                     }

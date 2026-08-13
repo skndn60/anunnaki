@@ -198,7 +198,7 @@ struct TimelineEventDetailView: View {
                         .foregroundStyle(.secondary)
                 }
                 if !event.eventDescription.isEmpty || event.richDescription != nil {
-                    RichTextDisplay(richData: event.richDescription, fallback: event.eventDescription)
+                    LinkedDescription(text: event.eventDescription, richData: event.richDescription)
                         .font(.body)
                 }
                 if !event.source.isEmpty {
