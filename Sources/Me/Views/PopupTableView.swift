@@ -63,10 +63,10 @@ struct PopupTableView: View {
                     Grid(alignment: .leading, horizontalSpacing: 1, verticalSpacing: 1) {
                         GridRow {
                             Color.clear
-                                .frame(width: 160, height: 44)
+                                .frame(width: 160, height: 120)
                             ForEach(figures) { figure in
                                 FigureColumnHeader(figure: figure)
-                                    .frame(width: 180, height: 44)
+                                    .frame(width: 180, height: 120)
                             }
                         }
                         .background(Color(nsColor: .controlBackgroundColor))
@@ -74,13 +74,13 @@ struct PopupTableView: View {
                         ForEach(sortedAttributes) { attribute in
                             GridRow {
                                 AttributeRowHeader(attribute: attribute)
-                                    .frame(width: 160, height: 44)
+                                    .frame(width: 160, height: 120)
                                 ForEach(figures) { figure in
                                     CellView(
                                         value: cellBinding(attributeID: attribute.persistentModelID, figureID: figure.persistentModelID),
                                         isEditing: isEditing
                                     )
-                                    .frame(width: 180, height: 44)
+                                    .frame(width: 180, height: 120)
                                 }
                             }
                         }
