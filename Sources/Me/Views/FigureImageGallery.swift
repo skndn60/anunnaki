@@ -579,7 +579,8 @@ struct ImageDetailContent: View {
 
     private func tagLabel(_ tag: Tag) -> some View {
         HStack(spacing: 4) {
-            if let hex = tag.colorHex, !hex.isEmpty, let color = Color(hex: hex) {
+            if let hex = tag.colorHex, !hex.isEmpty {
+                let color = Color(hex: hex)
                 Circle()
                     .fill(color)
                     .frame(width: 8, height: 8)

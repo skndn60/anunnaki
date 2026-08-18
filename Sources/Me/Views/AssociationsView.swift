@@ -1063,7 +1063,8 @@ struct EditRelationshipForm: View {
     @State private var toSearchText = ""
     @Query private var allRelationTypes: [RelationshipType]
     @State private var selectedType: RelationshipType?
-    @State private var source = ""
+    @Query(sort: \Source.name) private var sources: [Source]
+    @State private var selectedSource: Source?
 
     private var filteredFromFigures: [FigureSearchResult] {
         guard !fromSearchText.isEmpty else { return [] }
@@ -1106,7 +1107,9 @@ struct EditRelationshipForm: View {
                         placeholder: "Search to figure\u{2026}"
                     )
                 }
-                TextField("Source", text: $source)
+                Section("Source") {
+                    SourcePickerView(selection: $selectedSource, sources: sources)
+                }
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -1125,7 +1128,7 @@ struct EditRelationshipForm: View {
                 toFigure = FigureSearchResult(figure: fig, matchedAlternateName: nil)
             }
             selectedType = relationship.relationshipType
-            source = relationship.source
+            selectedSource = relationship.sourceRef ?? sources.first { $0.name.compare(relationship.source, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }
         }
         .onChange(of: fromFigure) { _, _ in inferType() }
     }
@@ -1134,7 +1137,17 @@ struct EditRelationshipForm: View {
         relationship.fromFigure = fromFigure?.figure
         relationship.toFigure = toFigure?.figure
         relationship.relationshipType = selectedType
-        relationship.source = source
+        let oldSource = relationship.sourceRef
+        if oldSource != selectedSource {
+            if let old = oldSource {
+                old.relationships.removeAll { $0.persistentModelID == relationship.persistentModelID }
+            }
+            relationship.sourceRef = nil
+            if let newSource = selectedSource {
+                newSource.relationships.append(relationship)
+            }
+        }
+        relationship.source = selectedSource?.name ?? ""
         dismiss()
     }
 

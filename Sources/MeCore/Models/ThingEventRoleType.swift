@@ -12,7 +12,7 @@ package final class ThingEventRoleType {
     package var associations: [ThingEventAssociation] = []
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, icon: String, colorHex: String) {

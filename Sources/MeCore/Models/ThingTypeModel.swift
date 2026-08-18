@@ -12,7 +12,7 @@ package final class ThingType {
     package var things: [Thing] = []
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, icon: String, colorHex: String) {

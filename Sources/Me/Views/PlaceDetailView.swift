@@ -23,6 +23,9 @@ struct PlaceDetailView: View {
     @State private var selectedEventRole: EventPlaceRoleType?
     @State private var showAddAttribution = false
     @State private var editingAttribution: ContentAttribution?
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
 
     private var relatedEvents: [Event] {
         place.eventAssociations.compactMap { $0.event }
@@ -87,6 +90,34 @@ struct PlaceDetailView: View {
                                     .fill(.orange.opacity(0.12))
                             )
                     }
+
+                    if place.latitude != nil, place.longitude != nil {
+                        MapPreviewPopoverButton(place: place)
+                    }
+
+                    Button {
+                        editRichDescription = place.richDescription
+                        editPlainDescription = place.placeDescription
+                        showDescriptionEditor = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit description")
+                }
+                .sheet(isPresented: $showDescriptionEditor) {
+                    DescriptionEditorSheet(
+                        entityName: place.name,
+                        richDescription: $editRichDescription,
+                        plainDescription: $editPlainDescription
+                    )
+                    .onDisappear {
+                        place.richDescription = editRichDescription
+                        place.placeDescription = editPlainDescription
+                        try? modelContext.save()
+                    }
                 }
 
                 // Stickies
@@ -116,6 +147,17 @@ struct PlaceDetailView: View {
                             .font(.callout)
                             .textSelection(.enabled)
                     }
+                }
+
+                // Historical map
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Map")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    HistoricalMapView(place: place)
+                        .frame(height: 260)
                 }
 
                 // Description
@@ -418,7 +460,6 @@ struct PlaceDetailView: View {
 
                 // Groups
                 EntityGroupsSection(
-                    entityType: .place,
                     associations: place.groupAssociations,
                     onCreateAssociation: { group in
                         let assoc = FigureGroupAssociation(place: place)
@@ -457,9 +498,6 @@ struct PlaceDetailView: View {
                         }
                     }
                 }
-
-                Spacer()
-                MapPreviewButton(place: place)
             }
             .padding(20)
             .textSelection(.enabled)

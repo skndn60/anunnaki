@@ -457,6 +457,7 @@ private struct RelationshipTypeEditSheetView: View {
     @State private var icon = ""
     @State private var color: Color = .gray
     @State private var category = ""
+    @State private var reverseName = ""
 
     private var isEditing: Bool { item != nil }
 
@@ -467,6 +468,7 @@ private struct RelationshipTypeEditSheetView: View {
                 .padding()
             Form {
                 TextField("Name", text: $name, prompt: Text("e.g. Father, Ally, Commander"))
+                TextField("Reverse Name", text: $reverseName, prompt: Text("e.g. Son, Commanded by, Alliances with"))
                 TextField("SF Symbol", text: $icon, prompt: Text("e.g. heart, person.2.fill"))
                 TextField("Category", text: $category, prompt: Text("e.g. parent, social, military"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
@@ -482,7 +484,7 @@ private struct RelationshipTypeEditSheetView: View {
             }
             .padding()
         }
-        .frame(width: 380, height: 340)
+        .frame(width: 380, height: 380)
         .onAppear { loadIfEditing() }
     }
 
@@ -490,18 +492,21 @@ private struct RelationshipTypeEditSheetView: View {
         guard let item else { return }
         name = item.name
         icon = item.icon
-        color = Color(hex: item.colorHex) ?? .gray
+        color = Color(hex: item.colorHex)
         category = item.category
+        reverseName = item.reverseName ?? ""
     }
 
     private func save() {
+        let trimmedReverse = reverseName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let item {
             item.name = name
             item.icon = icon
             item.colorHex = color.hex
             item.category = category
+            item.reverseName = trimmedReverse.isEmpty ? nil : trimmedReverse
         } else {
-            let newItem = RelationshipType(name: name, icon: icon, colorHex: color.hex, category: category)
+            let newItem = RelationshipType(name: name, icon: icon, colorHex: color.hex, category: category, reverseName: trimmedReverse.isEmpty ? nil : trimmedReverse)
             modelContext.insert(newItem)
         }
         try? modelContext.save()

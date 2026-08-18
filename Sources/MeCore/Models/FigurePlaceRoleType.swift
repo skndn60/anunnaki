@@ -12,7 +12,7 @@ package final class FigurePlaceRoleType: Equatable {
     package var associations: [FigurePlaceAssociation] = []
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, icon: String, colorHex: String) {

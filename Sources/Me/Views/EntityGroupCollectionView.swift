@@ -79,12 +79,10 @@ private func spineItems(for group: FigureGroup) -> [MixedItem] {
     for item in group.memberTextSpine {
         switch item {
         case .member(let assoc):
-            switch group.entityType {
-            case .figure: if let f = assoc.figure { result.append(.figure(f, assoc.displayName)) }
-            case .place: if let p = assoc.place { result.append(.place(p, assoc.displayName)) }
-            case .event: if let e = assoc.event { result.append(.event(e, assoc.displayName)) }
-            case .thing: if let t = assoc.thing { result.append(.thing(t, assoc.displayName)) }
-            }
+            if let f = assoc.figure { result.append(.figure(f, assoc.displayName)) }
+            else if let p = assoc.place { result.append(.place(p, assoc.displayName)) }
+            else if let e = assoc.event { result.append(.event(e, assoc.displayName)) }
+            else if let t = assoc.thing { result.append(.thing(t, assoc.displayName)) }
         case .text(let block):
             result.append(.text(block))
         }
@@ -101,7 +99,7 @@ struct EntityGroupCollectionView: View {
     @State private var searchText = ""
     @State private var expandedGroups: Set<PersistentIdentifier> = []
     @State private var hoveredFigureID: PersistentIdentifier?
-    @State private var selectedMemberID: PersistentIdentifier?
+    @State private var detailItem: GroupMemberItem?
     @State private var revealedBars: Set<Int> = []
     @State private var editingFigure: Figure?
     @State private var editingPlace: Place?
@@ -111,6 +109,7 @@ struct EntityGroupCollectionView: View {
     @State private var deletingTextBlock: GroupTextBlock?
     @State private var showDeleteConfirm = false
     @State private var showDeleteTextBlockConfirm = false
+    @State private var deleteWarningMessage: String?
     @State private var showTextBlockControls = false
     @State private var imageDetailImage: ImageAsset?
 
@@ -149,36 +148,24 @@ struct EntityGroupCollectionView: View {
         return chain.reversed()
     }
 
-    private var selectedFigure: Figure? {
-        guard entityType == .figure, let id = selectedMemberID else { return nil }
-        let fetch = FetchDescriptor<Figure>(predicate: #Predicate { $0.persistentModelID == id })
-        return try? modelContext.fetch(fetch).first
-    }
-
-    private var selectedPlace: Place? {
-        guard entityType == .place, let id = selectedMemberID else { return nil }
-        let fetch = FetchDescriptor<Place>(predicate: #Predicate { $0.persistentModelID == id })
-        return try? modelContext.fetch(fetch).first
-    }
-
-    private var selectedEvent: Event? {
-        guard entityType == .event, let id = selectedMemberID else { return nil }
-        let fetch = FetchDescriptor<Event>(predicate: #Predicate { $0.persistentModelID == id })
-        return try? modelContext.fetch(fetch).first
-    }
-
-    private var selectedThing: Thing? {
-        guard entityType == .thing, let id = selectedMemberID else { return nil }
-        let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.persistentModelID == id })
-        return try? modelContext.fetch(fetch).first
-    }
-
     private var selectedItemName: String? {
-        switch entityType {
-        case .figure: return selectedFigure?.name
-        case .place: return selectedPlace?.name
-        case .event: return selectedEvent?.name
-        case .thing: return selectedThing?.name
+        detailItem?.name
+    }
+
+    private func openLinkedEntity(kind: EntityKind, id: PersistentIdentifier) {
+        switch kind {
+        case .figure:
+            if let figure = try? modelContext.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .figure(figure, nil)
+            }
+        case .place:
+            if let place = try? modelContext.fetch(FetchDescriptor<Place>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .place(place, nil)
+            }
+        case .event:
+            if let event = try? modelContext.fetch(FetchDescriptor<Event>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .event(event, nil)
+            }
         }
     }
 
@@ -188,6 +175,9 @@ struct EntityGroupCollectionView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     ancestorTrail
                     header
+                    if group.era != nil {
+                        GroupEraMapView(group: group)
+                    }
                     heroStats
                     reignTower
                     searchBar
@@ -202,7 +192,7 @@ struct EntityGroupCollectionView: View {
                                         group: subgroup,
                                         expanded: $expandedGroups,
                                         showTextBlockControls: showTextBlockControls,
-                                        onSelectMember: { selectedMemberID = $0.id },
+                                        onSelectMember: { detailItem = memberItem(from: $0) },
                                         onOpenInSidebar: { openInSidebar($0) },
                                         onOpenInWindow: { openInWindow($0) },
                                         onEditMember: { beginEdit($0) },
@@ -221,7 +211,7 @@ struct EntityGroupCollectionView: View {
                                 default:
                                     MemberRow(
                                         item: item,
-                                        isSelected: selectedMemberID == item.id,
+                                        isSelected: detailItem?.id == item.id,
                                         isHoverLinked: hoveredFigureID == item.id,
                                         onHoverLink: { hovering in
                                             if case .figure = item {
@@ -230,7 +220,7 @@ struct EntityGroupCollectionView: View {
                                                 hoveredFigureID = nil
                                             }
                                         },
-                                        onSelect: { selectedMemberID = item.id },
+                                        onSelect: { detailItem = memberItem(from: item) },
                                         onOpenInSidebar: { openInSidebar(item) },
                                         onOpenInWindow: { openInWindow(item) },
                                         onEdit: { beginEdit(item) },
@@ -246,10 +236,10 @@ struct EntityGroupCollectionView: View {
             }
 
             Group {
-                if selectedMemberID != nil {
+                if detailItem != nil {
                     Divider()
                     detailPanel
-                        .id(selectedMemberID)
+                        .id(detailItem?.id)
                         .frame(width: 320)
                         .frame(maxHeight: .infinity)
                         .background(.thinMaterial)
@@ -260,7 +250,14 @@ struct EntityGroupCollectionView: View {
                 removal: .move(edge: .leading).combined(with: .opacity)
             ))
         }
-        .animation(.easeInOut(duration: 0.3), value: selectedMemberID)
+        .animation(.easeInOut(duration: 0.3), value: detailItem?.id)
+        .environment(\.inlineLinkGroupContext, InlineLinkGroupContext(
+            groupID: group.persistentModelID,
+            groupName: group.name,
+            onOpenEntity: { kind, id in
+                openLinkedEntity(kind: kind, id: id)
+            }
+        ))
         .sheet(item: $editingFigure) { FigureFormView(figure: $0) }
         .sheet(item: $editingPlace) { PlaceFormView(place: $0) }
         .sheet(item: $editingEvent) { EventFormView(event: $0) }
@@ -278,7 +275,12 @@ struct EntityGroupCollectionView: View {
             Button("Delete", role: .destructive) { deleteSelected() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text(selectedItemName.map { "Delete \"\($0)\"? This cannot be undone." } ?? "Delete this member?")
+            let name = selectedItemName ?? "this member"
+            if let warning = deleteWarningMessage {
+                Text("Delete \"\(name)\"? \(warning)\nThis cannot be undone.")
+            } else {
+                Text("Delete \"\(name)\"? This cannot be undone.")
+            }
         }
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
@@ -292,30 +294,32 @@ struct EntityGroupCollectionView: View {
     private var detailPanel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
-                switch entityType {
-                case .figure:
-                    if let figure = selectedFigure {
+                if let item = detailItem {
+                    switch item {
+                    case .figure(let figure, _):
                         IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") { editingFigure = figure }
-                        IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
-                    }
-                case .place:
-                    if let place = selectedPlace {
+                        if isMember(item) {
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
+                        }
+                    case .place(let place, _):
                         IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") { editingPlace = place }
-                        IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
-                    }
-                case .event:
-                    if let event = selectedEvent {
+                        if isMember(item) {
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
+                        }
+                    case .event(let event, _):
                         IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") { editingEvent = event }
-                        IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
-                    }
-                case .thing:
-                    if let thing = selectedThing {
+                        if isMember(item) {
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
+                        }
+                    case .thing(let thing, _):
                         IconActionButton(icon: "pencil", color: .accentColor, help: "Edit") { editingThing = thing }
-                        IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
+                        if isMember(item) {
+                            IconActionButton(icon: "trash", color: .red, help: "Delete") { showDeleteConfirm = true }
+                        }
                     }
                 }
                 Spacer()
-                Button(action: { selectedMemberID = nil }) {
+                Button(action: { detailItem = nil }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
@@ -327,9 +331,9 @@ struct EntityGroupCollectionView: View {
             }
             .padding(8)
 
-            switch entityType {
-            case .figure:
-                if let figure = selectedFigure {
+            if let item = detailItem {
+                switch item {
+                case .figure(let figure, _):
                     FigureDetailView(
                         figure: figure,
                         onSelectFigure: { selected in deferSelect(selected.persistentModelID) },
@@ -337,50 +341,32 @@ struct EntityGroupCollectionView: View {
                         onSelectEvent: { event in deferSelect(event.persistentModelID) },
                         onSelectImage: { imageDetailImage = $0 }
                     )
-                } else {
-                    Text("Select a figure")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            case .place:
-                if let place = selectedPlace {
+                case .place(let place, _):
                     PlaceDetailView(
                         place: place,
                         onSelectFigure: { figure in deferSelect(figure.persistentModelID) },
                         onSelectEvent: { event in deferSelect(event.persistentModelID) },
                         onSelectImage: { imageDetailImage = $0 }
                     )
-                } else {
-                    Text("Select a place")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            case .event:
-                if let event = selectedEvent {
+                case .event(let event, _):
                     EventDetailView(
                         event: event,
                         onSelectFigure: { figure in deferSelect(figure.persistentModelID) },
                         onSelectPlace: { place in deferSelect(place.persistentModelID) },
                         onSelectImage: { imageDetailImage = $0 }
                     )
-                } else {
-                    Text("Select an event")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-            case .thing:
-                if let thing = selectedThing {
+                case .thing(let thing, _):
                     ThingDetailView(
                         thing: thing,
                         onSelectImage: { imageDetailImage = $0 }
                     )
-                } else {
-                    Text("Select a thing")
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
         }
+    }
+
+    private func isMember(_ item: GroupMemberItem) -> Bool {
+        group.effectiveMemberItems(in: modelContext).contains { $0.id == item.id }
     }
 
     private var ancestorTrail: some View {
@@ -644,7 +630,7 @@ struct EntityGroupCollectionView: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
                 .font(.caption)
-            TextField("Search \(entityType.pluralName.lowercased()) and subgroups\u{2026}", text: $searchText)
+            TextField("Search \(group.memberPluralLabel) and subgroups\u{2026}", text: $searchText)
                 .textFieldStyle(.roundedBorder)
         }
         .frame(maxWidth: 320)
@@ -655,7 +641,7 @@ struct EntityGroupCollectionView: View {
             Image(systemName: entityType.icon)
                 .font(.system(size: 36))
                 .foregroundStyle(.secondary)
-            Text(searchText.isEmpty ? "No \(entityType.pluralName.lowercased()) in this group" : "No matches")
+            Text(searchText.isEmpty ? "No \(group.memberPluralLabel) in this group" : "No matches")
                 .font(.callout)
                 .foregroundStyle(.tertiary)
         }
@@ -665,7 +651,15 @@ struct EntityGroupCollectionView: View {
 
     private func deferSelect(_ id: PersistentIdentifier) {
         Task { @MainActor in
-            selectedMemberID = id
+            if let figure = try? modelContext.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .figure(figure, nil)
+            } else if let place = try? modelContext.fetch(FetchDescriptor<Place>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .place(place, nil)
+            } else if let event = try? modelContext.fetch(FetchDescriptor<Event>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .event(event, nil)
+            } else if let thing = try? modelContext.fetch(FetchDescriptor<Thing>(predicate: #Predicate { $0.persistentModelID == id })).first {
+                detailItem = .thing(thing, nil)
+            }
         }
     }
 
@@ -717,8 +711,28 @@ struct EntityGroupCollectionView: View {
             showDeleteTextBlockConfirm = true
             return
         }
-        selectedMemberID = item.id
+        if let member = memberItem(from: item) {
+            detailItem = member
+        }
+        deleteWarningMessage = computeDeleteWarning(for: item)
         showDeleteConfirm = true
+    }
+
+    private func computeDeleteWarning(for item: MixedItem) -> String? {
+        let entityID: PersistentIdentifier?
+        switch item {
+        case .figure(let fig, _): entityID = fig.persistentModelID
+        case .place(let p, _): entityID = p.persistentModelID
+        case .event(let e, _): entityID = e.persistentModelID
+        case .thing(let t, _): entityID = t.persistentModelID
+        case .group, .text: return nil
+        }
+        guard let entityID else { return nil }
+        let involvingEvents = group.eventsInvolving(entityID: entityID, in: modelContext)
+        guard !involvingEvents.isEmpty else { return nil }
+        let eventNames = involvingEvents.map(\.name).prefix(3).joined(separator: ", ")
+        let suffix = involvingEvents.count > 3 ? " and \(involvingEvents.count - 3) more" : ""
+        return "This entity is involved in events: \(eventNames)\(suffix)."
     }
 
     private func deleteTextBlock() {
@@ -730,26 +744,27 @@ struct EntityGroupCollectionView: View {
     }
 
     private func deleteSelected() {
-        switch entityType {
-        case .figure:
-            if let figure = selectedFigure {
-                modelContext.delete(figure)
-            }
-        case .place:
-            if let place = selectedPlace {
-                modelContext.delete(place)
-            }
-        case .event:
-            if let event = selectedEvent {
-                modelContext.delete(event)
-            }
-        case .thing:
-            if let thing = selectedThing {
-                modelContext.delete(thing)
-            }
+        if let figure = detailItem?.figure {
+            modelContext.delete(figure)
+        } else if let place = detailItem?.place {
+            modelContext.delete(place)
+        } else if let event = detailItem?.event {
+            modelContext.delete(event)
+        } else if let thing = detailItem?.thing {
+            modelContext.delete(thing)
         }
-        selectedMemberID = nil
+        detailItem = nil
         try? modelContext.save()
+    }
+}
+
+private func memberItem(from item: MixedItem) -> GroupMemberItem? {
+    switch item {
+    case .figure(let entity, let alias): return .figure(entity, alias)
+    case .place(let entity, let alias): return .place(entity, alias)
+    case .event(let entity, let alias): return .event(entity, alias)
+    case .thing(let entity, let alias): return .thing(entity, alias)
+    case .group, .text: return nil
     }
 }
 
@@ -833,7 +848,7 @@ private struct MemberRow: View {
     }
 
     var body: some View {
-        Button(action: onSelect) {
+        let row = Button(action: onSelect) {
             HStack(spacing: 10) {
                 Image(systemName: icon)
                     .font(.caption)
@@ -873,9 +888,6 @@ private struct MemberRow: View {
                     .stroke(isSelected ? Color.accentColor.opacity(0.4) : Color.gray.opacity(0.2), lineWidth: 0.5)
             )
             .contentShape(Rectangle())
-            .onHover { hovering in
-                onHoverLink?(hovering)
-            }
             .animation(.easeInOut(duration: 0.15), value: isHoverLinked)
         }
         .buttonStyle(.plain)
@@ -896,6 +908,12 @@ private struct MemberRow: View {
             Button("Delete", role: .destructive) {
                 onDelete()
             }
+        }
+
+        if case .figure(let figure, _) = item, figure.mugshotImage != nil {
+            row.mugshotHover(figure, size: 120, arrowEdge: .leading, onHover: onHoverLink)
+        } else {
+            row.onHover { onHoverLink?($0) }
         }
     }
 }
@@ -1059,6 +1077,11 @@ private struct TextBlockRow: View {
     let onDelete: () -> Void
 
     @State private var isHovered = false
+    @State private var showFullText = false
+
+    private var hasSummary: Bool {
+        !(block.summary?.isEmpty ?? true)
+    }
 
     var body: some View {
         let alignment = block.alignment
@@ -1101,15 +1124,47 @@ private struct TextBlockRow: View {
                     .help("Delete text block")
                 }
             }
-            RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-                .multilineTextAlignment(textAlignment)
+            if hasSummary {
+                RichTextDisplay(richData: block.summaryRichText, fallback: block.summary ?? "", stripForegroundColor: true)
+                    .font(.callout)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .multilineTextAlignment(textAlignment)
+                    .frame(maxWidth: .infinity, alignment: frameAlignment)
+                if showFullText {
+                    RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                        .multilineTextAlignment(textAlignment)
+                        .frame(maxWidth: .infinity, alignment: frameAlignment)
+                }
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showFullText.toggle()
+                    }
+                } label: {
+                    Text(showFullText ? "Hide full text" : "Show full text\u{2026}")
+                        .font(.caption)
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .pointingHand()
                 .frame(maxWidth: .infinity, alignment: frameAlignment)
+            } else {
+                RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .multilineTextAlignment(textAlignment)
+                    .frame(maxWidth: .infinity, alignment: frameAlignment)
+            }
         }
         .padding(10)
+        .frame(minHeight: 32)
         .frame(maxWidth: block.maxWidth.map { CGFloat($0) } ?? .infinity, alignment: frameAlignment)
         .background(
             RoundedRectangle(cornerRadius: 6)
@@ -1141,6 +1196,8 @@ struct GroupTextBlockSheet: View {
     @State private var title: String
     @State private var text: String
     @State private var richText: Data?
+    @State private var summary: String
+    @State private var summaryRichText: Data?
     @State private var maxWidth: Double?
     @State private var alignment: GroupTextBlock.TextBlockAlignment
     @State private var titleSize: GroupTextBlock.TextBlockTitleSize
@@ -1151,6 +1208,8 @@ struct GroupTextBlockSheet: View {
         _title = State(initialValue: block.title)
         _text = State(initialValue: block.text)
         _richText = State(initialValue: block.richText)
+        _summary = State(initialValue: block.summary ?? "")
+        _summaryRichText = State(initialValue: block.summaryRichText)
         _maxWidth = State(initialValue: block.maxWidth)
         _alignment = State(initialValue: block.alignment)
         _titleSize = State(initialValue: block.titleSize)
@@ -1162,8 +1221,16 @@ struct GroupTextBlockSheet: View {
                 .font(.headline)
             TextField("Title (optional)", text: $title)
                 .textFieldStyle(.roundedBorder)
+            Text("Summary")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
+            RichTextEditorSection(richData: $summaryRichText, plainText: $summary)
+                .frame(minHeight: 90)
+            Text("Full text")
+                .font(.callout.weight(.medium))
+                .foregroundStyle(.secondary)
             RichTextEditorSection(richData: $richText, plainText: $text)
-                .frame(minHeight: 200)
+                .frame(minHeight: 140)
             HStack(spacing: 8) {
                 Text("Title size:")
                     .font(.callout)
@@ -1211,6 +1278,8 @@ struct GroupTextBlockSheet: View {
                     block.title = title
                     block.text = text
                     block.richText = richText
+                    block.summary = summary
+                    block.summaryRichText = summaryRichText
                     block.maxWidth = maxWidth
                     block.alignmentRawValue = alignment.rawValue
                     block.titleSizeRawValue = titleSize.rawValue
@@ -1224,7 +1293,7 @@ struct GroupTextBlockSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 520, height: 420)
+        .frame(width: 560, height: 620)
     }
 }
 
@@ -1239,20 +1308,3 @@ private extension GroupTextBlock.TextBlockTitleSize {
     }
 }
 
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-    }
-}

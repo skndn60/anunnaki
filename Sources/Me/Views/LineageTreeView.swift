@@ -43,6 +43,17 @@ struct LineageTreeView: View {
     @State private var altForFigure: Figure?
     @State private var rightClickFigureID: PersistentIdentifier?
     @State private var centerHistory: [Figure] = []
+    @State private var sourceFilter = ""
+
+    private var availableSources: [String] {
+        let sources = relationships.map(\.sourceDisplayName).filter { !$0.isEmpty }
+        return Array(Set(sources)).sorted()
+    }
+
+    private var filteredRelationships: [Relationship] {
+        guard !sourceFilter.isEmpty else { return relationships }
+        return relationships.filter { $0.sourceDisplayName == sourceFilter }
+    }
 
     private let cardWidth: CGFloat = 120
     private let cardHeight: CGFloat = 52
@@ -117,6 +128,10 @@ struct LineageTreeView: View {
             Spacer()
             FigureTypeLegend(types: figureTypes)
 
+            if availableSources.count > 1 {
+                sourceFilterMenu
+            }
+
             stepperButton(direction: .up, value: $generationsAbove, maximum: 4)
             stepperButton(direction: .down, value: $generationsBelow, maximum: 4)
         }
@@ -124,6 +139,33 @@ struct LineageTreeView: View {
     }
 
     // MARK: - Stepper
+
+    private var sourceFilterMenu: some View {
+        Menu {
+            Button("All sources") { sourceFilter = "" }
+            Divider()
+            ForEach(availableSources, id: \.self) { source in
+                Button(source) { sourceFilter = source }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "book.closed")
+                    .font(.system(size: 9))
+                Text(sourceFilter.isEmpty ? "All sources" : sourceFilter)
+                    .font(.caption)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 7))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.secondary.opacity(0.1)))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Filter lineage by source")
+    }
 
     private enum StepperDirection {
         case up, down
@@ -218,7 +260,29 @@ struct LineageTreeView: View {
                 .onContinuousHover { phase in
                     if case .active(let location) = phase {
                         rightClickFigureID = figureAt(location: location, in: layout)
+                    } else {
+                        rightClickFigureID = nil
                     }
+                }
+
+                if let figID = rightClickFigureID,
+                   let frame = layout.nodeLayouts[figID],
+                   let figure = figures.first(where: { $0.persistentModelID == figID }),
+                   figure.mugshotImage != nil {
+                    let size: CGFloat = 140
+                    let below = frame.maxY + size < layout.canvasHeight
+                    MugshotView(
+                        image: figure.mugshotImage,
+                        cropRect: ImageCropRect(encoded: figure.mugshotCropRect),
+                        size: size,
+                        figureType: figure.figureType,
+                        identification: figure.mugshotIdentification
+                    )
+                    .allowsHitTesting(false)
+                    .position(
+                        x: frame.midX,
+                        y: below ? frame.maxY + 28 + size / 2 : frame.minY - 28 - size / 2
+                    )
                 }
             }
             .padding(40)
@@ -267,7 +331,7 @@ struct LineageTreeView: View {
         guard nextGen >= maxGen else { return }
         guard !collapsedIDs.contains(figure.name) else { return }
 
-        let rels = relationships.filter { $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID }
+        let rels = filteredRelationships.filter { $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == figure.persistentModelID }
         let childID = idFor(figure, gen: currentGen)
 
         if rels.isEmpty {
@@ -370,7 +434,7 @@ struct LineageTreeView: View {
         guard nextGen <= maxGen else { return }
         guard !collapsedIDs.contains(figure.name) else { return }
 
-        let rels = relationships.filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
+        let rels = filteredRelationships.filter { $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == figure.persistentModelID }
         let parentID = slotOwner[figure.persistentModelID] ?? idFor(figure, gen: currentGen)
         var seen: Set<PersistentIdentifier> = []
 
@@ -468,7 +532,7 @@ struct LineageTreeView: View {
     // MARK: - Partner Helpers
 
     private func preferredPartner(of figure: Figure) -> Figure? {
-        let rels = relationships.filter {
+        let rels = filteredRelationships.filter {
             ($0.relationshipType?.name == "Spouse" || $0.relationshipType?.name == "Consort") &&
             ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID)
         }
@@ -477,7 +541,7 @@ struct LineageTreeView: View {
     }
 
     private func partnerCount(of figure: Figure) -> Int {
-        let rels = relationships.filter {
+        let rels = filteredRelationships.filter {
             ($0.relationshipType?.name == "Spouse" || $0.relationshipType?.name == "Consort") &&
             ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID)
         }
@@ -827,7 +891,7 @@ struct LineageTreeView: View {
 
 private struct AlternativePartnersSheet: View {
     let figure: Figure
-    let partners: [Figure]
+    let partners: [(figure: Figure, source: String?)]
     let onClose: () -> Void
     let onRecenter: (PersistentIdentifier) -> Void
 
@@ -850,14 +914,17 @@ private struct AlternativePartnersSheet: View {
                 Text("No alternative partners found.").foregroundStyle(.secondary).padding()
                 Spacer()
             } else {
-                List(partners, id: \.persistentModelID) { partner in
+                List(partners, id: \.figure.persistentModelID) { partner in
                     HStack(spacing: 8) {
-                        Circle().fill(partner.figureType?.color ?? .gray).frame(width: 8, height: 8)
-                        Text(partner.name).font(.body)
-                        Text(partner.figureType?.name ?? "").font(.caption).foregroundStyle(.secondary)
+                        Circle().fill(partner.figure.figureType?.color ?? .gray).frame(width: 8, height: 8)
+                        Text(partner.figure.name).font(.body)
+                        Text(partner.figure.figureType?.name ?? "").font(.caption).foregroundStyle(.secondary)
+                        if let source = partner.source {
+                            SourceBadgeView(name: source)
+                        }
                         Spacer()
                         Button("Recenter") {
-                            onRecenter(partner.persistentModelID)
+                            onRecenter(partner.figure.persistentModelID)
                         }
                         .buttonStyle(.plain)
                         .foregroundColor(.accentColor)
@@ -894,22 +961,22 @@ private struct FigureDetailSheet: View {
     }
 }
 
-    private func alternativePartners(of figure: Figure) -> [Figure] {
+    private func alternativePartners(of figure: Figure) -> [(figure: Figure, source: String?)] {
         let preferred = preferredPartner(of: figure)
-        let rels = relationships.filter {
+        let rels = filteredRelationships.filter {
             ($0.relationshipType?.name == "Spouse" || $0.relationshipType?.name == "Consort") &&
             ($0.fromFigure?.persistentModelID == figure.persistentModelID || $0.toFigure?.persistentModelID == figure.persistentModelID)
         }
-        var partners: [Figure] = []
+        var partners: [(figure: Figure, source: String?)] = []
         var seen = Set<PersistentIdentifier>()
         for rel in rels {
             let p = rel.fromFigure?.persistentModelID == figure.persistentModelID ? rel.toFigure : rel.fromFigure
             if let fig = p, seen.insert(fig.persistentModelID).inserted {
-                partners.append(fig)
+                partners.append((fig, rel.sourceDisplayName.isEmpty ? nil : rel.sourceDisplayName))
             }
         }
         if let pref = preferred {
-            partners.removeAll { $0.persistentModelID == pref.persistentModelID }
+            partners.removeAll { $0.figure.persistentModelID == pref.persistentModelID }
         }
         return partners
     }

@@ -144,8 +144,8 @@ package struct Migration {
 
     /// Create Hermani and Yehadiel — the two Commander figures missing from the restored snapshot.
     package static func ensureMissingCommanderFiguresExist(context: ModelContext) {
-        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
-        guard !existingNames.contains("Hermani") || !existingNames.contains("Yehadiel") else { return }
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
+        guard !existingNames.contains("hermani") || !existingNames.contains("yehadiel") else { return }
 
         let commanderPredicate = #Predicate<FigureType> { $0.name == "Commander" }
         let commanderType = try? context.fetch(FetchDescriptor<FigureType>(predicate: commanderPredicate)).first
@@ -161,7 +161,7 @@ package struct Migration {
         ]
 
         for config in missingFigures {
-            guard !existingNames.contains(config.name) else { continue }
+            guard !existingNames.contains(config.name.lowercased()) else { continue }
             let figure = Figure(
                 name: config.name,
                 title: config.title,
@@ -182,12 +182,12 @@ package struct Migration {
             let commanderRelPredicate = #Predicate<RelationshipType> { $0.name == "Commander" }
             let commanderRelType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: commanderRelPredicate)).first
 
-            let existingRelations = Set((samyaza.outgoingRelationships ?? []).compactMap { $0.toFigure?.name })
+            let existingRelations = Set((samyaza.outgoingRelationships ?? []).compactMap { $0.toFigure?.name.lowercased() })
             let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
 
             for name in ["Hermani", "Yehadiel"] {
-                guard !existingRelations.contains(name),
-                      let target = allFigures.first(where: { $0.name == name }) else { continue }
+                guard !existingRelations.contains(name.lowercased()),
+                      let target = allFigures.first(where: { $0.name.lowercased() == name.lowercased() }) else { continue }
                 let rel = Relationship(
                     fromFigure: samyaza,
                     toFigure: target,
@@ -237,12 +237,12 @@ package struct Migration {
              "One of the seven holy archangels. Set over those who rise (the resurrection). Presides over the faithful who are raised to eternal life."),
         ]
 
-        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
         let creationDate = MythologicalDate(year: nil, era: "Creation", isApproximate: true)
         let eternalDate = MythologicalDate(year: nil, era: "Eternal", isApproximate: true)
 
         for config in archangelConfigs {
-            guard !existingNames.contains(config.name) else { continue }
+            guard !existingNames.contains(config.name.lowercased()) else { continue }
 
             let figure = Figure(
                 name: config.name,
@@ -375,14 +375,14 @@ package struct Migration {
     /// Add Duttur (mother of Dumuzi & Geshtinanna) and parent relationships
     /// so sibling inference via shared parents works for Dumuzi <-> Geshtinanna.
     package static func ensureDumuziFamilyExists(context: ModelContext) {
-        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
 
         let fatherType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Father" })).first
         let motherType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: #Predicate { $0.name == "Mother" })).first
 
         // Create Duttur if missing
         let dutturID: PersistentIdentifier?
-        if existingNames.contains("Duttur") {
+        if existingNames.contains("duttur") {
             dutturID = (try? context.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.name == "Duttur" })).first)?.persistentModelID
         } else {
             let figureType = try? context.fetch(FetchDescriptor<FigureType>(predicate: #Predicate { $0.name == "Deity" })).first
@@ -407,9 +407,9 @@ package struct Migration {
         guard let dutturID else { return }
 
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        guard let enki = allFigures.first(where: { $0.name == "Enki" }),
-              let dumuzi = allFigures.first(where: { $0.name == "Dumuzi" }),
-              let geshtinanna = allFigures.first(where: { $0.name == "Geshtinanna" }),
+        guard let enki = allFigures.first(where: { $0.name.lowercased() == "enki" }),
+              let dumuzi = allFigures.first(where: { $0.name.lowercased() == "dumuzi" }),
+              let geshtinanna = allFigures.first(where: { $0.name.lowercased() == "geshtinanna" }),
               let duttur = allFigures.first(where: { $0.persistentModelID == dutturID }),
               let fatherType, let motherType else { return }
 
@@ -440,14 +440,15 @@ package struct Migration {
 
     /// Import deities from deities_import.json that don't already exist in the database.
     package static func ensureDeitiesImportExist(context: ModelContext) {
-        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
         let targetNames: Set<String> = [
             "Ishkur", "Uraš", "Zababa", "Ninazu", "Ningishzida",
             "Gugalanna", "Birtu", "Kulla", "Mushdamma", "Hendursaga",
             "Isimud", "Papsukkal", "Lugal-Marada", "Numushda", "Shara",
             "Pabilsag", "Lulal", "Enkimdu", "Ninshubur",
         ]
-        guard targetNames.intersection(existingNames).count != targetNames.count else { return }
+        let targetNamesLower = Set(targetNames.map { $0.lowercased() })
+        guard targetNamesLower.intersection(existingNames).count != targetNamesLower.count else { return }
 
         let url: URL? = {
             if let u = Bundle.module.url(forResource: "deities_import", withExtension: "json") { return u }
@@ -459,12 +460,12 @@ package struct Migration {
             return
         }
 
-        let rootExistingNames = Set(root.figures.map(\.name))
-        guard rootExistingNames.isSubset(of: targetNames) else {
+        let rootExistingNames = Set(root.figures.map { $0.name.lowercased() })
+        guard rootExistingNames.isSubset(of: targetNamesLower) else {
             return
         }
 
-        let toImport = root.figures.filter { !existingNames.contains($0.name) }
+        let toImport = root.figures.filter { !existingNames.contains($0.name.lowercased()) }
         guard !toImport.isEmpty else { return }
 
         let importedIds = Set(toImport.map(\.id))
@@ -612,14 +613,14 @@ package struct Migration {
         let unknownDate = MythologicalDate(year: nil, era: "", isApproximate: true)
 
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        let existingNames = Set(allFigures.map(\.name))
+        let existingNames = Set(allFigures.map { $0.name.lowercased() })
 
         let figureById: [PersistentIdentifier: Figure] = allFigures.reduce(into: [:]) { $0[$1.persistentModelID] = $1 }
-        let figureByName: [String: Figure] = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
+        let figureByName: [String: Figure] = allFigures.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
 
         // Look up or create a figure by name
         func getOrCreateFigure(name: String, title: String, domain: String, description: String) -> Figure? {
-            if let existing = figureByName[name] { return existing }
+            if let existing = figureByName[name.lowercased()] { return existing }
             let fig = Figure(
                 name: name,
                 title: title,
@@ -653,7 +654,7 @@ package struct Migration {
 
         // Re-fetch figures after creating new ones
         let allFigures2 = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        let figureByName2: [String: Figure] = allFigures2.reduce(into: [:]) { $0[$1.name] = $1 }
+        let figureByName2: [String: Figure] = allFigures2.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
 
         let relDefs: [(from: String, to: String, type: RelationshipType?, source: String)] = [
             // Mythological
@@ -698,8 +699,8 @@ package struct Migration {
 
         for (fromName, toName, type, source) in relDefs {
             guard let type else { continue }
-            guard let from = figureByName2[fromName],
-                  let to = figureByName2[toName] else { continue }
+            guard let from = figureByName2[fromName.lowercased()],
+                  let to = figureByName2[toName.lowercased()] else { continue }
             guard !hasRel(from, to) else { continue }
             let rel = Relationship(fromFigure: from, toFigure: to, relationshipType: type, source: source)
             context.insert(rel)
@@ -841,9 +842,9 @@ package struct Migration {
 
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
         let allPlaces = (try? context.fetch(FetchDescriptor<Place>())) ?? []
-        let existingPlaceNames = Set(allPlaces.map(\.name))
-        let figureByName = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
-        var placeByName = allPlaces.reduce(into: [:]) { $0[$1.name] = $1 }
+        let existingPlaceNames = Set(allPlaces.map { $0.name.lowercased() })
+        let figureByName = allFigures.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
+        var placeByName = allPlaces.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
 
         let seedFigureNameById = root.figures.reduce(into: [:]) { $0[$1.id] = $1.name }
         let seedPlaceNameById = root.places.reduce(into: [:]) { $0[$1.id] = $1.name }
@@ -852,7 +853,7 @@ package struct Migration {
 
         // 1. Create missing places
         for seedPlace in root.places {
-            guard !existingPlaceNames.contains(seedPlace.name) else { continue }
+            guard !existingPlaceNames.contains(seedPlace.name.lowercased()) else { continue }
             let placeType = placeTypeByName[seedPlace.placeType]
             let place = Place(
                 name: seedPlace.name,
@@ -864,7 +865,7 @@ package struct Migration {
                 longitude: seedPlace.longitude
             )
             context.insert(place)
-            placeByName[seedPlace.name] = place
+            placeByName[seedPlace.name.lowercased()] = place
         }
 
         // 2. Create missing figure-place associations
@@ -874,8 +875,8 @@ package struct Migration {
         for seedAssoc in root.figurePlaceAssociations ?? [] {
             guard let figName = seedFigureNameById[seedAssoc.figureId],
                   let placeName = seedPlaceNameById[seedAssoc.placeId],
-                  let figure = figureByName[figName],
-                  let place = placeByName[placeName] else { continue }
+                  let figure = figureByName[figName.lowercased()],
+                  let place = placeByName[placeName.lowercased()] else { continue }
 
             let alreadyExists = existingAssocs.contains { assoc in
                 assoc.figure?.persistentModelID == figure.persistentModelID &&
@@ -899,8 +900,8 @@ package struct Migration {
         let existingPlaceAssocs = (try? context.fetch(FetchDescriptor<PlacePlaceAssociation>())) ?? []
 
         for seedAssoc in root.placePlaceAssociations ?? [] {
-            guard let fromPlace = placeByName[seedPlaceNameById[seedAssoc.fromPlaceId] ?? ""],
-                  let toPlace = placeByName[seedPlaceNameById[seedAssoc.toPlaceId] ?? ""] else { continue }
+            guard let fromPlace = placeByName[(seedPlaceNameById[seedAssoc.fromPlaceId] ?? "").lowercased()],
+                  let toPlace = placeByName[(seedPlaceNameById[seedAssoc.toPlaceId] ?? "").lowercased()] else { continue }
 
             let alreadyExists = existingPlaceAssocs.contains { assoc in
                 assoc.fromPlace?.persistentModelID == fromPlace.persistentModelID &&
@@ -938,19 +939,19 @@ package struct Migration {
         let allEventTypes = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
         let allEventPlaceRoles = (try? context.fetch(FetchDescriptor<EventPlaceRoleType>())) ?? []
 
-        var figureByName = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
-        var placeByName = allPlaces.reduce(into: [:]) { $0[$1.name] = $1 }
+        var figureByName = allFigures.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
+        var placeByName = allPlaces.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
         let eventTypeByName = allEventTypes.reduce(into: [:]) { $0[$1.name] = $1 }
         let occuredAtRole = allEventPlaceRoles.first(where: { $0.name == "Occurred At" })
 
-        let existingEventNames = Set(allFigures.isEmpty ? [] : (try? context.fetch(FetchDescriptor<Event>()))?.map(\.name) ?? [])
+        let existingEventNames = Set(allFigures.isEmpty ? [] : (try? context.fetch(FetchDescriptor<Event>()))?.map { $0.name.lowercased() } ?? [])
 
         let seedFigureNameById = root.figures.reduce(into: [:]) { $0[$1.id] = $1.name }
         let seedPlaceNameById = root.places.reduce(into: [:]) { $0[$1.id] = $1.name }
 
         // 1. Create missing figures
         for seedFig in root.figures {
-            guard !figureByName.keys.contains(seedFig.name) else { continue }
+            guard !figureByName.keys.contains(seedFig.name.lowercased()) else { continue }
             let sklFigures = Set(["Eannatum", "Entemena", "Urukagina", "Ukush", "Mesilim"])
             guard sklFigures.contains(seedFig.name) else { continue }
             let humanType = try? context.fetch(FetchDescriptor<FigureType>(predicate: #Predicate { $0.name == "Human" })).first
@@ -966,13 +967,13 @@ package struct Migration {
                 source: seedFig.source
             )
             context.insert(figure)
-            figureByName[seedFig.name] = figure
+            figureByName[seedFig.name.lowercased()] = figure
         }
 
         // 2. Create missing places
         let sklPlaceNames = Set(["Girsu", "Gu-Edin", "Aratta", "Dabrum"])
         for seedPlace in root.places {
-            guard !placeByName.keys.contains(seedPlace.name) else { continue }
+            guard !placeByName.keys.contains(seedPlace.name.lowercased()) else { continue }
             guard sklPlaceNames.contains(seedPlace.name) else { continue }
             let placeType = try? context.fetch(FetchDescriptor<PlaceType>(predicate: #Predicate { $0.name == seedPlace.placeType })).first
             let place = Place(
@@ -985,18 +986,18 @@ package struct Migration {
                 longitude: seedPlace.longitude
             )
             context.insert(place)
-            placeByName[seedPlace.name] = place
+            placeByName[seedPlace.name.lowercased()] = place
         }
 
         try? context.save()
 
         // 3. Create missing events
         for seedEvent in root.events {
-            guard !existingEventNames.contains(seedEvent.name) else { continue }
+            guard !existingEventNames.contains(seedEvent.name.lowercased()) else { continue }
 
             let eventFigures = seedEvent.involvedFigureIds.compactMap { fid -> Figure? in
                 guard let figName = seedFigureNameById[fid] else { return nil }
-                return figureByName[figName]
+                return figureByName[figName.lowercased()]
             }
 
             let event = Event(
@@ -1011,7 +1012,7 @@ package struct Migration {
             context.insert(event)
 
             // Create EventPlaceAssociation if placeId is specified
-            if let pid = seedEvent.placeId, let placeName = seedPlaceNameById[pid], let place = placeByName[placeName] {
+            if let pid = seedEvent.placeId, let placeName = seedPlaceNameById[pid], let place = placeByName[placeName.lowercased()] {
                 let assoc = EventPlaceAssociation(
                     event: event,
                     place: place,
@@ -1112,6 +1113,24 @@ package struct Migration {
         }
     }
 
+    /// Sweeps `FigureGroupAssociation` rows whose group was deleted. Group deletion empties the
+    /// group-side association array (the crash-safe macOS 26 pattern), which nullifies each row's
+    /// `group` but leaves the row itself linked from the entity-side arrays — so figures can show
+    /// phantom group rows with a "?" description. Detach from every inverse side, then delete.
+    package static func removeOrphanedGroupAssociations(context: ModelContext) {
+        let orphans = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>()))?.filter { $0.group == nil } ?? []
+        guard !orphans.isEmpty else { return }
+        try? context.transaction {
+            for assoc in orphans {
+                assoc.figure?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                assoc.place?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                assoc.event?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                assoc.thing?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                context.delete(assoc)
+            }
+        }
+    }
+
     package static func ensureImportedDeityRelationships(context: ModelContext) {
         let relationships: [(from: String, to: String, type: String, source: String)] = [
             ("Gugalanna", "Ereshkigal", "Spouse", "Sumerian mythology"),
@@ -1127,14 +1146,14 @@ package struct Migration {
         ]
 
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        let figureByName = allFigures.reduce(into: [:]) { $0[$1.name] = $1 }
+        let figureByName = allFigures.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
 
         let allRelTypes = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
         let existingRelationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
 
         for rel in relationships {
-            guard let fromFigure = figureByName[rel.from],
-                  let toFigure = figureByName[rel.to],
+            guard let fromFigure = figureByName[rel.from.lowercased()],
+                  let toFigure = figureByName[rel.to.lowercased()],
                   let relType = allRelTypes.first(where: { $0.name == rel.type }) else { continue }
 
             let alreadyExists = existingRelationships.contains { existing in
@@ -1179,6 +1198,53 @@ package struct Migration {
             changed = true
         }
         if changed { try? context.save() }
+    }
+
+    /// Fix `Figure.orderIndex` for SKL figures whose seed order was wrong (Etana
+    /// appeared before Jushur in an earlier seed_data.json). Reads the corrected
+    /// seed, recomputes per-era orderIndex values, and re-runs `applyRegnalOrder`
+    /// on every SKL-chain group so association display order matches the SKL.
+    /// One-shot: only acts when at least one SKL figure's orderIndex doesn't match
+    /// the seed (checked via a hash of expected values).
+    package static func fixSKLFigureOrder(context: ModelContext) {
+        guard let url = Bundle.module.url(forResource: "seed_data", withExtension: "json")
+                ?? Bundle.main.url(forResource: "seed_data", withExtension: "json") else { return }
+        guard let data = try? Data(contentsOf: url),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else { return }
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+
+        var expectedOrderIndex: [String: Int] = [:]
+        var sklEraIndex: [String: Int] = [:]
+        for seedFig in root.figures {
+            guard seedFig.source.contains("Sumerian King List") else { continue }
+            let era = seedFig.birthDate.era.isEmpty ? "Antediluvian" : seedFig.birthDate.era
+            let idx = sklEraIndex[era, default: 0]
+            expectedOrderIndex[seedFig.name] = idx
+            sklEraIndex[era] = idx + 1
+        }
+
+        var changed = false
+        for (name, expectedIdx) in expectedOrderIndex {
+            guard let figure = allFigures.first(where: { $0.name == name }),
+                  figure.orderIndex != expectedIdx else { continue }
+            figure.orderIndex = expectedIdx
+            changed = true
+        }
+        guard changed else { return }
+        try? context.save()
+
+        func partOfSKLChain(_ group: FigureGroup) -> Bool {
+            if group.kind == .skl { return true }
+            if let parent = group.parentGroup { return partOfSKLChain(parent) }
+            return false
+        }
+        let allGroups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        for group in allGroups where partOfSKLChain(group) && group.entityType == .figure && !group.figureAssociations.isEmpty {
+            group.applyRegnalOrder()
+            group.sortMode = .ordered
+        }
+        try? context.save()
     }
 
     /// Backfill `Figure.reignYears` from each figure's description ("Listed reign" /
@@ -1342,7 +1408,7 @@ package struct Migration {
             collectiveType = newType
         }
 
-        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map(\.name) ?? [])
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
 
         let collectiveConfigs: [(name: String, title: String, domain: String, description: String)] = [
             ("Anunnaki", "The Great Gods of Heaven and Earth",
@@ -1356,7 +1422,7 @@ package struct Migration {
         let mythicDate = MythologicalDate(year: nil, era: "Creation", isApproximate: true)
 
         for config in collectiveConfigs {
-            guard !existingNames.contains(config.name) else { continue }
+            guard !existingNames.contains(config.name.lowercased()) else { continue }
             let figure = Figure(
                 name: config.name,
                 title: config.title,
@@ -1371,6 +1437,388 @@ package struct Migration {
             context.insert(figure)
         }
         try? context.save()
+    }
+
+    /// Links every `Relationship.sourceRef` to the `Source` entity named by its
+    /// free-text `source` string. Existing Source names match case-insensitively
+    /// ("Adapa myth" → seeded "Adapa Myth"); multi-text strings such as
+    /// "Enuma Elish, Babylonian texts" use the first text as the primary
+    /// attribution; unknown names get a coarse new `Source` created. Additive +
+    /// idempotent — never re-points an existing `sourceRef`.
+    package static func ensureRelationshipSources(context: ModelContext) {
+        var byName: [String: Source] = [:]
+        for source in (try? context.fetch(FetchDescriptor<Source>())) ?? [] {
+            byName[source.name.lowercased()] = source
+        }
+
+        let relationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        var changed = false
+        for relationship in relationships where relationship.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: relationship.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.relationships.append(relationship)
+            } else {
+                let source = Source(
+                    name: name,
+                    sourceType: name.localizedCaseInsensitiveContains("king list") ? .kingList : .ancientText,
+                    author: "",
+                    language: "",
+                    period: "",
+                    sourceDescription: "",
+                    publicationInfo: "",
+                    url: ""
+                )
+                context.insert(source)
+                source.relationships.append(relationship)
+                byName[key] = source
+            }
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    private static func primarySourceName(from raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        let first = trimmed.split(separator: ",").first.map(String.init) ?? trimmed
+        return first.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// Tag every entity that has no tags yet using `TagEngine`'s rule-based
+    /// suggestions (derived from type, gender, domain, era, source, description).
+    /// Additive + idempotent — entities that already have any tag are never touched,
+    /// so user curation is never overridden and a deleted auto-tag stays gone.
+    /// New `Tag` rows get a deterministic palette color from the tag name.
+    package static func ensureAutoTags(context: ModelContext) {
+        let existingTags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        var tagByName = existingTags.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
+
+        func tag(named name: String) -> Tag {
+            let key = name.lowercased()
+            if let existing = tagByName[key] { return existing }
+            let newTag = Tag(name: name, colorHex: TagEngine.colorHex(for: name))
+            context.insert(newTag)
+            tagByName[key] = newTag
+            return newTag
+        }
+
+        var changed = false
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for figure in figures where figure.tags.isEmpty {
+            let names = TagEngine.tags(for: figure).sorted()
+            guard !names.isEmpty else { continue }
+            for name in names {
+                figure.tags.append(tag(named: name))
+            }
+            changed = true
+        }
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        for place in places where place.tags.isEmpty {
+            let names = TagEngine.tags(for: place).sorted()
+            guard !names.isEmpty else { continue }
+            for name in names {
+                place.tags.append(tag(named: name))
+            }
+            changed = true
+        }
+
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        for event in events where event.tags.isEmpty {
+            let names = TagEngine.tags(for: event).sorted()
+            guard !names.isEmpty else { continue }
+            for name in names {
+                event.tags.append(tag(named: name))
+            }
+            changed = true
+        }
+
+        let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        for thing in things where thing.tags.isEmpty {
+            let names = TagEngine.tags(for: thing).sorted()
+            guard !names.isEmpty else { continue }
+            for name in names {
+                thing.tags.append(tag(named: name))
+            }
+            changed = true
+        }
+
+        if changed { try? context.save() }
+    }
+
+    /// Follow-up to `ensureAutoTags`: the old `domainTags` kept each comma-separated
+    /// domain phrase whole, producing fragment tags like `"and the underworld"` or
+    /// `"steward and scribe"`. `TagEngine.domainTags` now emits single words with
+    /// connectors stripped. This pass removes exactly those legacy fragment links
+    /// and backfills the refined single-word facets. Idempotent and additive — only
+    /// tags matching a legacy domain phrase that no longer survives the new engine
+    /// are removed; curated/type/tradition tags are untouched and `Tag` entities
+    /// (shared across entities) are never deleted.
+    package static func ensureRefinedDomainTags(context: ModelContext) {
+        let existingTags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        var tagByName = existingTags.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
+
+        func tag(named name: String) -> Tag {
+            let key = name.lowercased()
+            if let existing = tagByName[key] { return existing }
+            let newTag = Tag(name: name, colorHex: TagEngine.colorHex(for: name))
+            context.insert(newTag)
+            tagByName[key] = newTag
+            return newTag
+        }
+
+        var changed = false
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for figure in figures where !figure.domain.isEmpty {
+            let obsolete = Set(legacyDomainTagPhrases(figure.domain)).subtracting(TagEngine.domainTags(figure.domain))
+            guard !obsolete.isEmpty else { continue }
+
+            var hasChange = false
+            let before = figure.tags.count
+            figure.tags.removeAll { obsolete.contains($0.name.lowercased()) }
+            hasChange = figure.tags.count != before
+
+            for tagName in TagEngine.domainTags(figure.domain).sorted() {
+                guard !figure.tags.contains(where: { $0.name.lowercased() == tagName }) else { continue }
+                figure.tags.append(tag(named: tagName))
+                hasChange = true
+            }
+
+            if hasChange { changed = true }
+        }
+
+        if changed { try? context.save() }
+    }
+
+    private static func legacyDomainTagPhrases(_ domain: String) -> [String] {
+        let phrases = domain.split(whereSeparator: { $0 == "," || $0 == ";" })
+        var result: [String] = []
+        for phrase in phrases {
+            let cleaned = TagEngine.cleanedToken(String(phrase))
+            guard !cleaned.isEmpty, cleaned != "and", cleaned != "of", cleaned != "the" else { continue }
+            result.append(cleaned)
+        }
+        return result
+    }
+
+    /// Creates a top-level "Dynasties" group (kind `.skl`) with one subgroup per SKL
+    /// dynasty era from the `Era` table. Each subgroup auto-populates its kings (figures
+    /// whose `era` points to that era) ordered by reign succession, plus any events whose
+    /// era string matches the dynasty name — giving every dynasty a mixed-type page
+    /// (figures + events, places added by hand) like the Enoch-style group pages.
+    /// Additive + idempotent: only missing groups/members are created; existing groups,
+    /// manual additions, and user-set ordering are never overwritten.
+    package static func ensureDynastyGroups(context: ModelContext) {
+        let allGroups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let dynastyEras = eras
+            .filter { $0.name.localizedCaseInsensitiveContains("dynasty") }
+            .sorted { $0.orderIndex < $1.orderIndex }
+        guard !dynastyEras.isEmpty else { return }
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        var changed = false
+
+        var top = allGroups.first { $0.name == "Dynasties" }
+        if top == nil {
+            let group = FigureGroup(
+                name: "Dynasties",
+                groupDescription: "Sumerian King List dynasties with their kings, events, and places",
+                icon: "building.columns",
+                colorHex: "007AFF",
+                orderIndex: 100,
+                kind: .skl,
+                entityType: .figure
+            )
+            context.insert(group)
+            top = group
+            changed = true
+        }
+        guard let top else { return }
+
+        var subgroupIndex = (top.subgroups ?? []).compactMap { $0.orderIndex }.max().map { $0 + 1 } ?? (top.subgroups ?? []).count
+        for era in dynastyEras {
+            var sub: FigureGroup?
+            let isNew: Bool
+            if let existing = (top.subgroups ?? []).first(where: { $0.name == era.name }) {
+                sub = existing
+                isNew = false
+            } else {
+                let newSub = FigureGroup(
+                    name: era.name,
+                    groupDescription: "Kings, events, and places of \(era.name)",
+                    icon: "crown",
+                    colorHex: "007AFF",
+                    orderIndex: subgroupIndex,
+                    kind: .skl,
+                    entityType: .figure,
+                    sortMode: .ordered
+                )
+                context.insert(newSub)
+                if top.subgroups == nil { top.subgroups = [] }
+                top.subgroups?.append(newSub)
+                subgroupIndex += 1
+                changed = true
+                sub = newSub
+                isNew = true
+            }
+            guard let sub else { continue }
+            if sub.era?.persistentModelID != era.persistentModelID {
+                sub.era = era
+                changed = true
+            }
+
+            for figure in figures where figure.era?.persistentModelID == era.persistentModelID {
+                guard !sub.figureAssociations.contains(where: { $0.figure?.persistentModelID == figure.persistentModelID }) else { continue }
+                let assoc = FigureGroupAssociation(figure: figure)
+                context.insert(assoc)
+                sub.figureAssociations.append(assoc)
+                figure.groupAssociations.append(assoc)
+                changed = true
+            }
+
+            let eraName = era.name.trimmingCharacters(in: .whitespaces).lowercased()
+            for event in events where event.era.trimmingCharacters(in: .whitespaces).lowercased() == eraName {
+                guard !sub.figureAssociations.contains(where: { $0.event?.persistentModelID == event.persistentModelID }) else { continue }
+                let assoc = FigureGroupAssociation(event: event)
+                context.insert(assoc)
+                sub.figureAssociations.append(assoc)
+                event.groupAssociations.append(assoc)
+                changed = true
+            }
+
+            if isNew && !sub.figureAssociations.isEmpty {
+                sub.applyRegnalOrder()
+            }
+        }
+
+        // Link eras to dynasty subgroups in any other tree (e.g. a legacy hand-built
+        // "Sumerian King List" group) by normalized name. Additive + idempotent —
+        // existing era links and user-created groups are untouched.
+        let eraByNormalized: [String: Era] = Dictionary(
+            dynastyEras.map { (Self.normalizedGroupName($0.name), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        for sub in allGroups where sub.parentGroup != nil && sub.era == nil {
+            guard let era = eraByNormalized[Self.normalizedGroupName(sub.name)] else { continue }
+            sub.era = era
+            changed = true
+        }
+
+        if changed { try? context.save() }
+    }
+
+    private static func normalizedGroupName(_ name: String) -> String {
+        var s = name.trimmingCharacters(in: .whitespaces).lowercased()
+        while s.hasPrefix("the ") { s = String(s.dropFirst(4)) }
+        return s
+    }
+
+    /// Author-era territory polygons for the SKL dynasties (lon, lat), keyed by
+    /// normalized era name. Open rings; closed at serialization. Drawn once when
+    /// `era.boundaryGeoJSON` is empty so the user's own drawings always win.
+    package static let dynastyBoundaryRings: [String: [[Double]]] = [
+        "first dynasty of kish": [[44.05, 33.45], [44.75, 33.45], [45.05, 33.15], [45.15, 32.65], [45.35, 32.20], [45.20, 31.95], [44.95, 32.00], [44.55, 32.10], [44.30, 32.15], [44.10, 32.55], [44.00, 32.95]],
+        "first rulers of uruk": [[45.35, 32.10], [45.75, 32.10], [46.15, 31.90], [46.30, 31.55], [46.15, 31.25], [45.80, 31.05], [45.45, 31.15], [45.30, 31.45], [45.25, 31.75]],
+        "first dynasty of ur": [[45.55, 31.55], [46.00, 31.60], [46.35, 31.40], [46.40, 31.00], [46.20, 30.75], [45.90, 30.75], [45.70, 30.95], [45.45, 31.15]],
+        "second dynasty of kish": [[44.10, 33.20], [44.70, 33.30], [45.00, 33.10], [45.10, 32.70], [45.00, 32.35], [44.70, 32.30], [44.35, 32.40], [44.15, 32.80]],
+        "dynasty of hamazi": [[44.90, 33.60], [45.40, 33.70], [45.90, 34.00], [46.40, 34.10], [46.80, 33.90], [46.70, 33.40], [46.20, 33.20], [45.70, 33.30], [45.20, 33.40]],
+        "second dynasty of uruk": [[45.40, 32.05], [45.80, 32.05], [46.10, 31.85], [46.25, 31.50], [46.10, 31.20], [45.75, 31.05], [45.45, 31.15], [45.30, 31.45], [45.40, 31.80]],
+        "second dynasty of ur": [[45.60, 31.60], [46.05, 31.65], [46.40, 31.45], [46.50, 31.05], [46.25, 30.70], [45.95, 30.70], [45.65, 30.90], [45.45, 31.15]],
+        "dynasty of adab": [[45.40, 32.30], [45.85, 32.30], [46.25, 32.10], [46.40, 31.80], [46.25, 31.50], [45.90, 31.50], [45.60, 31.70], [45.40, 32.00]],
+        "dynasty of mari": [[40.30, 34.90], [40.90, 35.20], [41.60, 35.20], [42.20, 34.90], [42.30, 34.40], [41.70, 34.10], [41.00, 34.10], [40.40, 34.30], [40.10, 34.60]],
+        "dynasty of awan": [[45.20, 33.60], [46.20, 33.80], [47.40, 33.60], [48.40, 33.20], [48.50, 32.20], [48.10, 31.70], [47.30, 31.90], [46.40, 32.10], [45.60, 32.40]],
+        "third dynasty of kish": [[44.10, 33.25], [44.75, 33.30], [45.05, 33.05], [45.20, 32.60], [45.30, 32.15], [45.05, 31.95], [44.70, 32.10], [44.35, 32.20], [44.10, 32.60]],
+        "dynasty of akshak": [[44.10, 33.45], [44.80, 33.50], [45.15, 33.30], [45.25, 32.90], [45.10, 32.50], [44.75, 32.35], [44.40, 32.45], [44.15, 32.85]],
+        "fourth dynasty of kish": [[44.05, 33.40], [44.70, 33.45], [45.00, 33.15], [45.10, 32.65], [45.30, 32.20], [45.05, 32.00], [44.60, 32.10], [44.30, 32.20], [44.10, 32.60]],
+        "third dynasty of uruk": [[45.25, 32.20], [45.65, 32.15], [46.05, 31.95], [46.20, 31.60], [46.05, 31.25], [45.70, 31.10], [45.40, 31.20], [45.25, 31.50]],
+        "dynasty of akkad": [[40.60, 35.40], [42.30, 35.60], [45.30, 35.40], [46.60, 34.60], [47.20, 33.20], [46.60, 31.60], [46.00, 30.60], [45.30, 30.70], [44.70, 31.00], [43.90, 31.60], [43.20, 32.60], [42.60, 33.80], [41.60, 34.20], [40.60, 34.60]],
+        "fourth dynasty of uruk": [[45.35, 32.00], [45.75, 32.00], [46.10, 31.80], [46.20, 31.45], [46.05, 31.20], [45.70, 31.05], [45.40, 31.15], [45.28, 31.45], [45.35, 31.80]],
+        "fifth dynasty of uruk": [[45.40, 32.10], [45.85, 32.10], [46.15, 31.85], [46.25, 31.50], [46.10, 31.20], [45.75, 31.05], [45.42, 31.15], [45.30, 31.50], [45.40, 31.85]],
+        "third dynasty of ur": [[43.60, 34.60], [45.20, 34.50], [46.80, 33.90], [48.40, 33.30], [48.60, 31.80], [47.80, 31.50], [46.60, 30.60], [45.60, 30.55], [44.80, 30.90], [43.90, 31.70], [43.20, 32.90], [43.20, 33.90]],
+        "dynasty of isin": [[44.30, 32.80], [44.90, 32.80], [45.20, 32.60], [45.40, 32.20], [45.60, 31.90], [45.90, 31.70], [46.10, 31.40], [46.05, 31.10], [45.65, 30.95], [45.35, 31.10], [45.10, 31.45], [44.90, 31.85], [44.55, 32.10], [44.30, 32.50]],
+        "gutian rule": [[44.60, 34.20], [45.40, 34.40], [46.40, 34.90], [47.20, 35.10], [47.80, 34.40], [47.30, 33.50], [46.40, 33.30], [45.60, 33.40], [44.90, 33.80]],
+    ]
+
+    /// Backfills `Era.boundaryGeoJSON` with the author-drawn territory polygon
+    /// for every dynasty era, once. Additive + idempotent: closed, non-degenerate
+    /// existing boundaries (user-drawn or edited) are never overwritten. Rings
+    /// saved by the prototype draw tool were unclosed and could be degenerate
+    /// (invisible slivers) — those are repaired back to the authored territory.
+    /// The repair also covers *closed* slivers: a ring whose extent along either
+    /// axis is below `sliverMinAxisDegrees` is a dot / thick line / test-draw,
+    /// not a territory (the smallest authored ring spans 0.70 degrees), so it is
+    /// restored to the authored polygon too.
+    package static func ensureDynastyBoundaries(context: ModelContext) {
+        guard !Self.dynastyBoundaryRings.isEmpty else { return }
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let eraByNormalized: [String: Era] = Dictionary(
+            eras.map { (Self.normalizedGroupName($0.name), $0) },
+            uniquingKeysWith: { first, _ in first }
+        )
+        var changed = false
+        for (normalizedName, ring) in Self.dynastyBoundaryRings {
+            guard let era = eraByNormalized[normalizedName],
+                  let authored = Self.polygonGeoJSON(ring: ring) else { continue }
+            if let existing = era.boundaryGeoJSON,
+               let stored = Self.decodedRing(from: existing),
+               stored.count >= 4,
+               stored.first == stored.last,
+               Self.ringAreaSq(stored) > 0.001,
+               Self.ringMinAxisDegrees(stored) >= Self.sliverMinAxisDegrees {
+                continue
+            }
+            era.boundaryGeoJSON = authored
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    private static let sliverMinAxisDegrees = 0.4
+
+    /// The smallest bounding-box extent (degrees) across both axes. A closed
+    /// ring whose min-axis is tiny is a degenerate dot/line, not a polygon.
+    private static func ringMinAxisDegrees(_ ring: [[Double]]) -> Double {
+        var minLon = Double.infinity, maxLon = -Double.infinity
+        var minLat = Double.infinity, maxLat = -Double.infinity
+        for point in ring {
+            minLon = Swift.min(minLon, point[0])
+            maxLon = Swift.max(maxLon, point[0])
+            minLat = Swift.min(minLat, point[1])
+            maxLat = Swift.max(maxLat, point[1])
+        }
+        return Swift.min(maxLon - minLon, maxLat - minLat)
+    }
+
+    private static func decodedRing(from json: String) -> [[Double]]? {
+        guard let data = json.data(using: .utf8),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              object["type"] as? String == "Polygon",
+              let coordinates = object["coordinates"] as? [[[Double]]],
+              let ring = coordinates.first else { return nil }
+        return ring
+    }
+
+    private static func ringAreaSq(_ ring: [[Double]]) -> Double {
+        guard ring.count >= 3 else { return 0 }
+        var area = 0.0
+        for i in 0..<ring.count {
+            let p = ring[i]
+            let q = ring[(i + 1) % ring.count]
+            area += p[0] * q[1] - q[0] * p[1]
+        }
+        return abs(area) / 2
+    }
+
+    package static func polygonGeoJSON(ring: [[Double]]) -> String? {
+        guard ring.count >= 3 else { return nil }
+        let closed = ring + [ring[0]]
+        let object: [String: Any] = ["type": "Polygon", "coordinates": [closed]]
+        guard let data = try? JSONSerialization.data(withJSONObject: object) else { return nil }
+        return String(data: data, encoding: .utf8)
     }
 
 }

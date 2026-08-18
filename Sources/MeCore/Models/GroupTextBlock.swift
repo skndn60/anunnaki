@@ -17,6 +17,13 @@ package final class GroupTextBlock: Identifiable {
     /// Rich-text version of `text` (RTF). Optional for migration safety.
     package var richText: Data?
 
+    /// Optional summary shown by default, with a "Show full text…" toggle revealing
+    /// the full prose. Nil or empty = always show the full text (existing behavior).
+    package var summary: String?
+
+    /// Rich-text version of `summary` (RTF). Optional for migration safety.
+    package var summaryRichText: Data?
+
     /// Position of this block within the group's unified member+text spine.
     /// Nil means "no explicit position". Optional for migration safety.
     package var orderIndex: Int?
@@ -63,6 +70,8 @@ package final class GroupTextBlock: Identifiable {
         title: String = "",
         text: String = "",
         richText: Data? = nil,
+        summary: String? = nil,
+        summaryRichText: Data? = nil,
         orderIndex: Int? = nil,
         maxWidth: Double? = nil,
         alignment: TextBlockAlignment = .left,
@@ -72,6 +81,8 @@ package final class GroupTextBlock: Identifiable {
         self.title = title
         self.text = text
         self.richText = richText
+        self.summary = summary
+        self.summaryRichText = summaryRichText
         self.orderIndex = orderIndex
         self.maxWidth = maxWidth
         self.alignmentRawValue = alignment.rawValue

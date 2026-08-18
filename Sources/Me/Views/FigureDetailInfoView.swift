@@ -21,22 +21,30 @@ struct FigureTypeBadge: View {
 // MARK: - Figure Icon Circle
 
 struct FigureIconCircle: View {
-    let figureType: FigureType?
+    let color: Color
+    let icon: String
     let size: CGFloat
 
     init(figureType: FigureType?, size: CGFloat = 48) {
-        self.figureType = figureType
+        self.color = figureType?.color ?? .gray
+        self.icon = figureType?.icon ?? "questionmark"
+        self.size = size
+    }
+
+    init(color: Color, icon: String, size: CGFloat = 48) {
+        self.color = color
+        self.icon = icon
         self.size = size
     }
 
     var body: some View {
         Circle()
-            .fill(figureType?.color.opacity(0.2) ?? .gray.opacity(0.2))
+            .fill(color.opacity(0.2))
             .frame(width: size, height: size)
             .overlay(
-                Image(systemName: figureType?.icon ?? "questionmark")
+                Image(systemName: icon)
                     .font(.system(size: size * 0.45))
-                    .foregroundStyle(figureType?.color ?? .gray)
+                    .foregroundStyle(color)
             )
     }
 }
@@ -106,7 +114,13 @@ struct FigureHeaderView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            FigureIconCircle(figureType: figure.figureType)
+            MugshotView(
+                image: figure.mugshotImage,
+                cropRect: ImageCropRect(encoded: figure.mugshotCropRect),
+                size: 48,
+                figureType: figure.figureType,
+                identification: figure.mugshotIdentification
+            )
             VStack(alignment: .leading, spacing: 2) {
                 FigureNameWithGender(
                     name: figure.name,

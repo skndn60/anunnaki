@@ -7,6 +7,9 @@ package final class ImageAsset {
     package var places: [Place] = []
     package var events: [Event] = []
     package var things: [Thing] = []
+    /// Figures for which this image is the designated mugshot (inverse of
+    /// `Figure.mugshotImage`). A figure can also have this image in its gallery.
+    package var mugshots: [Figure] = []
     package var filename: String
     package var caption: String
     package var source: String

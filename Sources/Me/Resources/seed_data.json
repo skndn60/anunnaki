@@ -1141,29 +1141,6 @@
       "disambiguation": ""
     },
     {
-      "name": "Etana",
-      "title": "King of First dynasty of Kish",
-      "figureType": "Human",
-      "gender": "Male",
-      "domain": "Kingship",
-      "figureDescription": "Etana (𒂊𒋫𒈾, E.TA.NA) was the thirteenth king of the first dynasty of Kish, according to the Sumerian King List. He is listed as the successor of Arwium, the son of Mashda, as king of Kish. The list also calls Etana \"the shepherd, who ascended to heaven and consolidated all the foreign countries\", and states that he ruled 1,500 years (some copies read 635) before being succeeded by his son Balih, said to have ruled 400 years.",
-      "birthDate": {
-        "era": "First dynasty of Kish",
-        "isApproximate": true,
-        "startYear": -27000,
-        "endYear": -27000
-      },
-      "deathDate": {
-        "era": "First dynasty of Kish",
-        "isApproximate": true,
-        "startYear": null,
-        "endYear": null
-      },
-      "source": "Etana myth, Sumerian King List",
-      "id": "85e1904f-3baa-5709-83dc-0670c02d6194",
-      "disambiguation": ""
-    },
-    {
       "name": "Sarpanit",
       "title": "Lady of Babylon, Shining One",
       "figureType": "Deity",
@@ -1644,6 +1621,29 @@
       },
       "source": "Sumerian King List",
       "id": "38928ba9-e896-547e-a18e-a55284bef20e",
+      "disambiguation": ""
+    },
+    {
+      "name": "Etana",
+      "title": "King of First dynasty of Kish",
+      "figureType": "Human",
+      "gender": "Male",
+      "domain": "Kingship",
+      "figureDescription": "Etana (𒂊𒋫𒈾, E.TA.NA) was the thirteenth king of the first dynasty of Kish, according to the Sumerian King List. He is listed as the successor of Arwium, the son of Mashda, as king of Kish. The list also calls Etana \"the shepherd, who ascended to heaven and consolidated all the foreign countries\", and states that he ruled 1,500 years (some copies read 635) before being succeeded by his son Balih, said to have ruled 400 years.",
+      "birthDate": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": -27000,
+        "endYear": -27000
+      },
+      "deathDate": {
+        "era": "First dynasty of Kish",
+        "isApproximate": true,
+        "startYear": null,
+        "endYear": null
+      },
+      "source": "Etana myth, Sumerian King List",
+      "id": "85e1904f-3baa-5709-83dc-0670c02d6194",
       "disambiguation": ""
     },
     {

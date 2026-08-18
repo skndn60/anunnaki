@@ -490,6 +490,7 @@ struct PlaceDossierView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                MapPreviewPopoverButton(place: dossier.place)
                 MapPreviewButton(place: dossier.place)
             }
 

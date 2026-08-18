@@ -19,7 +19,7 @@ package final class Pantheon {
     package var figureAssociations: [FigurePantheonAssociation]? = nil
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, pantheonDescription: String = "", icon: String = "building.columns.circle.fill", colorHex: String = "8E8E93") {

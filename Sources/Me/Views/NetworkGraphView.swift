@@ -8,6 +8,9 @@ struct GraphNode: Identifiable, Equatable {
     let name: String
     let type: NodeType
     let color: Color
+    let figureTypeName: String?
+    let placeTypeName: String?
+    let eventTypeName: String?
     let persistentModelID: PersistentIdentifier?
     var position: CGPoint
     var velocity: CGPoint
@@ -55,33 +58,31 @@ struct ForceEngine {
     let damping: CGFloat = 0.85
     let minDistance: CGFloat = 10
     let maxVelocity: CGFloat = 50
+    let cellSize: CGFloat = 90
     var temperature: CGFloat = 1.0
     let coolingRate: CGFloat = 0.997
     let minTemperature: CGFloat = 0.01
 
-    mutating func tick(nodes: inout [GraphNode], edges: [GraphEdge], size: CGSize) {
+    /// Advances the simulation one step. Returns the maximum node speed this
+    /// step so the caller can stop once the layout has settled.
+    @discardableResult
+    mutating func tick(nodes: inout [GraphNode], edges: [GraphEdge], size: CGSize) -> CGFloat {
         let count = nodes.count
-        guard count > 0 else { return }
+        guard count > 0 else { return 0 }
 
         var forces: [UUID: CGPoint] = [:]
+        forces.reserveCapacity(count)
         for node in nodes { forces[node.id] = .zero }
 
-        for i in 0..<count {
-            for j in (i + 1)..<count {
-                let a = nodes[i], b = nodes[j]
-                var delta = CGPoint(x: a.position.x - b.position.x, y: a.position.y - b.position.y)
-                let dist = max(sqrt(delta.x * delta.x + delta.y * delta.y), minDistance)
-                let force = repulsion / (dist * dist)
-                delta = CGPoint(x: delta.x / dist * force, y: delta.y / dist * force)
-                forces[a.id] = CGPoint(x: forces[a.id]!.x + delta.x, y: forces[a.id]!.y + delta.y)
-                forces[b.id] = CGPoint(x: forces[b.id]!.x - delta.x, y: forces[b.id]!.y - delta.y)
-            }
-        }
+        var indexOf: [UUID: Int] = [:]
+        indexOf.reserveCapacity(count)
+        for (i, node) in nodes.enumerated() { indexOf[node.id] = i }
+
+        applyGridRepulsion(nodes: nodes, forces: &forces)
 
         for edge in edges {
-            guard let sourceIdx = nodes.firstIndex(where: { $0.id == edge.sourceID }),
-                  let targetIdx = nodes.firstIndex(where: { $0.id == edge.targetID }) else { continue }
-            let a = nodes[sourceIdx], b = nodes[targetIdx]
+            guard let si = indexOf[edge.sourceID], let ti = indexOf[edge.targetID] else { continue }
+            let a = nodes[si], b = nodes[ti]
             var delta = CGPoint(x: b.position.x - a.position.x, y: b.position.y - a.position.y)
             let dist = max(sqrt(delta.x * delta.x + delta.y * delta.y), minDistance)
             let force = attraction * dist
@@ -101,6 +102,7 @@ struct ForceEngine {
             )
         }
 
+        var maxSpeed: CGFloat = 0
         for i in 0..<count {
             guard !nodes[i].isPinned else { continue }
             let f = CGPoint(
@@ -121,8 +123,75 @@ struct ForceEngine {
                 x: nodes[i].position.x + vx,
                 y: nodes[i].position.y + vy
             )
+            let moved = sqrt(vx * vx + vy * vy)
+            if moved > maxSpeed { maxSpeed = moved }
         }
         temperature = max(minTemperature, temperature * coolingRate)
+        return maxSpeed
+    }
+
+    /// Grid-accelerated repulsion: exact all-pairs inside a cell, a coarse
+    /// monopole for far cells — O(n · cells) instead of O(n²) per tick.
+    private func applyGridRepulsion(nodes: [GraphNode], forces: inout [UUID: CGPoint]) {
+        struct CellKey: Hashable {
+            let x: Int
+            let y: Int
+        }
+        struct Cell {
+            var indices: [Int] = []
+            var centroid = CGPoint.zero
+        }
+
+        var cells: [CellKey: Cell] = [:]
+        cells.reserveCapacity(nodes.count / 4 + 1)
+        for (i, node) in nodes.enumerated() {
+            let key = CellKey(
+                x: Int(floor(node.position.x / cellSize)),
+                y: Int(floor(node.position.y / cellSize))
+            )
+            var cell = cells[key] ?? Cell()
+            cell.indices.append(i)
+            cell.centroid.x += node.position.x
+            cell.centroid.y += node.position.y
+            cells[key] = cell
+        }
+        for key in Array(cells.keys) {
+            guard let cell = cells[key] else { continue }
+            let count = CGFloat(cell.indices.count)
+            cells[key] = Cell(
+                indices: cell.indices,
+                centroid: CGPoint(x: cell.centroid.x / count, y: cell.centroid.y / count)
+            )
+        }
+
+        for (_, cell) in cells {
+            for aIdx in 0..<cell.indices.count {
+                let a = nodes[cell.indices[aIdx]]
+                for bIdx in (aIdx + 1)..<cell.indices.count {
+                    let b = nodes[cell.indices[bIdx]]
+                    var delta = CGPoint(x: a.position.x - b.position.x, y: a.position.y - b.position.y)
+                    let dist = max(sqrt(delta.x * delta.x + delta.y * delta.y), minDistance)
+                    let force = repulsion / (dist * dist)
+                    delta = CGPoint(x: delta.x / dist * force, y: delta.y / dist * force)
+                    forces[a.id] = CGPoint(x: forces[a.id]!.x + delta.x, y: forces[a.id]!.y + delta.y)
+                    forces[b.id] = CGPoint(x: forces[b.id]!.x - delta.x, y: forces[b.id]!.y - delta.y)
+                }
+            }
+        }
+
+        for node in nodes {
+            let ownKey = CellKey(
+                x: Int(floor(node.position.x / cellSize)),
+                y: Int(floor(node.position.y / cellSize))
+            )
+            for (key, cell) in cells where key != ownKey {
+                var delta = CGPoint(x: node.position.x - cell.centroid.x, y: node.position.y - cell.centroid.y)
+                let dist = max(sqrt(delta.x * delta.x + delta.y * delta.y), minDistance)
+                let force = repulsion * CGFloat(cell.indices.count) / (dist * dist)
+                delta = CGPoint(x: delta.x / dist * force, y: delta.y / dist * force)
+                forces[node.id] = CGPoint(x: forces[node.id]!.x + delta.x, y: forces[node.id]!.y + delta.y)
+            }
+        }
     }
 }
 
@@ -141,11 +210,18 @@ struct NetworkGraphView: View {
     @Query private var eventPlaceAssociations: [EventPlaceAssociation]
     @Query private var eventEventAssociations: [EventEventAssociation]
     @Query private var figureTypes: [FigureType]
+    @Query private var placeTypes: [PlaceType]
+    @Query private var eventTypes: [EventType]
 
     @State private var nodes: [GraphNode] = []
     @State private var edges: [GraphEdge] = []
     @State private var engine = ForceEngine()
     @State private var showTypes: Set<GraphNode.NodeType> = [.figure, .place, .event]
+    @State private var hiddenFigureTypes: Set<String> = []
+    @State private var hiddenPlaceTypes: Set<String> = []
+    @State private var hiddenEventTypes: Set<String> = []
+    @State private var hideVeryBusy = false
+    @State private var hideBusy = false
     @State private var searchText = ""
     @State private var selectedNode: GraphNode?
     @State private var hoveredNode: GraphNode?
@@ -157,7 +233,11 @@ struct NetworkGraphView: View {
     @State private var preDragOffset: CGSize = .zero
     @State private var isSimulationRunning = true
     @State private var canvasSize: CGSize = .zero
+    @State private var canvasGlobalFrame: CGRect = .zero
     @State private var scrollMonitor: Any?
+    @State private var connectionDegrees: [UUID: Int] = [:]
+    @State private var staticTicks = 0
+    @State private var pinchStartScale: CGFloat?
 
     private enum PanelContent {
         case dossier
@@ -175,6 +255,8 @@ struct NetworkGraphView: View {
             toolbar
             Divider()
             HStack(spacing: 0) {
+                figureTypeFilterColumn
+                Divider()
                 canvasArea
                     .layoutPriority(1)
                 if selectedNode != nil {
@@ -189,18 +271,21 @@ struct NetworkGraphView: View {
         .onAppear {
             rebuildGraph()
             scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
-                let factor: CGFloat = event.scrollingDeltaY > 0 ? 1.15 : 1 / 1.15
-                scale = max(0.2, min(5.0, scale * factor))
+                guard cursorIsOverCanvas(event) else { return event }
+                let dy = event.scrollingDeltaY
+                guard dy != 0 else { return event }
+                let pixels = event.hasPreciseScrollingDeltas ? dy : dy * 10
+                applyZoom(CGFloat(exp(Double(pixels) * 0.015)), at: event)
                 return nil
             }
         }
-        .onChange(of: figures) { rebuildGraph() }
-        .onChange(of: places) { rebuildGraph() }
-        .onChange(of: events) { rebuildGraph() }
-        .onChange(of: relationships) { rebuildGraph() }
-        .onChange(of: figurePlaceAssociations) { rebuildGraph() }
-        .onChange(of: eventPlaceAssociations) { rebuildGraph() }
-        .onChange(of: eventEventAssociations) { rebuildGraph() }
+        .onChange(of: figures.map(\.persistentModelID)) { _, _ in rebuildGraph() }
+        .onChange(of: places.map(\.persistentModelID)) { _, _ in rebuildGraph() }
+        .onChange(of: events.map(\.persistentModelID)) { _, _ in rebuildGraph() }
+        .onChange(of: relationships.map(\.persistentModelID)) { _, _ in rebuildGraph() }
+        .onChange(of: figurePlaceAssociations.map(\.persistentModelID)) { _, _ in rebuildGraph() }
+        .onChange(of: eventPlaceAssociations.map(\.persistentModelID)) { _, _ in rebuildGraph() }
+        .onChange(of: eventEventAssociations.map(\.persistentModelID)) { _, _ in rebuildGraph() }
         .onReceive(timer) { _ in if isSimulationRunning { tick() } }
         .onDisappear {
             timer.upstream.connect().cancel()
@@ -298,6 +383,121 @@ struct NetworkGraphView: View {
 
     // MARK: - Canvas
 
+    private var figureTypeFilterColumn: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                filterTypeSection(title: "Figure Types", items: figureTypeItems, hiddenSet: $hiddenFigureTypes)
+                Divider()
+                filterTypeSection(title: "Place Types", items: placeTypeItems, hiddenSet: $hiddenPlaceTypes)
+                Divider()
+                filterTypeSection(title: "Event Types", items: eventTypeItems, hiddenSet: $hiddenEventTypes)
+                Divider()
+                connectionsSection
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+        }
+        .frame(width: 150)
+    }
+
+    private struct TypeFilterItem: Identifiable {
+        let id: String
+        let name: String
+        let color: Color
+    }
+
+    private var figureTypeItems: [TypeFilterItem] {
+        figureTypes.sorted { $0.name < $1.name }.map { TypeFilterItem(id: $0.name, name: $0.name, color: $0.color) }
+    }
+
+    private var placeTypeItems: [TypeFilterItem] {
+        placeTypes.sorted { $0.name < $1.name }.map { TypeFilterItem(id: $0.name, name: $0.name, color: $0.color) }
+    }
+
+    private var eventTypeItems: [TypeFilterItem] {
+        eventTypes.sorted { $0.name < $1.name }.map { TypeFilterItem(id: $0.name, name: $0.name, color: $0.color) }
+    }
+
+    private func filterTypeSection(title: String, items: [TypeFilterItem], hiddenSet: Binding<Set<String>>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Toggle(isOn: selectAllBinding(items, hiddenSet: hiddenSet)) {
+                    Text(title)
+                        .font(.subheadline.bold())
+                }
+                .toggleStyle(.checkbox)
+                .disabled(items.isEmpty)
+                .help(items.isEmpty ? "No types" : "Select/deselect all \(title.lowercased())")
+            }
+            if items.isEmpty {
+                Text("No types")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(items) { item in
+                    Toggle(isOn: typeVisibilityBinding(hiddenSet, for: item.id)) {
+                        HStack(spacing: 5) {
+                            Circle()
+                                .fill(item.color)
+                                .frame(width: 8, height: 8)
+                            Text(item.name)
+                                .font(.caption)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                    }
+                    .toggleStyle(.checkbox)
+                    .help("Show/hide \(item.name)")
+                }
+            }
+        }
+    }
+
+    private func selectAllBinding(_ items: [TypeFilterItem], hiddenSet: Binding<Set<String>>) -> Binding<Bool> {
+        Binding(
+            get: { hiddenSet.wrappedValue.isEmpty },
+            set: { isOn in
+                if isOn {
+                    hiddenSet.wrappedValue = []
+                } else {
+                    hiddenSet.wrappedValue = Set(items.map(\.id))
+                }
+            }
+        )
+    }
+
+    private var connectionsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Connections")
+                .font(.subheadline.bold())
+            Toggle(isOn: $hideVeryBusy) {
+                Text("Hide very busy (6+)")
+                    .font(.caption)
+            }
+            .toggleStyle(.checkbox)
+            .help("Hide nodes with more than 5 connections")
+            Toggle(isOn: $hideBusy) {
+                Text("Hide busy (2\u{2013}5)")
+                    .font(.caption)
+            }
+            .toggleStyle(.checkbox)
+            .help("Hide nodes with 2 to 5 connections")
+        }
+    }
+
+    private func typeVisibilityBinding(_ set: Binding<Set<String>>, for value: String) -> Binding<Bool> {
+        Binding(
+            get: { !set.wrappedValue.contains(value) },
+            set: { isOn in
+                if isOn {
+                    set.wrappedValue.remove(value)
+                } else {
+                    set.wrappedValue.insert(value)
+                }
+            }
+        )
+    }
+
     private var canvasArea: some View {
         GeometryReader { geo in
             let size = geo.size
@@ -306,13 +506,16 @@ struct NetworkGraphView: View {
                     let activeNodes = filteredNodes
                     let activeNodeIDs = Set(activeNodes.map(\.id))
                     let activeEdges = edges.filter { activeNodeIDs.contains($0.sourceID) && activeNodeIDs.contains($0.targetID) }
+                    var nodeByID: [UUID: GraphNode] = [:]
+                    nodeByID.reserveCapacity(activeNodes.count)
+                    for node in activeNodes { nodeByID[node.id] = node }
 
                     context.translateBy(x: offset.width + canvasSize.width / 2, y: offset.height + canvasSize.height / 2)
                     context.scaleBy(x: scale, y: scale)
 
                     for edge in activeEdges {
-                        guard let source = nodeWithID(edge.sourceID),
-                              let target = nodeWithID(edge.targetID) else { continue }
+                        guard let source = nodeByID[edge.sourceID],
+                              let target = nodeByID[edge.targetID] else { continue }
                         var path = Path()
                         path.move(to: source.position)
                         path.addLine(to: target.position)
@@ -340,7 +543,28 @@ struct NetworkGraphView: View {
                         context.fill(Path(ellipseIn: rect), with: .color(node.color))
                         context.stroke(Path(ellipseIn: rect), with: .color(.white.opacity(0.5)), lineWidth: isSelected ? 2 : 1)
 
-                        if scale > 0.5 || isSelected || isHovered || isSearched {
+                        if isHovered {
+                            let label = Text(node.name)
+                                .font(.system(size: 12 / scale, weight: .semibold))
+                                .foregroundColor(.primary)
+                            let resolved = context.resolve(label)
+                            let labelSize = resolved.measure(in: CGSize(width: 10000, height: 10000))
+                            let labelCenter = CGPoint(
+                                x: node.position.x,
+                                y: node.position.y + r + max(12, 12 / scale)
+                            )
+                            let backdrop = CGRect(
+                                x: labelCenter.x - labelSize.width / 2 - 4,
+                                y: labelCenter.y - labelSize.height / 2 - 2,
+                                width: labelSize.width + 8,
+                                height: labelSize.height + 4
+                            )
+                            context.fill(
+                                Path(roundedRect: backdrop, cornerRadius: 4),
+                                with: .color(Color(nsColor: .textBackgroundColor).opacity(0.85))
+                            )
+                            context.draw(resolved, at: labelCenter)
+                        } else if scale > 0.5 || isSelected || isSearched {
                             context.draw(
                                 Text(node.name)
                                     .font(.system(size: 9))
@@ -357,7 +581,21 @@ struct NetworkGraphView: View {
                 )
                 .simultaneousGesture(
                     MagnificationGesture()
-                        .onChanged { value in scale = max(0.2, min(5.0, scale * value)) }
+                        .onChanged { value in
+                            if pinchStartScale == nil {
+                                pinchStartScale = scale
+                                isSimulationRunning = false
+                            }
+                            if let start = pinchStartScale {
+                                scale = max(0.2, min(5.0, start * value))
+                            }
+                        }
+                        .onEnded { _ in
+                            pinchStartScale = nil
+                            if engine.temperature > engine.minTemperature {
+                                isSimulationRunning = true
+                            }
+                        }
                 )
 
                 if filteredNodes.isEmpty {
@@ -383,8 +621,8 @@ struct NetworkGraphView: View {
                     .allowsHitTesting(false)
                 }
             }
-            .onAppear { canvasSize = size; initializePositions(size: size) }
-            .onChange(of: size) { _, newSize in canvasSize = newSize }
+            .onAppear { canvasSize = size; canvasGlobalFrame = geo.frame(in: .global); initializePositions(size: size) }
+            .onChange(of: size) { _, newSize in canvasSize = newSize; canvasGlobalFrame = geo.frame(in: .global) }
             .onContinuousHover { phase in
                 switch phase {
                 case .active(let location):
@@ -595,10 +833,31 @@ struct NetworkGraphView: View {
 
     private var filteredNodes: [GraphNode] {
         var result = nodes.filter { showTypes.contains($0.type) }
+        result = applyTypeFilter(result, nodeType: .figure, hidden: hiddenFigureTypes) { $0.figureTypeName }
+        result = applyTypeFilter(result, nodeType: .place, hidden: hiddenPlaceTypes) { $0.placeTypeName }
+        result = applyTypeFilter(result, nodeType: .event, hidden: hiddenEventTypes) { $0.eventTypeName }
+        if hideVeryBusy {
+            result = result.filter { connectionDegrees[$0.id, default: 0] <= 5 }
+        }
+        if hideBusy {
+            result = result.filter { node in
+                let degree = connectionDegrees[node.id, default: 0]
+                return degree < 2 || degree > 5
+            }
+        }
         if !searchText.isEmpty {
             result = result.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
         }
         return result
+    }
+
+    private func applyTypeFilter(_ nodes: [GraphNode], nodeType: GraphNode.NodeType, hidden: Set<String>, typeName: (GraphNode) -> String?) -> [GraphNode] {
+        guard !hidden.isEmpty else { return nodes }
+        return nodes.filter { node in
+            guard node.type == nodeType else { return true }
+            guard let name = typeName(node) else { return false }
+            return !hidden.contains(name)
+        }
     }
 
     private var filteredEdgesCount: Int {
@@ -606,20 +865,9 @@ struct NetworkGraphView: View {
         return edges.filter { activeIDs.contains($0.sourceID) && activeIDs.contains($0.targetID) }.count
     }
 
-    private func nodeWithID(_ id: UUID) -> GraphNode? { nodes.first { $0.id == id } }
-
     private func dist(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
         let dx = a.x - b.x, dy = a.y - b.y
         return sqrt(dx * dx + dy * dy)
-    }
-
-    private var connectionDegrees: [UUID: Int] {
-        var degrees: [UUID: Int] = [:]
-        for edge in edges {
-            degrees[edge.sourceID, default: 0] += 1
-            degrees[edge.targetID, default: 0] += 1
-        }
-        return degrees
     }
 
     private func radius(for node: GraphNode) -> CGFloat {
@@ -638,8 +886,14 @@ struct NetworkGraphView: View {
     }
 
     private func resetLayout() {
+        for i in 0..<nodes.count {
+            nodes[i].position = .zero
+            nodes[i].velocity = .zero
+            nodes[i].isPinned = false
+        }
         engine.temperature = 1.0
         isSimulationRunning = true
+        staticTicks = 0
         initializePositions(size: canvasSize)
     }
 
@@ -659,6 +913,30 @@ struct NetworkGraphView: View {
             x: (viewLocation.x - offset.width - canvasSize.width / 2) / scale,
             y: (viewLocation.y - offset.height - canvasSize.height / 2) / scale
         )
+    }
+
+    private func cursorIsOverCanvas(_ event: NSEvent) -> Bool {
+        guard let window = event.window, !canvasGlobalFrame.isEmpty else { return false }
+        let height = window.contentView?.bounds.height ?? 0
+        let point = CGPoint(x: event.locationInWindow.x, y: height - event.locationInWindow.y)
+        return canvasGlobalFrame.contains(point)
+    }
+
+    private func applyZoom(_ factor: CGFloat, at event: NSEvent) {
+        guard let window = event.window, !canvasGlobalFrame.isEmpty else { return }
+        let height = window.contentView?.bounds.height ?? 0
+        let anchor = CGPoint(
+            x: event.locationInWindow.x - canvasGlobalFrame.minX,
+            y: height - event.locationInWindow.y - canvasGlobalFrame.minY
+        )
+        let newScale = max(0.2, min(5.0, scale * factor))
+        let applied = newScale / scale
+        let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height / 2)
+        offset = CGSize(
+            width: offset.width * applied + (anchor.x - center.x) * (1 - applied),
+            height: offset.height * applied + (anchor.y - center.y) * (1 - applied)
+        )
+        scale = newScale
     }
 
     private func nodeAt(_ location: CGPoint) -> GraphNode? {
@@ -738,8 +1016,13 @@ struct NetworkGraphView: View {
     private func tick() {
         let activeIDs = Set(filteredNodes.map(\.id))
         let activeEdges = edges.filter { activeIDs.contains($0.sourceID) && activeIDs.contains($0.targetID) }
-        engine.tick(nodes: &nodes, edges: activeEdges, size: canvasSize)
-        if engine.temperature <= engine.minTemperature {
+        let maxSpeed = engine.tick(nodes: &nodes, edges: activeEdges, size: canvasSize)
+        if maxSpeed < 0.5 {
+            staticTicks += 1
+        } else {
+            staticTicks = 0
+        }
+        if staticTicks >= 40 || engine.temperature <= engine.minTemperature {
             isSimulationRunning = false
         }
     }
@@ -750,12 +1033,24 @@ struct NetworkGraphView: View {
         var newNodes: [GraphNode] = []
         var newEdges: [GraphEdge] = []
 
-        func addNode(name: String, type: GraphNode.NodeType, color: Color, persistentModelID: PersistentIdentifier?) -> UUID {
+        var oldPositions: [PersistentIdentifier: CGPoint] = [:]
+        for node in nodes {
+            if let id = node.persistentModelID {
+                oldPositions[id] = node.position
+            }
+        }
+        let oldSelectedID = selectedNode?.persistentModelID
+
+        func addNode(name: String, type: GraphNode.NodeType, color: Color, figureTypeName: String? = nil, placeTypeName: String? = nil, eventTypeName: String? = nil, persistentModelID: PersistentIdentifier?) -> UUID {
             let id = UUID()
             newNodes.append(GraphNode(
                 id: id, name: name, type: type, color: color,
+                figureTypeName: figureTypeName,
+                placeTypeName: placeTypeName,
+                eventTypeName: eventTypeName,
                 persistentModelID: persistentModelID,
-                position: .zero, velocity: .zero, isPinned: false
+                position: persistentModelID.flatMap { oldPositions[$0] } ?? .zero,
+                velocity: .zero, isPinned: false
             ))
             return id
         }
@@ -765,17 +1060,17 @@ struct NetworkGraphView: View {
         var eventNodeMap: [String: UUID] = [:]
 
         for figure in figures {
-            let id = addNode(name: figure.name, type: .figure, color: figure.figureType?.color ?? .blue, persistentModelID: figure.persistentModelID)
+            let id = addNode(name: figure.name, type: .figure, color: figure.figureType?.color ?? .blue, figureTypeName: figure.figureType?.name, persistentModelID: figure.persistentModelID)
             figureNodeMap[figure.name] = id
         }
 
         for place in places {
-            let id = addNode(name: place.name, type: .place, color: .green, persistentModelID: place.persistentModelID)
+            let id = addNode(name: place.name, type: .place, color: .green, placeTypeName: place.placeType?.name, persistentModelID: place.persistentModelID)
             placeNodeMap[place.name] = id
         }
 
         for event in events {
-            let id = addNode(name: event.name, type: .event, color: .orange, persistentModelID: event.persistentModelID)
+            let id = addNode(name: event.name, type: .event, color: .orange, eventTypeName: event.eventType?.name, persistentModelID: event.persistentModelID)
             eventNodeMap[event.name] = id
         }
 
@@ -821,7 +1116,22 @@ struct NetworkGraphView: View {
 
         nodes = newNodes
         edges = newEdges
+
+        var degrees: [UUID: Int] = [:]
+        for edge in newEdges {
+            degrees[edge.sourceID, default: 0] += 1
+            degrees[edge.targetID, default: 0] += 1
+        }
+        connectionDegrees = degrees
+
         initializePositions(size: canvasSize)
+
+        if let oldSelectedID {
+            selectedNode = nodes.first { $0.persistentModelID == oldSelectedID }
+        }
+        engine.temperature = 1.0
+        isSimulationRunning = true
+        staticTicks = 0
     }
 
     private func initializePositions(size: CGSize) {
@@ -830,17 +1140,18 @@ struct NetworkGraphView: View {
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
         let radius = min(size.width, size.height) * 0.35
 
-        let hasPositions = nodes.contains { $0.position != .zero }
+        let unpositioned = nodes.filter { $0.position == .zero }.count
+        guard unpositioned > 0 else { return }
 
-        if !hasPositions {
-            for i in 0..<nodes.count {
-                let angle = 2 * .pi * CGFloat(i) / CGFloat(nodes.count)
-                nodes[i].position = CGPoint(
-                    x: center.x + radius * cos(angle),
-                    y: center.y + radius * sin(angle)
-                )
-                nodes[i].velocity = .zero
-            }
+        var index = 0
+        for i in 0..<nodes.count where nodes[i].position == .zero {
+            let angle = 2 * .pi * CGFloat(index) / CGFloat(unpositioned)
+            nodes[i].position = CGPoint(
+                x: center.x + radius * cos(angle),
+                y: center.y + radius * sin(angle)
+            )
+            nodes[i].velocity = .zero
+            index += 1
         }
     }
 }

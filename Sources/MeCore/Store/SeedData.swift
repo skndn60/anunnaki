@@ -527,7 +527,7 @@ package struct SeedData {
         var sklEraIndex: [String: Int] = [:]
         for seedFigure in root.figures {
             let orderIndex: Int
-            if seedFigure.source == "Sumerian King List" {
+            if seedFigure.source.contains("Sumerian King List") {
                 let era = seedFigure.birthDate.era.isEmpty ? "Antediluvian" : seedFigure.birthDate.era
                 orderIndex = sklEraIndex[era, default: 0]
                 sklEraIndex[era] = orderIndex + 1

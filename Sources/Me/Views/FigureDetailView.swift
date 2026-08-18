@@ -18,31 +18,24 @@ struct FigureDetailView: View {
     @State private var showDropConfirmation = false
     @State private var selectedRelationTypeName: String = "Father"
     @State private var allRelationTypes: [RelationshipType] = []
-    @State private var dropSource = ""
+    @Query(sort: \Source.name) private var dropSources: [Source]
+    @State private var dropSource: Source?
     @State private var isDropTargeted = false
-    @State private var showDeleteAltConfirm = false
-    @State private var altToDelete: AlternateName?
-    @State private var showAddAltSheet = false
+
     @State private var showParentSearch = false
     @State private var parentSearchTypeName = ""
-    @State private var showPlaceLinkPopover = false
-    @State private var placeSearchText = ""
-    @State private var selectedPlaceForLink: Place?
-    @State private var selectedPlaceRole: FigurePlaceRoleType?
-    @State private var showThingLinkPopover = false
-    @State private var thingSearchText = ""
-    @State private var selectedThingForLink: Thing?
-    @State private var selectedThingRole: ThingFigureRoleType?
-    @State private var showGroupLinkPopover = false
-    @State private var groupSearchText = ""
-    @State private var selectedGroupForLink: FigureGroup?
-    @Query(sort: \Pantheon.name) private var allPantheons: [Pantheon]
-    @State private var showAddCitation = false
-    @State private var editingCommentsID: PersistentIdentifier?
-    @State private var editingCommentsText: String = ""
+
+
+
     @State private var filterText = ""
+    @State private var showAddCitation = false
     @State private var showAddAttribution = false
     @State private var editingAttribution: ContentAttribution?
+    @State private var showMugshotSheet = false
+    @State private var showingPopupTableGrid: PopupTable?
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
     init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil, backLabel: String? = nil, onBack: (() -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
@@ -121,31 +114,35 @@ struct FigureDetailView: View {
         return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
     }
 
-    private var groupedRelationships: [(type: String, preferred: Relationship, alternatives: [Relationship])] {
-        let dict = Dictionary(grouping: matchingRelationships) { $0.relationshipType?.name ?? "?" }
-        return dict.compactMap { type, rels in
-            guard let preferred = rels.first(where: { $0.isPreferred == true }) ?? rels.first else { return nil }
-            let alts = rels.filter { $0.persistentModelID != preferred.persistentModelID }
-            return (type, preferred, alts)
-        }.sorted { $0.type < $1.type }
+    private var filteredRelationships: [Relationship] {
+        let filtered = matchingRelationships.filter {
+            matchesFilter($0.fromFigure?.name ?? "") ||
+            matchesFilter($0.toFigure?.name ?? "") ||
+            matchesFilter($0.relationshipType?.name ?? "")
+        }
+        return filtered.sorted {
+            let l0 = displayedLabelPrefix(of: $0)
+            let l1 = displayedLabelPrefix(of: $1)
+            if l0 != l1 { return l0 < l1 }
+            let n0 = otherFigureName(in: $0)
+            let n1 = otherFigureName(in: $1)
+            return n0 < n1
+        }
+    }
+
+    private func displayedLabelPrefix(of relationship: Relationship) -> String {
+        let isFrom = relationship.fromFigure?.persistentModelID == figure.persistentModelID
+        return relationshipDirectionPrefix(relationship, perspective: figure, isFrom: isFrom)
+    }
+
+    private func otherFigureName(in relationship: Relationship) -> String {
+        let isFrom = relationship.fromFigure?.persistentModelID == figure.persistentModelID
+        return (isFrom ? relationship.toFigure?.name : relationship.fromFigure?.name) ?? ""
     }
 
     private func matchesFilter(_ text: String) -> Bool {
         guard !filterText.isEmpty else { return true }
         return text.localizedCaseInsensitiveContains(filterText)
-    }
-
-    private var filteredGroupedRelationships: [(type: String, preferred: Relationship, alternatives: [Relationship])] {
-        groupedRelationships.compactMap { group in
-            let matchingAlts = group.alternatives.filter {
-                matchesFilter($0.fromFigure?.name ?? "") || matchesFilter($0.relationshipType?.name ?? "")
-            }
-            let preferredMatches = matchesFilter(group.preferred.fromFigure?.name ?? "") || matchesFilter(group.type)
-            if preferredMatches || !matchingAlts.isEmpty {
-                return (group.type, group.preferred, matchingAlts.isEmpty ? group.alternatives : matchingAlts)
-            }
-            return nil
-        }
     }
 
     @ViewBuilder
@@ -165,7 +162,25 @@ struct FigureDetailView: View {
         }
 
         HStack(spacing: 12) {
-            FigureIconCircle(figureType: figure.figureType, size: 44)
+            Button {
+                showMugshotSheet = true
+            } label: {
+                MugshotView(
+                    image: figure.mugshotImage,
+                    cropRect: ImageCropRect(encoded: figure.mugshotCropRect),
+                    size: 44,
+                    figureType: figure.figureType,
+                    identification: figure.mugshotIdentification
+                )
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                        .background(Circle().fill(Color(.textBackgroundColor)))
+                }
+            }
+            .buttonStyle(.plain)
+            .help("Set mugshot")
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -204,444 +219,48 @@ struct FigureDetailView: View {
                             .fill(.orange.opacity(0.12))
                     )
             }
-        }
-    }
 
-    private var filteredAlternateNames: [AlternateName] {
-        (filterText.isEmpty ? figure.alternateNames : figure.alternateNames.filter {
-            matchesFilter($0.name) || matchesFilter($0.tradition.rawValue) || matchesFilter($0.nameType.rawValue) || matchesFilter($0.note)
-        }).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    @ViewBuilder
-    private var alternateNamesView: some View {
-        Divider()
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Also Known As")
-                    .font(.caption)
+            Button {
+                editRichDescription = figure.richDescription
+                editPlainDescription = figure.figureDescription
+                showDescriptionEditor = true
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 13))
                     .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-                Button {
-                    showAddAltSheet = true
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .buttonStyle(.plain)
-                .help("Add alternate name")
             }
-
-            if figure.alternateNames.isEmpty {
-                Text("No alternate names")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            } else {
-                ForEach(filteredAlternateNames) { altName in
-                    HStack(spacing: 8) {
-                        Text(altName.name)
-                            .font(.callout)
-                            .fontWeight(.medium)
-                        Text(altName.tradition.rawValue)
-                            .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.secondary.opacity(0.1))
-                            )
-                        Text(altName.nameType.rawValue)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                        Spacer()
-                        Button(action: {
-                            altToDelete = altName
-                            showDeleteAltConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Delete alternate name")
-                    }
-                    if !altName.note.isEmpty {
-                        Text(altName.note)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.leading, 4)
-                    }
-                }
-            }
+            .buttonStyle(.plain)
+            .help("Edit description")
         }
-    }
-
-    @ViewBuilder 
-    private var relationshipsView: some View {
-        if !filteredGroupedRelationships.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Relationships")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
-                ForEach(filteredGroupedRelationships, id: \.type) { group in
-                    RelationshipGroupRow(
-                        relationship: group.preferred,
-                        alternatives: group.alternatives,
-                        perspective: figure,
-                        onSelectFigure: onSelectFigure
-                    )
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var eventsView: some View {
-        let allFigureEvents: [Event] = modelContext.fetchAll().filter {
-            $0.involvedFigures.contains(where: { $0.persistentModelID == figure.persistentModelID })
-        }
-        let figureEvents = filterText.isEmpty ? allFigureEvents : allFigureEvents.filter {
-            matchesFilter($0.name) || matchesFilter($0.eventType?.name ?? "") || matchesFilter($0.date.displayLabel)
-        }
-        if !figureEvents.isEmpty {
-            Divider()
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Events")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-
-                ForEach(figureEvents) { event in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Image(systemName: event.eventType?.icon ?? "bolt")
-                                .font(.caption)
-                                .foregroundStyle(event.eventType?.color ?? .gray)
-                                .frame(width: 14)
-                            Button(action: { onSelectEvent?(event) }) {
-                                Text(event.name)
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(Color.accentColor)
-                                    .underline()
-                            }
-                            .buttonStyle(.plain)
-                            .pointingHand()
-                            Text(event.eventType?.name ?? "Other")
-                                .font(.caption2)
-                                .foregroundStyle(event.eventType?.color ?? .gray)
-                Spacer()
-                            Text(event.date.displayLabel)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        if !event.placeAssociations.isEmpty {
-                            HStack(spacing: 4) {
-                                Image(systemName: "mappin")
-                                    .font(.caption2)
-                                    .foregroundStyle(.teal)
-                                ForEach(Array(event.placeAssociations.enumerated()), id: \.element.id) { idx, assoc in
-                                    Button(action: {
-                                        if let p = assoc.place { onSelectPlace?(p) }
-                                    }) {
-                                        Text(assoc.place?.name ?? "?")
-                                            .font(.caption)
-                                            .foregroundStyle(Color.accentColor)
-                                            .underline()
-                                    }
-                                    .buttonStyle(.plain)
-                                    .pointingHand()
-                                    if idx < event.placeAssociations.count - 1 {
-                                        Text("·")
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                }
-                            }
-                            .padding(.leading, 22)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-            }
-        }
-    }
-
-    private var filteredCitations: [Citation] {
-        filterText.isEmpty ? figureCitations : figureCitations.filter {
-            matchesFilter($0.source?.name ?? "") || matchesFilter($0.safeLocation) || matchesFilter($0.safeNote)
-        }
-    }
-
-    @ViewBuilder
-    private var citationsView: some View {
-        Divider()
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Sources & Citations")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-                Button(action: { showAddCitation = true }) {
-                    Image(systemName: "plus")
-                        .font(.caption)
-                }
-                .buttonStyle(.plain)
-                .help("Add citation")
-            }
-
-            if filteredCitations.isEmpty {
-                    Text("No matching citations found.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                } else {
-                    ForEach(filteredCitations) { citation in
-                        FigureCitationsRow(citation: citation)
-                    }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var thingsSection: some View {
-        Divider()
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Associated Things")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-                Button(action: { showThingLinkPopover = true }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .buttonStyle(.plain)
-                .help("Link a thing")
-                .popover(isPresented: $showThingLinkPopover) {
-                    ThingLinkPopover(
-                        figure: figure,
-                        searchText: $thingSearchText,
-                        selectedThing: $selectedThingForLink,
-                        selectedRole: $selectedThingRole,
-                        isPresented: $showThingLinkPopover
-                    )
-                    .frame(width: 340, height: 400)
-                }
-            }
-
-            if figure.thingAssociations.isEmpty {
-                Text("No things linked")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 4)
-            } else {
-                ForEach(figure.thingAssociations) { assoc in
-                    if let thing = assoc.thing {
-                        HStack(spacing: 8) {
-                            Image(systemName: thing.thingType?.icon ?? "shippingbox")
-                                .font(.callout)
-                                .foregroundStyle(thing.thingType?.color ?? .brown)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(assoc.displayName.map { "\(thing.name) as \($0)" } ?? thing.name)
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                HStack(spacing: 4) {
-                                    Text(assoc.roleType?.name ?? "—")
-                                        .font(.caption2)
-                                        .padding(.horizontal, 4)
-                                        .padding(.vertical, 1)
-                                        .background(RoundedRectangle(cornerRadius: 3).fill((thing.thingType?.color ?? .brown).opacity(0.12)))
-                                    if !assoc.source.isEmpty {
-                                        Text(assoc.source)
-                                            .font(.caption2)
-                                            .foregroundStyle(.tertiary)
-                                    }
-                                }
-                            }
-                            Spacer()
-                            Button(action: {
-                                modelContext.delete(assoc)
-                                try? modelContext.save()
-                            }) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.red.opacity(0.7))
-                            }
-                            .buttonStyle(.plain)
-                            .help("Remove thing")
-                        }
-                        .padding(.vertical, 2)
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var groupsSection: some View {
-        Divider()
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Groups")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-                Button(action: { showGroupLinkPopover = true }) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
-                }
-                .buttonStyle(.plain)
-                .help("Add to group")
-                .popover(isPresented: $showGroupLinkPopover) {
-                    GroupLinkPopover(
-                        figure: figure,
-                        searchText: $groupSearchText,
-                        selectedGroup: $selectedGroupForLink,
-                        isPresented: $showGroupLinkPopover
-                    )
-                    .frame(width: 340, height: 400)
-                }
-            }
-
-            let groups = figure.groupAssociations
-                .sorted { ($0.group?.name ?? "") < ($1.group?.name ?? "") }
-
-            if groups.isEmpty {
-                Text("Not in any group")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 4)
-            } else {
-                ForEach(groups) { assoc in
-                    HStack(spacing: 8) {
-                        Image(systemName: assoc.group?.icon ?? "folder")
-                            .font(.caption)
-                            .foregroundStyle(assoc.group.map { Color(hex: $0.colorHex) } ?? .gray)
-                            .frame(width: 16)
-                        Text(assoc.group?.name ?? "?")
-                            .font(.callout)
-                        if !assoc.note.isEmpty {
-                            Text(assoc.note)
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.vertical, 2)
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var pantheonsSection: some View {
-        Divider()
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Pantheons")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .textCase(.uppercase)
-                Spacer()
-                Menu {
-                    ForEach(allPantheons) { pantheon in
-                        let isMember = figure.pantheons.contains { $0.persistentModelID == pantheon.persistentModelID }
-                        Button {
-                            if isMember {
-                                removePantheonMembership(pantheon)
-                            } else {
-                                figure.pantheons.append(pantheon)
-                                try? modelContext.save()
-                            }
-                        } label: {
-                            Label(pantheon.name, systemImage: isMember ? "checkmark" : "")
-                        }
-                    }
-                    if allPantheons.isEmpty {
-                        Text("No pantheons — add them in Type Settings")
-                    }
-                } label: {
-                    Label("\(figure.pantheons.count)", systemImage: "building.columns")
-                        .labelStyle(.titleAndIcon)
-                }
-                .menuStyle(.borderlessButton)
-                .help("Assign pantheons to this figure")
-                .fixedSize()
-            }
-
-            if figure.pantheons.isEmpty {
-                Text("Not assigned to any pantheon")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 4)
-            } else {
-                ForEach(figure.pantheons.sorted { $0.name < $1.name }) { pantheon in
-                    HStack(spacing: 8) {
-                        Image(systemName: pantheon.icon)
-                            .font(.caption)
-                            .foregroundStyle(pantheon.color)
-                            .frame(width: 16)
-                        Text(pantheon.name)
-                            .font(.callout)
-                        Text("as")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                        TextField("\(figure.name)", text: pantheonAliasBinding(for: pantheon))
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 160)
-                    }
-                    .padding(.vertical, 2)
-                }
-            }
-        }
-    }
-
-    private func removePantheonMembership(_ pantheon: Pantheon) {
-        figure.pantheons.removeAll { $0.persistentModelID == pantheon.persistentModelID }
-        if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
-            figure.pantheonAssociations?.removeAll { $0.persistentModelID == assoc.persistentModelID }
-            modelContext.delete(assoc)
-        }
-        try? modelContext.save()
-    }
-
-    private func pantheonAliasBinding(for pantheon: Pantheon) -> Binding<String> {
-        Binding(
-            get: {
-                if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }),
-                   let name = assoc.displayName, !name.isEmpty {
-                    return name
-                }
-                return figure.name
-            },
-            set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !trimmed.isEmpty, trimmed != figure.name else {
-                    if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
-                        assoc.displayName = nil
-                        try? modelContext.save()
-                    }
-                    return
-                }
-                if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
-                    assoc.displayName = trimmed
-                } else {
-                    let assoc = FigurePantheonAssociation(figure: figure, pantheon: pantheon, displayName: trimmed)
-                    modelContext.insert(assoc)
-                    if figure.pantheonAssociations == nil {
-                        figure.pantheonAssociations = []
-                    }
-                    figure.pantheonAssociations?.append(assoc)
-                }
+        .sheet(isPresented: $showDescriptionEditor) {
+            DescriptionEditorSheet(
+                entityName: figure.name,
+                richDescription: $editRichDescription,
+                plainDescription: $editPlainDescription
+            )
+            .onDisappear {
+                figure.richDescription = editRichDescription
+                figure.figureDescription = editPlainDescription
                 try? modelContext.save()
             }
-        )
+        }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     var body: some View {
         ScrollView {
@@ -736,133 +355,48 @@ struct FigureDetailView: View {
                 )
 
                 // Alternate Names
-                alternateNamesView
+                AlternateNamesSection(figure: figure, filterText: filterText)
 
                 Divider()
 
                 // Relationships
-                relationshipsView
-
-                // Place Associations
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Associated Places")
+                if !filteredRelationships.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Relationships")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        Spacer()
-                        Button(action: { showPlaceLinkPopover = true }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Link a place")
-                        .popover(isPresented: $showPlaceLinkPopover) {
-                            PlaceLinkPopover(
-                                figure: figure,
-                                searchText: $placeSearchText,
-                                selectedPlace: $selectedPlaceForLink,
-                                selectedRole: $selectedPlaceRole,
-                                isPresented: $showPlaceLinkPopover
-                            )
-                            .frame(width: 340, height: 400)
-                        }
-                    }
 
-                    if figure.placeAssociations.isEmpty {
-                        Text("No places linked")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .padding(.vertical, 4)
-                    } else {
-                        let filteredPlaces = filterText.isEmpty ? figure.placeAssociations : figure.placeAssociations.filter {
-                            matchesFilter($0.place?.name ?? "") || matchesFilter($0.roleType?.name ?? "") || matchesFilter($0.source)
-                        }
-                        ForEach(filteredPlaces) { assoc in
-                            VStack(alignment: .leading, spacing: 2) {
-                                FigurePlaceAssociationRow(association: assoc, onSelectPlace: onSelectPlace)
-                                if editingCommentsID == assoc.persistentModelID {
-                                    HStack(spacing: 4) {
-                                        TextField("Comments", text: $editingCommentsText)
-                                            .textFieldStyle(.plain)
-                                            .font(.caption)
-                                            .onSubmit {
-                                                assoc.comments = editingCommentsText.isEmpty ? nil : editingCommentsText
-                                                editingCommentsID = nil
-                                                try? modelContext.save()
-                                            }
-                                        Button(action: {
-                                            assoc.comments = editingCommentsText.isEmpty ? nil : editingCommentsText
-                                            editingCommentsID = nil
-                                            try? modelContext.save()
-                                        }) {
-                                            Image(systemName: "checkmark")
-                                                .font(.caption2)
-                                                .foregroundStyle(.green)
-                                        }
-                                        .buttonStyle(.plain)
-                                        Button(action: {
-                                            editingCommentsID = nil
-                                        }) {
-                                            Image(systemName: "xmark")
-                                                .font(.caption2)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                    .padding(.leading, 22)
-                                } else if let comments = assoc.comments, !comments.isEmpty {
-                                    Button(action: {
-                                        editingCommentsText = comments
-                                        editingCommentsID = assoc.persistentModelID
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Text(comments)
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                            Image(systemName: "pencil")
-                                                .font(.caption2)
-                                                .foregroundStyle(.tertiary)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.leading, 22)
-                                } else {
-                                    Button(action: {
-                                        editingCommentsText = ""
-                                        editingCommentsID = assoc.persistentModelID
-                                    }) {
-                                        HStack(spacing: 4) {
-                                            Text("Add comment…")
-                                                .font(.caption)
-                                                .foregroundStyle(.tertiary)
-                                            Image(systemName: "plus")
-                                                .font(.caption2)
-                                                .foregroundStyle(.tertiary)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                    .padding(.leading, 22)
-                                }
-                            }
+                        ForEach(filteredRelationships, id: \.persistentModelID) { rel in
+                            RelationshipGroupRow(
+                                relationship: rel,
+                                alternatives: [],
+                                perspective: figure,
+                                onSelectFigure: onSelectFigure
+                            )
                         }
                     }
                 }
 
+                // Place Associations
+                PlacesSection(figure: figure, filterText: filterText, onSelectPlace: onSelectPlace)
+
                 // Associated Things
-                thingsSection
+                ThingsSection(figure: figure)
 
                 // Figure Groups
-                groupsSection
+                GroupsSection(figure: figure)
 
                 // Pantheons
                 if isDivineFigure {
-                    pantheonsSection
+                    PantheonsSection(figure: figure)
                 }
 
+                // Comparison Tables
+                ComparisonTablesSection(figure: figure, showingPopupTableGrid: $showingPopupTableGrid)
+
                 // Associated Events
-                eventsView
+                EventsSection(figure: figure, filterText: filterText, onSelectEvent: onSelectEvent, onSelectPlace: onSelectPlace)
 
                 // Images
                 Divider()
@@ -893,7 +427,7 @@ struct FigureDetailView: View {
                 }
 
                 // Citations
-                citationsView
+                CitationsSection(figure: figure, filterText: filterText, showAddCitation: $showAddCitation)
 
                 Spacer()
             }
@@ -947,7 +481,7 @@ struct FigureDetailView: View {
                     allRelationTypes = (modelContext.fetchAll() as [RelationshipType])
                 }
 
-                TextField("Source", text: $dropSource, prompt: Text("e.g. Enuma Elish, Tablet I"))
+                SourcePickerView(selection: $dropSource, sources: dropSources)
 
                 HStack(spacing: 16) {
                     Button("Cancel") { showDropConfirmation = false }
@@ -958,11 +492,14 @@ struct FigureDetailView: View {
                     let rel = Relationship(
                         fromFigure: sourceFigure,
                         toFigure: self.figure,
-                        source: dropSource
+                        source: dropSource?.name ?? ""
                     )
                             modelContext.insert(rel)
                             if let type = allRelationTypes.first(where: { $0.name == selectedRelationTypeName }) {
                                 type.relationships.append(rel)
+                            }
+                            if let source = dropSource {
+                                source.relationships.append(rel)
                             }
                             try? modelContext.save()
                         }
@@ -974,18 +511,7 @@ struct FigureDetailView: View {
             .padding()
             .frame(width: 400)
         }
-        .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
-            Button("Delete", role: .destructive) {
-                modelContext.delete(altName)
-                try? modelContext.save()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: { altName in
-            Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(altName.figure?.name ?? "?")?")
-        }
-        .sheet(isPresented: $showAddAltSheet) {
-            AlternateNameFormView(alternateName: nil, preSelectedFigure: self.figure)
-        }
+
         .sheet(isPresented: $showParentSearch) {
             ParentCoupleSheet(
                 childFigure: self.figure,
@@ -1001,6 +527,12 @@ struct FigureDetailView: View {
         }
         .sheet(item: $editingAttribution) { attribution in
             ContentAttributionFormView(attribution: attribution)
+        }
+        .sheet(isPresented: $showMugshotSheet) {
+            MugshotSheet(figure: figure) { showMugshotSheet = false }
+        }
+        .sheet(item: $showingPopupTableGrid) { table in
+            PopupTableView(table: table)
         }
     }
 
@@ -1026,58 +558,59 @@ struct RelationshipGroupRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: relationshipIcon)
-                .font(.caption)
-                .foregroundStyle(relationshipColor)
-                .frame(width: 16)
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Image(systemName: relationshipIcon)
+                    .font(.caption)
+                    .foregroundStyle(relationshipColor)
+                    .frame(width: 16)
 
-            descriptionView
+                descriptionView
 
-            Spacer()
+                Spacer()
 
-            if !alternatives.isEmpty {
-                Button {
-                    showAlternativesPopover.toggle()
-                } label: {
-                    Text("+\(alternatives.count)")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-                        )
+                if !alternatives.isEmpty {
+                    Button {
+                        showAlternativesPopover.toggle()
+                    } label: {
+                        Text("+\(alternatives.count)")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .popover(isPresented: $showAlternativesPopover) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Alternative \(relationship.relationshipType?.name ?? "traditions")")
+                                .font(.caption.bold())
+                                .padding(.bottom, 2)
+                            ForEach(alternatives) { alt in
+                                AlternativeRelationRow(relationship: alt, perspective: perspective, onSelectFigure: onSelectFigure)
+                            }
+                        }
+                        .padding(10)
+                        .frame(minWidth: 200)
+                    }
+                }
+
+                Button(action: { showDeleteConfirm = true }) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red.opacity(0.7))
                 }
                 .buttonStyle(.plain)
-                .popover(isPresented: $showAlternativesPopover) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("Alternative \(relationship.relationshipType?.name ?? "traditions")")
-                            .font(.caption.bold())
-                            .padding(.bottom, 2)
-                        ForEach(alternatives) { alt in
-                            AlternativeRelationRow(relationship: alt, perspective: perspective, onSelectFigure: onSelectFigure)
-                        }
-                    }
-                    .padding(10)
-                    .frame(minWidth: 200)
-                }
+                .help("Delete relationship")
             }
 
-            if !relationship.source.isEmpty {
-                Text(relationship.source)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            if !relationship.sourceDisplayName.isEmpty {
+                SourceBadgeView(name: relationship.sourceDisplayName, url: relationship.sourceURL)
+                    .padding(.leading, 16)
             }
-
-            Button(action: { showDeleteConfirm = true }) {
-                Image(systemName: "trash")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.red.opacity(0.7))
-            }
-            .buttonStyle(.plain)
-            .help("Delete relationship")
         }
         .padding(.vertical, 3)
         .contextMenu {
@@ -1119,46 +652,56 @@ struct RelationshipGroupRow: View {
     }
 
     private func labelPrefix(isFrom: Bool) -> String {
-        let name = relationship.relationshipType?.name ?? ""
-        switch name {
-        case "Father":
-            return isFrom ? "Father of" : "\(perspective.gender == .female ? "Daughter" : perspective.gender == .male ? "Son" : "Child") of"
-        case "Mother":
-            return isFrom ? "Mother of" : "\(perspective.gender == .female ? "Daughter" : perspective.gender == .male ? "Son" : "Child") of"
-        case "Spouse":
-            if perspective.gender == .male { return "Husband of" }
-            else if perspective.gender == .female { return "Wife of" }
-            else { return "Spouse of" }
-        case "Consort":
-            return "Consort of"
-        case "Sibling":
-            if perspective.gender == .male { return "Brother of" }
-            else if perspective.gender == .female { return "Sister of" }
-            else { return "Sibling of" }
-        case "Uncle":
-            return isFrom ? "Uncle of" : "Nephew/Niece of"
-        case "Aunt":
-            return isFrom ? "Aunt of" : "Nephew/Niece of"
-        case "Creator":
-            return isFrom ? "Creator of" : "Created by"
-        case "Commander":
-            return isFrom ? "Commander of" : "Commanded by"
-        case "Servant":
-            return isFrom ? "Servant of" : "Served by"
-        case "Ally":
-            return "Ally of"
-        case "Enemy":
-            return "Enemy of"
-        case "Worshipper":
-            return isFrom ? "Worshipper of" : "Worshipped by"
-        default:
-            return isFrom ? "\(name) of" : "Has \(name)"
-        }
+        relationshipDirectionPrefix(relationship, perspective: perspective, isFrom: isFrom)
     }
 
     private var relationshipIcon: String { relationship.relationshipType?.icon ?? "questionmark" }
 
     private var relationshipColor: Color { relationship.relationshipType?.color ?? .gray }
+}
+
+/// Direction-aware label prefix for a relationship as seen from `perspective`.
+/// Outgoing ("Father of") and incoming ("Son of" / reverseName) directions are
+/// phrased from the viewer's standpoint so a child always reads as a child.
+private func relationshipDirectionPrefix(_ relationship: Relationship, perspective: Figure, isFrom: Bool) -> String {
+    let name = relationship.relationshipType?.name ?? ""
+    if let reverseName = relationship.relationshipType?.reverseName, !reverseName.isEmpty {
+        return isFrom ? "\(name) of" : "\(reverseName) of"
+    }
+    switch name {
+    case "Father":
+        return isFrom ? "Father of" : "\(perspective.gender == .female ? "Daughter" : perspective.gender == .male ? "Son" : "Child") of"
+    case "Mother":
+        return isFrom ? "Mother of" : "\(perspective.gender == .female ? "Daughter" : perspective.gender == .male ? "Son" : "Child") of"
+    case "Spouse":
+        if perspective.gender == .male { return "Husband of" }
+        else if perspective.gender == .female { return "Wife of" }
+        else { return "Spouse of" }
+    case "Consort":
+        return "Consort of"
+    case "Sibling":
+        if perspective.gender == .male { return "Brother of" }
+        else if perspective.gender == .female { return "Sister of" }
+        else { return "Sibling of" }
+    case "Uncle":
+        return isFrom ? "Uncle of" : "Nephew/Niece of"
+    case "Aunt":
+        return isFrom ? "Aunt of" : "Nephew/Niece of"
+    case "Creator":
+        return isFrom ? "Creator of" : "Created by"
+    case "Commander":
+        return isFrom ? "Commander of" : "Commanded by"
+    case "Servant":
+        return isFrom ? "Servant of" : "Served by"
+    case "Ally":
+        return "Ally of"
+    case "Enemy":
+        return "Enemy of"
+    case "Worshipper":
+        return isFrom ? "Worshipper of" : "Worshipped by"
+    default:
+        return isFrom ? "\(name) of" : "Has \(name)"
+    }
 }
 
 /// A compact row for an alternative relationship shown inside the popover.
@@ -1177,15 +720,18 @@ struct AlternativeRelationRow: View {
             Image(systemName: relationship.relationshipType?.icon ?? "questionmark")
                 .font(.caption2)
                 .foregroundStyle(relationship.relationshipType?.color ?? .gray)
-            Text(otherFigure?.name ?? "?")
+            Text(directionLabel + (otherFigure?.name ?? "?"))
                 .font(.callout)
                 .foregroundStyle(.secondary)
-            if !relationship.source.isEmpty {
-                Text("(\(relationship.source))")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
+            if !relationship.sourceDisplayName.isEmpty {
+                SourceBadgeView(name: relationship.sourceDisplayName, url: relationship.sourceURL)
             }
         }
+    }
+
+    private var directionLabel: String {
+        let isFrom = relationship.fromFigure?.persistentModelID == perspective.persistentModelID
+        return relationshipDirectionPrefix(relationship, perspective: perspective, isFrom: isFrom) + " "
     }
 }
 
@@ -1395,237 +941,6 @@ private struct ParentCoupleSheet: View {
     }
 }
 
-private struct PlaceLinkPopover: View {
-    let figure: Figure
-    @Binding var searchText: String
-    @Binding var selectedPlace: Place?
-    @Binding var selectedRole: FigurePlaceRoleType?
-    @Binding var isPresented: Bool
-
-    @Environment(\.modelContext) private var modelContext
-    @State private var allRoles: [FigurePlaceRoleType] = []
-    @State private var comments: String = ""
-
-    private var allPlaces: [Place] {
-        (try? modelContext.fetch(FetchDescriptor<Place>(sortBy: [SortDescriptor(\.name)]))) ?? []
-    }
-
-    private var filteredPlaces: [Place] {
-        let linked = Set(figure.placeAssociations.compactMap { $0.place?.persistentModelID })
-        let available = allPlaces.filter { !linked.contains($0.persistentModelID) }
-        if searchText.isEmpty { return available }
-        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search places…", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            if filteredPlaces.isEmpty {
-                Text("No matching places")
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 20)
-            } else {
-                List(filteredPlaces, id: \.persistentModelID) { place in
-                    Button(action: { selectedPlace = place }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: place.placeType?.icon ?? "mappin")
-                                .font(.caption)
-                                .foregroundStyle(.teal)
-                                .frame(width: 16)
-                            Text(place.name)
-                                .font(.body)
-                            if !place.modernLocation.isEmpty {
-                                Text(place.modernLocation)
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            Spacer()
-                            if selectedPlace?.persistentModelID == place.persistentModelID {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .listStyle(.plain)
-            }
-
-            Divider()
-
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Role:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("Role", selection: $selectedRole) {
-                        Text("Select…").tag(nil as FigurePlaceRoleType?)
-                        ForEach(allRoles, id: \.persistentModelID) { role in
-                            HStack(spacing: 6) {
-                                Image(systemName: role.icon)
-                                Text(role.name)
-                            }
-                            .tag(role as FigurePlaceRoleType?)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Comments:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("e.g. first antediluvian king", text: $comments)
-                        .textFieldStyle(.plain)
-                        .padding(8)
-                        .background(Color(.textBackgroundColor))
-                        .cornerRadius(6)
-                }
-
-                HStack {
-                    Spacer()
-                    Button("Cancel") { isPresented = false }
-                        .buttonStyle(.bordered)
-                    Button("Link") {
-                        createAssociation()
-                        isPresented = false
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(selectedPlace == nil || selectedRole == nil)
-                }
-            }
-        }
-        .padding()
-        .onAppear {
-            allRoles = (try? modelContext.fetch(FetchDescriptor<FigurePlaceRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
-        }
-    }
-
-    private func createAssociation() {
-        guard let place = selectedPlace, let role = selectedRole else { return }
-        let assoc = FigurePlaceAssociation(comments: comments.isEmpty ? nil : comments)
-        modelContext.insert(assoc)
-        figure.placeAssociations.append(assoc)
-        place.figureAssociations.append(assoc)
-        role.associations.append(assoc)
-        try? modelContext.save()
-    }
-}
-
-private struct ThingLinkPopover: View {
-    let figure: Figure
-    @Binding var searchText: String
-    @Binding var selectedThing: Thing?
-    @Binding var selectedRole: ThingFigureRoleType?
-    @Binding var isPresented: Bool
-
-    @Environment(\.modelContext) private var modelContext
-    @State private var allRoles: [ThingFigureRoleType] = []
-
-    private var allThings: [Thing] {
-        (try? modelContext.fetch(FetchDescriptor<Thing>(sortBy: [SortDescriptor(\.name)]))) ?? []
-    }
-
-    private var filteredThings: [Thing] {
-        let linked = Set(figure.thingAssociations.compactMap { $0.thing?.persistentModelID })
-        let available = allThings.filter { !linked.contains($0.persistentModelID) }
-        if searchText.isEmpty { return available }
-        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search things…", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            if filteredThings.isEmpty {
-                Text("No matching things")
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 20)
-            } else {
-                List(filteredThings, id: \.persistentModelID) { thing in
-                    Button(action: { selectedThing = thing }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: thing.thingType?.icon ?? "shippingbox")
-                                .font(.caption)
-                                .foregroundStyle(thing.thingType?.color ?? .brown)
-                                .frame(width: 16)
-                            Text(thing.name)
-                                .font(.body)
-                            Spacer()
-                            if selectedThing?.persistentModelID == thing.persistentModelID {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .listStyle(.plain)
-            }
-
-            Divider()
-
-            VStack(spacing: 8) {
-                HStack {
-                    Text("Role:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("Role", selection: $selectedRole) {
-                        Text("Select…").tag(nil as ThingFigureRoleType?)
-                        ForEach(allRoles, id: \.persistentModelID) { role in
-                            HStack(spacing: 6) {
-                                Image(systemName: role.icon)
-                                Text(role.name)
-                            }
-                            .tag(role as ThingFigureRoleType?)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity)
-                }
-
-                HStack {
-                    Spacer()
-                    Button("Cancel") { isPresented = false }
-                        .buttonStyle(.bordered)
-                    Button("Link") {
-                        createAssociation()
-                        isPresented = false
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(selectedThing == nil || selectedRole == nil)
-                }
-            }
-        }
-        .padding()
-        .onAppear {
-            allRoles = (try? modelContext.fetch(FetchDescriptor<ThingFigureRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
-        }
-    }
-
-    private func createAssociation() {
-        guard let thing = selectedThing, let role = selectedRole else { return }
-        let assoc = ThingFigureAssociation(figure: figure)
-        modelContext.insert(assoc)
-        figure.thingAssociations.append(assoc)
-        thing.figureAssociations.append(assoc)
-        role.associations.append(assoc)
-        try? modelContext.save()
-    }
-}
-
 private struct AddCitationSheet: View {
     let figure: Figure
     @Environment(\.modelContext) private var modelContext
@@ -1684,117 +999,4 @@ private struct AddCitationSheet: View {
     }
 }
 
-private struct GroupLinkPopover: View {
-    let figure: Figure
-    @Binding var searchText: String
-    @Binding var selectedGroup: FigureGroup?
-    @Binding var isPresented: Bool
-
-    @Environment(\.modelContext) private var modelContext
-    @State private var note: String = ""
-
-    private var allGroups: [FigureGroup] {
-        let all: [FigureGroup] = (try? modelContext.fetch(FetchDescriptor<FigureGroup>(sortBy: [SortDescriptor(\.orderIndex)]))) ?? []
-        return all.filter { $0.entityType == .figure }
-    }
-
-    private var filteredGroups: [FigureGroup] {
-        let linked = Set(figure.groupAssociations.compactMap { $0.group?.persistentModelID })
-        let available = allGroups.filter { !linked.contains($0.persistentModelID) }
-        if searchText.isEmpty { return available }
-        return available.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
-    }
-
-    var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search groups...", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            if filteredGroups.isEmpty {
-                Text("No matching groups")
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 20)
-            } else {
-                List(filteredGroups, id: \.persistentModelID) { group in
-                    Button(action: { selectedGroup = group }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: group.icon)
-                                .font(.caption)
-                                .foregroundStyle(Color(hex: group.colorHex))
-                                .frame(width: 16)
-                            Text(group.name)
-                                .font(.body)
-                            Spacer()
-                            if selectedGroup?.persistentModelID == group.persistentModelID {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-                .listStyle(.plain)
-            }
-
-            Divider()
-
-            VStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Note (optional):")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("e.g. chief deity of this council", text: $note)
-                        .textFieldStyle(.plain)
-                        .padding(8)
-                        .background(Color(.textBackgroundColor))
-                        .cornerRadius(6)
-                }
-
-                HStack {
-                    Spacer()
-                    Button("Cancel") { isPresented = false }
-                        .buttonStyle(.bordered)
-                    Button("Join") {
-                        createAssociation()
-                        isPresented = false
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(selectedGroup == nil)
-                }
-            }
-        }
-        .padding()
-    }
-
-    private func createAssociation() {
-        guard let group = selectedGroup else { return }
-        let assoc = FigureGroupAssociation(figure: figure, group: group, note: note)
-        modelContext.insert(assoc)
-        figure.groupAssociations.append(assoc)
-        group.figureAssociations.append(assoc)
-        try? modelContext.save()
-    }
-}
-
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-    }
-}
 

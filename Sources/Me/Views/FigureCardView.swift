@@ -93,5 +93,6 @@ struct FigureCardView: View {
             .padding(8)
             .frame(width: 180)
         }
+        .mugshotHover(figure, size: 140, arrowEdge: .bottom)
     }
 }

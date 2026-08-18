@@ -2,18 +2,22 @@ import SwiftUI
 import SwiftData
 
 struct EntityGroupsSection: View {
-    let entityType: GroupEntityType
     let associations: [FigureGroupAssociation]
     var onCreateAssociation: ((FigureGroup) -> Void)?
+    var event: Event?
+    var onJoinWithPropagation: ((FigureGroup) -> Void)?
+    var onRemoveWithDepropagation: ((FigureGroupAssociation) -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
     @State private var selectedGroup: FigureGroup?
     @State private var showPopover = false
+    @State private var showPropagationConfirm = false
+    @State private var propagationPreview: FigureGroup.EventPropagationSummary?
+    @State private var pendingJoinGroup: FigureGroup?
 
     private var allGroups: [FigureGroup] {
-        let all: [FigureGroup] = (try? modelContext.fetch(FetchDescriptor<FigureGroup>(sortBy: [SortDescriptor(\.orderIndex)]))) ?? []
-        return all.filter { $0.entityType == entityType }
+        (try? modelContext.fetch(FetchDescriptor<FigureGroup>(sortBy: [SortDescriptor(\.orderIndex)]))) ?? []
     }
 
     private var linkedIDs: Set<PersistentIdentifier> {
@@ -60,7 +64,7 @@ struct EntityGroupsSection: View {
                                 .font(.caption)
                                 .foregroundStyle(Color(hex: group.colorHex))
                                 .frame(width: 16)
-                            Text(group.name)
+                            Text(group.fullDisplayName)
                                 .font(.callout)
                         }
                         if !assoc.note.isEmpty {
@@ -70,8 +74,12 @@ struct EntityGroupsSection: View {
                         }
                         Spacer()
                         Button {
-                            modelContext.delete(assoc)
-                            try? modelContext.save()
+                            if let onRemoveWithDepropagation {
+                                onRemoveWithDepropagation(assoc)
+                            } else {
+                                modelContext.delete(assoc)
+                                try? modelContext.save()
+                            }
                         } label: {
                             Image(systemName: "xmark")
                                 .font(.system(size: 8, weight: .semibold))
@@ -82,6 +90,23 @@ struct EntityGroupsSection: View {
                     }
                     .padding(.vertical, 2)
                 }
+            }
+        }
+        .alert("Add to Group?", isPresented: $showPropagationConfirm) {
+            Button("Add") {
+                if let group = pendingJoinGroup {
+                    onJoinWithPropagation?(group)
+                }
+                pendingJoinGroup = nil
+                selectedGroup = nil
+                showPopover = false
+            }
+            Button("Cancel", role: .cancel) {
+                pendingJoinGroup = nil
+            }
+        } message: {
+            if let preview = propagationPreview {
+                Text("This event will also add: \(preview.description).")
             }
         }
     }
@@ -129,10 +154,23 @@ struct EntityGroupsSection: View {
                     .buttonStyle(.bordered)
                 Button("Join") {
                     if let group = selectedGroup {
-                        onCreateAssociation?(group)
+                        if let event, let onJoinWithPropagation {
+                            let preview = group.propagationPreview(for: event)
+                            if let preview {
+                                propagationPreview = preview
+                                pendingJoinGroup = group
+                                showPropagationConfirm = true
+                            } else {
+                                onJoinWithPropagation(group)
+                                selectedGroup = nil
+                                showPopover = false
+                            }
+                        } else {
+                            onCreateAssociation?(group)
+                            selectedGroup = nil
+                            showPopover = false
+                        }
                     }
-                    selectedGroup = nil
-                    showPopover = false
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(selectedGroup == nil)
@@ -143,20 +181,3 @@ struct EntityGroupsSection: View {
     }
 }
 
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-    }
-}

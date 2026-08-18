@@ -7,6 +7,7 @@ enum SidebarSection: String, CaseIterable {
     case visualizations = "Visualizations"
     case history = "History"
     case data = "Data"
+    case housekeeping = "Housekeeping"
 }
 
 enum NavigationItem: String, CaseIterable, Hashable {
@@ -35,6 +36,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case versions = "Versions"
     case sklMap = "Dynasty Map"
     case theMes = "The Me’s"
+    case appSettings = "App Settings"
+    case dataIntegrity = "Data Integrity"
+    case popupTables = "Comparison Tables"
 
     var icon: String {
         switch self {
@@ -63,6 +67,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .things: return "cube.box"
         case .figureGroups: return "folder"
         case .dictionary: return "book"
+        case .appSettings: return "gearshape"
+        case .dataIntegrity: return "checkmark.shield"
+        case .popupTables: return "tablecells"
         }
     }
 
@@ -71,8 +78,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .dashboard: return .overview
         case .missionControl, .importWiki, .versions: return .tools
         case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary: return .data
+        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary, .popupTables: return .data
         case .sklMap, .theMes: return .history
+        case .appSettings, .dataIntegrity: return .housekeeping
         }
     }
 
@@ -104,6 +112,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .versions: VersionListView()
         case .sklMap: SumerianDynastyMapView()
         case .theMes: ComingSoonView(title: "The Me’s")
+        case .appSettings: AppSettingsView()
+        case .dataIntegrity: DataIntegrityView()
+        case .popupTables: PopupTableListView()
         }
     }
 }
@@ -116,6 +127,7 @@ struct ContentView: View {
     @State private var showBackupSheet = false
     @State private var showFromTextSheet = false
     @State private var showFromTextHistorySheet = false
+    @State private var showDuplicateMergeSheet = false
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -211,6 +223,14 @@ struct ContentView: View {
                     Migration.ensureFigureGroupKinds(context: modelContext)
                     Migration.removeFloodPlaceholder(context: modelContext)
                     Migration.ensureSKLRegnalOrder(context: modelContext)
+                    Migration.fixSKLFigureOrder(context: modelContext)
+                    Migration.ensureDynastyGroups(context: modelContext)
+
+                    Migration.ensureDynastyBoundaries(context: modelContext)
+                    Migration.removeOrphanedGroupAssociations(context: modelContext)
+                    Migration.ensureRelationshipSources(context: modelContext)
+                    Migration.ensureAutoTags(context: modelContext)
+                    Migration.ensureRefinedDomainTags(context: modelContext)
 
                     try? modelContext.save()
                 }
@@ -278,8 +298,14 @@ struct ContentView: View {
                         }
                         sidebarDataGroupRows
                     }
+                    Section("Housekeeping") {
+                        ForEach(NavigationItem.allCases.filter { $0.section == .housekeeping }, id: \.self) { item in
+                            Label(item.rawValue, systemImage: item.icon)
+                                .tag(SidebarSelection.item(item))
+                        }
+                    }
                 }
-                .navigationSplitViewColumnWidth(min: 180, ideal: 200)
+                .navigationSplitViewColumnWidth(min: 230, ideal: 260)
                 .listStyle(.sidebar)
                 .focusable(false)
             } detail: {
@@ -386,6 +412,15 @@ struct ContentView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
+                        showDuplicateMergeSheet = true
+                    } label: {
+                        Image(systemName: "person.crop.circle.badge.plus")
+                    }
+                    .help("Find and merge duplicate entities")
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
                         showBackupSheet = true
                     } label: {
                         Image(systemName: "archivebox")
@@ -401,6 +436,9 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showBackupSheet) {
                 BackupSheet()
+            }
+            .sheet(isPresented: $showDuplicateMergeSheet) {
+                DuplicateMergeView()
             }
             .onReceive(NotificationCenter.default.publisher(for: .showBackupSheet)) { _ in
                 showBackupSheet = true
@@ -473,7 +511,6 @@ private struct SidebarGroupRow: View {
 
     private var subgroups: [FigureGroup] {
         (group.subgroups ?? [])
-            .filter { $0.entityType == type }
             .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
     }
 
@@ -512,20 +549,3 @@ private struct SidebarGroupRow: View {
     }
 }
 
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-    }
-}

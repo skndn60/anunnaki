@@ -156,6 +156,12 @@ struct FigureGroupListView: View {
         if selectedGroupID == group.persistentModelID { selectedGroupID = nil }
         Task { @MainActor in
             try? modelContext.transaction {
+                for assoc in group.figureAssociations {
+                    assoc.figure?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                    assoc.place?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                    assoc.event?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                    assoc.thing?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                }
                 group.figureAssociations = []
                 group.textBlocks = []
                 modelContext.delete(group)
@@ -492,7 +498,7 @@ struct FigureGroupDetailView: View {
                         }
 
                         if spineContents.isEmpty {
-                            Text("No \(group.entityType.pluralName.lowercased()) or prose in this group")
+                            Text("No \(group.memberPluralLabel) or prose in this group")
                                 .font(.callout)
                                 .foregroundStyle(.tertiary)
                         } else {
@@ -546,7 +552,7 @@ struct FigureGroupDetailView: View {
                         }
 
                         if members.isEmpty {
-                            Text("No \(group.entityType.pluralName.lowercased()) in this group")
+                            Text("No \(group.memberPluralLabel) in this group")
                                 .font(.callout)
                                 .foregroundStyle(.tertiary)
                         } else {
@@ -676,9 +682,13 @@ struct FigureGroupDetailView: View {
             items = allThings.filter { filter.matchesThing($0) && !existingIDs.contains($0.persistentModelID) }.map { GroupMemberItem.thing($0, nil) }
         }
         for item in items {
-            let assoc = item.makeAssociation()
-            modelContext.insert(assoc)
-            group.figureAssociations.append(assoc)
+            if case .event(let event, _) = item {
+                group.addEventWithPropagation(event: event, in: modelContext)
+            } else {
+                let assoc = item.makeAssociation()
+                modelContext.insert(assoc)
+                group.figureAssociations.append(assoc)
+            }
         }
         if group.sortMode == .ordered, group.entityType == .figure {
             group.applyRegnalOrder()
@@ -931,9 +941,13 @@ private struct BulkAddMembersSheet: View {
 
     private func addAllMatching() {
         for item in matchingItems {
-            let assoc = item.makeAssociation()
-            modelContext.insert(assoc)
-            group.figureAssociations.append(assoc)
+            if case .event(let event, _) = item {
+                group.addEventWithPropagation(event: event, in: modelContext)
+            } else {
+                let assoc = item.makeAssociation()
+                modelContext.insert(assoc)
+                group.figureAssociations.append(assoc)
+            }
         }
         if saveAsRule && hasActiveFilter {
             let filter: GroupMemberFilter
@@ -1051,20 +1065,3 @@ private struct MemberReorderButtons: View {
     }
 }
 
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-    }
-}

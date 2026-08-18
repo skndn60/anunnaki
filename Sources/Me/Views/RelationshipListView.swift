@@ -156,47 +156,47 @@ struct RelationshipRowView: View {
     private var isPreferred: Bool { relationship.isPreferred == true }
 
     var body: some View {
-        HStack(spacing: 10) {
-            if isPreferred {
-                Button(action: {
-                    Task { @MainActor in
-                        relationship.isPreferred = false
-                        try? modelContext.save()
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                if isPreferred {
+                    Button(action: {
+                        Task { @MainActor in
+                            relationship.isPreferred = false
+                            try? modelContext.save()
+                        }
+                    }) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.yellow)
                     }
-                }) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.yellow)
+                    .buttonStyle(.plain)
+                    .help("Click to unset as default")
                 }
-                .buttonStyle(.plain)
-                .help("Click to unset as default")
-            }
-            Text(relationship.fromFigure?.name ?? "?")
-                .fontWeight(isPreferred ? .bold : .medium)
-                .foregroundStyle(isPreferred ? .primary : .secondary)
-            Image(systemName: relationship.relationshipType?.icon ?? "questionmark")
-                .font(.caption)
-                .foregroundStyle(relationship.relationshipType?.color ?? .gray)
-            Text(relationship.relationshipType?.name ?? "")
-                .font(.caption)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(RoundedRectangle(cornerRadius: 4).fill((relationship.relationshipType?.color ?? .gray).opacity(0.12)))
-            Image(systemName: "arrow.right")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-            Text(relationship.toFigure?.name ?? "?")
-                .fontWeight(isPreferred ? .bold : .medium)
-                .foregroundStyle(isPreferred ? .primary : .secondary)
-            if !relationship.source.isEmpty {
-                Text(relationship.source)
+                Text(relationship.fromFigure?.name ?? "?")
+                    .fontWeight(isPreferred ? .bold : .medium)
+                    .foregroundStyle(isPreferred ? .primary : .secondary)
+                Image(systemName: relationship.relationshipType?.icon ?? "questionmark")
                     .font(.caption)
+                    .foregroundStyle(relationship.relationshipType?.color ?? .gray)
+                Text(relationship.relationshipType?.name ?? "")
+                    .font(.caption)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(RoundedRectangle(cornerRadius: 4).fill((relationship.relationshipType?.color ?? .gray).opacity(0.12)))
+                Image(systemName: "arrow.right")
+                    .font(.caption2)
                     .foregroundStyle(.tertiary)
-                    .lineLimit(1)
+                Text(relationship.toFigure?.name ?? "?")
+                    .fontWeight(isPreferred ? .bold : .medium)
+                    .foregroundStyle(isPreferred ? .primary : .secondary)
+                Spacer()
+                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: onEdit)
+                IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
             }
-            Spacer()
-            IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: onEdit)
-            IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
+            if !relationship.sourceDisplayName.isEmpty {
+                SourceBadgeView(name: relationship.sourceDisplayName, url: relationship.sourceURL)
+                    .padding(.leading, isPreferred ? 24 : 0)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -218,7 +218,8 @@ struct RelationshipFormView: View {
     @State private var toSearchText = ""
     @Query private var allRelationTypes: [RelationshipType]
     @State private var selectedType: RelationshipType?
-    @State private var source = ""
+    @Query(sort: \Source.name) private var sources: [Source]
+    @State private var selectedSource: Source?
 
     private var filteredFromFigures: [FigureSearchResult] {
         guard !fromSearchText.isEmpty else { return [] }
@@ -267,7 +268,9 @@ struct RelationshipFormView: View {
                     )
                 }
 
-                TextField("Source Text", text: $source, prompt: Text("e.g. Enuma Elish, Tablet I"))
+                Section("Source") {
+                    SourcePickerView(selection: $selectedSource, sources: sources)
+                }
             }
             .formStyle(.grouped)
             .padding(.horizontal)
@@ -309,11 +312,14 @@ struct RelationshipFormView: View {
         }
         let relationship = Relationship(
             fromFigure: from, toFigure: to,
-            source: source,
+            source: selectedSource?.name ?? "",
             isPreferred: isPreferred
         )
         modelContext.insert(relationship)
         type.relationships.append(relationship)
+        if let source = selectedSource {
+            source.relationships.append(relationship)
+        }
         try? modelContext.save()
         dismiss()
     }
@@ -335,11 +341,14 @@ struct RelationshipFormView: View {
         if existing.isEmpty {
             let relationship = Relationship(
                 fromFigure: from, toFigure: to,
-                source: source,
+                source: selectedSource?.name ?? "",
                 isPreferred: false
             )
             modelContext.insert(relationship)
             type.relationships.append(relationship)
+            if let source = selectedSource {
+                source.relationships.append(relationship)
+            }
             try? modelContext.save()
             dismiss()
         } else if type.category == "parent" {

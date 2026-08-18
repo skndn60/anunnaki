@@ -35,6 +35,9 @@ package final class Thing {
 
     package var thingType: ThingType?
 
+    package var coverageExempt: Bool?
+    package var coverageReviewedAt: Date?
+
     package init(name: String = "", thingDescription: String = "", source: String = "") {
         self.name = name
         self.thingDescription = thingDescription

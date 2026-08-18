@@ -2,6 +2,33 @@ import SwiftUI
 import SwiftData
 import AppKit
 
+/// The group page currently being read. Inline links rendered inside a group
+/// page preview the linked entity in the group's own detail panel (the main
+/// content stays put), so no sidebar navigation or breadcrumbs are involved.
+/// Outside a group page, links fall back to sidebar navigation.
+struct InlineLinkGroupContext {
+    let groupID: PersistentIdentifier
+    let groupName: String
+    let onOpenEntity: (EntityKind, PersistentIdentifier) -> Void
+
+    init(groupID: PersistentIdentifier, groupName: String, onOpenEntity: @escaping (EntityKind, PersistentIdentifier) -> Void) {
+        self.groupID = groupID
+        self.groupName = groupName
+        self.onOpenEntity = onOpenEntity
+    }
+}
+
+private struct InlineLinkGroupContextKey: EnvironmentKey {
+    static let defaultValue: InlineLinkGroupContext? = nil
+}
+
+extension EnvironmentValues {
+    var inlineLinkGroupContext: InlineLinkGroupContext? {
+        get { self[InlineLinkGroupContextKey.self] }
+        set { self[InlineLinkGroupContextKey.self] = newValue }
+    }
+}
+
 /// Renders a description — RTF when available, otherwise plain text — with
 /// entity names auto-linked to their dossier report window.
 struct LinkedDescription: View {
@@ -267,9 +294,18 @@ private struct InlineEntityLink: View {
     let request: EntityReportRequest
     @Environment(\.openWindow) private var openWindow
     @Environment(\.navigationCoordinator) private var navigationCoordinator
+    @Environment(\.inlineLinkGroupContext) private var inlineLinkGroupContext
+    @Environment(\.modelContext) private var modelContext
     @State private var isHovered = false
+    @State private var showMugshot = false
 
     private var displayName: String { request.name }
+
+    private var mugshotFigure: Figure? {
+        guard candidate.kind == .figure else { return nil }
+        guard let figure = try? modelContext.model(for: candidate.targetID) as? Figure else { return nil }
+        return figure.mugshotImage != nil ? figure : nil
+    }
 
     var body: some View {
         Button {
@@ -283,12 +319,31 @@ private struct InlineEntityLink: View {
                 .underline(isHovered)
         }
         .buttonStyle(.plain)
-        .onHover { isHovered = $0 }
+        .onHover { hovering in
+            isHovered = hovering
+            showMugshot = hovering && mugshotFigure != nil
+        }
         .pointingHand()
         .help("View \(request.kind.lowercased()) \"\(displayName)\"")
+        .popover(isPresented: $showMugshot, arrowEdge: .bottom) {
+            if let figure = mugshotFigure {
+                MugshotView(
+                    image: figure.mugshotImage,
+                    cropRect: ImageCropRect(encoded: figure.mugshotCropRect),
+                    size: 120,
+                    figureType: figure.figureType,
+                    identification: figure.mugshotIdentification
+                )
+                .padding(8)
+            }
+        }
     }
 
     private func navigateInSidebar(_ coordinator: NavigationCoordinator) {
+        if let context = inlineLinkGroupContext {
+            context.onOpenEntity(candidate.kind, candidate.targetID)
+            return
+        }
         switch candidate.kind {
         case .figure:
             coordinator.navigateToFigure(candidate.targetID, name: candidate.targetName)

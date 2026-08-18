@@ -45,7 +45,6 @@ struct FigureGroupFormView: View {
 
     private var isEditing: Bool { group != nil }
     private var totalSteps: Int { 2 }
-    private var loadedEntityType: GroupEntityType { group?.entityType ?? .figure }
     private var canGoBack: Bool { currentStep > 0 }
     private var canGoNext: Bool {
         switch currentStep {
@@ -87,12 +86,11 @@ struct FigureGroupFormView: View {
     }
 
     private var allCandidates: [GroupMemberItem] {
-        switch entityType {
-        case .figure: return allFigures.map { GroupMemberItem.figure($0, nil) }
-        case .place: return allPlaces.map { GroupMemberItem.place($0, nil) }
-        case .event: return allEvents.map { GroupMemberItem.event($0, nil) }
-        case .thing: return allThings.map { GroupMemberItem.thing($0, nil) }
-        }
+        (allFigures.map { GroupMemberItem.figure($0, nil) }
+            + allPlaces.map { GroupMemberItem.place($0, nil) }
+            + allEvents.map { GroupMemberItem.event($0, nil) }
+            + allThings.map { GroupMemberItem.thing($0, nil) })
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     private var filteredCandidates: [GroupMemberItem] {
@@ -100,7 +98,7 @@ struct FigureGroupFormView: View {
     }
 
     private var memberCountLabel: String {
-        "\(selectedMemberAliases.count) \(entityType.pluralName.lowercased()) selected"
+        "\(selectedMemberAliases.count) selected"
     }
 
     private var availableAggregationTargets: [GroupAggregationTarget] {
@@ -247,12 +245,12 @@ struct FigureGroupFormView: View {
                     .textFieldStyle(.roundedBorder)
                     .help("The name of this group")
 
-                Picker("Members Are", selection: $entityType) {
+                Picker("Group Type", selection: $entityType) {
                     ForEach(GroupEntityType.allCases, id: \.self) { type in
                         Text(type.pluralName).tag(type)
                     }
                 }
-                .help("What kind of entity this group holds.")
+                .help("The group's primary type — used for sidebar placement, smart rules, and summaries. Members of any kind can be added to any group.")
 
                 Section("Member Labels") {
                     TextField("Singular", text: $memberSingular, prompt: Text("ruler"))
@@ -285,7 +283,7 @@ struct FigureGroupFormView: View {
 
                 ColorPicker("Color", selection: Binding(
                     get: { Color(hex: colorHex) },
-                    set: { colorHex = $0.toHex ?? "8E8E93" }
+                    set: { colorHex = $0.hex }
                 ))
 
                 Picker("Kind", selection: $kind) {
@@ -415,9 +413,6 @@ struct FigureGroupFormView: View {
         .formStyle(.grouped)
         .onChange(of: entityType) { _, newType in
             if newType != .figure { kind = .standard }
-            if newType != loadedEntityType {
-                selectedMemberAliases.removeAll()
-            }
             ruleTypeNames.removeAll()
             if availableAggregationTargets.isEmpty {
                 aggregationEnabled = false
@@ -453,12 +448,12 @@ struct FigureGroupFormView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                TextField("Search \(entityType.pluralName.lowercased())...", text: $searchText)
+                TextField("Search members...", text: $searchText)
                     .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal)
 
-            Text(selectedMemberAliases.isEmpty ? "No \(entityType.pluralName.lowercased()) selected" : memberCountLabel)
+            Text(selectedMemberAliases.isEmpty ? "No members selected" : memberCountLabel)
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -673,7 +668,7 @@ struct FigureGroupFormView: View {
         memberPlural = group.memberPlural ?? ""
         loadRule(from: group.decodedFilter)
         selectedMemberAliases = Dictionary(uniqueKeysWithValues: group.figureAssociations.compactMap { assoc in
-            guard let id = memberID(assoc, of: entityType) else { return nil }
+            guard let id = memberID(assoc) else { return nil }
             return (id, assoc.displayName ?? "")
         })
         if let agg = group.decodedAggregation {
@@ -757,13 +752,11 @@ struct FigureGroupFormView: View {
         }
     }
 
-    private func memberID(_ assoc: FigureGroupAssociation, of type: GroupEntityType) -> PersistentIdentifier? {
-        switch type {
-        case .figure: return assoc.figure?.persistentModelID
-        case .place: return assoc.place?.persistentModelID
-        case .event: return assoc.event?.persistentModelID
-        case .thing: return assoc.thing?.persistentModelID
-        }
+    private func memberID(_ assoc: FigureGroupAssociation) -> PersistentIdentifier? {
+        assoc.figure?.persistentModelID
+            ?? assoc.place?.persistentModelID
+            ?? assoc.event?.persistentModelID
+            ?? assoc.thing?.persistentModelID
     }
 
     private func candidate(for id: PersistentIdentifier) -> GroupMemberItem? {
@@ -772,29 +765,37 @@ struct FigureGroupFormView: View {
 
     private func syncMembers(group: FigureGroup, newAliases: [PersistentIdentifier: String]) {
         let existing = group.figureAssociations
-        let existingIDs = Set(existing.compactMap { memberID($0, of: entityType) })
+        let existingIDs = Set(existing.compactMap { memberID($0) })
         let newIDs = Set(newAliases.keys)
 
         let toRemove = existing.filter { assoc in
-            guard let id = memberID(assoc, of: entityType) else { return false }
+            guard let id = memberID(assoc) else { return false }
             return !newIDs.contains(id)
         }
         for assoc in toRemove {
-            modelContext.delete(assoc)
+            if let event = assoc.event {
+                group.removeEventWithDepropagation(event: event, in: modelContext)
+            } else {
+                modelContext.delete(assoc)
+            }
         }
 
         for assoc in existing {
-            guard let id = memberID(assoc, of: entityType), newIDs.contains(id) else { continue }
+            guard let id = memberID(assoc), newIDs.contains(id) else { continue }
             assoc.displayName = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
         }
 
         let toAdd = newIDs.subtracting(existingIDs)
         for id in toAdd {
             guard let candidate = candidate(for: id) else { continue }
-            let assoc = makeAssociation(for: candidate)
-            assoc.displayName = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
-            modelContext.insert(assoc)
-            group.figureAssociations.append(assoc)
+            if case .event(let event, _) = candidate {
+                group.addEventWithPropagation(event: event, in: modelContext)
+            } else {
+                let assoc = makeAssociation(for: candidate)
+                assoc.displayName = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
+                modelContext.insert(assoc)
+                group.figureAssociations.append(assoc)
+            }
         }
     }
 
@@ -811,28 +812,3 @@ private struct RuleTypePill: Identifiable {
     var id: String { name }
 }
 
-private extension Color {
-    init(hex: String) {
-        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        var int: UInt64 = 0
-        Scanner(string: hex).scanHexInt64(&int)
-        let r, g, b: Double
-        switch hex.count {
-        case 6:
-            r = Double((int >> 16) & 0xFF) / 255
-            g = Double((int >> 8) & 0xFF) / 255
-            b = Double(int & 0xFF) / 255
-        default:
-            r = 0.5; g = 0.5; b = 0.5
-        }
-        self.init(.sRGB, red: r, green: g, blue: b, opacity: 1)
-    }
-
-    var toHex: String? {
-        guard let components = cgColor?.components, components.count >= 3 else { return nil }
-        let r = Int(components[0] * 255)
-        let g = Int(components[1] * 255)
-        let b = Int(components[2] * 255)
-        return String(format: "%02X%02X%02X", r, g, b)
-    }
-}

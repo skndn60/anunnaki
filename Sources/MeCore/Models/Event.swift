@@ -15,6 +15,9 @@ package final class Event {
     /// Override for alphabetical sorting (e.g. "The Great Flood" → "Flood")
     package var sortName: String?
 
+    package var coverageExempt: Bool?
+    package var coverageReviewedAt: Date?
+
     /// Figures involved in this event
     @Relationship
     package var involvedFigures: [Figure] = []

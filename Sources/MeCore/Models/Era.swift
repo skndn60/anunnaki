@@ -10,6 +10,13 @@ package final class Era {
     package var startDate: MythologicalDate
     package var endDate: MythologicalDate
 
+    /// Group pages that represent this era (e.g. dynasty group pages).
+    @Relationship
+    package var groups: [FigureGroup]? = nil
+
+    /// Author-drawn territory boundary as GeoJSON Polygon (migration-safe optional).
+    package var boundaryGeoJSON: String? = nil
+
     package init(
         name: String = "",
         orderIndex: Int = 0,

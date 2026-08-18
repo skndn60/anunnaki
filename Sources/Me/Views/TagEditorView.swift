@@ -101,7 +101,8 @@ struct TagEditorView: View {
 
     private func tagLabel(_ tag: Tag) -> some View {
         HStack(spacing: 4) {
-            if let hex = tag.colorHex, !hex.isEmpty, let color = Color(hex: hex) {
+            if let hex = tag.colorHex, !hex.isEmpty {
+                let color = Color(hex: hex)
                 Circle()
                     .fill(color)
                     .frame(width: 8, height: 8)
@@ -118,7 +119,8 @@ struct TagTokenView: View {
 
     var body: some View {
         HStack(spacing: 2) {
-            if let hex = tag.colorHex, !hex.isEmpty, let color = Color(hex: hex) {
+            if let hex = tag.colorHex, !hex.isEmpty {
+                let color = Color(hex: hex)
                 Circle()
                     .fill(color)
                     .frame(width: 5, height: 5)

@@ -8,6 +8,7 @@ struct ParentCouple: Identifiable {
     let fatherRel: Relationship?
     let motherRel: Relationship?
     var isPreferred: Bool { fatherRel?.isPreferred == true || motherRel?.isPreferred == true }
+    var sourceLabel: String? { fatherRel?.sourceDisplayName ?? motherRel?.sourceDisplayName }
 }
 
 func buildCouples(for figure: Figure, from relationships: [Relationship]) -> [ParentCouple] {
@@ -99,9 +100,25 @@ struct MiniLineageView: View {
 
     @Query private var allRelationships: [Relationship]
     @Environment(\.modelContext) private var modelContext
+    @State private var sourceFilter = ""
+
+    private var availableSources: [String] {
+        let sources = relationships.map(\.sourceDisplayName).filter { !$0.isEmpty }
+        return Array(Set(sources)).sorted()
+    }
+
+    private var filteredRelationships: [Relationship] {
+        guard !sourceFilter.isEmpty else { return relationships }
+        return relationships.filter { $0.sourceDisplayName == sourceFilter }
+    }
+
+    private var filteredAllRelationships: [Relationship] {
+        guard !sourceFilter.isEmpty else { return allRelationships }
+        return allRelationships.filter { $0.sourceDisplayName == sourceFilter }
+    }
 
     private var couples: [ParentCouple] {
-        buildCouples(for: figure, from: relationships)
+        buildCouples(for: figure, from: filteredRelationships)
     }
 
     private var preferredCouple: ParentCouple? {
@@ -125,12 +142,12 @@ struct MiniLineageView: View {
 
     private var paternalGrandfather: Figure? {
         guard let father = preferredCouple?.father else { return nil }
-        return parents(typeName: "Father", of: father, from: allRelationships).preferred
+        return parents(typeName: "Father", of: father, from: filteredAllRelationships).preferred
     }
 
     private var paternalGrandmother: Figure? {
         guard let father = preferredCouple?.father else { return nil }
-        return parents(typeName: "Mother", of: father, from: allRelationships).preferred
+        return parents(typeName: "Mother", of: father, from: filteredAllRelationships).preferred
     }
 
     private var hasGrandparents: Bool {
@@ -143,6 +160,11 @@ struct MiniLineageView: View {
                 .padding(.bottom, 12)
 
             VStack(spacing: 10) {
+
+                if availableSources.count > 1 {
+                    sourceFilterMenu
+                        .padding(.bottom, 2)
+                }
 
                 // Grandparents (from preferred couple's father)
                 if showGrandparents, hasGrandparents {
@@ -192,6 +214,33 @@ struct MiniLineageView: View {
             }
             .padding(.vertical, 8)
         }
+    }
+
+    private var sourceFilterMenu: some View {
+        Menu {
+            Button("All sources") { sourceFilter = "" }
+            Divider()
+            ForEach(availableSources, id: \.self) { source in
+                Button(source) { sourceFilter = source }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "book.closed")
+                    .font(.system(size: 9))
+                Text(sourceFilter.isEmpty ? "All sources" : sourceFilter)
+                    .font(.caption2)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 7))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(Color.secondary.opacity(0.1)))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Filter lineage by source")
     }
 
     @ViewBuilder
@@ -368,6 +417,10 @@ private struct AltCouplesButton: View {
                                 Text("?")
                                     .font(.caption)
                                     .foregroundStyle(.tertiary)
+                            }
+                            if let source = couple.sourceLabel, !source.isEmpty {
+                                Spacer()
+                                SourceBadgeView(name: source)
                             }
                         }
                         .padding(.horizontal, 8)

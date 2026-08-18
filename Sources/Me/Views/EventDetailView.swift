@@ -28,6 +28,9 @@ struct EventDetailView: View {
     @State private var showEditDisplayName = false
     @State private var showAddAttribution = false
     @State private var editingAttribution: ContentAttribution?
+    @State private var showDescriptionEditor = false
+    @State private var editRichDescription: Data? = nil
+    @State private var editPlainDescription = ""
 
     private var figureDisplayList: [(figure: Figure, displayName: String?, association: EventFigureAssociation?)] {
         var result: [(figure: Figure, displayName: String?, association: EventFigureAssociation?)] = event.involvedFigures.map { (figure: $0, displayName: nil, association: nil) }
@@ -86,6 +89,30 @@ struct EventDetailView: View {
                                 RoundedRectangle(cornerRadius: 5)
                                     .fill(.orange.opacity(0.12))
                             )
+                    }
+
+                    Button {
+                        editRichDescription = event.richDescription
+                        editPlainDescription = event.eventDescription
+                        showDescriptionEditor = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit description")
+                }
+                .sheet(isPresented: $showDescriptionEditor) {
+                    DescriptionEditorSheet(
+                        entityName: event.name,
+                        richDescription: $editRichDescription,
+                        plainDescription: $editPlainDescription
+                    )
+                    .onDisappear {
+                        event.richDescription = editRichDescription
+                        event.eventDescription = editPlainDescription
+                        try? modelContext.save()
                     }
                 }
 
@@ -255,7 +282,7 @@ struct EventDetailView: View {
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Locations")
+                        Text("Associated Places")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
@@ -407,14 +434,20 @@ struct EventDetailView: View {
 
                 // Groups
                 EntityGroupsSection(
-                    entityType: .event,
                     associations: event.groupAssociations,
-                    onCreateAssociation: { group in
-                        let assoc = FigureGroupAssociation(event: event)
-                        modelContext.insert(assoc)
-                        event.groupAssociations.append(assoc)
-                        group.figureAssociations.append(assoc)
+                    event: event,
+                    onJoinWithPropagation: { group in
+                        let summary = group.addEventWithPropagation(event: event, in: modelContext)
                         try? modelContext.save()
+                    },
+                    onRemoveWithDepropagation: { assoc in
+                        if let eventToRemove = assoc.event, let group = assoc.group {
+                            let removedNames = group.removeEventWithDepropagation(event: eventToRemove, in: modelContext)
+                            try? modelContext.save()
+                        } else {
+                            modelContext.delete(assoc)
+                            try? modelContext.save()
+                        }
                     }
                 )
 

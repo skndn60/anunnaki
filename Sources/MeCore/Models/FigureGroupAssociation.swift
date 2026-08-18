@@ -14,6 +14,9 @@ package final class FigureGroupAssociation {
     /// Explicit position of this member within its group when the group uses manual ordering.
     /// Nil means "no explicit position" (falls back to alphabetical). Optional for migration safety.
     package var orderIndex: Int?
+    /// Name of the event that caused this association to be auto-created (event propagation).
+    /// Nil means the member was added manually. Optional for migration safety.
+    package var propagatedFromEventName: String?
 
     package init(
         figure: Figure? = nil,
@@ -23,7 +26,8 @@ package final class FigureGroupAssociation {
         group: FigureGroup? = nil,
         note: String = "",
         displayName: String? = nil,
-        orderIndex: Int? = nil
+        orderIndex: Int? = nil,
+        propagatedFromEventName: String? = nil
     ) {
         self.figure = figure
         self.place = place
@@ -33,5 +37,6 @@ package final class FigureGroupAssociation {
         self.note = note
         self.displayName = displayName
         self.orderIndex = orderIndex
+        self.propagatedFromEventName = propagatedFromEventName
     }
 }

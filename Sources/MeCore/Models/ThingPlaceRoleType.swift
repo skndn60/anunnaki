@@ -12,7 +12,7 @@ package final class ThingPlaceRoleType {
     package var associations: [ThingPlaceAssociation] = []
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, icon: String, colorHex: String) {

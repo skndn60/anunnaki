@@ -114,6 +114,19 @@ struct SumerianKingListView: View {
                     ForEach(dynasty.reigns, id: \.figure.persistentModelID) { reign in
                         KingRow(reign: reign)
                             .tag(reign.figure.persistentModelID)
+                            .contextMenu {
+                                Button("Edit") {
+                                    editingFigure = reign.figure
+                                }
+                                Button("Show in Lineage Tree") {
+                                    coordinator?.navigateToLineageFigure(reign.figure.persistentModelID)
+                                }
+                                Divider()
+                                Button("Delete", role: .destructive) {
+                                    selectedFigureID = reign.figure.persistentModelID
+                                    showDeleteConfirm = true
+                                }
+                            }
                     }
                 } header: {
                     HStack(spacing: 8) {
@@ -241,5 +254,6 @@ private struct KingRow: View {
                     .lineLimit(1)
             }
         }
+        .mugshotHover(figure, arrowEdge: .leading)
     }
 }

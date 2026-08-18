@@ -364,8 +364,8 @@ extension Tag {
     var eventCount: Int { events.count }
     var placeCount: Int { places.count }
     var displayColor: Color {
-        if let hex = colorHex, !hex.isEmpty, let color = Color(hex: hex) {
-            return color
+        if let hex = colorHex, !hex.isEmpty {
+            return Color(hex: hex)
         }
         return .accentColor
     }

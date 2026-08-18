@@ -14,6 +14,9 @@ package final class Place {
     package var latitude: Double? // nil for cosmic/mythological places
     package var longitude: Double?
 
+    package var coverageExempt: Bool?
+    package var coverageReviewedAt: Date?
+
     package var sortName: String?
 
     package var foundedDate: MythologicalDate?

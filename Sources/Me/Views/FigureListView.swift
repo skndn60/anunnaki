@@ -1,6 +1,27 @@
 import SwiftUI
 import SwiftData
 
+/// Snapshot of a figure's row presentation, precomputed off the render path so
+/// list rows never fault a live `Figure` (or its relationships) during a layout
+/// pass — the macOS 26 SwiftData assert-on-fault class of crash that a merge or
+/// delete can trigger while the sidebar figures list is visible.
+private struct FigureRowDisplay: Identifiable {
+    let id: PersistentIdentifier
+    let name: String
+    let disambiguation: String?
+    let domain: String
+    let typeName: String
+    let typeColor: Color
+    let typeIcon: String
+    let genderSymbol: String
+    let isConcept: Bool
+    let hasUnresolvedSticky: Bool
+    let birthDateLabel: String
+    let isRed: Bool
+    let popupTableIDs: [PersistentIdentifier]
+    let popupTableNames: [String]
+}
+
 /// Input screen for managing figures (deities, humans, etc.)
 struct FigureListView: View {
     var coordinator: NavigationCoordinator?
@@ -9,6 +30,7 @@ struct FigureListView: View {
     @Query private var figures: [Figure]
     @Query private var figureTypes: [FigureType]
     @Query private var allGroups: [FigureGroup]
+    @Query(sort: \PopupTable.name) private var popupTables: [PopupTable]
     @State private var showingAddSheet = false
     @State private var editingFigure: Figure?
     @State private var selectedFigureID: PersistentIdentifier?
@@ -20,7 +42,9 @@ struct FigureListView: View {
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
     @State private var selectedDynastyGroup: FigureGroup?
-    @AppStorage("figureDetailWidth") private var detailWidth: Double = 320
+    @State private var rows: [FigureRowDisplay] = []
+    @State private var openTable: PopupTable?
+    @AppStorage("figureDetailWidth") private var detailWidth: Double = 390
 
     enum FigureSortOrder: String, CaseIterable {
         case name = "Name"
@@ -36,40 +60,35 @@ struct FigureListView: View {
             .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
     }
 
-    /// IDs of the figures that should be drawn red (members of the selected dynasty).
-    private var redFigureIDs: Set<PersistentIdentifier> {
-        guard let selected = selectedDynastyGroup else { return [] }
-        return Set(selected.figureAssociations.compactMap { $0.figure?.persistentModelID })
-    }
-
     private var selectedFigure: Figure? {
-        guard let id = selectedFigureID else { return nil }
-        return filteredFigures.first { $0.persistentModelID == id }
+        guard let id = selectedFigureID,
+              rows.contains(where: { $0.id == id }) else { return nil }
+        return figures.first { $0.persistentModelID == id }
     }
 
-    private var filteredFigures: [Figure] {
-        var result = figures
+    private var filteredRows: [FigureRowDisplay] {
+        var result = rows
         if !selectedTypeFilters.isEmpty {
-            result = result.filter { selectedTypeFilters.contains($0.figureType?.name ?? "") }
+            result = result.filter { selectedTypeFilters.contains($0.typeName) }
         }
         switch sortOrder {
         case .name: result.sort { sortName(for: $0.name) < sortName(for: $1.name) }
-        case .type: result.sort { (a: Figure, b: Figure) in (a.figureType?.name ?? "") < (b.figureType?.name ?? "") }
+        case .type: result.sort { $0.typeName < $1.typeName }
         case .domain: result.sort { $0.domain < $1.domain }
         }
         return result
     }
 
-    private var groupedFigures: [(key: String, figures: [Figure])] {
-        Dictionary(grouping: filteredFigures) { figure in
+    private var groupedRows: [(key: String, rows: [FigureRowDisplay])] {
+        Dictionary(grouping: filteredRows) { row in
             switch sortOrder {
-            case .name: String(sortName(for: figure.name).uppercased().prefix(1))
-            case .type: figure.figureType?.name ?? "?"
-            case .domain: figure.domain.isEmpty ? "?" : figure.domain
+            case .name: String(sortName(for: row.name).uppercased().prefix(1))
+            case .type: row.typeName.isEmpty ? "?" : row.typeName
+            case .domain: row.domain.isEmpty ? "?" : row.domain
             }
         }
         .sorted { $0.key < $1.key }
-        .map { (key: $0.key, figures: $0.value.sorted { sortName(for: $0.name) < sortName(for: $1.name) }) }
+        .map { (key: $0.key, rows: $0.value.sorted { sortName(for: $0.name) < sortName(for: $1.name) }) }
     }
 
     private func selectFigure(_ id: PersistentIdentifier) {
@@ -134,7 +153,7 @@ struct FigureListView: View {
 
                 Divider()
 
-                if filteredFigures.isEmpty {
+                if filteredRows.isEmpty {
                     VStack(spacing: 12) {
                         Spacer()
                         if figures.isEmpty {
@@ -158,7 +177,7 @@ struct FigureListView: View {
                 } else {
                     ScrollViewReader { proxy in
                         List(selection: $selectedFigureID) {
-                            ForEach(groupedFigures, id: \.key) { group in
+                            ForEach(groupedRows, id: \.key) { group in
                                 figureGroupSection(group)
                             }
                         }
@@ -240,6 +259,9 @@ struct FigureListView: View {
                 )
             }
         }
+        .sheet(item: $openTable) { table in
+            PopupTableView(table: table)
+        }
 
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
@@ -259,6 +281,27 @@ struct FigureListView: View {
         .onChange(of: coordinator?.pendingFigureID) { _, _ in
             consumePendingNavigation()
         }
+        .task {
+            rebuildRows()
+        }
+        .onChange(of: figures.map(\.persistentModelID)) { _, _ in
+            rebuildRows()
+        }
+        .onChange(of: popupTables.map(\.persistentModelID)) { _, _ in
+            rebuildRows()
+        }
+        .onChange(of: selectedDynastyGroup?.persistentModelID) { _, _ in
+            rebuildRows()
+        }
+        .onChange(of: showingAddSheet) { _, _ in
+            rebuildRows()
+        }
+        .onChange(of: editingFigure?.persistentModelID) { _, _ in
+            rebuildRows()
+        }
+        .onChange(of: showDescriptionEditor) { _, _ in
+            rebuildRows()
+        }
     }
 
     private func consumePendingNavigation() {
@@ -268,6 +311,52 @@ struct FigureListView: View {
                 selectFigure(id)
             }
         }
+    }
+
+    /// Rebuilds the value-snapshot rows from the live models. Runs only on
+    /// change triggers (never during a body render), so rows can't fault a
+    /// model that a concurrent merge or delete removed mid-layout.
+    private func rebuildRows() {
+        let redIDs = redFigureIDs()
+        let tablesByFigureID = popupTablesByFigureID()
+        rows = figures.map { figure in
+            let id = figure.persistentModelID
+            let tables = tablesByFigureID[id] ?? []
+            return FigureRowDisplay(
+                id: id,
+                name: figure.name,
+                disambiguation: figure.disambiguation,
+                domain: figure.domain,
+                typeName: figure.figureType?.name ?? "",
+                typeColor: figure.figureType?.color ?? .gray,
+                typeIcon: figure.figureType?.icon ?? "questionmark",
+                genderSymbol: figure.gender.symbol,
+                isConcept: figure.isConcept,
+                hasUnresolvedSticky: figure.stickies.contains(where: { !$0.isResolved }),
+                birthDateLabel: figure.birthDate.displayLabel,
+                isRed: redIDs.contains(id),
+                popupTableIDs: tables.map(\.id),
+                popupTableNames: tables.map(\.name)
+            )
+        }
+        if let selected = selectedFigureID, !rows.contains(where: { $0.id == selected }) {
+            selectedFigureID = nil
+        }
+    }
+
+    private func popupTablesByFigureID() -> [PersistentIdentifier: [(name: String, id: PersistentIdentifier)]] {
+        var result: [PersistentIdentifier: [(String, PersistentIdentifier)]] = [:]
+        for table in popupTables {
+            for figure in table.figures {
+                result[figure.persistentModelID, default: []].append((table.name, table.persistentModelID))
+            }
+        }
+        return result
+    }
+
+    private func redFigureIDs() -> Set<PersistentIdentifier> {
+        guard let selected = selectedDynastyGroup else { return [] }
+        return Set(selected.figureAssociations.compactMap { $0.figure?.persistentModelID })
     }
 
     private func typeFilterButton(_ type: FigureType) -> some View {
@@ -300,12 +389,29 @@ struct FigureListView: View {
         .buttonStyle(.plain)
     }
 
-    private func figureGroupSection(_ group: (key: String, figures: [Figure])) -> some View {
+    private func figureGroupSection(_ group: (key: String, rows: [FigureRowDisplay])) -> some View {
         Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
-            ForEach(group.figures) { figure in
-                FigureRow(figure: figure, isRed: redFigureIDs.contains(figure.persistentModelID))
-                    .tag(figure.persistentModelID)
-                    .id(figure.persistentModelID)
+            ForEach(group.rows) { row in
+                FigureRow(display: row, onOpenTable: { id in
+                    openTable = modelContext.model(for: id) as? PopupTable
+                })
+                    .tag(row.id)
+                    .id(row.id)
+                    .contextMenu {
+                        Button("Edit") {
+                            if let figure = modelContext.model(for: row.id) as? Figure {
+                                editingFigure = figure
+                            }
+                        }
+                        Button("Show in Lineage Tree") {
+                            coordinator?.navigateToLineageFigure(row.id)
+                        }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            selectedFigureID = row.id
+                            showDeleteConfirm = true
+                        }
+                    }
             }
         }
     }
@@ -320,10 +426,14 @@ struct FigureListView: View {
     }
 }
 
-/// A single row in the figures list.
-struct FigureRow: View {
-    let figure: Figure
-    var isRed: Bool = false
+/// A single row in the figures list. Renders only precomputed display values —
+/// never a live `Figure` — so it cannot fault during a layout pass.
+fileprivate struct FigureRow: View {
+    let display: FigureRowDisplay
+    var onOpenTable: ((PersistentIdentifier) -> Void)?
+    @State private var showTablePicker = false
+
+    private var hasTables: Bool { !display.popupTableIDs.isEmpty }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -331,13 +441,13 @@ struct FigureRow: View {
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .onDrag {
-                    NSItemProvider(object: figure.name as NSString)
+                    NSItemProvider(object: display.name as NSString)
                 } preview: {
                     Circle()
-                        .fill(figure.figureType?.color ?? .gray)
+                        .fill(display.typeColor)
                         .frame(width: 32, height: 32)
                         .overlay(
-                            Image(systemName: figure.figureType?.icon ?? "questionmark")
+                            Image(systemName: display.typeIcon)
                                 .font(.system(size: 16))
                                 .foregroundColor(.white)
                         )
@@ -346,35 +456,35 @@ struct FigureRow: View {
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
             Circle()
-                .fill(figure.figureType?.color ?? .gray)
+                .fill(display.typeColor)
                 .frame(width: 8, height: 8)
-            Text(figure.gender.symbol)
+            Text(display.genderSymbol)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(width: 14)
             VStack(alignment: .leading, spacing: 0) {
-                Text(figure.name)
-                    .fontWeight(isRed ? .bold : .medium)
-                    .foregroundStyle(isRed ? .red : .primary)
-                if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
+                Text(display.name)
+                    .fontWeight(display.isRed ? .bold : .medium)
+                    .foregroundStyle(display.isRed ? .red : .primary)
+                if let disambiguation = display.disambiguation, !disambiguation.isEmpty {
                     Text(disambiguation)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
             }
-            Text(figure.figureType?.name ?? "Unknown")
+            Text(display.typeName.isEmpty ? "Unknown" : display.typeName)
                 .font(.caption)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(figure.figureType?.color.opacity(0.12) ?? .gray.opacity(0.12))
+                        .fill(display.typeColor.opacity(0.12))
                 )
-            Text(figure.domain)
+            Text(display.domain)
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-            if figure.isConcept {
+            if display.isConcept {
                 Text("Concept")
                     .font(.caption2)
                     .foregroundStyle(.orange)
@@ -382,17 +492,52 @@ struct FigureRow: View {
                     .padding(.vertical, 1)
                     .background(RoundedRectangle(cornerRadius: 3).fill(.orange.opacity(0.12)))
             }
-            if figure.stickies.contains(where: { !$0.isResolved }) {
+            if display.hasUnresolvedSticky {
                 Circle()
                     .fill(.yellow)
                     .frame(width: 10, height: 10)
             }
+            if hasTables {
+                Button {
+                    if display.popupTableIDs.count == 1 {
+                        onOpenTable?(display.popupTableIDs[0])
+                    } else {
+                        showTablePicker = true
+                    }
+                } label: {
+                    Image(systemName: "tablecells")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.accentColor)
+                }
+                .buttonStyle(.plain)
+                .popover(isPresented: $showTablePicker) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Comparison Tables")
+                            .font(.caption.bold())
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.top, 6)
+                        ForEach(display.popupTableIDs.indices, id: \.self) { index in
+                            Button {
+                                showTablePicker = false
+                                onOpenTable?(display.popupTableIDs[index])
+                            } label: {
+                                Label(display.popupTableNames[index], systemImage: "tablecells")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 2)
+                        }
+                        Spacer(minLength: 4)
+                    }
+                    .frame(minWidth: 160)
+                }
+            }
             Spacer()
-            Text(figure.birthDate.displayLabel)
+            Text(display.birthDateLabel)
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }
     }
 }
-
-

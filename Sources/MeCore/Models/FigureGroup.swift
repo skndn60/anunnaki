@@ -216,6 +216,11 @@ package final class FigureGroup {
 
     package var parentGroup: FigureGroup?
 
+    /// The era this group pages (e.g. a dynasty). When set, the group's page shows a
+    /// time-focused historical map of the era's span (see `GroupEraMapView`).
+    @Relationship(deleteRule: .nullify, inverse: \Era.groups)
+    package var era: Era?
+
     package var directFigures: [Figure] {
         figureAssociations.compactMap { $0.figure }
     }
@@ -451,6 +456,165 @@ package final class FigureGroup {
         case .thing:
             let all = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
             return all.filter { filter.matchesThing($0) }.map(\.persistentModelID)
+        }
+    }
+
+    // MARK: - Event Propagation
+
+    package struct EventPropagationSummary {
+        package var figureNames: [String]
+        package var placeNames: [String]
+        package var thingNames: [String]
+
+        package var totalAdded: Int { figureNames.count + placeNames.count + thingNames.count }
+        package var isEmpty: Bool { totalAdded == 0 }
+
+        package var description: String {
+            var parts: [String] = []
+            if !figureNames.isEmpty { parts.append("\(figureNames.count) figure\(figureNames.count == 1 ? "" : "s")") }
+            if !placeNames.isEmpty { parts.append("\(placeNames.count) place\(placeNames.count == 1 ? "" : "s")") }
+            if !thingNames.isEmpty { parts.append("\(thingNames.count) thing\(thingNames.count == 1 ? "" : "s")") }
+            return parts.joined(separator: ", ")
+        }
+    }
+
+    /// Compute what would be propagated if `event` were added to this group.
+    /// Returns nil when the event is already a member or has no participants.
+    package func propagationPreview(for event: Event) -> EventPropagationSummary? {
+        let eventAlreadyMember = figureAssociations.contains { $0.event === event }
+        guard !eventAlreadyMember else { return nil }
+
+        let existingFigureIDs = Set(figureAssociations.compactMap { $0.figure?.persistentModelID })
+        let existingPlaceIDs = Set(figureAssociations.compactMap { $0.place?.persistentModelID })
+        let existingThingIDs = Set(figureAssociations.compactMap { $0.thing?.persistentModelID })
+
+        let figures = event.figureAssociations?.compactMap(\.figure) ?? []
+        let legacyFigures = event.involvedFigures.filter { !figures.contains($0) }
+        let allFigures = figures + legacyFigures
+        let newFigures = allFigures.filter { !existingFigureIDs.contains($0.persistentModelID) }
+
+        let places = event.placeAssociations.compactMap(\.place)
+        let newPlaces = places.filter { !existingPlaceIDs.contains($0.persistentModelID) }
+
+        let things = event.thingAssociations.compactMap(\.thing)
+        let newThings = things.filter { !existingThingIDs.contains($0.persistentModelID) }
+
+        guard !newFigures.isEmpty || !newPlaces.isEmpty || !newThings.isEmpty else { return nil }
+        return EventPropagationSummary(
+            figureNames: newFigures.map(\.name),
+            placeNames: newPlaces.map(\.name),
+            thingNames: newThings.map(\.name)
+        )
+    }
+
+    /// Add an event to this group and propagate its associated figures, places, and things.
+    /// Returns the summary of propagated entities, or nil if the event was already a member.
+    @discardableResult
+    package func addEventWithPropagation(event: Event, in context: ModelContext) -> EventPropagationSummary? {
+        guard !figureAssociations.contains(where: { $0.event === event }) else { return nil }
+
+        let eventAssoc = FigureGroupAssociation(event: event)
+        context.insert(eventAssoc)
+        figureAssociations.append(eventAssoc)
+
+        let existingFigureIDs = Set(figureAssociations.compactMap { $0.figure?.persistentModelID })
+        let existingPlaceIDs = Set(figureAssociations.compactMap { $0.place?.persistentModelID })
+        let existingThingIDs = Set(figureAssociations.compactMap { $0.thing?.persistentModelID })
+
+        var addedFigures: [String] = []
+        var addedPlaces: [String] = []
+        var addedThings: [String] = []
+
+        let figures = event.figureAssociations?.compactMap(\.figure) ?? []
+        let legacyFigures = event.involvedFigures.filter { !figures.contains($0) }
+        for figure in figures + legacyFigures {
+            guard !existingFigureIDs.contains(figure.persistentModelID) else { continue }
+            let assoc = FigureGroupAssociation(figure: figure, propagatedFromEventName: event.name)
+            context.insert(assoc)
+            figureAssociations.append(assoc)
+            addedFigures.append(figure.name)
+        }
+
+        for placeAssoc in event.placeAssociations {
+            guard let place = placeAssoc.place, !existingPlaceIDs.contains(place.persistentModelID) else { continue }
+            let assoc = FigureGroupAssociation(place: place, propagatedFromEventName: event.name)
+            context.insert(assoc)
+            figureAssociations.append(assoc)
+            addedPlaces.append(place.name)
+        }
+
+        for thingAssoc in event.thingAssociations {
+            guard let thing = thingAssoc.thing, !existingThingIDs.contains(thing.persistentModelID) else { continue }
+            let assoc = FigureGroupAssociation(thing: thing, propagatedFromEventName: event.name)
+            context.insert(assoc)
+            figureAssociations.append(assoc)
+            addedThings.append(thing.name)
+        }
+
+        guard !addedFigures.isEmpty || !addedPlaces.isEmpty || !addedThings.isEmpty else { return nil }
+        return EventPropagationSummary(figureNames: addedFigures, placeNames: addedPlaces, thingNames: addedThings)
+    }
+
+    /// Remove an event from this group and clean up propagated members.
+    /// Members linked to other events in the group or manually added are kept.
+    @discardableResult
+    package func removeEventWithDepropagation(event: Event, in context: ModelContext) -> [String] {
+        let eventAssoc = figureAssociations.first { $0.event === event }
+        if let eventAssoc {
+            context.delete(eventAssoc)
+            figureAssociations.removeAll { $0 === eventAssoc }
+        }
+
+        let remainingEventIDs = Set(figureAssociations.compactMap { $0.event?.persistentModelID })
+
+        var removedNames: [String] = []
+
+        let propagated = figureAssociations.filter { $0.propagatedFromEventName == event.name }
+        for assoc in propagated {
+            let entityID = assoc.figure?.persistentModelID ?? assoc.place?.persistentModelID ?? assoc.thing?.persistentModelID
+            guard let entityID else {
+                context.delete(assoc)
+                figureAssociations.removeAll { $0 === assoc }
+                continue
+            }
+
+            let isCoveredByOtherEvent = remainingEventIDs.contains { otherEventID in
+                guard otherEventID != event.persistentModelID else { return false }
+                return isEntity(entityID, involvedInEventWithID: otherEventID, in: context)
+            }
+
+            if isCoveredByOtherEvent {
+                assoc.propagatedFromEventName = nil
+            } else {
+                let name = assoc.figure?.name ?? assoc.place?.name ?? assoc.thing?.name ?? "?"
+                removedNames.append(name)
+                assoc.figure?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                assoc.place?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                assoc.thing?.groupAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID }
+                context.delete(assoc)
+                figureAssociations.removeAll { $0 === assoc }
+            }
+        }
+
+        return removedNames
+    }
+
+    private func isEntity(_ entityID: PersistentIdentifier, involvedInEventWithID eventID: PersistentIdentifier, in context: ModelContext) -> Bool {
+        guard let event = context.model(for: eventID) as? Event else { return false }
+        if let figures = event.figureAssociations?.compactMap(\.figure) {
+            if figures.contains(where: { $0.persistentModelID == entityID }) { return true }
+        }
+        if event.involvedFigures.contains(where: { $0.persistentModelID == entityID }) { return true }
+        if event.placeAssociations.contains(where: { $0.place?.persistentModelID == entityID }) { return true }
+        if event.thingAssociations.contains(where: { $0.thing?.persistentModelID == entityID }) { return true }
+        return false
+    }
+
+    /// Check whether the given entity is involved in any event that is a member of this group.
+    package func eventsInvolving(entityID: PersistentIdentifier, in context: ModelContext) -> [Event] {
+        let groupEvents = figureAssociations.compactMap(\.event)
+        return groupEvents.filter { event in
+            isEntity(entityID, involvedInEventWithID: event.persistentModelID, in: context)
         }
     }
 

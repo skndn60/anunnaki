@@ -290,6 +290,16 @@ struct ThingListView: View {
             ForEach(group.things) { thing in
                 ThingRow(thing: thing)
                     .tag(thing.persistentModelID)
+                    .contextMenu {
+                        Button("Edit") {
+                            editingThing = thing
+                        }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            selectedThingID = thing.persistentModelID
+                            showDeleteConfirm = true
+                        }
+                    }
             }
         }
     }
@@ -361,6 +371,32 @@ struct ThingDetailView: View {
                     }
                     Text(thing.name)
                         .font(.title2.bold())
+
+                    Spacer()
+
+                    Button {
+                        editRichDescription = thing.richDescription
+                        editPlainDescription = thing.thingDescription
+                        showDescriptionEditor = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit description")
+                }
+                .sheet(isPresented: $showDescriptionEditor) {
+                    DescriptionEditorSheet(
+                        entityName: thing.name,
+                        richDescription: $editRichDescription,
+                        plainDescription: $editPlainDescription
+                    )
+                    .onDisappear {
+                        thing.richDescription = editRichDescription
+                        thing.thingDescription = editPlainDescription
+                        try? modelContext.save()
+                    }
                 }
 
                 if !thing.thingDescription.isEmpty || thing.richDescription != nil {
@@ -497,7 +533,6 @@ struct ThingDetailView: View {
 
                 // Groups
                 EntityGroupsSection(
-                    entityType: .thing,
                     associations: thing.groupAssociations,
                     onCreateAssociation: { group in
                         let assoc = FigureGroupAssociation(thing: thing)

@@ -131,6 +131,401 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 
 ## Session Log
 
+### 2026-08-17 — SKL ordering fix + title-only text block visibility
+
+**Part 1 — SKL figure ordering (source matching).** Four SKL kings (Etana, Gilgamesh, Lugalbanda, Urukagina) had `orderIndex=0` instead of their correct positions (12, 36, 41, 44). Root cause: their `source` field contained compound strings like `"Sumerian King List; Sumerian mythology"` which failed the exact `==` match in `SeedData.swift:530` and `Migration.fixSKLFigureOrder:1220`. Fixed by changing to `.contains("Sumerian King List")` in both locations. Verified: Etana now gets `orderIndex=12` with `reignYears=1560`. On existing DBs, `fixSKLFigureOrder` migration auto-corrects on next launch. 244 tests pass.
+
+**Part 2 — Title-only text block visibility.** Text blocks with a title but empty body/summary rendered as near-invisible slivers in `EntityGroupCollectionView`. `TextBlockRow` renders title + `RichTextDisplay` which returns `EmptyView` for empty text; the card had `.padding(10)` + subtle `Color(.textBackgroundColor).opacity(0.6)` background, but without body content the card was too thin to notice. Fixed by adding `.frame(minHeight: 32)` to `TextBlockRow` in `EntityGroupCollectionView.swift:1167`. The manager spine (`FigureGroupListView`) was unaffected — text blocks appear there with reorder arrows and drag-and-drop. 244 tests pass.
+
+**Relevant files:**
+- `Sources/MeCore/Store/SeedData.swift:530` — `.contains()` fix for seed orderIndex
+- `Sources/MeCore/Store/Migration.swift:1220` — `.contains()` fix in `fixSKLFigureOrder`
+- `Sources/Me/Views/EntityGroupCollectionView.swift:1167` — `minHeight: 32` on `TextBlockRow`
+
+### 2026-08-16 — Dynasties as mixed-type groups + single-word domain tags
+
+**Part 1 — Single-word domain tags.** The tag cloud surfaced fragment "tags" like `steward and scribe`, `and the underworld`, `associated with farming and fertility` — sentence fragments produced by `TagEngine.domainTags`, which had kept each comma-separated piece of a figure's `domain` prose whole (only literal `"and"`/`"of"`/`"the"` phrases were dropped). The user wanted single words. `domainTags` now splits each phrase into words and strips a stopword set (`and, the, of, with, associated, related, …`), so `"associated with farming and fertility"` → `farming` + `fertility`, `"and the underworld"` → `underworld`. Curated multi-word tags (traditions like "sumerian king list", type names like "divine collective", era names) are untouched — they flow through other paths.
+
+**Part 2 — Re-tag pass.** The old fragment tags were already persisted by `Migration.ensureAutoTags`, which only tags empty entities. New `Migration.ensureRefinedDomainTags` (Migration.swift) computes the legacy phrase set vs. the new single-word set per figure and removes exactly the obsolete fragment links, backfilling the refined words — surgical, idempotent, never touches curated tags, never deletes shared `Tag` rows. Wired into the launch sequence after `ensureAutoTags`.
+
+**Part 3 — Dynasties as groups.** The user wanted to register the SKL dynasties as groups so events (and places) could attach to them alongside kings, leveraging the mixed-type group system. New `Migration.ensureDynastyGroups` (Migration.swift) creates a top-level **"Dynasties"** group (kind `.skl`, published, History section) with one subgroup per dynastic `Era` row ("First dynasty of Kish", "Dynasty of Akkad", …). Each subgroup auto-populates its **kings** (figures whose `Figure.era` points to that era) ordered by reign succession via `applyRegnalOrder`, plus **events** whose `event.era` string matches the era name; **places** are left for the user to add by hand. Additive + idempotent: only missing groups/members created; existing subgroups, manual additions, and user ordering never overwritten. Wired into the launch sequence after `ensureSKLRegnalOrder`.
+
+**Part 4 — Per-dynasty era map.** The user asked for a historical map on each dynasty page, focused on the dynasty's time and area. This reused the dynasty map's existing OHM machinery: new `FigureGroup.era: Era?` (migration-safe optional, inverse `Era.groups` — bare `@Relationship` on the Era side per the circular-reference rule) links a group to the era it pages; `ensureDynastyGroups` now sets it on every subgroup (existing ones included, still additive/idempotent). New `GroupEraMapView` (Me layer) embeds `DynastyHistoricalMapView` on any group page whose `era` is set (rendered right after the header in `EntityGroupCollectionView`): it computes the era's span from the group's king members via `SKLDatePropagator.compute` and feeds the midpoint ISO year to the OHM `filterByDate` (same `dynastyDateString` logic), draws the group's place members as markers (capital heuristic = place whose name appears in the era name), and inherits the shared App Settings presentation keys (historical theme/language/label size/startup zoom).
+
+**Part 5 — "I do not see a map": always-on basemap + legacy-tree era backfill.** The user launched and reported no map. Diagnosis via the live store (`ZFIGUREGROUP.ZERA`): the migration *had* linked eras — but only in the new "Dynasties" tree. The live DB also holds the legacy pre-Groups-era **"Sumerian King List"** top group (typographical subgroup names like "Fouth dynasty of Uruk", "The rhird dynasty of Uruk") whose subgroups had **no era links**, so they rendered no map. Additionally, `GroupEraMapView` only rendered the OHM map when the group had **place members** — and the dynasty subgroups had none (places are added by hand), so even the correct tree showed only the "no placed members" hint box instead of a map. Two fixes:
+- `SumerianDynastyMapView.swift` — `DynastyHistoricalMapView` gained `defaultCenter: (Double, Double)?` and `mapHTML` no longer bails on an empty `places` array: it centers on the capital → first place → default center (falls back to Mesopotamia 44.4/33.3), and the empty-marker `setCapital`/`focus` calls are already no-ops. `updateNSView` reloads when the default center changes (component-wise compare).
+- `Migration.ensureDynastyGroups` — after the "Dynasties" pass, a second pass links `sub.era` for **any** subgroup in **any** tree whose normalized name matches a dynasty era (lowercased + trim + strip leading "the "), only when `sub.era == nil` — additive, idempotent, never touches user-created era links. The 2 typo'd legacy subgroup names stay unmatched (no rename without consent).
+- `GroupEraMapView` — now **always** renders `DynastyHistoricalMapView` (bare OHM basemap, date-filtered to the dynasty midpoint) even with zero place members, plus a small caption hint ("No placed members yet. Add places to this group to mark them on this historical map.").
+
+**Changes made:**
+- `Sources/MeCore/Store/TagEngine.swift` — `domainTags` rewritten (single words + stopword set + dedup).
+- `Sources/MeCore/Store/Migration.swift` — `ensureRefinedDomainTags` + `legacyDomainTagPhrases`; `ensureDynastyGroups` (now also links `sub.era` within its own tree AND backfills eras across other trees via `normalizedGroupName`).
+- `Sources/Me/Views/ContentView.swift` — Both new migrations added to the launch sequence.
+- `Sources/MeCore/Models/FigureGroup.swift` — `era: Era?` relationship (annotated side).
+- `Sources/MeCore/Models/Era.swift` — inverse `groups: [FigureGroup]?` (bare `@Relationship`).
+- `Sources/Me/Views/GroupEraMapView.swift` — Added.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Renders `GroupEraMapView` after the header when `group.era != nil`.
+- `Sources/Me/Views/SumerianDynastyMapView.swift` — `DynastyHistoricalMapView` + `mapHTML` support empty `places` via `defaultCenter`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated `domainTags` expectations + 3 new TagEngine tests; 2 new `ensureRefinedDomainTags` tests; 2 new `ensureDynastyGroups` tests (creation/idempotency/mixed membership + era linkage + inverse `era.groups`, manual-subgroup preservation + era link on existing subgroup); 1 new cross-tree test (`testEnsureDynastyGroupsLinksErasAcrossOtherTrees` — exact match, "the "-prefix match, typo left untouched, inverse populated, no members auto-added). 227 tests pass; `swift build` clean.
+
+**Key decisions:**
+- Single words for auto-derived domain tags; curated multi-word tags preserved (they're proper nouns/fixed terms, not fragments).
+- The re-tag pass removes only names that no longer survive the new engine, so curated single-word tags and shared `Tag` rows are safe; it's idempotent and a no-op after the first run.
+- Dynasty groups follow the Book-of-Enoch page pattern (top-level + subgroups) so the sidebar stays clean; `.skl` kind makes the regnal-ordering machinery apply to the whole chain.
+- The tag-cloud rotation/width experiment from earlier in the session was fully reverted to HEAD per the user ("revert back to where we were before starting this experiment").
+- The era→group link (not name matching) drives the map, so it survives renames and generalizes: attaching an era to *any* group gives it a time-focused map.
+- The map reuses the dynasty map's date-filter + capital-focus machinery verbatim; the only new pieces are the era link and the wrapper view.
+- A dynasty subgroup with no place members still shows the historical basemap (a map is the point, not markers); the "add places" hint is a caption, never a map substitute.
+- The era backfill matches by normalized name across all trees so the legacy "Sumerian King List" subgroups get maps too; typo'd names ("Fouth…", "rhird…") are left alone — the user can rename those to link them.
+
+**Part 6 — Dynasty boundaries: draw-on-map prototype + author-drawn territories.** The user asked "can you draw on the map, like in a separate layer?" and specified the real goal: **drawing the boundaries of the dynasty on the historical map**. Two halves:
+
+**6a — The freehand draw tool** (prototype, as designed):
+- `Sources/MeCore/Models/Era.swift` — `boundaryGeoJSON: String?` (migration-safe optional; GeoJSON Polygon JSON string). No migration needed — it's an optional new attribute, and only set when the user draws.
+- `Sources/Me/Views/SumerianDynastyMapView.swift` — `DynastyHistoricalMapView` gained required params `boundaryGeoJSON: String?`, `drawMode: Bool`, `onBoundaryDrawn: (([[Double]]) -> Void)?` (all must be passed explicitly — Swift 6.3.1's memberwise init omits defaulted stored properties). `makeNSView` registers a `boundaryDrawn` message handler; `updateNSView` applies `setDrawMode` when the toggle flips and resets it on reload. `mapHTML` adds a GeoJSON `boundary` source + fill/line layers (dynasty color, fill-opacity 0.22) and a dashed `boundary-preview` line source; `setBoundary(ring)` swaps the polygon; draw mode disables pan/zoom, captures mousedown/mousemove/mouseup into a ring with a live dashed preview, and posts `boundaryDrawn` (a `[[Double]]` ring) back to Swift. Boundary sources/layers are created in `setupBoundary()` inside `onLoad` (MapLibre throws if layers are added before the style loads); empty GeoJSON defaults to an empty FeatureCollection.
+- `Sources/Me/Views/GroupEraMapView.swift` — ZStack overlay with a **"Draw boundary"** toggle button (MapZoomButtons-style, top-leading; becomes "Finish boundary" while active), an orange "drag to outline" hint caption, and a red **Clear boundary** button when a boundary exists. On `onBoundaryDrawn` it closes the ring (first point appended — spec-valid GeoJSON) and serializes `{"type":"Polygon","coordinates":[ring]}` into `era.boundaryGeoJSON`, saves, and auto-toggles draw mode off. The full dynasty map shows the era's boundary read-only (era looked up by `selectedDynasty.name`).
+
+**6b — Author-drawn territory polygons** (the user, after trying the tool: "haha, I was hoping you could do the drawing :-)"): the assistant authored plausible historical territory polygons for all 20 SKL dynasty eras by hand (georeferenced to the seed's city coordinates; verified point-in-polygon for each dynasty's capital), stored as `Migration.dynastyBoundaryRings` (normalized era name → `[[Double]]` lon/lat ring) and written into `era.boundaryGeoJSON` once by `Migration.ensureDynastyBoundaries` (additive + idempotent, nil-checked so the user's own drawings always win; runs at launch after `ensureDynastyGroups`). Akkad covers north to Assur + west to Mari; Ur III reaches Susa; Awan/Hamazi/Gutian hug the Zagros; city-state dynasties are tight rings around their capitals. `polygonGeoJSON(ring:)` closes the ring at serialization.
+
+**6c — "No borders appear": the Akkad test-draw.** The user reported "Looking at dynasty of Akkad and no borders appear" and asked whether it was a zoom/viewport issue. Diagnosis via the live store: Akkad's stored ring had **32 vertices, was unclosed, and spanned only 0.02° of latitude** — a degenerate horizontal sliver, invisible at any zoom. The user confirmed they had drawn a quick square just to test the draw tool; the prototype `saveBoundary` saved the raw unclosed ring, and `ensureDynastyBoundaries`' nil-check preserved that test-draw instead of the authored territory (every other dynasty matched the authored rings). Fixes:
+- `Sources/MeCore/Store/Migration.swift` — `ensureDynastyBoundaries` now **repairs invalid stored rings**: a stored boundary is only honored if it's a closed, non-degenerate polygon (closed ring, ≥ 4 points, shoelace area > 0.001 deg², **and min bounding-box axis ≥ 0.4 deg**); anything else (legacy unclosed test-draws, degenerate slivers, **closed dots/thick-lines**) is replaced by the authored territory. New `decodedRing(from:)` / `ringAreaSq(_:)` / `ringMinAxisDegrees(_:)` helpers + `sliverMinAxisDegrees = 0.4`. Since `saveBoundary` now closes rings, a genuine user drawing is always closed → never repaired; the 0.4° axis floor only ever catches dot/line test-draws (the smallest authored ring spans 0.70°).
+- `Sources/Me/Views/GroupEraMapView.swift` — `saveBoundary` **closes the ring** (appends the first point) before serializing, so freehand draws produce spec-valid GeoJSON and render correctly.
+- `Sources/Me/Views/SumerianDynastyMapView.swift` — boundary lines thickened for visibility: `boundary-line` 2.5 → **4 px** (opacity 0.95), `boundary-preview-line` 2 → **3 px**. The **modern (MapKit) map now renders the boundary too**: new `selectedBoundary` decodes the era's Polygon ring into `[CLLocationCoordinate2D]` and `legacyMapPanel` draws a `MapPolygon` (fill 0.22 dynasty color, 4 px stroke) — borders show on both map versions.
+- `Tests/MeCoreTests/MeCoreTests.swift` — `testEnsureDynastyBoundariesRepairsDegenerateTestDraw` (unclosed sliver replaced by the 14-vertex closed authored Akkad ring with real vertical extent). `testEnsureDynastyBoundariesNeverOverwrites` still passes (closed ring preserved). Later the user relaunched and reported "no, no boundary" again: they had **re-drawn a fresh closed 31-vertex sliver** (lat 32.91→32.96, min-axis 0.046°) with the new closing `saveBoundary`; the then-repair (closure + area) preserved it. Added `testEnsureDynastyBoundariesRepairsClosedSliver` (closed horizontal sliver → authored Akkad ring) and the min-axis sliver check. **234 tests pass; `swift build` clean.**
+
+**Key decisions:**
+- The boundary lives on the **era** (not the group) so it's shared by every page that pages that era and survives the legacy/new-tree duplication.
+- Boundaries are author-drawn once as static data, then owned by the user: the draw tool/clear button let them refine any dynasty. The "never overwrite" promise now has one carve-out: **a stored ring that isn't a real polygon is invalid** — unclosed rings (invalid GeoJSON per spec) *and* closed dots/thick-line slivers (extent under 0.4° on either axis, i.e. smaller than the smallest authored dynasty territory by a wide margin) are repaired to the authored territory, while any genuine closed region-shaped user drawing is preserved forever. The 0.4° floor was validated against every authored ring (smallest min-axis 0.70° = First dynasty of Ur) and the live DB (Akkad's sliver 0.046°; all other 19 dynasties ≥ 0.80°).
+- Draw mode deliberately disables pan/zoom so the gesture is unambiguous; draw is a toggle (not click-to-enter), with a cancel path via the same button.
+- Prototype = one polygon per era; multiple shapes, undo, and edit are follow-ups if the user likes the feel.
+
+**Verify:** `swift build` clean; 234 tests pass. Manual: relaunch → the launch migration replaces Akkad's stored test-sliver with the authored territory, so Akkad's dynasty page + the Dynasty Map show the full border (thick line, tinted fill) on both Historical and Modern; the draw tool still works and now produces closed polygons.
+
+**Relevant files:**
+- `Sources/MeCore/Store/TagEngine.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/EntityGroupCollectionView.swift`, `Sources/Me/Views/GroupEraMapView.swift` (new), `Sources/MeCore/Models/FigureGroup.swift`, `Sources/MeCore/Models/Era.swift`, `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-15 — Mixed-type groups: `entityType` demoted to a soft classification
+
+**Context:** A `FigureGroup` could only hold members of its declared `entityType` — so a curated dossier like "Atrahasis" (gods, tablets, places, events, prose) could never mix kinds, and the event "Creation of Mankind" couldn't join any group. The user asked: make a group an aggregation page that can hold figures, places, events, things, text blocks, and subgroups freely. Decision after a full survey of enforcement points: `entityType` stays as a **soft classification** controlling only sidebar placement, figure-only chrome (reign tower/hero stats, Enoch/SKL/Flood dedicated views, aggregation targets), and smart-rule scope — never membership. Smart groups stay type-scoped (a mixed group is manual-only).
+
+**Changes made:**
+
+- `Sources/Me/Views/EntityGroupsSection.swift` — Removed the `entityType` filter (was line 16) and the stored `entityType` property; the section now takes only `associations` + `onCreateAssociation`.
+- `Sources/Me/Views/EventDetailView.swift`, `ThingListView.swift`, `PlaceDetailView.swift` — Dropped the `entityType:` argument at the `EntityGroupsSection` call sites (the association-creation closures were already polymorphic via `FigureGroupAssociation(event:/thing:/place:)`).
+- `Sources/Me/Views/FigureDetailView.swift` — `GroupLinkPopover.allGroups` no longer filters `.figure`; a figure can join any group.
+- `Sources/Me/Views/FigureGroupFormView.swift` — Member picker candidates = figures + places + events + things (name-sorted); "Members Are" picker relabeled "Group Type" with a help tooltip stating classification-only semantics (sidebar/smart/summaries) and that any kind can be added; search placeholder + empty text generic ("Search members…", "No members selected"); `memberCountLabel` generic ("N selected"); **removed `selectedMemberAliases.removeAll()` from `onChange(of: entityType)`** (type change no longer wipes selection); `memberID(_:of:)` is now polymorphic `memberID(_:)` (figure ?? place ?? event ?? thing); removed now-unused `loadedEntityType`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `spineItems(for:)` uses a polymorphic if-let chain over `assoc.figure/place/event/thing` instead of `switch group.entityType`; search placeholder + empty-state text use `group.memberPluralLabel`.
+- `Sources/Me/Views/FigureGroupListView.swift` — Both empty-state texts ("No X in this group") use `group.memberPluralLabel`.
+- `Sources/Me/Views/ContentView.swift` — `SidebarGroupRow.subgroups` no longer filters by `entityType`, so a figure group's event/thing subgroups still nest in the sidebar; per-type sidebar sections + dedicated kind-view dispatch (`.enoch`/`.skl`/`.flood`, figure-only) unchanged.
+
+**Design decisions:**
+- `entityType` is now purely descriptive: sidebar section placement (History for figure-classified, "X Groups" for others), figure-only chrome (`reignEntries`/`heroStats`/`reignTower`/`aggregatedReign` guards, `applyRegnalOrder`, smart-rule builder), and dedicated kind views. It never constrains which entities can be associated.
+- Smart groups stay type-scoped: `effectiveMemberItems`/`liveMatchIDs` still switch on `entityType` (a smart group's rule matches only its own kind), so a mixed group must be manual. The manual path (`sortedAssociations.compactMap(GroupMemberItem.init(association:))`) was already polymorphic.
+- `syncMembers`/`BulkAddMembersSheet`/`applyRegnalOrder` stay type-scoped per the above.
+- No model changes: `FigureGroupAssociation` was already polymorphic; `GroupMemberItem`/`MixedItem` already cover all four kinds; `FigureGroup.memberPluralLabel` (exists) reused for generic texts.
+
+**Verify:** `swift build` clean; 207 tests pass. Manual: edit the "Atrahasis" group → "Group Type" picker stays on Figures but the member picker lists every figure/place/event/thing; add "Creation of Mankind" → it appears in the group page with an event row; the sidebar still places the group in History.
+
+**Relevant files:**
+- `Sources/Me/Views/EntityGroupsSection.swift`, `EventDetailView.swift`, `ThingListView.swift`, `PlaceDetailView.swift`, `FigureDetailView.swift` — Updated
+- `Sources/Me/Views/FigureGroupFormView.swift` — Updated
+- `Sources/Me/Views/EntityGroupCollectionView.swift`, `FigureGroupListView.swift`, `ContentView.swift` — Updated
+
+### 2026-08-15 — Source-discriminated lineage, Step 2: badges, filter, contradiction display
+
+**Context:** The long-planned "source-discriminated lineage" idea (see the 2026-06-22 design note) finally shipped in two steps. Step 1 (model + migration) linked each `Relationship.source` free-text string to a `Source` entity (`Relationship.sourceRef: Source?` + `Source.relationships` inverse + `Migration.ensureRelationshipSources`), wired into the ContentView launch sequence after `ensureSKLRegnalOrder`; `swift build` was green. This session delivered **Step 2 — the read-side UI**: source badges on every relationship row, a per-source filter on all four lineage views, and source-labeled contradiction lists in the alternatives popovers. The demo: Enki's tree filtered to "Enuma Elish" collapses to `Anu → Enki → Marduk`; unfiltered, the alternatives popovers show "Enuma Elish" vs "Sumerian texts" side by side.
+
+**Changes made:**
+
+- `Sources/Me/Views/SourceBadgeView.swift` — NEW. Reusable capsule badge (small `book.closed` icon + source name, `.secondary` tint on `Color.secondary.opacity(0.12)`); clicking opens the source URL via `NSWorkspace` when `url` is non-empty; `.help(url ?? name)`.
+- `Sources/MeCore/Models/Relationship.swift` — Added `package var sourceDisplayName: String` (entity-backed `sourceRef?.name` when non-empty, else the legacy `source` string) and `package var sourceURL: String?` (non-empty `sourceRef?.url` only). Moved here (not the Me layer) so MeCore tests can exercise them.
+- `Sources/Me/Views/FigureDetailView.swift` — `RelationshipGroupRow` and `AlternativeRelationRow` (the row inside the `+N` alternatives popover) now render `SourceBadgeView` instead of the bare source text — this is the figure detail's contradiction display.
+- `Sources/Me/Views/RelationshipListView.swift` — `RelationshipRowView` source text replaced with `SourceBadgeView`.
+- `Sources/Me/Views/MiniLineageView.swift` — New `@State sourceFilter` + `availableSources`/`filteredRelationships`/`filteredAllRelationships` computed pools. `couples` (via `buildCouples`) and the grandparent lookups read the **filtered** pools. A compact source-filter `Menu` capsule ("All sources" / per-source) appears above the tree only when `availableSources.count > 1`. `AltCouplesButton` rows gain a per-couple `SourceBadgeView` (from `ParentCouple.sourceLabel` = father/mother relationship source).
+- `Sources/Me/Views/LineageTreeView.swift` — Same `sourceFilter` pattern; `filteredRelationships` feeds `collectAncestors`, `collectDescendants`, `preferredPartner`, `partnerCount`, `alternativePartners`. Filter `Menu` sits in the header next to `FigureTypeLegend`. `alternativePartners` now returns `[(figure: Figure, source: String?)]` (dedup by id, first source wins) and `AlternativePartnersSheet` renders a `SourceBadgeView` per partner row.
+- `Sources/Me/Views/FigureLineageExplorer.swift`, `LineageExplorerWindow.swift` — Same `sourceFilter` + `filteredRelationships` substitution across all relationship reads (parents/children/grandparents/grandchildren/spouses/consorts/siblings/co-parents); filter `Menu` in each header (shown only when >1 distinct source).
+- `Tests/MeCoreTests/MeCoreTests.swift` — 7 new tests: case-insensitive resolve to an existing Source ("Adapa myth" → seeded "Adapa Myth", no new Source), coarse Source creation for unknown names (`.ancientText`), first-comma-segment handling ("Enuma Elish, Babylonian texts" → "Enuma Elish"), king-list type detection (`.kingList`), idempotency (second run creates nothing), never re-points an existing `sourceRef`, and `sourceDisplayName`/`sourceURL` fallback behavior. 206 tests pass.
+
+**Design decisions:**
+- The filter slices the relationship **pool** before any resolution (couples, generation rows, partners) rather than post-filtering rendered nodes — so `isPreferred`-within-pool semantics and Unknown-parent placeholders behave consistently per source.
+- Filter `Menu` only renders when the pool has >1 distinct source (Enki yes, a single-source figure no clutter).
+- `AlternativePartnersSheet` keeps figure dedup by `PersistentIdentifier` but attaches the first relationship's source as a label — the tree's contradiction surface without changing `FigureCardView`'s figure-only `alternatives` API.
+- The quicklook window (`FigureQuicklookView`) groups relationships by type and keeps only `[Figure]`, so its rows stay source-free (secondary surface; the figure-detail sidebar is the canonical one). The `FigureDossier` relationship lists are figure-based too and intentionally left for Step 4's source-aware query answers.
+- `Relationship.sourceDisplayName`/`sourceURL` live in MeCore so the fallback logic is unit-tested; the UI badge is a thin renderer.
+
+**Verify:** `swift build` clean; 206 tests pass. Manual: run the app on the existing DB — the migration creates coarse `Source`s only for `Inanna's Descent`, `Sumerian hymns`, `Sumerian mythology`, `Sumerian texts`, `Babylonian texts`; everything else links to existing seeded sources. Open Enki → Relationship rows show book-icon badges; the `+N` alternatives popover lists e.g. "Enuma Elish" vs "Sumerian texts" badges; the mini-lineage source menu set to "Enuma Elish" collapses the tree to Anu → Enki → Marduk. Same menu in the Lineage Tree / explorer windows.
+
+**Relevant files:**
+- `Sources/Me/Views/SourceBadgeView.swift` — Added
+- `Sources/MeCore/Models/Relationship.swift`, `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/RelationshipListView.swift`, `Sources/Me/Views/MiniLineageView.swift`, `Sources/Me/Views/LineageTreeView.swift`, `Sources/Me/Views/FigureLineageExplorer.swift`, `Sources/Me/Views/LineageExplorerWindow.swift`, `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-15 — Startup re-seeding bug: case-sensitive reconciliation guards recreate merged entities
+
+**Context:** The user de-dupped "Bad-Tibira" (duplicate-finder detected it), but the duplicate kept coming back on every launch. Investigation confirmed the suspicion: the app's seed-reconciliation migrations run at **every launch** and recreate any seed entity whose *exact* name is absent. The seed stores `Bad-tibira` (lowercase); the user's keeper was `Bad-Tibira` — so the next launch saw `"Bad-tibira"` missing, re-created it from seed, and the pair returned. Both rows existed in the live DB (pk 31 `Bad-Tibira` = user data with richer modern location; pk 92 `Bad-tibira` = seed copy with seed coords).
+
+**Root cause:** Every `existingNames`/`figureByName`/`placeByName`/`existingEventNames` guard in `Migration.swift` matched case-sensitively (e.g. `Set(allPlaces.map(\.name))`, `figureByName[$1.name]`). Any variant spelling a user creates (case difference, hyphen vs space) survives the guard as "absent" and gets re-seeded.
+
+**Changes made (`Sources/MeCore/Store/Migration.swift`):**
+- **`ensureMissingCitiesAndAssociations`** — `existingPlaceNames`/`placeByName`/`figureByName` now key on `name.lowercased()`; creation guard + association lookups (figure-place, place-place, event-place) use the lowercased key.
+- **`ensureSKLEventsAndFigures`** — `figureByName`/`placeByName` lowercased; figure/place/event creation guards + involved-figure/event-place lookups lowercased.
+- **`ensureDeitiesImportExist`** — `existingNames` lowercased; `targetNames`/`rootExistingNames` compared lowercased; `toImport` filters by lowercased name.
+- **`ensureDumuziFamilyExists`** — `existingNames` lowercased; "Duttur" check + Enki/Dumuzi/Geshtinanna lookups case-insensitive.
+- **`ensureParentRelationshipsExist`** — `figureByName`/`figureByName2`/`existingNames` lowercased; `getOrCreateFigure` + relDef lookups case-insensitive.
+- **`ensureMissingCommanderFiguresExist`**, **`ensureArchangelsExist`**, **`ensureDivineCollectives`**, **`ensureImportedDeityRelationships`** — same lowercase normalization (figure name sets/maps + relationship target lookups).
+- All changes are **additive + idempotent**: no existing row is renamed, deleted, or overwritten; the guards now simply *see* case-variant entities as already-present.
+
+**Design decisions:**
+- Keying on `name.lowercased()` (not full normalization) keeps the change minimal and consistent — matches the DuplicateMerger's own case-insensitive grouping.
+- Purely creation-guard changes; update-only paths (e.g. `ensureSKLAnchorDates` figure lookup for description editing) left exact-match.
+- `ensureEnochDataExists` (SeedData.swift) left as-is per user request — its Mount Hermon sentinel-only guard is a separate, user-accepted risk.
+
+**Tests:** 3 new tests: `testEnsureMissingCitiesAndAssociationsSkipsCaseVariantPlace`, `testEnsureMissingCitiesAndAssociationsCreatesMissingPlace` (46 seed places), `testEnsureSKLEventsAndFiguresSkipsCaseVariantFigureAndPlace`. 199 tests pass; `swift build` clean (2 pre-existing unused-variable warnings in `ensureParentRelationshipsExist`).
+
+**Verify:** `swift build` + `swift test` green. Manual: run the app on the existing DB — `Bad-tibira` is no longer re-created on launch; the two existing rows (pk 31/92) remain until the user re-merges them once more, after which the duplicate stays gone (user wants the survivor named `Bad-tibira`).
+
+**Relevant files:**
+- `Sources/MeCore/Store/Migration.swift` — Updated
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-14 — Map markers open a place detail sheet (drop the popup, keep the map)
+
+**Context:** On the Dynasty Map, clicking a place showed only a tiny name popup (MapLibre `.setText` popover on the historical map; nothing at all on the modern map), while the sidebar offers full place detail. The user called the popup "silly" and asked for click-to-open. A first attempt navigated the sidebar to the Places list — but the user rejected that: the map was replaced by the list, exactly what they wanted to avoid ("the full details should appear alongside, not replace the map"). Final behavior: clicking a place opens a **sheet** with the full `PlaceDetailView`, mirroring the ruler-click pattern (figure quicklook sheet) — the map stays visible underneath.
+
+**Changes made:**
+- `Sources/Me/Views/SumerianDynastyMapView.swift`:
+  - **Historical map**: `DynastyHistoricalMapView` gained `onPlaceSelected: (Int) -> Void`. Its `Coordinator` is now `NSObject, WKScriptMessageHandler`; `makeNSView` builds the web view with a `WKUserContentController` registering `placeClicked`. The JS replaced `.setPopup(...).addTo(map)` with an `addEventListener('click')` that posts the marker index through `window.webkit.messageHandlers.placeClicked` (guarded so it no-ops outside WKWebView). The callback is refreshed on every `updateNSView`, and the index resolves against the parent's live `allPlaces`.
+  - **Modern map**: `Marker`s replaced with `Annotation(coordinate:content:label:)` + custom dot-and-label marker (colored circle + name pill, capital bold/dynasty-colored) carrying an `.onTapGesture` → `openPlace(place)`. `MapSelection` was rejected: it's macOS 15+ and the app targets macOS 14.
+  - **Place detail sheet**: new `@State detailPlace: Place?`; `openPlace(_:)` sets it (was `coordinator?.navigateToPlace`). A second `.sheet(item: $detailPlace)` presents `PlaceDetailView(place:)` in a `NavigationStack` with a Close toolbar button (`minWidth: 560, minHeight: 500`), next to the existing `detailFigure` quicklook sheet.
+
+**Design decisions:**
+- `MapSelection<PersistentIdentifier>` binding was the first choice (native pin look + native selection) but is `@available(macOS 15.0)` — the project still builds against macOS 14, so it was abandoned rather than `@available`-gated.
+- The custom annotation mirrors the historical map's dot + label aesthetic, giving both map versions a consistent marker language (and the capital highlight is preserved via dynasty color + semibold weight).
+- Popup removed entirely; the place detail sheet replaces it, so there is no transient callout/flash.
+- **No sidebar navigation** — the map is never left; `PlaceDetailView` is reused as-is (editing affordances intact), keeping behavior consistent with the figure quicklook sheet.
+
+**Verify:** `swift build` clean (no warnings); 196 tests pass (UI-layer change). Manual: Dynasty Map → Historical mode, click any city dot → a sheet opens with that place's full details; the map stays visible behind it. Same for Modern mode (click the dot+label marker). Close returns to the map. No popup and no sidebar jump.
+
+**Relevant files:**
+- `Sources/Me/Views/SumerianDynastyMapView.swift` — Updated
+
+### 2026-08-14 — Dynasty map presentation settings (theme, language, label size, modern style, date filter)
+
+**Context:** Follow-up to the startup-zoom settings. The user asked what other map parameters could be surfaced (colors, fonts, languages); research showed OHM supports per-language `name:<lang>` label fields (incl. `grc`, `la`), four style themes, and a date-filter plugin. The user approved implementing them all; colors were deliberately deprioritized.
+
+**Changes made:**
+- `Sources/Me/Views/SumerianDynastyMapView.swift` — New file-scope setting enums shared with AppSettingsView: `HistoricalMapTheme` (historical/railway/woodblock/japaneseScroll → style URL), `HistoricalMapLanguage` (en/fr/de/es/ar/grc/la → `name:<lang>` IETF tags), `MapLabelSize` (small 9/medium 11/large 14 px), `ModernMapStyle` (standard/hybrid). Six new `@AppStorage` keys: `dynastyMapModernStyle`, `dynastyMapModernMuted`, `dynastyMapHistoricalTheme`, `dynastyMapHistoricalLanguage`, `dynastyMapLabelSize`, `dynastyMapDateFilter` (default false).
+- Modern map: `modernMapStyle` computed property — `.hybrid(...)` or `.standard(emphasis: .muted)` when enabled; every variant passes `pointsOfInterest: .excludingAll, showsTraffic: false` (decluttered basemap; applies immediately, live via `@AppStorage`).
+- `DynastyHistoricalMapView` gained `theme/language/labelSize/dateString`; `mapHTML` reworked:
+  - Style URL from theme; the three alternate themes load pinned jsDelivr (`@openhistoricalmap/map-styles@0.9.8/dist/<theme>/<theme>.json` — verified live; sprite/glyphs are absolute URLs so any origin works).
+  - Loads `@openhistoricalmap/maplibre-gl-dates@1.3.0` (adds `map.filterByDate`); on `styledata` snapshots each layer's filter, then applies language + date + label size.
+  - Language: for every layer whose `text-field` expression references `name`, sets `['coalesce', ['get', 'name_<lang>'], ['get', 'name']]`.
+  - Date filter: `dynastyDateString` = midpoint of the dynasty's `startBCE`/`endBCE` formatted as ISO year (negative BCE zero-padded to 4 digits, e.g. `-2850`); `setDate()` on load + every dynasty switch; when off/empty it restores the snapshot filters (the plugin has no reset API, so we snapshot + restore ourselves — idempotent).
+  - Label size: `.place-label` font-size driven by `--place-label-size` CSS var; `applyLabelSize()` scales base size with zoom (clamped 0.8–1.8).
+- `Sources/Me/Views/AppSettingsView.swift` — Dynasty Map section extended: modern style picker, "Quiet modern basemap" toggle (shown only for standard), theme picker, label-language picker, label-size picker, experimental date-filter toggle.
+
+**Design decisions:**
+- Historical-map settings apply on the next view open (captured in `makeNSView`/`updateNSView`, which early-return when the places signature and focus token are unchanged); modern-style settings are live.
+- Date filter is OFF by default: OHM coverage of deep-past (2nd–4th millennium BCE) eras is sparse, so the map can look near-empty for the early dynasties until the user opts in.
+- Filter reset is handled by snapshotting original layer filters on `styledata` and restoring before each `filterByDate` — makes repeated dynasty switches idempotent and survives style reloads.
+- Label scale anchors at the previous default: zoom 5 → scale 1.0 (medium = 11px, the old hardcoded size), so defaults reproduce the prior look.
+
+**Verify:** `swift build` clean; 196 tests pass (UI-layer change). Manual: App Settings → pick Historical theme "Woodblock"/"Japanese Scroll", language "Ancient Greek", Large labels, enable the date filter; reopen Dynasty Map in Historical mode and switch dynasties — theme/language/labels change on reopen, era filtering fades later features; modern map honors Standard/Hybrid + Quiet toggle immediately.
+
+**Relevant files:**
+- `Sources/Me/Views/SumerianDynastyMapView.swift` — Updated
+- `Sources/Me/Views/AppSettingsView.swift` — Updated
+
+### 2026-08-14 — App Settings (Housekeeping) + dynasty map startup zoom settings
+
+**Context:** The user noticed the historical (OpenHistoricalMap) dynasty map opens at a lower zoom than the modern (MapKit) one — the historical map hardcoded `zoom: 5` in its MapLibre init *and* in the `focus()` call on dynasty switch, while the modern map's `onAppear`/`onChange` flew to the capital at span 3 (≈ zoom 6). The user asked for runtime settings to fix the mismatch. Decision: start the app's runtime-settings story with a new **Housekeeping** sidebar section → **App Settings**, holding the two startup zoom settings.
+
+**Changes made:**
+- `Sources/Me/Views/ContentView.swift` — New `SidebarSection.housekeeping` ("Housekeeping", rendered as the last sidebar section) and `NavigationItem.appSettings` ("App Settings", `gearshape` icon); destination `AppSettingsView()`.
+- `Sources/Me/Views/AppSettingsView.swift` — NEW. Grouped `Form` with "Dynasty Map" section: two `@AppStorage` sliders — `dynastyMapModernStartupZoom` (default 6.0) and `dynastyMapHistoricalStartupZoom` (default 5.0), range 2–10 step 0.5, with formatted value + caption per row.
+- `Sources/Me/Views/SumerianDynastyMapView.swift`:
+  - Reads both settings via `@AppStorage`.
+  - Modern map: extracted `focusModernMap()` (capital at the setting-derived span, region center fallback) used by both `.onAppear` and `.onChange(of: selectedDynastyIndex)`, replacing the hardcoded span-3 focus.
+  - New `span(for zoom:)` convention: `zoom 5 → span 6`, `zoom 6 → span 3` (the two previously hardcoded values), so the default 6.0 reproduces the old modern behavior.
+  - Historical map: `DynastyHistoricalMapView` gained `startupZoom: Double`, threaded through `mapHTML` (`zoom: <setting>`) and the dynasty-switch `focus(...)` call; default 5.0 reproduces old behavior.
+
+**Design decisions:**
+- Defaults reproduce the pre-existing effective behavior (modern 6.0 ≈ span 3 on open; historical 5.0), so nothing changes until the user adjusts them; the two sliders make the mismatch visible and alignable.
+- The setting drives *every* camera move within a map version (initial + dynasty-switch focus), not just startup — one "standard zoom" per map version, so raising historical to 7 doesn't pop back to 5 on dynasty switch.
+- Only the dynasty map consumes these today; the single-place `MapWebView` keeps its hardcoded zoom 5 (it's a different map, not a "map version").
+- Settings live in the sidebar per request (not in the map header); the existing Modern/Historical segmented toggle stays in the header.
+
+**Verify:** `swift build` clean (one pre-existing unrelated warning in LinkifiedDescription.swift); 196 tests pass. Manual: sidebar → Housekeeping → App Settings → drag both sliders; reopen Dynasty Map in each style and switch dynasties — the camera respects the per-style zoom.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/AppSettingsView.swift` — Added
+
+**Relevant files:**
+- `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/SumerianDynastyMapView.swift` — Updated
+
+### 2026-08-14 — Object Graph zoom smoothness pass
+
+**Context:** The user reported zoom (wheel + pinch) was "extremely jerky" — touching the mouse risked losing the view. Two root causes in `NetworkGraphView.swift`:
+
+1. **Flat per-event scroll zoom** — the `scrollWheel` monitor applied a constant `1.15` factor per event (`scrollingDeltaY > 0 ? 1.15 : 1/1.15`). A single wheel notch / trackpad flick emits many events, so `1.15^n` exploded to the 0.2–5.0 clamp in one gesture. It also swallowed scroll events **app-wide** (any window, any region), so scrolling the sidebar while the graph was open zoomed the graph.
+2. **Compounding pinch zoom** — `MagnificationGesture().onChanged { scale = scale * value }`. SwiftUI's magnification `value` is cumulative from gesture start, so multiplying the already-mutated `scale` each update compounded quadratically and direction-reversals behaved erratically (the classic pinch bug).
+3. **Center-anchored zoom** — zoom was anchored at canvas center, so zooming in made the node under the cursor fly off-screen ("losing the view").
+
+**Changes made:**
+- Zoom is now **proportional to the scroll delta**: `applyZoom(exp(pixels * 0.015))` where `pixels = hasPreciseScrollingDeltas ? scrollingDeltaY : scrollingDeltaY * 10` — a notch ≈ +16%, small flicks zoom proportionally instead of runaway.
+- Scroll monitor is **gated to the canvas**: `cursorIsOverCanvas(_:)` converts `event.locationInWindow` (bottom-left) into window top-left coordinates via `contentView.bounds.height` and tests against a tracked `canvasGlobalFrame` (`geo.frame(in: .global)`), updated in `canvasArea.onAppear`/`.onChange(of: size)`. Scrolls outside the canvas pass through (`return event`) instead of zooming the graph.
+- Zoom is **anchored at the cursor**: `applyZoom(_:at:)` also adjusts `offset` so the graph point under the mouse stays fixed — the node you're pointing at stays put while zooming in/out.
+- Pinch fixed by capturing the **gesture-start scale** (`pinchStartScale`), computing `start * value` (not `scale * value`), pausing the simulation during pinch and resuming on end if temperature allows (mirrors the drag behavior).
+
+**Verify:** `swift build` clean; 196 tests pass (UI-layer change). Manual: wheel-zoom over a node — the node under the cursor stays centered; a full wheel notch steps ~16% instead of snapping to 5×; scrolling the sidebar while the graph is open no longer zooms it; pinch zooms smoothly both directions.
+
+**Relevant files:**
+- `Sources/Me/Views/NetworkGraphView.swift` — Updated
+
+### 2026-08-14 — Dashboard data-coverage audit for all four entity types
+
+**Context:** Following the Object Graph performance pass, the user asked what other tools could analyse the dataset; the answer included the Dashboard's Data Coverage audit, which was **figures-only**. The user approved extending it in both directions: the 8 new figure dimensions (fields added since the audit was written) AND coverage for Places, Events, and Things.
+
+**Changes made:**
+- `Sources/MeCore/Models/Place.swift`, `Event.swift`, `Thing.swift` — Added `coverageExempt: Bool?` and `coverageReviewedAt: Date?` (migration-safe optionals, mirroring `Figure`).
+- `Sources/Me/Views/DashboardView.swift`:
+  - `coverage` replaced a 7-field tuple with a `FigureCoverage` struct; 8 new dimensions: Missing Type (`figureType == nil`), Missing Reign Years (`reignYears == nil`), Missing Epithet, Missing Mugshot (`mugshotImage == nil`), Missing Pantheon (`pantheons.isEmpty`), Missing Alternate Names, No Images, Missing Attribution (`(contentAttributions ?? []).isEmpty`).
+  - New `PlaceCoverage` (description / modern location / coordinates / type), `EventCoverage` (description / date / type / involved figures), `ThingCoverage` (description / type) computed properties, all filtering `coverageExempt != true`.
+  - `CoverageBlock` generalized from `[Figure]` to `CoverageBlock<Entity: PersistentModel>` with a `name: (Entity) -> String` closure and `id: \.persistentModelID`.
+  - `dataCoverageSection` now renders four group headers (Figures / Places / Events / Things) via a generic `coverageBlocks(dims:total:totalLabel:name:markAll:markOne:)` builder; Dismiss All / Dismiss work per entity type via concrete closures.
+  - `auditSummary` counts auto-exempted + manually-reviewed across all four entity types.
+
+**Design decisions:**
+- `coverageExempt`/`coverageReviewedAt` were added to Place/Event/Thing so the same Dismiss mechanism (mark reviewed once, never re-audit) applies uniformly; the existing auto-exempt-by-type migration stays figures-only (kings/deities noise mostly lives in figures).
+- The generic `CoverageBlock` needed a `name` closure because `PersistentModel` has no `name` requirement.
+- `markAll`/`markOne` are concrete per call site (not type-erased) because `coverageExempt` isn't on the `PersistentModel` protocol — an existential `(any Collection<PersistentModel>) -> Void` can't mutate the flag.
+
+**Verify:** `swift build` clean; 196 tests pass (UI-layer change, no MeCore logic to test). Manual: Dashboard → Data Coverage now lists missing-description/modern-location/coordinate/type for places, missing-date/type/figures for events, missing-description/type for things; Dismiss All and per-item Dismiss persist `coverageExempt` + `coverageReviewedAt`.
+
+**Relevant files:**
+- `Sources/Me/Views/DashboardView.swift` — Updated
+- `Sources/MeCore/Models/Place.swift`, `Event.swift`, `Thing.swift` — Updated
+
+### 2026-08-13 — Figures list crash after merge: value-based rows (completed in resumed session)
+
+**Context:** After the duplicate merger / DuplicateMergeView work, merging duplicates while the Figures list was visible crashed the app on macOS 26.5. Same fault class as the 2026-08-09 group-deletion crash: a merge deletes a duplicate `Figure` (and its relationships/join rows) and saves; the live `@Query figures` in `FigureListView` updates; the list re-renders its rows, and a row that still references the deleted figure faults `persistentBackingData` mid-`NSHostingView.layout()` → `EXC_BREAKPOINT`/`_assertionFailure`. The previous DuplicateMergeView fix already precomputed the sheet's rows; the sidebar Figures list was still rendering live models.
+
+**Interrupted session note:** This fix was designed and documented during the 2026-08-13 evening session (crash reports `Me-2026-08-13-230946.ips` = DuplicateMergeView `Event.name` fault, already fixed at 23:11; `Me-2026-08-13-232017.ips` = `FigureRow.body` → `Figure.gender` fault) but the session was shut down before the code was written — the working tree did not compile (`MugshotView` already called the then-missing `FigureIconCircle(color:icon:size:)` init). This entry was completed in the resumed session: implemented, built clean, 196 tests pass.
+
+**Fix (value-based snapshot rows):**
+- `Sources/Me/Views/FigureListView.swift` — The list no longer renders live `Figure`s. A private `FigureRowDisplay` struct (id, name, disambiguation, domain, typeName/color/icon, genderSymbol, isConcept, hasUnresolvedSticky, birthDateLabel, isRed, mugshot) is snapshotted off the render path by `rebuildRows()` (reads models in `.task`/`.onChange`, never in `body`). `filteredFigures`/`groupedFigures`/`redFigureIDs` became `filteredRows`/`groupedRows` over `[FigureRowDisplay]`; `FigureRow` renders only `display` values. `selectedFigure` resolves the live model only if its id is still in the snapshot (a deleted figure drops out and the detail panel closes instead of faulting).
+- Rebuild triggers: `.task` (initial), `.onChange(of: figures.map(\.persistentModelID))` (any add/remove — covers merge/FromText/delete), `.onChange(of: selectedDynastyGroup?.persistentModelID)` (dynasty red highlight), and `.onChange` of the three sheet-presentation states (`showingAddSheet`, `editingFigure`, `showDescriptionEditor`) so edits that change only properties (not the ID set) still refresh. `rebuildRows()` also clears `selectedFigureID` when the selection vanished.
+- `Sources/Me/Views/FigureDetailInfoView.swift` — `FigureIconCircle` gained an `init(color:icon:size:)` (stored color/icon) so the mugshot fallback doesn't need a live `FigureType`.
+- `Sources/Me/Views/MugshotHover.swift` — New plain-value `MugshotHoverData` (imageURL, cropRect, identification, fallbackColor/icon) + `MugshotHoverValueModifier` + `View.mugshotHover(_:MugshotHoverData?, ...)` overload; the model-based modifier is unchanged for other callers. `MugshotView` got a value-based `init(imageURL:cropRect:size:fallbackColor:fallbackIcon:identification:)`.
+
+**Design decisions:**
+- The snapshot is rebuilt only on change triggers, so the body is pure value-driven; a row can never fault a deleted figure during the layout pass that follows a merge's save.
+- `figures.map(\.persistentModelID)` (not `figures`) as the `.onChange` value — comparing IDs is safe (metadata, no fault) and fires deterministically on the query update after a merge deletes + saves.
+- Mugshot hover data is pre-resolved into the snapshot (image `fileURL`, crop rect, identification, fallback color/icon) so list rows keep working with the hover-reveal portraits.
+
+**Verify:** `swift build --no-incremental` clean; 196 tests pass. Manual: Figures sidebar open → merge two duplicates from the toolbar sheet → no crash, list re-renders without the duplicate, detail panel (if it was showing the duplicate) closes.
+
+**Relevant files:**
+- `Sources/Me/Views/FigureListView.swift`, `Sources/Me/Views/MugshotHover.swift`, `Sources/Me/Views/MugshotView.swift`, `Sources/Me/Views/FigureDetailInfoView.swift` — Updated
+
+### 2026-08-14 — Object Graph performance pass
+
+**Context:** The user reported the Object Graph ("network") getting "very slow" — ~320 nodes with an O(n²) repulsion force simulation running at 60fps until temperature cooled to 0.01 (~25s), plus per-frame linear scans for edges and per-render degree recomputation. Approved a performance pass.
+
+**Changes made (`Sources/Me/Views/NetworkGraphView.swift`):**
+- **Grid/monopole repulsion** — `ForceEngine.applyGridRepulsion` replaces the O(n²) all-pairs loop: nodes bucketed into `cellSize = 90` cells; exact pair repulsion inside a cell; a coarse monopole (cell centroid × member count) for far cells. O(n · cells) per tick instead of O(n²). `tick()` now returns the step's `maxSpeed` (`@discardableResult`).
+- **Motion-based early stop** — new `@State staticTicks`; `tick()` stops the simulation after 40 consecutive ticks below `maxSpeed < 0.5`, so a settled layout halts in ~0.7s instead of running the full cooling schedule. Temperature-based stop retained as a backstop.
+- **Cached degrees** — `connectionDegrees` is now `@State` populated in `rebuildGraph()` (was a computed property recomputed on every render/radius lookup); `radius(for:)` is a dict read.
+- **Value-based rebuild triggers** — `.onChange(of: figures.map(\.persistentModelID))` (same for places/events/relationships/associations) replaces `.onChange(of: figures)` etc., so identity-preserving edits (renames, description changes) no longer tear down and rebuild the graph. Rebuilds only fire on structural changes.
+- **Position carryover** — `rebuildGraph()` snapshots old node positions keyed by `PersistentIdentifier` into `oldPositions` and seeds new nodes from it; `initializePositions(size:)` now circles only `.zero`-position nodes (so newly added nodes join the existing layout instead of everything snapping back to a fresh circle). Selection is preserved across rebuilds by `persistentModelID`. Rebuild also resets `engine.temperature = 1.0`, resumes the simulation, and clears `staticTicks`.
+- **resetLayout()** — now zeroes every position/velocity and unpins nodes *before* re-circling (previously re-circled on stale positions, so it did nothing after the first run).
+- **Canvas edge rendering** — builds a `nodeByID: [UUID: GraphNode]` once per render pass for O(1) edge endpoint lookups; removed the now-unused `nodeWithID(_:)` linear scan.
+
+**Design decisions:**
+- Monopole approximation only affects far cells (>= 1 cell away); intra-cell repulsion stays exact, so the layout quality is essentially unchanged while the per-tick cost drops by ~an order of magnitude.
+- Carryover on rebuild keeps a data entry in the graph visually stable — new nodes drift in and the simulation re-settles locally instead of the whole graph jumping to a fresh circle.
+- Early stop is motion-based rather than temperature-based because temperature only reflects the cooling schedule, not actual settledness; a frozen layout (e.g. nodes pinned during a drag) stops promptly.
+- Renames/description edits intentionally don't rebuild (identity unchanged); node names refresh on the next structural change or view reopen.
+
+**Verify:** `swift build` clean (no warnings); 196 tests pass. Manual: open Object Graph — simulation settles in ~1–2s and pauses itself; add a figure via From-Text while the graph is open → new node appears and joins the existing layout; select a node then rename it in the side panel → no full re-layout; Reset Layout restores a fresh circle.
+
+**Relevant files:**
+- `Sources/Me/Views/NetworkGraphView.swift` — Updated
+
+### 2026-08-13 — Duplicate entity merger (find + merge duplicates)
+
+**Context:** The user wanted a way to find and merge duplicate entities ("Ninurta" vs "ninurta" accumulated from Add-from-Text and Wikipedia imports). Chosen design: a name-based duplicate finder (case-insensitive, per-entity-kind) plus a merge that re-points every link to the keeper, folds the duplicate's owned content into the keeper, and deletes the duplicate — all inside a transaction with observed arrays emptied before deletion (macOS 26 safety pattern from the 2026-08-09 group-deletion fix).
+
+**Changes made:**
+- `Sources/MeCore/Store/DuplicateMerger.swift` — NEW. `DuplicateGroup` (kind + name + candidate ids, keeper-first) and `DuplicateMerger`:
+  - `findGroups(in:)` — buckets entities by trimmed-lowercased name per kind (Figure/Place/Event/Thing), returns only groups with >1 member, sorted by kind then name. Kinds never mix (a figure "Babylon" and place "Babylon" are not a merge group).
+  - `mergeFigures` — re-points outgoing/incoming `Relationship`s (deleting keeper- or self-referencing ones); folds alternate names, place/thing/group associations (dedup by target+role), stickies, images, tags, events, pantheons, pantheon/group/content attributions; re-points `Event.figureAssociations`; adopts era, mugshot, and empty scalar fields (`adoptString`/`adoptOptional` — keeper values always win). Empties all observed arrays then deletes the duplicate, all in `context.transaction` + `save`.
+  - `mergePlaces` — folds figure/event/thing associations + alternate names + groups + stickies + images + tags + attributions, re-points `PlacePlaceAssociation`s (deleting self-loops), adopts modern location/description/source/coords/type.
+  - `mergeEvents` — folds figure (EFA)/place/thing associations + tags + images + stickies + groups + attributions, re-points `EventEventAssociation`s (deleting self-loops), adopts description/era/source/type/date.
+  - `mergeThings` — folds figure/place/event associations + images + tags + stickies + groups + attributions, adopts description/source/type.
+- `Sources/Me/Views/DuplicateMergeView.swift` — NEW. Sheet UI: grouped duplicate cards per name, radio-style keeper selection per group, "Merge N into keeper" button, per-member linked-data summary (relationship/place/event/group/mugshot counts), status banner, Refresh + Done.
+- `Sources/Me/Views/ContentView.swift` — NEW toolbar button (`person.crop.circle.badge.plus`, "Find and merge duplicate entities") + `.sheet(isPresented: $showDuplicateMergeSheet)`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 11 new tests: case-insensitive grouping, kind isolation (no figure/place cross-merge), single-entry skip, relationship re-pointing (incl. self-relationship deletion), owned-content folding (names/places/tags/stickies/groups/pantheons/images), field adoption (empty keeper) + keeper-wins, place PPA re-pointing, event EFA/EEA re-pointing, thing association folding, EFA re-pointing from mergeFigures. 196 tests pass.
+
+**Design decisions:**
+- The keeper is user-chosen per group (default first-found); merging is a deliberate per-group action, not bulk.
+- Re-pointing happens on the model relationship arrays (per the 2026-06-27 SwiftData convention) and via whole-store passes for the un-owned join tables (`Event.figureAssociations`, `PlacePlaceAssociation`, `EventEventAssociation`).
+- Dedup when folding (same target + role for associations, same name + tradition for alternate names) so a keeper already linked to the same thing doesn't get a double entry.
+- `adoptString`/`adoptOptional` copy duplicate values only into empty/nil keeper fields — the keeper is never overwritten. Nullify-deleted orphans (e.g. a folded association whose other side was the duplicate) are left to their existing delete rules.
+- The merger lives in MeCore (unit-testable, no AppKit); the sheet is the only Me-layer piece.
+
+**Verify:** `swift build` clean; 196 tests pass. Manual: add two same-named figures (or run `swift run Me --reseed` on a throwaway DB), open the duplicate-merge sheet from the toolbar, pick a keeper, Merge → duplicate gone, its relationships/names/places/groups now on the keeper.
+
+**Relevant new/removed files:**
+- `Sources/MeCore/Store/DuplicateMerger.swift` — Added
+- `Sources/Me/Views/DuplicateMergeView.swift` — Added
+
+**Relevant files:**
+- `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-13 — DuplicateMergeView crash: faulting models inside the SwiftUI body
+
+**Problem:** Opening the duplicate-merge sheet crashed the app on macOS 26.5 (`EXC_BREAKPOINT` / `_assertionFailure` inside SwiftData, from `DuplicateMergeView.detail(for:id:)` → `Event.name.getter`). The stack showed the fault happening **inside `ForEachChild.updateValue()` during an `NSHostingView.layout()` render transaction** — i.e. the body faulted a model's persisted property mid-layout, hitting the same macOS 26 SwiftData assert-on-fault-in-live-render class as the 2026-08-09 group-deletion crash.
+
+**Fix:** `Sources/Me/Views/DuplicateMergeView.swift` — decoupled the view from live model access. The body no longer touches any `@Model`. A `load()` (called from `.task` and Refresh/merge) resolves every `PersistentIdentifier` → plain-value `DuplicateMemberDisplay`/`DuplicateGroupDisplay` structs (title/subtitle/ids only) once, off the render path; the body renders only those value structs. Merge still resolves keeper/duplicate models, but inside the button action (not during a view update). `detail(for:)` now returns nil for unresolvable ids (skipped rather than shown as "?").
+
+**Lesson:** On macOS 26, never fault a `PersistentModel`'s properties from inside a SwiftUI `body` (incl. helper funcs called by the body during `ForEach` render). Precompute display values into plain structs in a non-render path (`load()`/`.task`/button actions) and keep the body pure value-driven.
+
+**Verify:** `swift build` clean; 196 tests pass. Manual: open the duplicate-merge sheet on a DB with duplicate events (e.g. a double "The Flood") — no crash; rows show precomputed summaries.
+
+**Relevant files:**
+- `Sources/Me/Views/DuplicateMergeView.swift` — Updated
+
+### 2026-08-13 — Mugshots everywhere: hover-reveal portraits
+
+**Context:** With a growing image + mugshot collection, the user wanted portraits available across the app "without making the screens too crowded" — chosen pattern: **hover-reveal only**. A reusable modifier shows a circular mugshot popover over any figure-bearing surface; figures without a mugshot render exactly as before (no hover machinery at all). Also fixed a jerky-crop bug in the mugshot sheet.
+
+**Changes made:**
+
+- `Sources/Me/Views/MugshotHover.swift` — NEW. `MugshotHoverModifier` (figure, `size`, `arrowEdge`, optional `onHover` forward for callers that already track row hover, e.g. group-member link highlighting). Gate: only applies `.onHover` + `.popover` when `figure.mugshotImage != nil`. `extension View.mugshotHover(_:size:arrowEdge:onHover:)`.
+- `Sources/Me/Views/FigureCardView.swift` — Lineage tree cards get `.mugshotHover(figure, size: 140, arrowEdge: .bottom)` (popover below the card; coexists with the existing +N alts popover).
+- `Sources/Me/Views/FigureListView.swift` — `FigureRow` gets `.mugshotHover(figure)` (sidebar figure list).
+- `Sources/Me/Views/SumerianKingListView.swift` — `KingRow` gets `.mugshotHover(figure)`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `MemberRow` restructured: `let row = Button(...)` then conditional — figures with a mugshot use `.mugshotHover(figure, size: 120, onHover: onHoverLink)` (forwards the hover so the inline-link highlight still works); all other entity types keep the plain `.onHover`. Removed the inner `.onHover` from the HStack chain.
+- `Sources/Me/Views/LinkifiedDescription.swift` — `InlineEntityLink` now fetches the figure via `modelContext.model(for: candidate.targetID) as? Figure` and shows a 120pt mugshot popover (arrow `.bottom`) when hovering a figure mention that has a mugshot; non-figure links unchanged.
+- `Sources/Me/Views/MugshotSheet.swift` — Fixed jerky drag: both `moveGesture` and `resizeGesture` previously applied the cumulative `value.translation` on top of the already-mutated `crop` each frame (compounding movement). Added `@State moveStart`/`resizeStart` anchoring each drag to its start value; resize also recomputes center/size from the start rect.
+
+**Follow-up (same day):**
+- Sidebar figure rows (`FigureRow`, `KingRow`) switched to `arrowEdge: .leading` — popover now appears at the row's left (where it meets the sidebar) instead of the far right.
+- `LineageTreeView` (the main tree) draws cards inside the Canvas, so `FigureCardView`'s popover never applied there. Added a hover-reveal overlay in the tree: `rightClickFigureID` (already tracked via `onContinuousHover`) + `layout.nodeLayouts` frame → a 140pt `MugshotView` positioned below the hovered card (above when near the canvas bottom edge), `.allowsHitTesting(false)`. Also clears `rightClickFigureID` on hover `.ended` (previously stale, which also let right-click menus target the last-hovered figure after leaving). `FigureLineageExplorer`/`LineageExplorerWindow` keep the `FigureCardView` popover.
+
+**Design decisions:**
+- Popover-on-hover (not inline thumbnails) keeps every list/card/prose layout pixel-identical — zero crowding, and popover is native macOS with automatic placement.
+- The `.onHover` forward hook keeps the group-member "linked entity" accent highlight working on top of the mugshot popover — the two hover behaviors compose instead of the modifier shadowing the row's own `onHover`.
+- Inline links pop only for figure mentions with a mugshot — place/event mentions and figures without portraits stay plain text (no empty popovers, no hover noise while scanning prose).
+
+**Verify:** `swift build` clean; 185 tests pass. Manual: hover a figure row in the sidebar / SKL / group members / lineage card / an in-prose figure mention → circular mugshot appears near it; figures without mugshots show nothing on hover.
+
+**Relevant new/removed files:**
+- `Sources/Me/Views/MugshotHover.swift` — Added
+
+**Relevant files:**
+- `Sources/Me/Views/FigureCardView.swift`, `FigureListView.swift`, `SumerianKingListView.swift`, `EntityGroupCollectionView.swift`, `LinkifiedDescription.swift`, `MugshotSheet.swift` — Updated
+
 ### 2026-06-18 — Section headers, SKL view, delete confirmations, icon transparency
 
 **Changes made:**
@@ -1298,3 +1693,103 @@ User asked whether group text blocks support content attributions — **no**: `C
 **Relevant files:**
 - `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated
 - `Sources/Me/Views/FigureGroupListView.swift` — Updated
+
+### 2026-08-13 — Text block summary + expand (scannable story pages)
+
+**Context:** Group text blocks render full prose, which is heavy to scan when a group page holds many blocks. The user wanted an optional *summary* shown by default with a "Show full text…" toggle beneath it revealing the full block inline. Implemented per the TODO item (proposed 2026-08-12).
+
+**Changes made:**
+- `Sources/MeCore/Models/GroupTextBlock.swift` — Added `summary: String?` + `summaryRichText: Data?` (both optional, migration-safe; init params with `nil` defaults). Nil or empty summary keeps the existing always-full-text behavior.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `TextBlockRow` now branches on `hasSummary` (non-empty plain summary): when present it renders the summary (primary foreground, via `RichTextDisplay`) with a "Show full text…"/"Hide full text" caption button (per-row `@State showFullText`) revealing the full prose below; the toggle uses `withAnimation`. Summary and full text both honor alignment/max-width framing. No summary → current full-text rendering unchanged.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — `GroupTextBlockSheet` gained a "Summary" editor (`RichTextEditorSection` bound to `summaryRichText`/`summary` state) above the "Full text" editor; save writes both fields. Sheet enlarged 520×420 → 560×620 to fit the two editors. Shared by the collection view and the group manager (`FigureGroupListView`), so both get the summary field.
+- `Tests/MeCoreTests/MeCoreTests.swift` — `testGroupTextBlockSummaryRoundTrip` (persist + fetch round-trip, nil-rich default, plain block defaults nil). 180 tests pass.
+
+**Key design decisions:**
+- Empty-string summary counts as "no summary" — clearing the field restores the full-text fallback exactly.
+- Per-row `@State` matches the TODO ("simple `@State` per row"); expansion state is not persisted (the stretch goal).
+- Summary renders in `.primary` (it's the scannable entry point), full text stays `.secondary` — same hierarchy as a heading vs body.
+- No auto-suggest from full text (stretch goal, deliberately deferred).
+
+**Relevant files:**
+- `Sources/MeCore/Models/GroupTextBlock.swift` — Updated
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-13 — Inline-link breadcrumbs: reading context, not target
+
+**Problem:** Clicking an inline entity link (e.g. "Ninurta" in an Atrahasis text block on a group page) called `navigateToFigure/Place/Event` with the default `recordHistory: true`, pushing a breadcrumb named after the *target*. That crumb is a no-op (the sidebar is already on the target), so the trail couldn't return the user to where they were reading — the group page / text block.
+
+**Fix:** Reading-context breadcrumb, mirroring the collection view's existing "Open in Sidebar" pattern (push the group crumb, then navigate with `recordHistory: false`):
+- `Sources/Me/Views/LinkifiedDescription.swift` — New `InlineLinkGroupContext` (`groupID`/`groupName`) + `inlineLinkGroupContext` environment key. `InlineEntityLink.navigateInSidebar` now pushes a crumb for the reading group page (`.figureGroups` item), then navigates to the target with `recordHistory: false`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Sets `.environment(\.inlineLinkGroupContext, …)` for its `group` so all links rendered on the page (header description, text blocks, expanded-subgroup prose, and the inline detail panel's bios) get the reading-context crumb.
+
+**Design decisions:**
+- The context is the *currently displayed page* (`EntityGroupCollectionView.group`), so links in an inline-expanded subgroup's text blocks push the top-level page (correct — that's where the user is reading), while a subgroup opened as its own page pushes that subgroup.
+- `pushHistory`'s last-entry dedupe keeps repeated link clicks from stacking duplicate group crumbs.
+- Separate-window contexts (quicklook/timeline/report, no `navigationCoordinator`) are unchanged — they still open the `entity-report` window.
+
+**Verify:** `swift build` clean; 180 tests pass. Manual: on a group page, click an inline link → sidebar jumps to the target and the trail shows the group page; clicking it returns to where you were reading.
+
+**Relevant files:**
+- `Sources/Me/Views/LinkifiedDescription.swift` — Updated
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated
+- `TODO.md` — Item marked done
+
+### 2026-08-13 — Inline links preview in the group panel (no sidebar nav, no breadcrumbs)
+
+**Context:** The breadcrumb fix (below) made sense while links left the page, but on a group page the user pointed out the "back link is not correct" — and reasoned that since the follow-up content renders in the sidebar detail panel while the main window stays put, there is *no navigation at all*, so breadcrumbs are factually unnecessary. The sidebar switch + reading-context crumb was replaced with an in-place preview.
+
+**Changes made:**
+- `Sources/Me/Views/LinkifiedDescription.swift` — `InlineLinkGroupContext` gained `onOpenEntity: (EntityKind, PersistentIdentifier) -> Void`. `InlineEntityLink.navigateInSidebar` now calls it (instead of `navigateToFigure/Place/Event`) when a group context exists. Non-group sidebar contexts keep the original navigate-with-recordHistory:true behavior; separate windows still open `entity-report`.
+- `Sources/Me/Views/EntityGroupCollectionView.swift`:
+  - `@State selectedMemberID: PersistentIdentifier?` → `@State detailItem: GroupMemberItem?` (holds the actual entity reference, so the panel can show *any* type, not just the group's own entity type).
+  - Removed `selectedFigure/selectedPlace/selectedEvent/selectedThing` fetch-helpers; added `openLinkedEntity(kind:id:)` (fetch by `PersistentIdentifier`, set `detailItem`), `deferSelect` resolves any figure/place/event/thing id, and file-scope `memberItem(from: MixedItem) -> GroupMemberItem?` converts row items.
+  - `.environment(\.inlineLinkGroupContext, …)` now passes the `onOpenEntity` handler (captures `self`; only touches `@State`/`@Environment`).
+  - `detailPanel` renders whichever entity type `detailItem` is (FigureDetailView / PlaceDetailView / EventDetailView / ThingDetailView); the toolbar's Edit/Delete buttons are only shown when `isMember(item)` (the entity is an actual member of the group) — so a link-previewed cross-type entity can be edited but not deleted from this panel.
+
+**Design decisions:**
+- Follow-up content shown in the group's right-hand panel, main content unchanged → no breadcrumb needed because the user never left. Deliberate "Open in Sidebar" context-menu affordance still exists for when the user *wants* to leave the page.
+- Delete is gated on group membership to keep the preview a read-mostly surface; edit stays available for any previewed entity.
+- Cross-type links now work for the first time (a figure mention inside a place group previews the FigureDetailView).
+
+**Verify:** `swift build` clean; 180 tests pass. Manual: on a group page, click an inline link → the right panel shows that entity's detail, the group page does not change, no breadcrumb appears; close the panel to resume reading.
+
+**Relevant files:**
+- `Sources/Me/Views/LinkifiedDescription.swift` — Updated
+- `Sources/Me/Views/EntityGroupCollectionView.swift` — Updated
+- `TODO.md` — Item rewritten
+
+### 2026-08-13 — Mugshots: designated portrait per figure (prototype)
+
+**Context:** The user's long-standing idea — most Mesopotamian figures have no portrait, but plenty of statue photos online are croppable to a mugshot; not every figure needs one. Agreed design: the mugshot is a *derived crop of an existing image*, plus a record of *how the statue was identified* (since most Mesopotamian statues are anonymous). Prototyped end-to-end.
+
+**Changes made:**
+- `Sources/MeCore/Models/Figure.swift` — `mugshotImage: ImageAsset?` (`@Relationship(deleteRule: .nullify, inverse: \ImageAsset.mugshots)`), `mugshotCropRect: String?` (normalized `"x,y,w,h"`), `mugshotIdentification: String?` (tier: `inscribed` / `conventional` / `hypothetical` / `unknown`). All optional → lightweight migration.
+- `Sources/MeCore/Models/FigureImage.swift` — new inverse array `ImageAsset.mugshots: [Figure]`.
+- `Sources/MeCore/Models/ImageCropRect.swift` — NEW normalized-crop value type with `encoded()`/`init?(encoded:)`/clamping (`package`, unit-tested). The crop is metadata — the statue photo stays whole, the mugshot is rendered by cropping on the fly.
+- `Sources/Me/Views/MugshotView.swift` — NEW. `MugshotImageLoader` (CGImageSource thumbnail + `cgImage.cropping(to:)`, bounded pixel size; plus an in-memory `crop(_:cropRect:)` for live previews) and `MugshotView` (circular masked crop, falls back to the type-icon `FigureIconCircle`, reloads on image/crop change).
+- `Sources/Me/Views/MugshotSheet.swift` — NEW. Set/edit/remove: choose from the figure's linked images or import a new one (fileImporter → Images dir, appended to `figure.images`), a `MugshotCropEditor` (drag-to-position + corner-handle resize of a circular crop over the statue, dimmed outside with eoFill path), live circular preview, identification-tier picker, source/attribution text field (writes into the image's `source` if empty).
+- `Sources/Me/Views/FigureDetailView.swift` — header portrait replaced with a `MugshotView` + pencil-overlay button opening the sheet; `.sheet(isPresented: $showMugshotSheet)`.
+- `Sources/Me/Views/FigureDetailInfoView.swift` — shared `FigureHeaderView` (covers dossiers + quicklooks) now renders the mugshot.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 5 new tests (crop full/round-trip/clamp, mugshot fields round-trip incl. inverse, nullify on image delete). 185 pass.
+
+**Design decisions:**
+- **Save the crop, not a cropped file** — normalized rect metadata on the figure; the original statue photo is never duplicated, so attribution context and zoom-in stay intact, and re-cropping is a one-string edit.
+- **Identification tier is a first-class value** — Mesopotamian statuary is mostly anonymous; `inscribed` (Gudea's named statues) vs `conventional` (Hammurabi stele) vs `hypothetical` (museum-label guess) vs `unknown` is the scholarly honesty the domain needs. Shown as a tooltip on the mugshot.
+- Relationship set via the annotated side: `figure.mugshotImage = image` (the `@Relationship(inverse:)` lives on `Figure.mugshotImage`).
+- `ImageCropRect` lives in MeCore so encode/decode/clamp are unit-testable without AppKit.
+
+**Known follow-ups (in TODO.md):** mugshot in list rows (`MemberRow`) / `FigureCardView` / `SumerianKingListView`; `sourceURL` + license on `ImageAsset`; Wikimedia Commons fetch via `WikiClient`; "set as mugshot" affordance in `FigureImageGallery`.
+
+**Verify:** `swift build` clean; 185 tests pass. Manual: figure detail → tap portrait (or pencil overlay) → Mugshot sheet → pick/import a statue photo → drag/resize the crop circle → pick identification tier → Set Mugshot; header shows the circular crop; Remove Mugshot clears it.
+
+**Relevant new/removed files:**
+- `Sources/MeCore/Models/ImageCropRect.swift` — Added
+- `Sources/Me/Views/MugshotView.swift` — Added
+- `Sources/Me/Views/MugshotSheet.swift` — Added
+
+**Relevant files:**
+- `Sources/MeCore/Models/Figure.swift`, `Sources/MeCore/Models/FigureImage.swift` — Updated
+- `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/FigureDetailInfoView.swift` — Updated
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+- `TODO.md` — Item added (marked done with follow-ups)

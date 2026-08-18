@@ -133,16 +133,16 @@ struct EraSwimlaneRow: View {
 
     private var eraColor: Color {
         let palette: [Color] = [
-            Color(hex: "C4895B") ?? Color(red: 0.77, green: 0.54, blue: 0.36), // Terracotta
-            Color(hex: "3A6B9F") ?? Color(red: 0.23, green: 0.42, blue: 0.62), // Lapis Lazuli
-            Color(hex: "C8943C") ?? Color(red: 0.78, green: 0.58, blue: 0.24), // Gold
-            Color(hex: "5A5A5A") ?? Color(red: 0.35, green: 0.35, blue: 0.35), // Obsidian
-            Color(hex: "8B6C4A") ?? Color(red: 0.55, green: 0.42, blue: 0.29), // Cedar
-            Color(hex: "5B7B6B") ?? Color(red: 0.36, green: 0.48, blue: 0.42), // Patina
-            Color(hex: "6B5B7B") ?? Color(red: 0.42, green: 0.36, blue: 0.48), // Amethyst
-            Color(hex: "8B4A4A") ?? Color(red: 0.55, green: 0.29, blue: 0.29), // Pomegranate
-            Color(hex: "B8A88A") ?? Color(red: 0.72, green: 0.66, blue: 0.54), // Alabaster
-            Color(hex: "4A6B6B") ?? Color(red: 0.29, green: 0.42, blue: 0.42), // Euphrates
+            Color(hex: "C4895B"), // Terracotta
+            Color(hex: "3A6B9F"), // Lapis Lazuli
+            Color(hex: "C8943C"), // Gold
+            Color(hex: "5A5A5A"), // Obsidian
+            Color(hex: "8B6C4A"), // Cedar
+            Color(hex: "5B7B6B"), // Patina
+            Color(hex: "6B5B7B"), // Amethyst
+            Color(hex: "8B4A4A"), // Pomegranate
+            Color(hex: "B8A88A"), // Alabaster
+            Color(hex: "4A6B6B"), // Euphrates
         ]
         return palette[abs(era.orderIndex) % palette.count]
     }

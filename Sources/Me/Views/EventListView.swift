@@ -277,6 +277,16 @@ struct EventListView: View {
                 EventRow(event: event)
                     .tag(event.persistentModelID)
                     .id(event.persistentModelID)
+                    .contextMenu {
+                        Button("Edit") {
+                            editingEvent = event
+                        }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            selectedEventID = event.persistentModelID
+                            showDeleteConfirm = true
+                        }
+                    }
             }
         }
     }

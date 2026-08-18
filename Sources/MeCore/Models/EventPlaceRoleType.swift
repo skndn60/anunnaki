@@ -12,7 +12,7 @@ package final class EventPlaceRoleType: Equatable {
     package var associations: [EventPlaceAssociation] = []
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, icon: String, colorHex: String) {

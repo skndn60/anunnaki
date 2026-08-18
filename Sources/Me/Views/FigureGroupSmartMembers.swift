@@ -35,6 +35,19 @@ extension FigureGroup {
         guard isSmart else { return figureAssociations.count }
         return liveMatchIDs(in: context).count
     }
+
+    /// Full display name: the ancestor path joined with ", " so a subgroup like
+    /// "Tablet I: Creation and Rebellion" reads "Atrahasis, Tablet I: Creation and Rebellion".
+    /// Segments are whitespace-trimmed (legacy names can carry stray leading spaces).
+    var fullDisplayName: String {
+        var names: [String] = []
+        var current: FigureGroup? = self
+        while let group = current {
+            names.append(group.name.trimmingCharacters(in: .whitespaces))
+            current = group.parentGroup
+        }
+        return names.reversed().joined(separator: ", ")
+    }
 }
 
 extension GroupAggregation {

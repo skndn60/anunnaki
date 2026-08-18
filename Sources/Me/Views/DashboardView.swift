@@ -28,29 +28,64 @@ struct DashboardView: View {
         figures.filter { $0.coverageExempt != true }
     }
 
-    private var coverage: (missingAncestry: [Figure], missingFather: [Figure], missingMother: [Figure], missingBirth: [Figure], missingDeath: [Figure], missingDescription: [Figure], missingDomain: [Figure]) {
+    private var coverage: FigureCoverage {
         let withFather = Set(relationships.filter { $0.relationshipType?.name == "Father" }.compactMap { $0.toFigure?.persistentModelID })
         let withMother = Set(relationships.filter { $0.relationshipType?.name == "Mother" }.compactMap { $0.toFigure?.persistentModelID })
 
-        var mf: [Figure] = []
-        var mm: [Figure] = []
-        var mb: [Figure] = []
-        var md: [Figure] = []
-        var mdesc: [Figure] = []
-        var mdom: [Figure] = []
-
+        var c = FigureCoverage()
         for fig in coverageFigures {
-            if !withFather.contains(fig.persistentModelID) { mf.append(fig) }
-            if !withMother.contains(fig.persistentModelID) { mm.append(fig) }
-            if fig.birthDate.startYear == nil && fig.birthDate.endYear == nil { mb.append(fig) }
-            if fig.deathDate.startYear == nil && fig.deathDate.endYear == nil { md.append(fig) }
-            if fig.figureDescription.isEmpty { mdesc.append(fig) }
-            if fig.domain.isEmpty { mdom.append(fig) }
+            if !withFather.contains(fig.persistentModelID) { c.missingFather.append(fig) }
+            if !withMother.contains(fig.persistentModelID) { c.missingMother.append(fig) }
+            if fig.birthDate.startYear == nil && fig.birthDate.endYear == nil { c.missingBirth.append(fig) }
+            if fig.deathDate.startYear == nil && fig.deathDate.endYear == nil { c.missingDeath.append(fig) }
+            if fig.figureDescription.isEmpty { c.missingDescription.append(fig) }
+            if fig.domain.isEmpty { c.missingDomain.append(fig) }
+            if fig.figureType == nil { c.missingType.append(fig) }
+            if fig.reignYears == nil { c.missingReignYears.append(fig) }
+            if fig.epithet == nil { c.missingEpithet.append(fig) }
+            if fig.mugshotImage == nil { c.missingMugshot.append(fig) }
+            if fig.pantheons.isEmpty { c.missingPantheon.append(fig) }
+            if fig.alternateNames.isEmpty { c.missingAlternateNames.append(fig) }
+            if fig.images.isEmpty { c.missingImages.append(fig) }
+            if (fig.contentAttributions ?? []).isEmpty { c.missingAttribution.append(fig) }
         }
+        c.missingAncestry = c.missingFather.filter { c.missingMother.contains($0) }
 
-        let missingAncestry = mf.filter { mm.contains($0) }
+        return c
+    }
 
-        return (missingAncestry, mf, mm, mb, md, mdesc, mdom)
+    private var placeCoverage: PlaceCoverage {
+        let all = places.filter { $0.coverageExempt != true }
+        var c = PlaceCoverage()
+        for p in all {
+            if p.placeDescription.isEmpty { c.missingDescription.append(p) }
+            if p.modernLocation.isEmpty { c.missingModernLocation.append(p) }
+            if p.latitude == nil || p.longitude == nil { c.missingCoordinates.append(p) }
+            if p.placeType == nil { c.missingType.append(p) }
+        }
+        return c
+    }
+
+    private var eventCoverage: EventCoverage {
+        let all = events.filter { $0.coverageExempt != true }
+        var c = EventCoverage()
+        for e in all {
+            if e.eventDescription.isEmpty { c.missingDescription.append(e) }
+            if e.date.startYear == nil && e.date.endYear == nil { c.missingDate.append(e) }
+            if e.eventType == nil { c.missingType.append(e) }
+            if e.involvedFigures.isEmpty && (e.figureAssociations ?? []).isEmpty { c.missingInvolvedFigures.append(e) }
+        }
+        return c
+    }
+
+    private var thingCoverage: ThingCoverage {
+        let all = things.filter { $0.coverageExempt != true }
+        var c = ThingCoverage()
+        for t in all {
+            if t.thingDescription.isEmpty { c.missingDescription.append(t) }
+            if t.thingType == nil { c.missingType.append(t) }
+        }
+        return c
     }
 
     var body: some View {
@@ -155,7 +190,13 @@ struct DashboardView: View {
 
     private var auditSummary: some View {
         let autoExempted = figures.filter { $0.coverageExempt == true && $0.coverageReviewedAt == nil }.count
+            + places.filter { $0.coverageExempt == true && $0.coverageReviewedAt == nil }.count
+            + events.filter { $0.coverageExempt == true && $0.coverageReviewedAt == nil }.count
+            + things.filter { $0.coverageExempt == true && $0.coverageReviewedAt == nil }.count
         let reviewed = figures.filter { $0.coverageExempt == true && $0.coverageReviewedAt != nil }.count
+            + places.filter { $0.coverageExempt == true && $0.coverageReviewedAt != nil }.count
+            + events.filter { $0.coverageExempt == true && $0.coverageReviewedAt != nil }.count
+            + things.filter { $0.coverageExempt == true && $0.coverageReviewedAt != nil }.count
         return HStack(spacing: 8) {
             Image(systemName: "checkmark.shield")
                 .font(.caption)
@@ -178,88 +219,109 @@ struct DashboardView: View {
             auditSummary
 
             let c = coverage
-            let exemptAndReviewed: (Figure) -> Void = { fig in
-                fig.coverageExempt = true
-                fig.coverageReviewedAt = .now
-                try? modelContext.save()
-            }
+            let pc = placeCoverage
+            let ec = eventCoverage
+            let tc = thingCoverage
             let now = Date.now
 
-            CoverageBlock(
-                title: "Missing Ancestry",
-                icon: "person.fill.questionmark",
-                color: .red,
-                items: c.missingAncestry,
+            coverageGroupHeader("Figures")
+            coverageBlocks(
+                dims: [
+                    (title: "Missing Ancestry", icon: "person.fill.questionmark", color: .red, items: c.missingAncestry),
+                    (title: "Missing Father", icon: "figure.stand", color: .orange, items: c.missingFather),
+                    (title: "Missing Mother", icon: "figure.stand.dress", color: .orange, items: c.missingMother),
+                    (title: "Missing Birth Date", icon: "calendar.badge.exclamationmark", color: .orange, items: c.missingBirth),
+                    (title: "Missing Death Date", icon: "calendar.badge.exclamationmark", color: .orange, items: c.missingDeath),
+                    (title: "Missing Description", icon: "text.alignleft", color: .yellow, items: c.missingDescription),
+                    (title: "Missing Domain", icon: "globe", color: .yellow, items: c.missingDomain),
+                    (title: "Missing Type", icon: "questionmark.circle", color: .orange, items: c.missingType),
+                    (title: "Missing Reign Years", icon: "crown", color: .orange, items: c.missingReignYears),
+                    (title: "Missing Epithet", icon: "quote.opening", color: .yellow, items: c.missingEpithet),
+                    (title: "Missing Mugshot", icon: "person.crop.circle.badge.questionmark", color: .yellow, items: c.missingMugshot),
+                    (title: "Missing Pantheon", icon: "building.columns", color: .yellow, items: c.missingPantheon),
+                    (title: "Missing Alternate Names", icon: "textformat.abc", color: .yellow, items: c.missingAlternateNames),
+                    (title: "No Images", icon: "photo", color: .yellow, items: c.missingImages),
+                    (title: "Missing Attribution", icon: "book.closed", color: .yellow, items: c.missingAttribution),
+                ],
                 total: coverageFigures.count,
                 totalLabel: "figures",
-                onMarkAll: { c.missingAncestry.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
+                name: { $0.name },
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
             )
 
-            CoverageBlock(
-                title: "Missing Father",
-                icon: "figure.stand",
-                color: .orange,
-                items: c.missingFather,
-                total: coverageFigures.count,
-                totalLabel: "figures",
-                onMarkAll: { c.missingFather.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
+            coverageGroupHeader("Places")
+            coverageBlocks(
+                dims: [
+                    (title: "Missing Description", icon: "text.alignleft", color: .yellow, items: pc.missingDescription),
+                    (title: "Missing Modern Location", icon: "mappin.and.ellipse", color: .orange, items: pc.missingModernLocation),
+                    (title: "Missing Coordinates", icon: "location.slash", color: .orange, items: pc.missingCoordinates),
+                    (title: "Missing Type", icon: "questionmark.circle", color: .orange, items: pc.missingType),
+                ],
+                total: places.filter { $0.coverageExempt != true }.count,
+                totalLabel: "places",
+                name: { $0.name },
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
             )
 
-            CoverageBlock(
-                title: "Missing Mother",
-                icon: "figure.stand.dress",
-                color: .orange,
-                items: c.missingMother,
-                total: coverageFigures.count,
-                totalLabel: "figures",
-                onMarkAll: { c.missingMother.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
+            coverageGroupHeader("Events")
+            coverageBlocks(
+                dims: [
+                    (title: "Missing Description", icon: "text.alignleft", color: .yellow, items: ec.missingDescription),
+                    (title: "Missing Date", icon: "calendar.badge.exclamationmark", color: .orange, items: ec.missingDate),
+                    (title: "Missing Type", icon: "questionmark.circle", color: .orange, items: ec.missingType),
+                    (title: "No Involved Figures", icon: "person.2.slash", color: .yellow, items: ec.missingInvolvedFigures),
+                ],
+                total: events.filter { $0.coverageExempt != true }.count,
+                totalLabel: "events",
+                name: { $0.name },
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
             )
 
-            CoverageBlock(
-                title: "Missing Birth Date",
-                icon: "calendar.badge.exclamationmark",
-                color: .orange,
-                items: c.missingBirth,
-                total: coverageFigures.count,
-                totalLabel: "figures",
-                onMarkAll: { c.missingBirth.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
+            coverageGroupHeader("Things")
+            coverageBlocks(
+                dims: [
+                    (title: "Missing Description", icon: "text.alignleft", color: .yellow, items: tc.missingDescription),
+                    (title: "Missing Type", icon: "questionmark.circle", color: .orange, items: tc.missingType),
+                ],
+                total: things.filter { $0.coverageExempt != true }.count,
+                totalLabel: "things",
+                name: { $0.name },
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
             )
+        }
+    }
 
-            CoverageBlock(
-                title: "Missing Death Date",
-                icon: "calendar.badge.exclamationmark",
-                color: .orange,
-                items: c.missingDeath,
-                total: coverageFigures.count,
-                totalLabel: "figures",
-                onMarkAll: { c.missingDeath.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
-            )
+    private func coverageGroupHeader(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.bold())
+            .foregroundStyle(.tertiary)
+            .textCase(.uppercase)
+            .padding(.top, 6)
+    }
 
+    private func coverageBlocks<Entity: PersistentModel>(
+        dims: [(title: String, icon: String, color: Color, items: [Entity])],
+        total: Int,
+        totalLabel: String,
+        name: @escaping (Entity) -> String,
+        markAll: @escaping ([Entity]) -> Void,
+        markOne: @escaping (Entity) -> Void
+    ) -> some View {
+        ForEach(dims, id: \.title) { dim in
             CoverageBlock(
-                title: "Missing Description",
-                icon: "text.alignleft",
-                color: .yellow,
-                items: c.missingDescription,
-                total: coverageFigures.count,
-                totalLabel: "figures",
-                onMarkAll: { c.missingDescription.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
-            )
-
-            CoverageBlock(
-                title: "Missing Domain",
-                icon: "globe",
-                color: .yellow,
-                items: c.missingDomain,
-                total: coverageFigures.count,
-                totalLabel: "figures",
-                onMarkAll: { c.missingDomain.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                onMarkFigure: exemptAndReviewed
+                title: dim.title,
+                icon: dim.icon,
+                color: dim.color,
+                items: dim.items,
+                total: total,
+                totalLabel: totalLabel,
+                name: name,
+                onMarkAll: { markAll(dim.items) },
+                onMarkFigure: markOne
             )
         }
     }
@@ -391,15 +453,53 @@ private struct QuickActionButton: View {
     }
 }
 
-private struct CoverageBlock: View {
+private struct FigureCoverage {
+    var missingAncestry: [Figure] = []
+    var missingFather: [Figure] = []
+    var missingMother: [Figure] = []
+    var missingBirth: [Figure] = []
+    var missingDeath: [Figure] = []
+    var missingDescription: [Figure] = []
+    var missingDomain: [Figure] = []
+    var missingType: [Figure] = []
+    var missingReignYears: [Figure] = []
+    var missingEpithet: [Figure] = []
+    var missingMugshot: [Figure] = []
+    var missingPantheon: [Figure] = []
+    var missingAlternateNames: [Figure] = []
+    var missingImages: [Figure] = []
+    var missingAttribution: [Figure] = []
+}
+
+private struct PlaceCoverage {
+    var missingDescription: [Place] = []
+    var missingModernLocation: [Place] = []
+    var missingCoordinates: [Place] = []
+    var missingType: [Place] = []
+}
+
+private struct EventCoverage {
+    var missingDescription: [Event] = []
+    var missingDate: [Event] = []
+    var missingType: [Event] = []
+    var missingInvolvedFigures: [Event] = []
+}
+
+private struct ThingCoverage {
+    var missingDescription: [Thing] = []
+    var missingType: [Thing] = []
+}
+
+private struct CoverageBlock<Entity: PersistentModel>: View {
     let title: String
     let icon: String
     let color: Color
-    let items: [Figure]
+    let items: [Entity]
     let total: Int
     let totalLabel: String
+    let name: (Entity) -> String
     let onMarkAll: (() -> Void)?
-    let onMarkFigure: ((Figure) -> Void)?
+    let onMarkFigure: ((Entity) -> Void)?
 
     @State private var isExpanded = false
 
@@ -452,15 +552,15 @@ private struct CoverageBlock: View {
                 let displayItems = items.prefix(10)
                 let remainder = count - displayItems.count
                 VStack(alignment: .leading, spacing: 1) {
-                    ForEach(Array(displayItems), id: \.persistentModelID) { fig in
+                    ForEach(Array(displayItems), id: \.persistentModelID) { item in
                         HStack(spacing: 4) {
-                            Text(fig.name)
+                            Text(name(item))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                             Spacer()
                             if let onMarkFigure {
                                 Button("Dismiss") {
-                                    onMarkFigure(fig)
+                                    onMarkFigure(item)
                                 }
                                 .buttonStyle(.borderedProminent)
                                 .controlSize(.mini)

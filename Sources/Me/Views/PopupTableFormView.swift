@@ -1,0 +1,298 @@
+import SwiftUI
+import SwiftData
+
+struct PopupTableFormView: View {
+    var table: PopupTable?
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Figure.name) private var allFigures: [Figure]
+
+    @State private var workingTable: PopupTable?
+    @State private var name: String = ""
+    @State private var tableDescription: String = ""
+    @State private var selectedFigureIDs: Set<PersistentIdentifier> = []
+    @State private var attributeName: String = ""
+    @State private var searchText: String = ""
+
+    private var currentTable: PopupTable? { workingTable ?? table }
+
+    private var filteredFigures: [Figure] {
+        guard !searchText.isEmpty else { return allFigures }
+        return allFigures.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(table == nil ? "New Comparison Table" : "Edit Comparison Table")
+                    .font(.headline)
+                Spacer()
+                Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button(table == nil ? "Create" : "Save") { save() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(name.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+
+            Divider()
+
+            Form {
+                Section("Table") {
+                    TextField("Name", text: $name)
+                    TextField("Description", text: $tableDescription, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+
+                Section {
+                    FigurePickerSection(
+                        allFigures: allFigures,
+                        filteredFigures: filteredFigures,
+                        selectedFigureIDs: $selectedFigureIDs,
+                        searchText: $searchText
+                    )
+                } header: {
+                    Text("Figures (\(selectedFigureIDs.count) selected)")
+                }
+
+                Section("Attributes") {
+                    HStack {
+                        TextField("New attribute name", text: $attributeName)
+                            .textFieldStyle(.roundedBorder)
+                        Button(action: addAttribute) {
+                            Image(systemName: "plus")
+                        }
+                        .disabled(attributeName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    if let tbl = currentTable, !tbl.attributes.isEmpty {
+                        ForEach(tbl.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }) { attr in
+                            HStack {
+                                Text(attr.name)
+                                Spacer()
+                                Button(action: { removeAttribute(attr) }) {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.red)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .onMove { from, to in
+                            moveAttributes(from: from, to: to)
+                        }
+                    } else if attributeName.isEmpty {
+                        Text("No attributes yet")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .formStyle(.grouped)
+        }
+        .frame(width: 520, height: 580)
+        .onAppear { load() }
+    }
+
+    private func load() {
+        if let table {
+            workingTable = table
+            name = table.name
+            tableDescription = table.tableDescription
+            selectedFigureIDs = Set(table.figures.map(\.persistentModelID))
+        } else {
+            let newTable = PopupTable()
+            modelContext.insert(newTable)
+            workingTable = newTable
+        }
+    }
+
+    private func save() {
+        guard let tbl = currentTable else { return }
+        let isNew = workingTable == nil
+        if isNew { modelContext.insert(tbl) }
+        tbl.name = name.trimmingCharacters(in: .whitespaces)
+        tbl.tableDescription = tableDescription.trimmingCharacters(in: .whitespaces)
+
+        let currentFigureIDs = selectedFigureIDs
+        let currentFigures = allFigures.filter { currentFigureIDs.contains($0.persistentModelID) }
+        tbl.figures = currentFigures
+
+        let existingCells = tbl.cells
+
+        for cell in existingCells {
+            if let figID = cell.figure?.persistentModelID, !currentFigureIDs.contains(figID) {
+                tbl.cells.removeAll { $0.persistentModelID == cell.persistentModelID }
+                modelContext.delete(cell)
+            }
+        }
+
+        for figID in currentFigureIDs {
+            guard let figure = allFigures.first(where: { $0.persistentModelID == figID }) else { continue }
+            for attr in tbl.attributes {
+                let alreadyHasCell = existingCells.contains { cell in
+                    cell.attribute?.persistentModelID == attr.persistentModelID &&
+                    cell.figure?.persistentModelID == figID
+                }
+                if !alreadyHasCell {
+                    let cell = PopupTableCell(attribute: attr, figure: figure)
+                    tbl.cells.append(cell)
+                    modelContext.insert(cell)
+                }
+            }
+        }
+
+        try? modelContext.save()
+        dismiss()
+    }
+
+    private func addAttribute() {
+        guard let table = currentTable, !attributeName.trimmingCharacters(in: .whitespaces).isEmpty else { return }
+        let maxIndex = table.attributes.compactMap(\.orderIndex).max() ?? -1
+        let attr = PopupTableAttribute(name: attributeName.trimmingCharacters(in: .whitespaces), orderIndex: maxIndex + 1)
+        table.attributes.append(attr)
+        modelContext.insert(attr)
+        attributeName = ""
+
+        for cell in table.cells where cell.attribute == nil {
+            cell.attribute = attr
+        }
+
+        for figID in selectedFigureIDs {
+            let alreadyHasCell = table.cells.contains { cell in
+                cell.attribute?.persistentModelID == attr.persistentModelID &&
+                cell.figure?.persistentModelID == figID
+            }
+            if !alreadyHasCell, let figure = allFigures.first(where: { $0.persistentModelID == figID }) {
+                let cell = PopupTableCell(attribute: attr, figure: figure)
+                table.cells.append(cell)
+                modelContext.insert(cell)
+            }
+        }
+
+        try? modelContext.save()
+    }
+
+    private func removeAttribute(_ attr: PopupTableAttribute) {
+        for cell in attr.cells { modelContext.delete(cell) }
+        modelContext.delete(attr)
+        try? modelContext.save()
+    }
+
+    private func moveAttributes(from source: IndexSet, to destination: Int) {
+        guard let table = currentTable else { return }
+        var attrs = table.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
+        attrs.move(fromOffsets: source, toOffset: destination)
+        for (index, attr) in attrs.enumerated() {
+            attr.orderIndex = index
+        }
+        try? modelContext.save()
+    }
+}
+
+private struct FigurePickerSection: View {
+    let allFigures: [Figure]
+    let filteredFigures: [Figure]
+    @Binding var selectedFigureIDs: Set<PersistentIdentifier>
+    @Binding var searchText: String
+
+    private var selectedFigures: [Figure] {
+        allFigures.filter { selectedFigureIDs.contains($0.persistentModelID) }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !selectedFigures.isEmpty {
+                FlowLayout(spacing: 6) {
+                    ForEach(selectedFigures, id: \.persistentModelID) { figure in
+                        HStack(spacing: 4) {
+                            if let type = figure.figureType {
+                                Image(systemName: type.icon)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(type.color)
+                            }
+                            Text(figure.name)
+                                .font(.caption)
+                            Button {
+                                selectedFigureIDs.remove(figure.persistentModelID)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(Color.accentColor.opacity(0.1))
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Color.accentColor.opacity(0.25), lineWidth: 0.5)
+                        )
+                    }
+                }
+            }
+
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search figures...", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+                if !searchText.isEmpty {
+                    Button(action: { searchText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            ScrollView {
+                LazyVStack(spacing: 2) {
+                    ForEach(filteredFigures) { figure in
+                        let isSelected = selectedFigureIDs.contains(figure.persistentModelID)
+                        Button(action: {
+                            if isSelected {
+                                selectedFigureIDs.remove(figure.persistentModelID)
+                            } else {
+                                selectedFigureIDs.insert(figure.persistentModelID)
+                                searchText = ""
+                            }
+                        }) {
+                            HStack(spacing: 6) {
+                                if let type = figure.figureType {
+                                    Image(systemName: type.icon)
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(type.color)
+                                        .frame(width: 16)
+                                }
+                                Text(figure.name)
+                                    .font(.callout)
+                                    .foregroundStyle(isSelected ? .primary : .secondary)
+                                if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
+                                    Text(disambiguation)
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                Spacer()
+                                if isSelected {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(Color.accentColor)
+                                        .font(.caption)
+                                }
+                            }
+                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                            .background(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .frame(maxHeight: 200)
+        }
+    }
+}

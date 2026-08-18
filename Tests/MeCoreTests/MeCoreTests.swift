@@ -30,7 +30,8 @@ final class MeCoreTests: XCTestCase {
             Agent.self, CollectedDatum.self, BlindSpot.self,
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
-            Pantheon.self, FigurePantheonAssociation.self
+            Pantheon.self, FigurePantheonAssociation.self,
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
         ])
         if isDisk {
             let url = FileManager.default.temporaryDirectory
@@ -1572,6 +1573,33 @@ final class MeCoreTests: XCTestCase {
         XCTAssertTrue(remaining.isEmpty)
     }
 
+    func testRemoveOrphanedGroupAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Enki")
+        context.insert(figure)
+        let group = FigureGroup(name: "Divine Council")
+        context.insert(group)
+        let assoc = FigureGroupAssociation(figure: figure)
+        context.insert(assoc)
+        group.figureAssociations.append(assoc)
+        try? context.save()
+
+        group.figureAssociations = []
+        context.delete(group)
+        try? context.save()
+
+        XCTAssertEqual(figure.groupAssociations.count, 1)
+        XCTAssertNil(figure.groupAssociations.first?.group)
+
+        Migration.removeOrphanedGroupAssociations(context: context)
+        try? context.save()
+
+        XCTAssertTrue(figure.groupAssociations.isEmpty)
+        let remaining = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>())) ?? []
+        XCTAssertTrue(remaining.isEmpty)
+    }
+
     func testGroupDeleteSmartGroupWithManyAssociations() {
         let container = makeContainer()
         let context = container.mainContext
@@ -1652,7 +1680,8 @@ final class MeCoreTests: XCTestCase {
             Agent.self, CollectedDatum.self, BlindSpot.self,
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
-            Pantheon.self, FigurePantheonAssociation.self
+            Pantheon.self, FigurePantheonAssociation.self,
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
         ])
         let config = ModelConfiguration(schema: schema, url: url)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -1707,7 +1736,8 @@ final class MeCoreTests: XCTestCase {
             Agent.self, CollectedDatum.self, BlindSpot.self,
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
-            Pantheon.self, FigurePantheonAssociation.self
+            Pantheon.self, FigurePantheonAssociation.self,
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
         ])
         let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -1762,7 +1792,8 @@ final class MeCoreTests: XCTestCase {
             Agent.self, CollectedDatum.self, BlindSpot.self,
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
-            Pantheon.self, FigurePantheonAssociation.self
+            Pantheon.self, FigurePantheonAssociation.self,
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
         ])
         let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -2076,6 +2107,31 @@ final class MeCoreTests: XCTestCase {
         switch spine[0] { case .member(let m): XCTAssertEqual(m.figure?.name, "Alpha"); case .text: XCTFail("expected member") }
         switch spine[1] { case .text(let t): XCTAssertEqual(t.title, "Aside"); case .member: XCTFail("expected text") }
         switch spine[2] { case .member(let m): XCTAssertEqual(m.figure?.name, "Beta"); case .text: XCTFail("expected member") }
+    }
+
+    func testGroupTextBlockSummaryRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter")
+        context.insert(group)
+        let block = GroupTextBlock(
+            title: "Atrahasis Tablet I",
+            text: "Long full prose body.",
+            summary: "The Anunnaki assign the Igigi their digging work.",
+            summaryRichText: nil
+        )
+        context.insert(block)
+        group.textBlocks = [block]
+        try? context.save()
+
+        let fetched = try? context.fetch(FetchDescriptor<GroupTextBlock>()).first
+        XCTAssertNotNil(fetched)
+        XCTAssertEqual(fetched?.summary, "The Anunnaki assign the Igigi their digging work.")
+        XCTAssertNil(fetched?.summaryRichText)
+        // Defaults for blocks without a summary: nil, and init default is nil.
+        let plain = GroupTextBlock(title: "Plain", text: "No summary")
+        XCTAssertNil(plain.summary)
+        XCTAssertNil(plain.summaryRichText)
     }
 
     func testGroupMemberTextSpineMoveRenumbers() {
@@ -2471,6 +2527,109 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertNil(figure.epithet)
     }
 
+    // MARK: - Relationship sources
+
+    func testEnsureRelationshipSourcesResolvesExistingSourceCaseInsensitively() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let source = Source(name: "Adapa Myth")
+        context.insert(source)
+        let rel = Relationship(source: "Adapa myth")
+        context.insert(rel)
+        try? context.save()
+
+        Migration.ensureRelationshipSources(context: context)
+        XCTAssertEqual(rel.sourceRef?.name, "Adapa Myth")
+        XCTAssertTrue(source.relationships.contains(where: { $0.persistentModelID == rel.persistentModelID }))
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertEqual(allSources.count, 1)
+    }
+
+    func testEnsureRelationshipSourcesCreatesCoarseSourceForUnknownName() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rel = Relationship(source: "Sumerian hymns")
+        context.insert(rel)
+        try? context.save()
+
+        Migration.ensureRelationshipSources(context: context)
+        XCTAssertEqual(rel.sourceRef?.name, "Sumerian hymns")
+        XCTAssertEqual(rel.sourceRef?.sourceType, .ancientText)
+        XCTAssertEqual(rel.sourceRef?.relationships.count, 1)
+    }
+
+    func testEnsureRelationshipSourcesUsesFirstCommaSegment() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rel = Relationship(source: "Enuma Elish, Babylonian texts")
+        context.insert(rel)
+        try? context.save()
+
+        Migration.ensureRelationshipSources(context: context)
+        XCTAssertEqual(rel.sourceRef?.name, "Enuma Elish")
+    }
+
+    func testEnsureRelationshipSourcesKingListDetection() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rel = Relationship(source: "Sumerian King List")
+        context.insert(rel)
+        try? context.save()
+
+        Migration.ensureRelationshipSources(context: context)
+        XCTAssertEqual(rel.sourceRef?.sourceType, .kingList)
+    }
+
+    func testEnsureRelationshipSourcesIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rel = Relationship(source: "Enuma Elish")
+        context.insert(rel)
+        try? context.save()
+
+        Migration.ensureRelationshipSources(context: context)
+        Migration.ensureRelationshipSources(context: context)
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertEqual(allSources.count, 1)
+        XCTAssertNotNil(rel.sourceRef)
+    }
+
+    func testEnsureRelationshipSourcesNeverRepointsExistingSourceRef() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let sumerianTexts = Source(name: "Sumerian texts")
+        let enumaElish = Source(name: "Enuma Elish")
+        context.insert(sumerianTexts)
+        context.insert(enumaElish)
+        let rel = Relationship(source: "Enuma Elish")
+        context.insert(rel)
+        sumerianTexts.relationships.append(rel)
+        try? context.save()
+
+        Migration.ensureRelationshipSources(context: context)
+        XCTAssertEqual(rel.sourceRef?.name, "Sumerian texts")
+        XCTAssertFalse(enumaElish.relationships.contains(where: { $0.persistentModelID == rel.persistentModelID }))
+    }
+
+    func testRelationshipSourceDisplayNameFallsBackToString() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rel = Relationship(source: "Enuma Elish")
+        context.insert(rel)
+        try? context.save()
+
+        XCTAssertEqual(rel.sourceDisplayName, "Enuma Elish")
+        XCTAssertNil(rel.sourceURL)
+
+        let source = Source(name: "Enuma Elish", url: "https://example.com/enuma")
+        context.insert(source)
+        source.relationships.append(rel)
+        try? context.save()
+
+        XCTAssertEqual(rel.sourceDisplayName, "Enuma Elish")
+        XCTAssertEqual(rel.sourceURL, "https://example.com/enuma")
+    }
+
     // MARK: - Figure era links
 
     func testEnsureFigureEraLinksLinksByBirthEraString() {
@@ -2582,6 +2741,169 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertNil(Migration.era(named: "", context: context))
         XCTAssertNil(Migration.era(named: "  ", context: context))
         XCTAssertNil(Migration.era(named: "Nonexistent", context: context))
+    }
+
+    func testEraBoundaryGeoJSONRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        era.boundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[44.4,33.3],[45.0,33.5],[44.8,32.9],[44.4,33.3]]]}"
+        context.insert(era)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<Era>()))?.first
+        XCTAssertEqual(fetched?.name, "Dynasty of Akkad")
+        XCTAssertEqual(fetched?.boundaryGeoJSON, era.boundaryGeoJSON, "boundary persisted on the era")
+    }
+
+    func testPolygonGeoJSONClosesRing() {
+        let json = Migration.polygonGeoJSON(ring: [[44.0, 33.0], [45.0, 33.0], [45.0, 34.0]])
+        XCTAssertNotNil(json)
+        guard let data = json?.data(using: .utf8),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let coordinates = object["coordinates"] as? [[[Double]]],
+              let ring = coordinates.first else {
+            XCTFail("expected a serialized Polygon")
+            return
+        }
+        XCTAssertEqual(object["type"] as? String, "Polygon")
+        XCTAssertEqual(ring.first!, ring.last!, "ring must be closed")
+        XCTAssertEqual(ring.count, 4)
+        XCTAssertNil(Migration.polygonGeoJSON(ring: [[44.0, 33.0], [45.0, 33.0]]))
+    }
+
+    func testEnsureDynastyBoundariesBackfillsEras() {
+        let container = makeContainer()
+        let context = container.mainContext
+        for name in ["Dynasty of Akkad", "Dynasty of Isin", "Dynasty of Mari", "Dynasty of Awan", "Gutian rule"] {
+            context.insert(Era(name: name, orderIndex: 1))
+        }
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        for era in eras {
+            XCTAssertNotNil(era.boundaryGeoJSON, "\(era.name) got a boundary")
+            guard let data = era.boundaryGeoJSON?.data(using: .utf8),
+                  let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let coordinates = object["coordinates"] as? [[[Double]]],
+                  let ring = coordinates.first else {
+                XCTFail("\(era.name) boundary not a Polygon")
+                continue
+            }
+            XCTAssertEqual(ring.first!, ring.last!, "\(era.name) ring closed")
+        }
+    }
+
+    func testEnsureDynastyBoundariesContainsCapitals() {
+        let container = makeContainer()
+        let context = container.mainContext
+        for name in ["Dynasty of Akkad", "Dynasty of Isin", "Dynasty of Mari", "First dynasty of Ur", "Dynasty of Awan"] {
+            context.insert(Era(name: name, orderIndex: 1))
+        }
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let points: [String: (Double, Double)] = [
+            "Dynasty of Akkad": (44.42, 33.33),
+            "Dynasty of Isin": (45.29, 31.92),
+            "Dynasty of Mari": (40.89, 34.55),
+            "First dynasty of Ur": (46.103, 30.963),
+            "Dynasty of Awan": (46.0, 33.0),
+        ]
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        for era in eras {
+            guard let data = era.boundaryGeoJSON?.data(using: .utf8),
+                  let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let coordinates = object["coordinates"] as? [[[Double]]],
+                  let ring = coordinates.first,
+                  let capital = points[era.name] else { continue }
+            XCTAssertTrue(pointInRing(capital, ring), "\(era.name) contains its capital")
+        }
+    }
+
+    func testEnsureDynastyBoundariesNeverOverwrites() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        era.boundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[1.0,1.0],[2.0,1.0],[2.0,2.0],[1.0,1.0]]]}"
+        context.insert(era)
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let fetched = (try? context.fetch(FetchDescriptor<Era>()))?.first
+        XCTAssertEqual(fetched?.boundaryGeoJSON, era.boundaryGeoJSON, "existing boundary untouched")
+    }
+
+    func testEnsureDynastyBoundariesRepairsDegenerateTestDraw() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        era.boundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[42.6,32.67],[42.7,32.68],[42.8,32.68],[42.9,32.68],[43.0,32.68],[43.1,32.68],[43.2,32.68],[43.3,32.68],[43.4,32.68]]]}"
+        context.insert(era)
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let fetched = (try? context.fetch(FetchDescriptor<Era>()))?.first
+        guard let data = fetched?.boundaryGeoJSON?.data(using: .utf8),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let coordinates = object["coordinates"] as? [[[Double]]],
+              let ring = coordinates.first else {
+            XCTFail("expected a repaired Polygon")
+            return
+        }
+        XCTAssertEqual(ring.first!, ring.last!, "repaired ring must be closed")
+        XCTAssertEqual(ring.count, 15, "authored Akkad ring is 14 vertices + closing point")
+        let lats = ring.map { $0[1] }
+        XCTAssertGreaterThan(lats.max()! - lats.min()!, 4.0, "degenerate sliver replaced with a real territory")
+    }
+
+    func testEnsureDynastyBoundariesRepairsClosedSliver() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        var ring: [[Double]] = []
+        for lon in stride(from: 42.0, through: 44.5, by: 0.08) {
+            ring.append([lon, 32.94])
+            ring.append([lon + 0.04, 32.95])
+        }
+        ring.append(ring[0])
+        era.boundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[\(ring.map { "[\($0[0]),\($0[1])]" }.joined(separator: ","))]}"
+        context.insert(era)
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let fetched = (try? context.fetch(FetchDescriptor<Era>()))?.first
+        guard let data = fetched?.boundaryGeoJSON?.data(using: .utf8),
+              let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              let coordinates = object["coordinates"] as? [[[Double]]],
+              let repaired = coordinates.first else {
+            XCTFail("expected a repaired Polygon")
+            return
+        }
+        XCTAssertEqual(repaired.first!, repaired.last!, "repaired ring must be closed")
+        XCTAssertEqual(repaired.count, 15, "authored Akkad ring is 14 vertices + closing point")
+        let lats = repaired.map { $0[1] }
+        XCTAssertGreaterThan(lats.max()! - lats.min()!, 4.0, "closed horizontal sliver replaced with a real territory")
+    }
+
+    private func pointInRing(_ point: (Double, Double), _ ring: [[Double]]) -> Bool {
+        var inside = false
+        let n = ring.count
+        for i in 0..<n {
+            let p1 = ring[i]
+            let p2 = ring[(i + 1) % n]
+            if (p1[1] > point.1) != (p2[1] > point.1)
+                && point.0 < (p2[0] - p1[0]) * (point.1 - p1[1]) / (p2[1] - p1[1]) + p1[0] {
+                inside.toggle()
+            }
+        }
+        return inside
     }
 
     func testFromTextSubjectOnly() {
@@ -3235,5 +3557,1197 @@ func testRegnalKeyOrdersEventsByDate() {
 
         XCTAssertEqual(figure.reignStartYear, -2047)
         XCTAssertEqual(figure.reignEndYear, -2030)
+    }
+
+    // MARK: - Mugshots
+
+    func testImageCropRectFullDefault() {
+        XCTAssertEqual(ImageCropRect.full.cgRect, CGRect(x: 0, y: 0, width: 1, height: 1))
+        XCTAssertNil(ImageCropRect(encoded: nil))
+        XCTAssertNil(ImageCropRect(encoded: ""))
+        XCTAssertNil(ImageCropRect(encoded: "0.1,0.2"))
+        XCTAssertNil(ImageCropRect(encoded: "a,b,c,d"))
+    }
+
+    func testImageCropRectEncodeDecodeRoundTrip() {
+        let crop = ImageCropRect(x: 0.25, y: 0.1, width: 0.4, height: 0.5)
+        let decoded = ImageCropRect(encoded: crop.encoded())
+        XCTAssertNotNil(decoded)
+        XCTAssertEqual(decoded, crop)
+    }
+
+    func testImageCropRectClampsOutOfBounds() {
+        let crop = ImageCropRect(x: -0.2, y: 1.5, width: 3, height: -1)
+        XCTAssertGreaterThanOrEqual(crop.x, 0)
+        XCTAssertLessThanOrEqual(crop.x + crop.width, 1)
+        XCTAssertLessThanOrEqual(crop.y + crop.height, 1)
+        XCTAssertGreaterThanOrEqual(crop.height, 0)
+    }
+
+    func testMugshotFieldsRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let gudea = Figure(name: "Gudea", gender: .male)
+        context.insert(gudea)
+        let statue = ImageAsset(filename: "gudea_statue.jpg", caption: "Gudea statue from Girsu", source: "Louvre")
+        context.insert(statue)
+        gudea.mugshotImage = statue
+        gudea.mugshotCropRect = ImageCropRect(x: 0.2, y: 0.1, width: 0.4, height: 0.5).encoded()
+        gudea.mugshotIdentification = "inscribed"
+        try? context.save()
+
+        let fetched = try? context.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.name == "Gudea" })).first
+        XCTAssertNotNil(fetched)
+        XCTAssertEqual(fetched?.mugshotImage?.filename, "gudea_statue.jpg")
+        XCTAssertEqual(fetched?.mugshotIdentification, "inscribed")
+        XCTAssertEqual(ImageCropRect(encoded: fetched?.mugshotCropRect), ImageCropRect(x: 0.2, y: 0.1, width: 0.4, height: 0.5))
+        XCTAssertEqual(statue.mugshots.count, 1)
+        XCTAssertEqual(statue.mugshots.first?.name, "Gudea")
+    }
+
+    func testMugshotRemovedWhenImageDeleted() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let gudea = Figure(name: "Gudea", gender: .male)
+        context.insert(gudea)
+        let statue = ImageAsset(filename: "statue.jpg")
+        context.insert(statue)
+        gudea.mugshotImage = statue
+        try? context.save()
+
+        context.delete(statue)
+        try? context.save()
+
+        XCTAssertNil(gudea.mugshotImage, "Deleting the mugshot image must nullify the figure's mugshot (delete rule .nullify)")
+    }
+
+    // MARK: - Duplicate Merger
+
+    func testDuplicateMergerFindGroupsFiguresCaseInsensitive() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Ea"))
+        context.insert(Figure(name: "ea"))
+        context.insert(Figure(name: "EA"))
+        context.insert(Figure(name: "Enki"))
+        try? context.save()
+
+        let groups = try! DuplicateMerger.findGroups(in: context)
+        let figureGroups = groups.filter { $0.kind == .figure }
+        XCTAssertEqual(figureGroups.count, 1)
+        XCTAssertEqual(figureGroups.first?.name.lowercased(), "ea", "Group name keeps the first-seen spelling (fetch order not guaranteed)")
+        XCTAssertEqual(figureGroups.first?.ids.count, 3)
+    }
+
+    func testDuplicateMergerFindGroupsDoesNotMixKinds() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Babylon"))
+        context.insert(Place(name: "Babylon"))
+        context.insert(Event(name: "Babylon"))
+        try? context.save()
+
+        let groups = try! DuplicateMerger.findGroups(in: context)
+        XCTAssertTrue(groups.isEmpty, "A figure, place, and event sharing a name are distinct entities — never a merge group")
+    }
+
+    func testDuplicateMergerFindGroupsSkippedWhenSingle() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Enki"))
+        context.insert(Place(name: "Nippur"))
+        try? context.save()
+
+        let groups = try! DuplicateMerger.findGroups(in: context)
+        XCTAssertTrue(groups.isEmpty)
+    }
+
+    func testDuplicateMergerMergeFiguresRePointsRelationships() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fatherType = RelationshipType(name: "Father", icon: "link", colorHex: "007AFF", category: "family")
+        context.insert(fatherType)
+        let keeper = Figure(name: "Enki")
+        let duplicate = Figure(name: "enki")
+        let child = Figure(name: "Marduk")
+        let parent = Figure(name: "Anu")
+        context.insert(keeper)
+        context.insert(duplicate)
+        context.insert(child)
+        context.insert(parent)
+        context.insert(Relationship(fromFigure: duplicate, toFigure: child, relationshipType: fatherType))
+        context.insert(Relationship(fromFigure: parent, toFigure: duplicate, relationshipType: fatherType))
+        context.insert(Relationship(fromFigure: duplicate, toFigure: duplicate, relationshipType: fatherType))
+        try? context.save()
+
+        try! DuplicateMerger.mergeFigures(keeper, duplicate, in: context)
+
+        let rels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(rels.count, 2, "the duplicate→duplicate self-relationship is deleted")
+        XCTAssertTrue(rels.contains { $0.fromFigure === keeper && $0.toFigure === child }, "outgoing re-pointed to keeper")
+        XCTAssertTrue(rels.contains { $0.fromFigure === parent && $0.toFigure === keeper }, "incoming re-pointed to keeper")
+        XCTAssertFalse(rels.contains { $0.fromFigure === duplicate || $0.toFigure === duplicate })
+    }
+
+    func testDuplicateMergerMergeFiguresFoldsOwnedContent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Figure(name: "Ninhursag")
+        let duplicate = Figure(name: "nin-hursag")
+        context.insert(keeper)
+        context.insert(duplicate)
+
+        let alt = AlternateName(figure: duplicate, name: "Mami", tradition: .akkadian, nameType: .syncretism)
+        context.insert(alt)
+        duplicate.alternateNames.append(alt)
+
+        let place = Place(name: "Nippur")
+        context.insert(place)
+        let role = FigurePlaceRoleType(name: "Patron", icon: "star", colorHex: "FF0000")
+        context.insert(role)
+        let pa = FigurePlaceAssociation(figure: duplicate, place: place, roleType: role)
+        context.insert(pa)
+        duplicate.placeAssociations.append(pa)
+        place.figureAssociations.append(pa)
+
+        let tag = Tag(name: "goddess")
+        context.insert(tag)
+        duplicate.tags.append(tag)
+
+        let sticky = StickyNote(text: "check cult", figure: duplicate)
+        context.insert(sticky)
+        duplicate.stickies.append(sticky)
+
+        let group = FigureGroup(name: "Pantheon")
+        context.insert(group)
+        let ga = FigureGroupAssociation(figure: duplicate, group: group)
+        context.insert(ga)
+        duplicate.groupAssociations.append(ga)
+
+        let pantheon = Pantheon(name: "Mesopotamian")
+        context.insert(pantheon)
+        duplicate.pantheons.append(pantheon)
+
+        let image = ImageAsset(filename: "ninhursag.jpg")
+        context.insert(image)
+        duplicate.images.append(image)
+
+        try? context.save()
+
+        try! DuplicateMerger.mergeFigures(keeper, duplicate, in: context)
+
+        XCTAssertEqual(keeper.alternateNames.map(\.name), ["Mami"])
+        XCTAssertEqual(keeper.placeAssociations.count, 1)
+        XCTAssertEqual(keeper.placeAssociations.first?.place, place)
+        XCTAssertEqual(keeper.tags.count, 1)
+        XCTAssertEqual(keeper.stickies.count, 1)
+        XCTAssertEqual(keeper.groupAssociations.count, 1)
+        XCTAssertEqual(keeper.pantheons.count, 1)
+        XCTAssertEqual(keeper.images.count, 1)
+        XCTAssertTrue(place.figureAssociations.contains { $0.figure === keeper })
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Figure>())) ?? []).count, 1, "duplicate is deleted")
+    }
+
+    func testDuplicateMergerMergeFiguresAdoptsEmptyFields() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Figure(name: "Enki")
+        let duplicate = Figure(name: "enki", gender: .male)
+        duplicate.title = "Lord of the Abzu"
+        duplicate.domain = "Water, Wisdom"
+        duplicate.figureDescription = "God of fresh water"
+        duplicate.epithet = "Nudimmud"
+        context.insert(keeper)
+        context.insert(duplicate)
+        try? context.save()
+
+        try! DuplicateMerger.mergeFigures(keeper, duplicate, in: context)
+
+        XCTAssertEqual(keeper.title, "Lord of the Abzu")
+        XCTAssertEqual(keeper.domain, "Water, Wisdom")
+        XCTAssertEqual(keeper.figureDescription, "God of fresh water")
+        XCTAssertEqual(keeper.epithet, "Nudimmud")
+        XCTAssertEqual(keeper.gender, .male)
+    }
+
+    func testDuplicateMergerMergeFiguresKeepsKeeperFields() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Figure(name: "Enki", gender: .male)
+        keeper.title = "Keeper Title"
+        keeper.domain = "Keeper Domain"
+        let duplicate = Figure(name: "enki")
+        duplicate.title = "Duplicate Title"
+        duplicate.domain = "Duplicate Domain"
+        context.insert(keeper)
+        context.insert(duplicate)
+        try? context.save()
+
+        try! DuplicateMerger.mergeFigures(keeper, duplicate, in: context)
+
+        XCTAssertEqual(keeper.title, "Keeper Title", "keeper values always win")
+        XCTAssertEqual(keeper.domain, "Keeper Domain")
+    }
+
+    func testDuplicateMergerMergePlacesRePointsAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Place(name: "Nippur")
+        let duplicate = Place(name: "nippur")
+        let figure = Figure(name: "Enlil")
+        let other = Place(name: "Ekur")
+        context.insert(keeper)
+        context.insert(duplicate)
+        context.insert(figure)
+        context.insert(other)
+        let role = FigurePlaceRoleType(name: "Worshipped", icon: "star", colorHex: "00FF00")
+        context.insert(role)
+        let fa = FigurePlaceAssociation(figure: figure, place: duplicate, roleType: role)
+        context.insert(fa)
+        figure.placeAssociations.append(fa)
+        duplicate.figureAssociations.append(fa)
+        let ppr = PlacePlaceRoleType(name: "Located Within", icon: "link", colorHex: "0000FF")
+        context.insert(ppr)
+        context.insert(PlacePlaceAssociation(fromPlace: duplicate, toPlace: other, roleType: ppr))
+        try? context.save()
+
+        try! DuplicateMerger.mergePlaces(keeper, duplicate, in: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.count, 2, "duplicate deleted, keeper + other remain")
+        XCTAssertTrue(figure.placeAssociations.contains { $0.place === keeper })
+        let ppas = (try? context.fetch(FetchDescriptor<PlacePlaceAssociation>())) ?? []
+        XCTAssertEqual(ppas.count, 1)
+        XCTAssertTrue(ppas.contains { $0.fromPlace === keeper && $0.toPlace === other })
+    }
+
+    func testDuplicateMergerMergeEventsRePointsAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Event(name: "The Flood")
+        let duplicate = Event(name: "the flood")
+        let figure = Figure(name: "Utnapishtim")
+        let other = Event(name: "Ark Lands")
+        context.insert(keeper)
+        context.insert(duplicate)
+        context.insert(figure)
+        context.insert(other)
+        let role = EventFigureRoleType(name: "Protagonist", icon: "person", colorHex: "FF00FF")
+        context.insert(role)
+        let efa = EventFigureAssociation(event: duplicate, figure: figure, roleType: role)
+        context.insert(efa)
+        duplicate.figureAssociations = [efa]
+        let er = EventEventRoleType(name: "Precedes", icon: "arrow.right", colorHex: "00FFFF")
+        context.insert(er)
+        context.insert(EventEventAssociation(fromEvent: duplicate, toEvent: other, roleType: er))
+        try? context.save()
+
+        try! DuplicateMerger.mergeEvents(keeper, duplicate, in: context)
+
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        XCTAssertEqual(events.count, 2, "duplicate deleted, keeper + other remain")
+        XCTAssertTrue((keeper.figureAssociations ?? []).contains { $0.figure === figure })
+        let eeas = (try? context.fetch(FetchDescriptor<EventEventAssociation>())) ?? []
+        XCTAssertEqual(eeas.count, 1)
+        XCTAssertTrue(eeas.contains { $0.fromEvent === keeper && $0.toEvent === other })
+    }
+
+    func testDuplicateMergerMergeThingsFoldsAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Thing(name: "Tablet of Destinies")
+        let duplicate = Thing(name: "tablet of destinies")
+        let figure = Figure(name: "Marduk")
+        let place = Place(name: "Esagila")
+        context.insert(keeper)
+        context.insert(duplicate)
+        context.insert(figure)
+        context.insert(place)
+        let role = ThingFigureRoleType(name: "Holder", icon: "hand.raised", colorHex: "888888")
+        context.insert(role)
+        let tfa = ThingFigureAssociation(thing: duplicate, figure: figure, roleType: role)
+        context.insert(tfa)
+        duplicate.figureAssociations.append(tfa)
+        figure.thingAssociations.append(tfa)
+        let tpr = ThingPlaceRoleType(name: "Kept At", icon: "building.columns", colorHex: "999999")
+        context.insert(tpr)
+        let tpa = ThingPlaceAssociation(thing: duplicate, place: place, roleType: tpr)
+        context.insert(tpa)
+        duplicate.placeAssociations.append(tpa)
+        place.thingAssociations.append(tpa)
+        try? context.save()
+
+        try! DuplicateMerger.mergeThings(keeper, duplicate, in: context)
+
+        let things = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        XCTAssertEqual(things.count, 1)
+        XCTAssertEqual(keeper.figureAssociations.count, 1)
+        XCTAssertEqual(keeper.figureAssociations.first?.figure, figure)
+        XCTAssertEqual(keeper.placeAssociations.count, 1)
+        XCTAssertEqual(keeper.placeAssociations.first?.place, place)
+    }
+
+    func testDuplicateMergerMergeFiguresMovesEventFigureAssociations() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let keeper = Figure(name: "Enkidu")
+        let duplicate = Figure(name: "enkidu")
+        let event = Event(name: "Hunting the Bull of Heaven")
+        context.insert(keeper)
+        context.insert(duplicate)
+        context.insert(event)
+        let role = EventFigureRoleType(name: "Participant", icon: "person", colorHex: "ABCDEF")
+        context.insert(role)
+        let efa = EventFigureAssociation(event: event, figure: duplicate, roleType: role)
+        context.insert(efa)
+        event.figureAssociations = [efa]
+        try? context.save()
+
+        try! DuplicateMerger.mergeFigures(keeper, duplicate, in: context)
+
+        XCTAssertEqual(event.figureAssociations?.first?.figure?.persistentModelID, keeper.persistentModelID)
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Figure>())) ?? []).count, 1)
+    }
+
+    // MARK: - Seed reconciliation guards (case-insensitive)
+
+    func testEnsureMissingCitiesAndAssociationsSkipsCaseVariantPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "Bad-Tibira", placeType: nil, modernLocation: "Tell al-Madineh", placeDescription: "", source: "Sumerian King List", latitude: 31.382778, longitude: 46.004444))
+        try? context.save()
+
+        Migration.ensureMissingCitiesAndAssociations(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.count, 46, "all other seed places still created; the case-variant must not be re-seeded")
+        let badTibiras = places.filter { $0.name.lowercased() == "bad-tibira" }
+        XCTAssertEqual(badTibiras.count, 1, "a case-variant existing place must not be re-seeded")
+        XCTAssertEqual(badTibiras.first?.name, "Bad-Tibira")
+    }
+
+    func testEnsureMissingCitiesAndAssociationsCreatesMissingPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureMissingCitiesAndAssociations(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.count, 46, "seed has 46 places")
+        XCTAssertTrue(places.contains { $0.name == "Bad-tibira" })
+    }
+
+    func testEnsureSKLEventsAndFiguresSkipsCaseVariantFigureAndPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Eannatum"))
+        context.insert(Place(name: "Girsu", placeType: nil, modernLocation: "", placeDescription: "", source: "", latitude: 0, longitude: 0))
+        try? context.save()
+
+        Migration.ensureSKLEventsAndFigures(context: context)
+
+        let eannatums = (try? context.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.name == "Eannatum" }))) ?? []
+        XCTAssertEqual(eannatums.count, 1, "existing exact-name figure must not be duplicated")
+
+        let girsu = (try? context.fetch(FetchDescriptor<Place>(predicate: #Predicate { $0.name == "Girsu" }))) ?? []
+        XCTAssertEqual(girsu.count, 1, "existing exact-name place must not be duplicated")
+    }
+
+    // MARK: - Tag engine (rule-based auto-tags)
+
+    func testTagEngineDeityTags() {
+        let deityType = FigureType(name: "Deity", icon: "star", colorHex: "FF9500")
+        let figure = Figure(
+            name: "Enki",
+            figureType: deityType,
+            gender: .male,
+            domain: "Water, Wisdom, Magic, Crafts",
+            figureDescription: "",
+            birthDate: MythologicalDate(year: nil, era: "Age of the First Gods", isApproximate: true),
+            deathDate: .unknown,
+            source: "Atra-Hasis, Enki and Ninhursag"
+        )
+        let tags = TagEngine.tags(for: figure)
+        XCTAssertTrue(tags.contains("deity"))
+        XCTAssertTrue(tags.contains("god"))
+        XCTAssertFalse(tags.contains("goddess"))
+        XCTAssertTrue(tags.contains("water"))
+        XCTAssertTrue(tags.contains("wisdom"))
+        XCTAssertTrue(tags.contains("magic"))
+        XCTAssertTrue(tags.contains("crafts"))
+        XCTAssertTrue(tags.contains("atrahasis"))
+        XCTAssertTrue(tags.contains("age of the first gods"))
+    }
+
+    func testTagEngineGoddessTag() {
+        let deityType = FigureType(name: "Deity", icon: "star", colorHex: "FF9500")
+        let figure = Figure(name: "Inanna", figureType: deityType, gender: .female, domain: "Love, War, Fertility, Venus", figureDescription: "", source: "Inanna's Descent")
+        let tags = TagEngine.tags(for: figure)
+        XCTAssertTrue(tags.contains("goddess"))
+        XCTAssertFalse(tags.contains("god"))
+        XCTAssertTrue(tags.contains("inanna's descent"))
+        XCTAssertTrue(tags.contains("love"))
+        XCTAssertTrue(tags.contains("venus"))
+    }
+
+    func testTagEngineKingTags() {
+        let humanType = FigureType(name: "Human", icon: "person", colorHex: "007AFF")
+        let figure = Figure(name: "Aga of Kish", figureType: humanType, gender: .male, domain: "Kingship of Kish", figureDescription: "", source: "Sumerian King List")
+        let tags = TagEngine.tags(for: figure)
+        XCTAssertTrue(tags.contains("human"))
+        XCTAssertTrue(tags.contains("king"))
+        XCTAssertTrue(tags.contains("kingship"))
+        XCTAssertTrue(tags.contains("kish"))
+        XCTAssertTrue(tags.contains("sumerian king list"))
+    }
+
+    func testTagEngineNonRulingHumanIsNotKing() {
+        let humanType = FigureType(name: "Human", icon: "person", colorHex: "007AFF")
+        let figure = Figure(name: "Hammurabi", figureType: humanType, gender: .male, domain: "", figureDescription: "", source: "")
+        let tags = TagEngine.tags(for: figure)
+        XCTAssertTrue(tags.contains("human"))
+        XCTAssertFalse(tags.contains("king"))
+    }
+
+    func testTagEngineWatcherTagForCommander() {
+        let commanderType = FigureType(name: "Commander", icon: "shield", colorHex: "EF4444")
+        let figure = Figure(name: "Samyaza", figureType: commanderType, gender: .male, domain: "Divine Council", figureDescription: "", source: "Book of Enoch (1 Enoch)")
+        let tags = TagEngine.tags(for: figure)
+        XCTAssertTrue(tags.contains("watcher"))
+        XCTAssertTrue(tags.contains("book of enoch"))
+        XCTAssertTrue(tags.contains("divine"))
+        XCTAssertTrue(tags.contains("council"))
+    }
+
+    func testTagEnginePlaceTags() {
+        let cityType = PlaceType(name: "City", icon: "building", colorHex: "007AFF")
+        let place = Place(name: "Eridu", placeType: cityType, modernLocation: "Abu Shahrain, Southern Iraq", placeDescription: "", source: "Sumerian King List", latitude: 30.816, longitude: 45.996)
+        let tags = TagEngine.tags(for: place)
+        XCTAssertTrue(tags.contains("city"))
+        XCTAssertTrue(tags.contains("iraq"))
+        XCTAssertTrue(tags.contains("sumerian king list"))
+        XCTAssertEqual(TagEngine.historicalRegionTag("Upper Mesopotamia"), "mesopotamia")
+        XCTAssertNil(TagEngine.historicalRegionTag("Eridu"))
+    }
+
+    func testTagEngineEventTags() {
+        let battleType = EventType(name: "Battle", icon: "flame", colorHex: "FF3B30")
+        let event = Event(name: "Sargon Conquers Sumer", eventType: battleType, eventDescription: "", date: .unknown, era: "Dynasty of Akkad", source: "Sumerian King List")
+        let tags = TagEngine.tags(for: event)
+        XCTAssertTrue(tags.contains("battle"))
+        XCTAssertTrue(tags.contains("dynasty of akkad"))
+        XCTAssertTrue(tags.contains("sumerian king list"))
+    }
+
+    func testTagEngineThingCategories() {
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "The Gold Dagger of Ur", description: "").contains("artifact"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Kingship", description: "").contains("office"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Truth", description: "").contains("concept"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Atra-Hasis", description: "").contains("literary work"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Craft of the smith", description: "").contains("craft"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Me", description: "").contains("divine powers"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "The flood", description: "").contains("flood"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Holy purification", description: "").contains("concept"))
+        XCTAssertTrue(TagEngine.thingCategoryTags(name: "Kurgarra (cultic entertainer)", description: "").contains("office"))
+    }
+
+    func testTagEngineDomainSplitsPhrases() {
+        XCTAssertEqual(TagEngine.domainTags("Sky, Kingship, Authority"), ["sky", "kingship", "authority"])
+        XCTAssertEqual(TagEngine.domainTags("Kingship of Kish"), ["kingship", "kish"])
+        XCTAssertEqual(TagEngine.domainTags("Salt Water, Chaos"), ["salt", "water", "chaos"])
+        XCTAssertEqual(TagEngine.domainTags(""), [])
+    }
+
+    func testTagEngineDomainStripsConnectorsAndFragments() {
+        XCTAssertEqual(TagEngine.domainTags("and the underworld"), ["underworld"])
+        XCTAssertEqual(TagEngine.domainTags("associated with farming and fertility"), ["farming", "fertility"])
+        XCTAssertEqual(TagEngine.domainTags("steward and scribe"), ["steward", "scribe"])
+        XCTAssertEqual(TagEngine.domainTags("and boundary stones"), ["boundary", "stones"])
+        XCTAssertEqual(TagEngine.domainTags("localized military defense"), ["localized", "military", "defense"])
+        XCTAssertEqual(TagEngine.domainTags("and"), [])
+        XCTAssertEqual(TagEngine.domainTags("Sky, Sky"), ["sky"])
+    }
+
+    func testTagEngineColorHexDeterministic() {
+        XCTAssertEqual(TagEngine.colorHex(for: "wisdom"), TagEngine.colorHex(for: "wisdom"))
+        XCTAssertNotEqual(TagEngine.colorHex(for: "wisdom"), TagEngine.colorHex(for: "battle"))
+        XCTAssertEqual(TagEngine.colorHex(for: "water").count, 6)
+    }
+
+    func testEnsureAutoTagsTagsAllKinds() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let deityType = FigureType(name: "Deity", icon: "star", colorHex: "FF9500")
+        let figure = Figure(name: "Enki", figureType: deityType, gender: .male, domain: "Water, Wisdom", figureDescription: "", source: "Enuma Elish")
+        context.insert(figure)
+        let cityType = PlaceType(name: "City", icon: "building", colorHex: "007AFF")
+        context.insert(Place(name: "Uruk", placeType: cityType, modernLocation: "Iraq", placeDescription: "", source: "", latitude: 31.322, longitude: 45.639))
+        let battleType = EventType(name: "Battle", icon: "flame", colorHex: "FF3B30")
+        context.insert(Event(name: "Slaying of Tiamat", eventType: battleType, eventDescription: "", date: .unknown, era: "Creation", source: "Enuma Elish"))
+        context.insert(Thing(name: "The Gold Dagger of Ur", thingDescription: "", source: ""))
+        try? context.save()
+
+        Migration.ensureAutoTags(context: context)
+
+        XCTAssertFalse(figure.tags.isEmpty)
+        XCTAssertTrue(figure.tags.contains { $0.name == "deity" })
+        XCTAssertTrue(figure.tags.contains { $0.name == "water" })
+        let allPlaces: [Place] = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(allPlaces.first?.tags.map(\.name).sorted(), ["city", "iraq"])
+        let allEvents: [Event] = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        XCTAssertTrue(allEvents.first?.tags.contains { $0.name == "battle" } ?? false)
+        XCTAssertTrue(allEvents.first?.tags.contains { $0.name == "creation" } ?? false)
+        let allThings: [Thing] = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        XCTAssertTrue(allThings.first?.tags.contains { $0.name == "artifact" } ?? false)
+    }
+
+    func testEnsureAutoTagsSkipsEntitiesWithExistingTags() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Marduk", figureType: FigureType(name: "Deity", icon: "star", colorHex: "FF9500"), gender: .male, domain: "Storm, Creation, Kingship", figureDescription: "", source: "Enuma Elish")
+        context.insert(figure)
+        let userTag = Tag(name: "user-curated", colorHex: "FF9500")
+        context.insert(userTag)
+        figure.tags.append(userTag)
+        try? context.save()
+
+        Migration.ensureAutoTags(context: context)
+
+        XCTAssertEqual(figure.tags.map(\.name), ["user-curated"], "an entity with any tag must be left untouched")
+    }
+
+    func testEnsureAutoTagsIsIdempotentAndReusesTags() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let deityType = FigureType(name: "Deity", icon: "star", colorHex: "FF9500")
+        context.insert(Figure(name: "Enki", figureType: deityType, gender: .male, domain: "Water", figureDescription: "", source: "Enuma Elish"))
+        context.insert(Figure(name: "Ea", figureType: deityType, gender: .male, domain: "Water", figureDescription: "", source: "Enuma Elish"))
+        try? context.save()
+
+        Migration.ensureAutoTags(context: context)
+        Migration.ensureAutoTags(context: context)
+
+        let allTags: [Tag] = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        XCTAssertEqual(allTags.filter { $0.name == "water" }.count, 1, "the same tag name must resolve to one Tag row")
+        XCTAssertEqual(allTags.filter { $0.name == "deity" }.count, 1)
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        for figure in figures {
+            XCTAssertEqual(figure.tags.count, Set(figure.tags.map(\.name)).count, "no duplicate tag rows per figure")
+        }
+    }
+
+    func testEnsureAutoTagsLeavesUntaggableEntitiesUntagged() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Thing(name: "Unremarkable", thingDescription: "", source: ""))
+        try? context.save()
+
+        Migration.ensureAutoTags(context: context)
+
+        let allTags: [Tag] = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        XCTAssertTrue(allTags.isEmpty, "a thing that matches no category must not force a tag")
+        let allThings: [Thing] = (try? context.fetch(FetchDescriptor<Thing>())) ?? []
+        XCTAssertTrue(allThings.first?.tags.isEmpty ?? true)
+    }
+
+    func testEnsureRefinedDomainTagsSplitsLegacyFragments() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Ninurta", figureType: FigureType(name: "Deity", icon: "star", colorHex: "FF9500"), gender: .male, domain: "steward and scribe; associated with farming and fertility; and the underworld", figureDescription: "", source: "Sumerian King List")
+        context.insert(figure)
+        let legacyNames = ["steward and scribe", "associated with farming and fertility", "and the underworld", "sumerian king list"]
+        for name in legacyNames {
+            let tag = Tag(name: name, colorHex: "FF9500")
+            context.insert(tag)
+            figure.tags.append(tag)
+        }
+        try? context.save()
+
+        Migration.ensureRefinedDomainTags(context: context)
+
+        let names = Set(figure.tags.map(\.name))
+        for obsolete in ["steward and scribe", "associated with farming and fertility", "and the underworld"] {
+            XCTAssertFalse(names.contains(obsolete), "legacy fragment \(obsolete) must be removed")
+        }
+        for refined in ["steward", "scribe", "farming", "fertility", "underworld"] {
+            XCTAssertTrue(names.contains(refined), "refined single-word tag \(refined) missing")
+        }
+        XCTAssertTrue(names.contains("sumerian king list"), "tradition tag must survive the pass")
+    }
+
+    func testEnsureRefinedDomainTagsIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Ninurta", figureType: FigureType(name: "Deity", icon: "star", colorHex: "FF9500"), gender: .male, domain: "steward and scribe", figureDescription: "", source: "")
+        context.insert(figure)
+        let legacy = Tag(name: "steward and scribe", colorHex: "FF9500")
+        context.insert(legacy)
+        figure.tags.append(legacy)
+        try? context.save()
+
+        Migration.ensureRefinedDomainTags(context: context)
+        Migration.ensureRefinedDomainTags(context: context)
+
+        XCTAssertEqual(Set(figure.tags.map(\.name)), ["steward", "scribe"])
+        let allTags: [Tag] = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        XCTAssertEqual(allTags.filter { $0.name == "steward" }.count, 1, "one Tag row per refined name")
+        XCTAssertEqual(allTags.filter { $0.name == "scribe" }.count, 1)
+    }
+
+    func testEnsureDynastyGroupsCreatesSubgroupsWithFiguresAndEvents() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let kishEra = Era(name: "First dynasty of Kish", orderIndex: 0)
+        let akkadEra = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        context.insert(kishEra)
+        context.insert(akkadEra)
+
+        func king(_ name: String, era: Era, order: Int) -> Figure {
+            let figure = Figure(name: name, domain: "Kingship", figureDescription: "", orderIndex: order)
+            figure.era = era
+            context.insert(figure)
+            return figure
+        }
+        king("En-me-barage-si", era: kishEra, order: 0)
+        king("Agga", era: kishEra, order: 1)
+        king("Sargon", era: akkadEra, order: 0)
+        king("Naram-Sin", era: akkadEra, order: 1)
+        context.insert(Figure(name: "Enki", domain: "Wisdom", figureDescription: "", orderIndex: 0))
+
+        let kishEvent = Event(name: "Siege of Uruk", date: .unknown, era: "First dynasty of Kish", source: "")
+        let akkadEvent = Event(name: "Fall of Akkad", date: .unknown, era: "Dynasty of Akkad", source: "")
+        let floodEvent = Event(name: "The Great Flood", date: .unknown, era: "The Great Flood", source: "")
+        context.insert(kishEvent)
+        context.insert(akkadEvent)
+        context.insert(floodEvent)
+        try? context.save()
+
+        Migration.ensureDynastyGroups(context: context)
+        Migration.ensureDynastyGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let top = groups.first(where: { $0.name == "Dynasties" }) else {
+            return XCTFail("Dynasties top group missing")
+        }
+        XCTAssertEqual(top.kind, .skl)
+        let subs = top.sortedSubgroups
+        XCTAssertEqual(subs.map(\.name), ["First dynasty of Kish", "Dynasty of Akkad"])
+
+        guard let kish = subs.first(where: { $0.name == "First dynasty of Kish" }),
+              let akkad = subs.first(where: { $0.name == "Dynasty of Akkad" }) else {
+            return XCTFail("dynasty subgroups missing")
+        }
+
+        XCTAssertEqual(kish.sortedAssociations.compactMap { $0.figure?.name }, ["En-me-barage-si", "Agga"], "kings in reign order")
+        XCTAssertEqual(akkad.sortedAssociations.compactMap { $0.figure?.name }, ["Sargon", "Naram-Sin"])
+        XCTAssertFalse(kish.sortedAssociations.contains { $0.figure?.name == "Enki" }, "non-dynastic figure excluded")
+
+        XCTAssertEqual(kish.era?.persistentModelID, kishEra.persistentModelID, "subgroup linked to its era")
+        XCTAssertEqual(akkad.era?.persistentModelID, akkadEra.persistentModelID, "subgroup linked to its era")
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Era>())) ?? 0, 2)
+        XCTAssertEqual(kishEra.groups?.map(\.name), ["First dynasty of Kish"], "inverse era.groups populated")
+
+        XCTAssertEqual(kish.sortedAssociations.compactMap { $0.event?.name }, ["Siege of Uruk"], "era-matched event attached")
+        XCTAssertEqual(akkad.sortedAssociations.compactMap { $0.event?.name }, ["Fall of Akkad"])
+        XCTAssertFalse(akkad.sortedAssociations.contains { $0.event?.name == "The Great Flood" }, "non-dynastic event excluded")
+        XCTAssertEqual(kish.sortMode, .ordered)
+
+        let totalAssocs = (try? context.fetchCount(FetchDescriptor<FigureGroupAssociation>())) ?? 0
+        XCTAssertEqual(totalAssocs, 6, "no duplicate members across two runs")
+    }
+
+    func testEnsureDynastyGroupsPreservesManualSubgroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let akkadEra = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        context.insert(akkadEra)
+        let sargon = Figure(name: "Sargon", domain: "Kingship", figureDescription: "", orderIndex: 0)
+        sargon.era = akkadEra
+        context.insert(sargon)
+
+        let top = FigureGroup(name: "Dynasties", icon: "building.columns", colorHex: "007AFF", kind: .skl)
+        context.insert(top)
+        let manualSub = FigureGroup(name: "Dynasty of Akkad", icon: "crown", colorHex: "007AFF", orderIndex: 0, kind: .skl, sortMode: .ordered)
+        context.insert(manualSub)
+        top.subgroups = [manualSub]
+        let manualAssoc = FigureGroupAssociation(figure: sargon)
+        context.insert(manualAssoc)
+        manualSub.figureAssociations = [manualAssoc]
+        sargon.groupAssociations.append(manualAssoc)
+        manualAssoc.orderIndex = 7
+        try? context.save()
+
+        Migration.ensureDynastyGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        let subs = groups.filter { $0.name == "Dynasty of Akkad" }
+        XCTAssertEqual(subs.count, 1, "existing subgroup reused, not duplicated")
+        XCTAssertEqual(subs.first?.figureAssociations.count, 1, "manual member kept, no duplicate")
+        XCTAssertEqual(subs.first?.figureAssociations.first?.orderIndex, 7, "manual order index untouched")
+        XCTAssertEqual(subs.first?.era?.persistentModelID, akkadEra.persistentModelID, "existing subgroup linked to its era")
+    }
+
+    func testEnsureDynastyGroupsLinksErasAcrossOtherTrees() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let kishEra = Era(name: "First dynasty of Kish", orderIndex: 0)
+        let akkadEra = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        context.insert(kishEra)
+        context.insert(akkadEra)
+
+        let legacyTop = FigureGroup(name: "Sumerian King List", icon: "building.columns", colorHex: "8E8E93", kind: .skl)
+        context.insert(legacyTop)
+        let kishSub = FigureGroup(name: "First dynasty of Kish", icon: "crown", colorHex: "8E8E93", orderIndex: 0, kind: .skl)
+        let akkadSub = FigureGroup(name: "The dynasty of Akkad", icon: "crown", colorHex: "8E8E93", orderIndex: 1, kind: .skl)
+        let typoSub = FigureGroup(name: "Fouth dynasty of Uruk", icon: "crown", colorHex: "8E8E93", orderIndex: 2, kind: .skl)
+        context.insert(kishSub)
+        context.insert(akkadSub)
+        context.insert(typoSub)
+        legacyTop.subgroups = [kishSub, akkadSub, typoSub]
+        try? context.save()
+
+        Migration.ensureDynastyGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        let kish = groups.first { $0.name == "First dynasty of Kish" && $0.parentGroup === legacyTop }
+        let akkad = groups.first { $0.name == "The dynasty of Akkad" }
+        let typo = groups.first { $0.name == "Fouth dynasty of Uruk" }
+        XCTAssertEqual(kish?.era?.persistentModelID, kishEra.persistentModelID, "legacy subgroup linked by exact normalized name")
+        XCTAssertEqual(akkad?.era?.persistentModelID, akkadEra.persistentModelID, "leading 'the' stripped before matching")
+        XCTAssertNil(typo?.era, "typo'd name left untouched")
+        XCTAssertEqual(kishEra.groups?.contains { $0 === kish }, true, "inverse era.groups includes legacy subgroup")
+        XCTAssertEqual(kish?.figureAssociations.isEmpty, true, "no members auto-added to legacy tree")
+    }
+
+    // MARK: - Event Propagation
+
+    func testAddEventWithPropagationCreatesFiguresAndPlacesAndThings() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Atrahasis Group", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        let mami = Figure(name: "Mami", figureDescription: "")
+        context.insert(enki); context.insert(mami)
+
+        let eridu = Place(name: "Eridu", placeDescription: "")
+        context.insert(eridu)
+
+        let tablet = Thing(name: "Atra-Hasis Tablet", thingDescription: "")
+        context.insert(tablet)
+
+        let flood = Event(name: "The Flood", eventDescription: "")
+        context.insert(flood)
+
+        let efa1 = EventFigureAssociation(event: flood, figure: enki)
+        let efa2 = EventFigureAssociation(event: flood, figure: mami)
+        context.insert(efa1); context.insert(efa2)
+        flood.figureAssociations = [efa1, efa2]
+        flood.involvedFigures = []
+
+        let epa = EventPlaceAssociation(event: flood, place: eridu)
+        context.insert(epa)
+        flood.placeAssociations = [epa]
+
+        let tea = ThingEventAssociation(thing: tablet, event: flood)
+        context.insert(tea)
+        tablet.eventAssociations = [tea]
+
+        try? context.save()
+
+        let summary = group.addEventWithPropagation(event: flood, in: context)
+        try? context.save()
+
+        XCTAssertEqual(summary?.figureNames.sorted(), ["Enki", "Mami"])
+        XCTAssertEqual(summary?.placeNames, ["Eridu"])
+        XCTAssertEqual(summary?.thingNames, ["Atra-Hasis Tablet"])
+
+        let figNames = group.figureAssociations.compactMap { $0.figure?.name }.sorted()
+        XCTAssertEqual(figNames, ["Enki", "Mami"])
+        XCTAssertEqual(group.figureAssociations.first?.propagatedFromEventName, "The Flood")
+
+        let placeNames = group.figureAssociations.compactMap { $0.place?.name }
+        XCTAssertEqual(placeNames, ["Eridu"])
+
+        let thingNames = group.figureAssociations.compactMap { $0.thing?.name }
+        XCTAssertEqual(thingNames, ["Atra-Hasis Tablet"])
+    }
+
+    func testAddEventWithPropagationSkipsExistingMembers() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        context.insert(enki)
+
+        let existing = FigureGroupAssociation(figure: enki)
+        context.insert(existing)
+        group.figureAssociations.append(existing)
+
+        let flood = Event(name: "The Flood", eventDescription: "")
+        context.insert(flood)
+
+        let efa = EventFigureAssociation(event: flood, figure: enki)
+        context.insert(efa)
+        flood.figureAssociations = [efa]
+        flood.involvedFigures = []
+        try? context.save()
+
+        let summary = group.addEventWithPropagation(event: flood, in: context)
+
+        XCTAssertNil(summary, "nil when nothing new propagated")
+        XCTAssertEqual(group.figureAssociations.count, 2, "event + existing figure")
+        XCTAssertTrue(group.figureAssociations.contains { $0.event === flood }, "event was added")
+    }
+
+    func testAddEventWithPropagationIncludesLegacyInvolvedFigures() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        context.insert(enki)
+
+        let flood = Event(name: "The Flood", eventDescription: "")
+        context.insert(flood)
+        flood.involvedFigures = [enki]
+        flood.figureAssociations = []
+        try? context.save()
+
+        let summary = group.addEventWithPropagation(event: flood, in: context)
+
+        XCTAssertEqual(summary?.figureNames, ["Enki"])
+    }
+
+    func testRemoveEventWithDepropagationRemovesOnlyPropagated() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        let manual = Figure(name: "Manually Added", figureDescription: "")
+        context.insert(enki); context.insert(manual)
+
+        let propagAssoc = FigureGroupAssociation(figure: enki, propagatedFromEventName: "The Flood")
+        let manualAssoc = FigureGroupAssociation(figure: manual)
+        context.insert(propagAssoc); context.insert(manualAssoc)
+        group.figureAssociations = [propagAssoc, manualAssoc]
+
+        let flood = Event(name: "The Flood", eventDescription: "")
+        context.insert(flood)
+
+        let efa = EventFigureAssociation(event: flood, figure: enki)
+        context.insert(efa)
+        flood.figureAssociations = [efa]
+        flood.involvedFigures = []
+        try? context.save()
+
+        let removed = group.removeEventWithDepropagation(event: flood, in: context)
+        try? context.save()
+
+        XCTAssertEqual(removed, ["Enki"])
+        XCTAssertEqual(group.figureAssociations.count, 1, "manual association kept")
+        XCTAssertEqual(group.figureAssociations.first?.figure?.name, "Manually Added")
+    }
+
+    func testRemoveEventWithDepropagationKeepsIfCoveredByOtherEvent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        context.insert(enki)
+
+        let eventA = Event(name: "Event A", eventDescription: "")
+        let eventB = Event(name: "Event B", eventDescription: "")
+        context.insert(eventA); context.insert(eventB)
+
+        let propagAssoc = FigureGroupAssociation(figure: enki, propagatedFromEventName: "Event A")
+        let eventBAssoc = FigureGroupAssociation(event: eventB)
+        context.insert(propagAssoc); context.insert(eventBAssoc)
+        group.figureAssociations = [propagAssoc, eventBAssoc]
+
+        let efaA = EventFigureAssociation(event: eventA, figure: enki)
+        let efaB = EventFigureAssociation(event: eventB, figure: enki)
+        context.insert(efaA); context.insert(efaB)
+        eventA.figureAssociations = [efaA]
+        eventB.figureAssociations = [efaB]
+        eventA.involvedFigures = []
+        eventB.involvedFigures = []
+        try? context.save()
+
+        _ = group.removeEventWithDepropagation(event: eventA, in: context)
+        try? context.save()
+
+        XCTAssertEqual(group.figureAssociations.count, 2, "eventB group assoc + enki (depromoted, kept)")
+        XCTAssertNil(group.figureAssociations.first { $0.figure === enki }?.propagatedFromEventName, "propagation cleared")
+        XCTAssertEqual(group.figureAssociations.first { $0.figure === enki }?.figure?.name, "Enki")
+    }
+
+    func testPropagationPreviewShowsCorrectCounts() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        let mami = Figure(name: "Mami", figureDescription: "")
+        context.insert(enki); context.insert(mami)
+
+        let eridu = Place(name: "Eridu", placeDescription: "")
+        context.insert(eridu)
+
+        let tablet = Thing(name: "Tablet", thingDescription: "")
+        context.insert(tablet)
+
+        let flood = Event(name: "The Flood", eventDescription: "")
+        context.insert(flood)
+
+        let efa = EventFigureAssociation(event: flood, figure: enki)
+        context.insert(efa)
+        flood.figureAssociations = [efa]
+        flood.involvedFigures = [mami]
+
+        let epa = EventPlaceAssociation(event: flood, place: eridu)
+        context.insert(epa)
+        flood.placeAssociations = [epa]
+
+        let tea = ThingEventAssociation(thing: tablet, event: flood)
+        context.insert(tea)
+        tablet.eventAssociations = [tea]
+        try? context.save()
+
+        let preview = group.propagationPreview(for: flood)
+
+        XCTAssertEqual(preview?.figureNames.count, 2)
+        XCTAssertEqual(preview?.placeNames.count, 1)
+        XCTAssertEqual(preview?.thingNames.count, 1)
+        XCTAssertTrue(preview?.description.contains("2 figures") == true)
+        XCTAssertTrue(preview?.description.contains("1 place") == true)
+        XCTAssertTrue(preview?.description.contains("1 thing") == true)
+    }
+
+    func testPropagationPreviewExcludesExistingMembers() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        let mami = Figure(name: "Mami", figureDescription: "")
+        context.insert(enki); context.insert(mami)
+
+        let existing = FigureGroupAssociation(figure: enki)
+        context.insert(existing)
+        group.figureAssociations.append(existing)
+
+        let flood = Event(name: "The Flood", eventDescription: "")
+        context.insert(flood)
+
+        let efa = EventFigureAssociation(event: flood, figure: enki)
+        context.insert(efa)
+        flood.figureAssociations = [efa]
+        flood.involvedFigures = [mami]
+        try? context.save()
+
+        let preview = group.propagationPreview(for: flood)
+
+        XCTAssertEqual(preview?.figureNames, ["Mami"], "only non-existing figure counted")
+    }
+
+    func testEventsInvolvingEntityReturnsMatchingEvents() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Test", entityType: .figure)
+        context.insert(group)
+
+        let enki = Figure(name: "Enki", figureDescription: "")
+        context.insert(enki)
+
+        let eventA = Event(name: "Event A", eventDescription: "")
+        let eventB = Event(name: "Event B", eventDescription: "")
+        context.insert(eventA); context.insert(eventB)
+
+        let efaA = EventFigureAssociation(event: eventA, figure: enki)
+        let efaB = EventFigureAssociation(event: eventB, figure: enki)
+        context.insert(efaA); context.insert(efaB)
+        eventA.figureAssociations = [efaA]
+        eventB.figureAssociations = [efaB]
+        eventA.involvedFigures = []
+        eventB.involvedFigures = []
+        try? context.save()
+
+        let assoc = FigureGroupAssociation(figure: enki)
+        let eventAInGroup = FigureGroupAssociation(event: eventA)
+        let eventBInGroup = FigureGroupAssociation(event: eventB)
+        context.insert(assoc); context.insert(eventAInGroup); context.insert(eventBInGroup)
+        group.figureAssociations = [assoc, eventAInGroup, eventBInGroup]
+
+        let events = group.eventsInvolving(entityID: enki.persistentModelID, in: context)
+        let names = events.map(\.name).sorted()
+        XCTAssertEqual(names, ["Event A", "Event B"])
+    }
+
+    func testPropagatedFromEventNameIsNilByDefault() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let assoc = FigureGroupAssociation(figure: Figure(name: "X"))
+        context.insert(assoc)
+
+        XCTAssertNil(assoc.propagatedFromEventName)
+    }
+
+    func testPropagatedFromEventNameRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let assoc = FigureGroupAssociation(figure: Figure(name: "X"), propagatedFromEventName: "The Flood")
+        context.insert(assoc)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<FigureGroupAssociation>()))?.first
+        XCTAssertEqual(fetched?.propagatedFromEventName, "The Flood")
+    }
+
+    // MARK: - PopupTable Tests
+
+    func testPopupTableDefaultInit() {
+        let table = PopupTable()
+        XCTAssertEqual(table.name, "")
+        XCTAssertEqual(table.tableDescription, "")
+        XCTAssertTrue(table.attributes.isEmpty)
+        XCTAssertTrue(table.cells.isEmpty)
+    }
+
+    func testPopupTableRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities", tableDescription: "Comparing canal deities")
+        context.insert(table)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<PopupTable>()))?.first
+        XCTAssertEqual(fetched?.name, "Water Deities")
+        XCTAssertEqual(fetched?.tableDescription, "Comparing canal deities")
+    }
+
+    func testPopupTableAttributeRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        context.insert(table)
+        let attr = PopupTableAttribute(table: table, name: "Primary Domain", orderIndex: 0)
+        context.insert(attr)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<PopupTableAttribute>()))?.first
+        XCTAssertEqual(fetched?.name, "Primary Domain")
+        XCTAssertEqual(fetched?.orderIndex, 0)
+        XCTAssertEqual(fetched?.table?.name, "T1")
+    }
+
+    func testPopupTableCellRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        let figure = Figure(name: "Enki")
+        let attr = PopupTableAttribute(table: table, name: "Domain")
+        context.insert(table); context.insert(figure); context.insert(attr)
+        let cell = PopupTableCell(table: table, attribute: attr, figure: figure, value: "Water")
+        context.insert(cell)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<PopupTableCell>()))?.first
+        XCTAssertEqual(fetched?.value, "Water")
+        XCTAssertEqual(fetched?.figure?.name, "Enki")
+        XCTAssertEqual(fetched?.attribute?.name, "Domain")
+        XCTAssertEqual(fetched?.table?.name, "T1")
+    }
+
+    func testPopupTableFiguresDerivedFromCells() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        let enki = Figure(name: "Enki")
+        let enlil = Figure(name: "Enlil")
+        let attr = PopupTableAttribute(name: "Role")
+        table.attributes.append(attr)
+        table.figures.append(enki)
+        table.figures.append(enlil)
+        context.insert(table); context.insert(enki); context.insert(enlil); context.insert(attr)
+        context.insert(PopupTableCell(attribute: attr, figure: enki, value: "God of water"))
+        context.insert(PopupTableCell(attribute: attr, figure: enlil, value: "God of air"))
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        let names = fetched?.figures.map { $0.name }.sorted()
+        XCTAssertEqual(names, ["Enki", "Enlil"])
+    }
+
+    func testPopupTableAttributeOrdering() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        context.insert(table)
+        let a2 = PopupTableAttribute(name: "Role", orderIndex: 1)
+        let a1 = PopupTableAttribute(name: "Domain", orderIndex: 0)
+        table.attributes.append(a2)
+        table.attributes.append(a1)
+        context.insert(a2); context.insert(a1)
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        let sorted = fetched?.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
+        XCTAssertEqual(sorted?.first?.name, "Domain")
+        XCTAssertEqual(sorted?.last?.name, "Role")
+    }
+
+    func testPopupTableCascadeDelete() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        let figure = Figure(name: "Enki")
+        let attr = PopupTableAttribute(name: "Domain")
+        table.attributes.append(attr)
+        table.figures.append(figure)
+        context.insert(table); context.insert(figure); context.insert(attr)
+        let cell = PopupTableCell(attribute: attr, figure: figure, value: "Water")
+        table.cells.append(cell)
+        context.insert(cell)
+        try? context.save()
+
+        context.delete(table)
+        try? context.save()
+
+        let tables = (try? context.fetch(FetchDescriptor<PopupTable>())) ?? []
+        let attrs = (try? context.fetch(FetchDescriptor<PopupTableAttribute>())) ?? []
+        let cells = (try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []
+        XCTAssertTrue(tables.isEmpty)
+        XCTAssertTrue(attrs.isEmpty)
+        XCTAssertTrue(cells.isEmpty)
+    }
+
+    func testPopupTableCellNilValueRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        let figure = Figure(name: "Enki")
+        let attr = PopupTableAttribute(name: "Domain")
+        table.attributes.append(attr)
+        table.figures.append(figure)
+        context.insert(table); context.insert(figure); context.insert(attr)
+        let cell = PopupTableCell(attribute: attr, figure: figure, value: nil)
+        table.cells.append(cell)
+        context.insert(cell)
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []).first
+        XCTAssertNil(fetched?.value)
     }
 }

@@ -12,7 +12,7 @@ package final class FigureType {
     package var figures: [Figure] = []
 
     package var color: Color {
-        Color(hex: colorHex) ?? .gray
+        Color(hex: colorHex)
     }
 
     package init(name: String, icon: String, colorHex: String) {
@@ -23,9 +23,12 @@ package final class FigureType {
 }
 
 package extension Color {
-    init?(hex: String) {
+    init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-        guard hex.count == 6, let value = UInt64(hex, radix: 16) else { return nil }
+        guard hex.count == 6, let value = UInt64(hex, radix: 16) else {
+            self.init(.sRGB, red: 0.5, green: 0.5, blue: 0.5, opacity: 1)
+            return
+        }
         self.init(
             red: Double((value >> 16) & 0xFF) / 255,
             green: Double((value >> 8) & 0xFF) / 255,

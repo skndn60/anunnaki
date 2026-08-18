@@ -19,6 +19,11 @@ package final class Source {
     @Relationship(deleteRule: .cascade, inverse: \Attachment.source)
     package var attachments: [Attachment] = []
 
+    /// Lineage/other relationships attested by this source. Set links via
+    /// this side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \Relationship.sourceRef)
+    package var relationships: [Relationship] = []
+
     package enum SourceType: String, Codable, CaseIterable, Hashable {
         case ancientText = "Ancient Text"
         case tablet = "Tablet"

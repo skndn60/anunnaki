@@ -31,6 +31,21 @@ package final class Figure {
     /// A title, not an alias, so it lives on the figure rather than as an AlternateName.
     package var epithet: String?
 
+    /// Designated portrait ("mugshot") — a crop of a statue photo, not every figure
+    /// has one. The original `ImageAsset` stays whole; `mugshotCropRect` describes
+    /// the normalized crop ("x,y,w,h") applied when rendering.
+    @Relationship(deleteRule: .nullify, inverse: \ImageAsset.mugshots)
+    package var mugshotImage: ImageAsset?
+
+    /// Normalized crop rectangle `"x,y,w,h"` (0...1) into `mugshotImage`.
+    package var mugshotCropRect: String?
+
+    /// How the statue was identified as this figure: "inscribed" (the statue
+    /// carries the name, e.g. Gudea), "conventional" (scholarly consensus,
+    /// e.g. the Hammurabi stele relief), "hypothetical" (museum-label guess),
+    /// or "unknown". Most Mesopotamian statues are anonymous — the tier matters.
+    package var mugshotIdentification: String?
+
     @Relationship
     package var era: Era?
 
@@ -90,6 +105,13 @@ package final class Figure {
 
     @Relationship(inverse: \ContentAttribution.figure)
     package var contentAttributions: [ContentAttribution]? = nil
+
+    /// Comparison table cells this figure appears in
+    @Relationship(deleteRule: .cascade, inverse: \PopupTableCell.figure)
+    package var popupTableCells: [PopupTableCell] = []
+
+    /// Comparison tables this figure is listed in
+    package var popupTables: [PopupTable]? = nil
 
     package enum Gender: String, Codable, CaseIterable, Hashable {
         case male = "Male"

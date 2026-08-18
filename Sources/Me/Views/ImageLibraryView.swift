@@ -189,7 +189,8 @@ struct ImageLibraryCell: View {
 
     private func tagToken(_ tag: Tag) -> some View {
         HStack(spacing: 2) {
-            if let hex = tag.colorHex, !hex.isEmpty, let color = Color(hex: hex) {
+            if let hex = tag.colorHex, !hex.isEmpty {
+                let color = Color(hex: hex)
                 Circle()
                     .fill(color)
                     .frame(width: 5, height: 5)

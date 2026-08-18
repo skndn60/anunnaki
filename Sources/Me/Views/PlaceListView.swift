@@ -282,6 +282,16 @@ struct PlaceListView: View {
                 PlaceRow(place: place)
                     .tag(place.persistentModelID)
                     .id(place.persistentModelID)
+                    .contextMenu {
+                        Button("Edit") {
+                            editingPlace = place
+                        }
+                        Divider()
+                        Button("Delete", role: .destructive) {
+                            selectedPlaceID = place.persistentModelID
+                            showDeleteConfirm = true
+                        }
+                    }
             }
         }
     }

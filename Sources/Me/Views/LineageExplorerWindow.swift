@@ -48,11 +48,22 @@ private struct FigureLineageExplorerContent: View {
     @State private var focusFigure: Figure
     @State private var showGrandparents = false
     @State private var showGrandchildren = false
+    @State private var sourceFilter = ""
 
     init(initialFigure: Figure, relationships: [Relationship]) {
         self.initialFigure = initialFigure
         self.relationships = relationships
         self._focusFigure = State(initialValue: initialFigure)
+    }
+
+    private var availableSources: [String] {
+        let sources = relationships.map(\.sourceDisplayName).filter { !$0.isEmpty }
+        return Array(Set(sources)).sorted()
+    }
+
+    private var filteredRelationships: [Relationship] {
+        guard !sourceFilter.isEmpty else { return relationships }
+        return relationships.filter { $0.sourceDisplayName == sourceFilter }
     }
 
     var body: some View {
@@ -88,8 +99,38 @@ private struct FigureLineageExplorerContent: View {
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .lineLimit(1)
+            if availableSources.count > 1 {
+                sourceFilterMenu
+            }
         }
         .padding()
+    }
+
+    private var sourceFilterMenu: some View {
+        Menu {
+            Button("All sources") { sourceFilter = "" }
+            Divider()
+            ForEach(availableSources, id: \.self) { source in
+                Button(source) { sourceFilter = source }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "book.closed")
+                    .font(.system(size: 9))
+                Text(sourceFilter.isEmpty ? "All sources" : sourceFilter)
+                    .font(.caption)
+                    .lineLimit(1)
+                Image(systemName: "chevron.up.chevron.down")
+                    .font(.system(size: 7))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.secondary.opacity(0.1)))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("Filter lineage by source")
     }
 
     private var treeContent: some View {
@@ -322,7 +363,7 @@ private struct FigureLineageExplorerContent: View {
     }
 
     private var resolvedParents: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
-        resolveGeneration(relationships.filter {
+        resolveGeneration(filteredRelationships.filter {
             $0.relationshipType?.category == "parent" && $0.toFigure?.persistentModelID == focusFigure.persistentModelID
         })
     }
@@ -331,7 +372,7 @@ private struct FigureLineageExplorerContent: View {
     private var parentAlts: [PersistentIdentifier: [Figure]] { resolvedParents.alts }
 
     private var resolvedChildren: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
-        resolveGeneration(relationships.filter {
+        resolveGeneration(filteredRelationships.filter {
             $0.relationshipType?.category == "parent" && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID
         })
     }
@@ -340,32 +381,32 @@ private struct FigureLineageExplorerContent: View {
     private var childAlts: [PersistentIdentifier: [Figure]] { resolvedChildren.alts }
 
     private var spousesLeft: [Figure] {
-        relationships
+        filteredRelationships
             .filter { $0.relationshipType?.name == "Spouse" && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private var spousesRight: [Figure] {
-        relationships
+        filteredRelationships
             .filter { $0.relationshipType?.name == "Spouse" && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private var consortsLeft: [Figure] {
-        relationships
+        filteredRelationships
             .filter { $0.relationshipType?.name == "Consort" && $0.toFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.fromFigure }
     }
 
     private var consortsRight: [Figure] {
-        relationships
+        filteredRelationships
             .filter { $0.relationshipType?.name == "Consort" && $0.fromFigure?.persistentModelID == focusFigure.persistentModelID }
             .compactMap { $0.toFigure }
     }
 
     private var resolvedGrandparents: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let parentIDs = Set(parents.map(\.persistentModelID))
-        return resolveGeneration(relationships.filter {
+        return resolveGeneration(filteredRelationships.filter {
             guard let toID = $0.toFigure?.persistentModelID else { return false }
             return $0.relationshipType?.category == "parent" && parentIDs.contains(toID)
         })
@@ -376,7 +417,7 @@ private struct FigureLineageExplorerContent: View {
 
     private var resolvedGrandchildren: (figures: [Figure], alts: [PersistentIdentifier: [Figure]]) {
         let childIDs = Set(children.map(\.persistentModelID))
-        return resolveGeneration(relationships.filter {
+        return resolveGeneration(filteredRelationships.filter {
             guard let fromID = $0.fromFigure?.persistentModelID else { return false }
             return $0.relationshipType?.category == "parent" && childIDs.contains(fromID)
         })
@@ -388,7 +429,7 @@ private struct FigureLineageExplorerContent: View {
     private var computeSiblings: [Figure] {
         let parentIDs = Set(parents.map(\.persistentModelID))
         guard !parentIDs.isEmpty else { return [] }
-        return relationships
+        return filteredRelationships
             .filter {
                 guard let fromID = $0.fromFigure?.persistentModelID,
                       let toID = $0.toFigure?.persistentModelID,
@@ -403,7 +444,7 @@ private struct FigureLineageExplorerContent: View {
     private var coParents: [Figure] {
         guard !children.isEmpty else { return [] }
         let childIDs = Set(children.map(\.persistentModelID))
-        let otherParentIDs = Set(relationships
+        let otherParentIDs = Set(filteredRelationships
             .filter {
                 guard let toID = $0.toFigure?.persistentModelID,
                       let fromID = $0.fromFigure?.persistentModelID,
@@ -413,7 +454,7 @@ private struct FigureLineageExplorerContent: View {
                 return true
             }
             .compactMap { $0.fromFigure?.persistentModelID })
-        return relationships.compactMap(\.fromFigure).filter { otherParentIDs.contains($0.persistentModelID) }
+        return filteredRelationships.compactMap(\.fromFigure).filter { otherParentIDs.contains($0.persistentModelID) }
     }
 
     private var siblingsExcludingCoParents: [Figure] {
