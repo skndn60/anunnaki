@@ -141,19 +141,19 @@ private struct FigureColumnHeader: View {
     var body: some View {
         HStack(spacing: 6) {
             if let mugshot = figure.mugshotImage {
-                MugshotView(imageURL: mugshot.fileURL, cropRect: figure.mugshotCropRect.flatMap { ImageCropRect(encoded: $0) }, size: 24, fallbackColor: figure.figureType.map { Color(hex: $0.colorHex) } ?? .gray, fallbackIcon: figure.figureType?.icon ?? "person.circle", identification: figure.mugshotIdentification)
+                MugshotView(imageURL: mugshot.fileURL, cropRect: figure.mugshotCropRect.flatMap { ImageCropRect(encoded: $0) }, size: 32, fallbackColor: figure.figureType.map { Color(hex: $0.colorHex) } ?? .gray, fallbackIcon: figure.figureType?.icon ?? "person.circle", identification: figure.mugshotIdentification)
             } else {
                 Circle()
                     .fill(figure.figureType.map { Color(hex: $0.colorHex) } ?? .gray)
-                    .frame(width: 24, height: 24)
+                    .frame(width: 32, height: 32)
                     .overlay(
                         Image(systemName: figure.figureType?.icon ?? "person.circle")
-                            .font(.caption2)
+                            .font(.caption)
                             .foregroundStyle(.white)
                     )
             }
             Text(figure.name)
-                .font(.caption.bold())
+                .font(.body.bold())
                 .lineLimit(1)
         }
         .padding(.horizontal, 8)
@@ -166,7 +166,7 @@ private struct AttributeRowHeader: View {
     let attribute: PopupTableAttribute
     var body: some View {
         Text(attribute.name)
-            .font(.caption.bold())
+            .font(.body.bold())
             .lineLimit(2)
             .padding(.horizontal, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -183,11 +183,11 @@ private struct CellView: View {
             if isEditing {
                 TextField("", text: $value)
                     .textFieldStyle(.plain)
-                    .font(.caption)
+                    .font(.body)
                     .padding(.horizontal, 6)
             } else {
                 Text(value.isEmpty ? "—" : value)
-                    .font(.caption)
+                    .font(.body)
                     .foregroundStyle(value.isEmpty ? .tertiary : .primary)
                     .padding(.horizontal, 6)
                     .frame(maxWidth: .infinity, alignment: .leading)
