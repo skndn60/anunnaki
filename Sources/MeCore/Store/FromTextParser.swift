@@ -279,7 +279,7 @@ package struct FromTextParser {
         var names: [String] = []
         for chunk in value.components(separatedBy: " and ").flatMap({ $0.components(separatedBy: ",") }) {
             let words = chunk.split(separator: " ")
-            guard let firstWord = words.first else { continue }
+            guard !words.isEmpty else { continue }
             var index = 0
             while index < words.count, nameFunctionWords.contains(words[index].lowercased().trimmingCharacters(in: .punctuationCharacters)) {
                 index += 1
