@@ -22,24 +22,16 @@ struct PopupTableView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading) {
-                    Text(table.name)
-                        .font(.headline)
-                    if !table.tableDescription.isEmpty {
-                        Text(table.tableDescription)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(table.name)
+                    .font(.headline)
+                if !table.tableDescription.isEmpty {
+                    Text(table.tableDescription)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
-                Spacer()
-                Button(action: { isEditing.toggle() }) {
-                    Label(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil")
-                }
-                .buttonStyle(.bordered)
-                Button("Close") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
 
             Divider()
@@ -89,6 +81,19 @@ struct PopupTableView: View {
                     .background(Color(nsColor: .separatorColor))
                 }
             }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button(action: { isEditing.toggle() }) {
+                    Label(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil")
+                }
+                .buttonStyle(.bordered)
+                Button("Close") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+            }
+            .padding()
         }
         .frame(minWidth: 700, minHeight: 400)
         .onAppear { loadCells() }
