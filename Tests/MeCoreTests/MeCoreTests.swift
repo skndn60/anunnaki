@@ -2427,6 +2427,8 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(ReignLength.parse(from: "he reigned for 25 years.")?.years, 25)
         XCTAssertEqual(ReignLength.parse(from: "He was said to have reigned for 18,600 years (5 sars and 1 ner).")?.years, 18600)
         XCTAssertEqual(ReignLength.parse(from: "Ruler from the First dynasty of Kish. Reigned 840 years (mythological length).")?.years, 840)
+        XCTAssertEqual(ReignLength.parse(from: "possibly reigning for 6 years")?.years, 6)
+        XCTAssertEqual(ReignLength.parse(from: "reigning for 7 years")?.years, 7)
     }
 
     func testReignLengthParsesNone() {
@@ -2525,6 +2527,217 @@ func testRegnalKeyOrdersEventsByDate() {
 
         Migration.ensureEpithets(context: context)
         XCTAssertNil(figure.epithet)
+    }
+
+    // MARK: - Computed SKL dates
+
+    func testDateSourceDefaultsToNil() {
+        let figure = Figure(name: "Test")
+        XCTAssertNil(figure.dateSource)
+        XCTAssertEqual(figure.decodedDateSource, .historical)
+    }
+
+    func testEnsureComputedSKLDatesWritesDatesAndSetsSource() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 390, startDate: MythologicalDate(startYear: -2334, endYear: -2334, era: "Dynasty of Akkad"), endDate: MythologicalDate(startYear: -2154, endYear: -2154, era: "Dynasty of Akkad"))
+        context.insert(era)
+        let anchor = Figure(name: "Naram-Sin", figureDescription: "Ruled c. 2255–2218 BC.\n(Listed reign: 37 years.)")
+        anchor.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Dynasty of Akkad")
+        anchor.era = era
+        context.insert(anchor)
+        let successor = Figure(name: "Sharkalisharri")
+        successor.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Dynasty of Akkad")
+        successor.era = era
+        successor.figureDescription = "(Listed reign: 25 years.)"
+        context.insert(successor)
+        try? context.save()
+
+        Migration.ensureComputedSKLDates(context: context)
+        XCTAssertNotNil(anchor.birthDate.startYear)
+        XCTAssertNotNil(successor.birthDate.startYear)
+        XCTAssertEqual(anchor.decodedDateSource, .computed)
+        XCTAssertEqual(successor.decodedDateSource, .computed)
+    }
+
+    func testEnsureComputedSKLDatesDoesNotOverwriteExistingDates() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 390, startDate: MythologicalDate(startYear: -2334, endYear: -2334, era: "Dynasty of Akkad"), endDate: MythologicalDate(startYear: -2154, endYear: -2154, era: "Dynasty of Akkad"))
+        context.insert(era)
+        let figure = Figure(name: "Naram-Sin", figureDescription: "Ruled c. 2255–2218 BC.\n(Listed reign: 37 years.)")
+        figure.birthDate = MythologicalDate(startYear: -2200, endYear: -2160, era: "Dynasty of Akkad")
+        figure.era = era
+        figure.dateSource = Figure.DateSource.historical.rawValue
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureComputedSKLDates(context: context)
+        XCTAssertEqual(figure.birthDate.startYear, -2200)
+        XCTAssertEqual(figure.decodedDateSource, .historical)
+    }
+
+    func testEnsureComputedSKLDatesIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 390, startDate: MythologicalDate(startYear: -2334, endYear: -2334, era: "Dynasty of Akkad"), endDate: MythologicalDate(startYear: -2154, endYear: -2154, era: "Dynasty of Akkad"))
+        context.insert(era)
+        let figure = Figure(name: "Naram-Sin", figureDescription: "Ruled c. 2255–2218 BC.\n(Listed reign: 37 years.)")
+        figure.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Dynasty of Akkad")
+        figure.era = era
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureComputedSKLDates(context: context)
+        let firstStartYear = figure.birthDate.startYear
+        XCTAssertNotNil(firstStartYear)
+
+        Migration.ensureComputedSKLDates(context: context)
+        XCTAssertEqual(figure.birthDate.startYear, firstStartYear)
+    }
+
+    func testFixSKLFigureOrderFixesHyphenatedName() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Apil-kin")
+        figure.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Gutian rule")
+        figure.orderIndex = 0
+        context.insert(figure)
+        try? context.save()
+
+        Migration.fixSKLFigureOrder(context: context)
+
+        XCTAssertEqual(figure.orderIndex, 10, "seed 'Apilkin' (index 10) must match hyphenated DB 'Apil-kin'")
+    }
+
+    func testEnsureSKLGutianReignLengthsFixesHyphenatedName() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Apil-kin")
+        figure.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Gutian rule")
+        figure.figureDescription = "Ruler from the Gutian rule. Reigned 3 years."
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureSKLGutianReignLengths(context: context)
+
+        XCTAssertTrue(
+            figure.figureDescription.contains("(Listed reign: 3 years.)"),
+            "seed 'Apilkin' (Listed reign: 3 years.) must match hyphenated DB 'Apil-kin'"
+        )
+    }
+
+    func testEnsureComputedSKLDatesPropagatesFullGutianDynastyFromAnchor() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Gutian rule", orderIndex: 700, startDate: MythologicalDate(startYear: -2200, endYear: -2200, era: "Gutian rule"), endDate: MythologicalDate(startYear: -2072, endYear: -2072, era: "Gutian rule"))
+        context.insert(era)
+
+        let namesAndReigns: [(String, Int)] = [
+            ("Inkishush", 6), ("Sarlagab", 6), ("Shulme", 6), ("Elulmesh", 6),
+            ("Inimabakesh", 5), ("Igeshaush", 6), ("Yarlagab", 15), ("Ibate", 3),
+            ("Yarla", 3), ("Kurum", 1), ("Apilkin", 3), ("La-erabum", 2),
+            ("Irarum", 2), ("Ibranum", 1), ("Hablum", 2), ("Puzur-Suen", 7),
+            ("Yarlaganda", 7), ("Unknown", 7), ("Tirigan", 40),
+        ]
+        var figures: [Figure] = []
+        for (i, (name, reign)) in namesAndReigns.enumerated() {
+            let figure = Figure(name: name)
+            figure.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Gutian rule")
+            figure.orderIndex = i
+            figure.era = era
+            if name == "Inkishush" {
+                figure.figureDescription = "Ruler from the Gutian rule. Reigned \(reign) years. (Listed reign: \(reign) years.) c. 2200–2194 BC"
+            } else {
+                figure.figureDescription = "Ruler from the Gutian rule. Reigned \(reign) years. (Listed reign: \(reign) years.)"
+            }
+            context.insert(figure)
+            figures.append(figure)
+        }
+        try? context.save()
+
+        Migration.ensureComputedSKLDates(context: context)
+
+        XCTAssertEqual(figures[0].birthDate.startYear, -2200)
+        XCTAssertEqual(figures[0].birthDate.endYear, -2194)
+        for figure in figures {
+            XCTAssertNotNil(figure.birthDate.startYear, "\(figure.name) should have a computed start year")
+            XCTAssertNotNil(figure.birthDate.endYear, "\(figure.name) should have a computed end year")
+            XCTAssertEqual(figure.decodedDateSource, .computed, "\(figure.name) dates must be flagged computed")
+        }
+        for i in 1..<figures.count {
+            XCTAssertEqual(figures[i].birthDate.startYear, figures[i - 1].birthDate.endYear, "contiguous reign chain breaks at \(figures[i].name)")
+        }
+        XCTAssertEqual(figures.last?.birthDate.endYear, -2072, "2200 minus 128 total Gutian reign-years")
+    }
+
+    // MARK: - Era date backfill from seed
+
+    func testEnsureEraDatesFromSeedBackfillsSecondDynastyOfKish() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Second dynasty of Kish", orderIndex: 15, startDate: .unknown, endDate: .unknown))
+        try? context.save()
+
+        Migration.ensureEraDatesFromSeed(context: context)
+
+        let era = (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == "Second dynasty of Kish" })))?.first
+        XCTAssertEqual(era?.startDate.startYear, -2500, "seed anchors Second dynasty of Kish at its conventional slot after Awan")
+        XCTAssertEqual(era?.startDate.endYear, -2500)
+        XCTAssertEqual(era?.endDate.startYear, -2400)
+        XCTAssertEqual(era?.endDate.endYear, -2400)
+        XCTAssertTrue(era?.startDate.isApproximate == true)
+    }
+
+    func testEnsureEraDatesFromSeedBackfillsAllDatedDynastyEras() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let names = ["First dynasty of Kish", "Second dynasty of Kish", "Dynasty of Akkad", "Gutian rule", "Dynasty of Isin"]
+        for (i, name) in names.enumerated() {
+            context.insert(Era(name: name, orderIndex: 500 + i, startDate: .unknown, endDate: .unknown))
+        }
+        try? context.save()
+
+        Migration.ensureEraDatesFromSeed(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        for era in eras {
+            XCTAssertNotNil(era.startDate.startYear, "\(era.name) should be backfilled from seed")
+            XCTAssertNotNil(era.endDate.startYear, "\(era.name) should be backfilled from seed")
+        }
+    }
+
+    func testEnsureEraDatesFromSeedIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Second dynasty of Kish", orderIndex: 15, startDate: .unknown, endDate: .unknown))
+        try? context.save()
+
+        Migration.ensureEraDatesFromSeed(context: context)
+        let first = (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == "Second dynasty of Kish" })))?.first
+        let firstStart = first?.startDate.startYear
+
+        Migration.ensureEraDatesFromSeed(context: context)
+        let second = (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == "Second dynasty of Kish" })))?.first
+        XCTAssertEqual(second?.startDate.startYear, firstStart)
+    }
+
+    func testEnsureEraDatesFromSeedNeverOverwritesExistingDates() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(
+            name: "Second dynasty of Kish",
+            orderIndex: 15,
+            startDate: MythologicalDate(startYear: -2600, endYear: -2600, era: "Second dynasty of Kish"),
+            endDate: MythologicalDate(startYear: -2550, endYear: -2550, era: "Second dynasty of Kish")
+        ))
+        try? context.save()
+
+        Migration.ensureEraDatesFromSeed(context: context)
+
+        let era = (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == "Second dynasty of Kish" })))?.first
+        XCTAssertEqual(era?.startDate.startYear, -2600, "user-entered era dates must never be overwritten")
+        XCTAssertEqual(era?.endDate.startYear, -2550)
     }
 
     // MARK: - Relationship sources
@@ -4749,5 +4962,329 @@ func testRegnalKeyOrdersEventsByDate() {
 
         let fetched = ((try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []).first
         XCTAssertNil(fetched?.value)
+    }
+
+    // MARK: - SKLTimelineLayout
+
+    func testIsDynastyEra() {
+        let sklFigure = Figure(name: "Jushur", source: "Sumerian King List")
+        let mythFigure = Figure(name: "Enki", source: "Sumerian mythology")
+        XCTAssertTrue(SKLTimelineLayout.isDynastyEra([sklFigure]))
+        XCTAssertTrue(SKLTimelineLayout.isDynastyEra([mythFigure, sklFigure]))
+        XCTAssertFalse(SKLTimelineLayout.isDynastyEra([mythFigure]))
+        XCTAssertFalse(SKLTimelineLayout.isDynastyEra([]))
+    }
+
+    func testIsDynastyEraMatchesCompoundSource() {
+        // Kings whose source is a compound string (like Etana) still count.
+        let figure = Figure(name: "Etana", source: "Sumerian King List; Sumerian mythology")
+        XCTAssertTrue(SKLTimelineLayout.isDynastyEra([figure]))
+    }
+
+    func testDynastyOrderedFiguresSortsByReignSequence() {
+        // Insertion order is scrambled (as in the live DB); orderIndex is the SKL sequence.
+        let jushur = Figure(name: "Jushur", source: "Sumerian King List", orderIndex: 0)
+        let kullassina = Figure(name: "Kullassina-bel", source: "Sumerian King List", orderIndex: 1)
+        let etana = Figure(name: "Etana", source: "Sumerian King List; Sumerian mythology", orderIndex: 12)
+        let aga = Figure(name: "Aga of Kish", source: "Sumerian King List", orderIndex: 22)
+
+        let ordered = SKLTimelineLayout.dynastyOrderedFigures([aga, etana, kullassina, jushur])
+        XCTAssertEqual(ordered.map(\.name), ["Jushur", "Kullassina-bel", "Etana", "Aga of Kish"])
+    }
+
+    func testDynastyOrderedFiguresTieBreaksByName() {
+        let a = Figure(name: "B", source: "Sumerian King List", orderIndex: 0)
+        let b = Figure(name: "A", source: "Sumerian King List", orderIndex: 0)
+        let ordered = SKLTimelineLayout.dynastyOrderedFigures([a, b])
+        XCTAssertEqual(ordered.map(\.name), ["A", "B"])
+    }
+
+    func testDynastySlotCentersEqualSpacing() {
+        // 23 kings across a 400-year band: first ≈ start+8.7, middle = 200, last ≈ start+391.3.
+        let slots = SKLTimelineLayout.dynastySlotCenters(count: 23, spanYears: 400)
+        XCTAssertEqual(slots.count, 23)
+        XCTAssertEqual(slots.first, 8)
+        XCTAssertEqual(slots[11], 200)
+        XCTAssertEqual(slots.last, 391)
+        XCTAssertEqual(slots, slots.sorted(), "slots are monotonically increasing")
+    }
+
+    func testDynastySlotCentersSingleRulerAndSmallSpan() {
+        XCTAssertEqual(SKLTimelineLayout.dynastySlotCenters(count: 1, spanYears: 400), [200])
+        XCTAssertEqual(SKLTimelineLayout.dynastySlotCenters(count: 0, spanYears: 100), [50], "count clamps to 1")
+        XCTAssertEqual(SKLTimelineLayout.dynastySlotCenters(count: 3, spanYears: 100), [16, 50, 83])
+    }
+
+    // MARK: - fixEraOrderIndices dynasty renumbering
+
+    func testFixEraOrderIndicesRenumbersDynastyErasToSeedOrder() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let dynasties: [(String, Int)] = [
+            ("First dynasty of Kish", 509),
+            ("First rulers of Uruk", 510),
+            ("First dynasty of Ur", 511),
+            ("Dynasty of Awan", 512),
+            ("Dynasty of Akkad", 523),
+            ("Gutian rule", 525),
+            ("Dynasty of Isin", 528),
+        ]
+        for (name, order) in dynasties {
+            context.insert(Era(name: name, orderIndex: order))
+        }
+        try? context.save()
+
+        Migration.fixEraOrderIndices(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let byName = Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0) })
+        XCTAssertEqual(byName["First dynasty of Kish"]?.orderIndex, 11)
+        XCTAssertEqual(byName["First rulers of Uruk"]?.orderIndex, 12)
+        XCTAssertEqual(byName["First dynasty of Ur"]?.orderIndex, 13)
+        XCTAssertEqual(byName["Dynasty of Awan"]?.orderIndex, 14)
+        XCTAssertEqual(byName["Dynasty of Akkad"]?.orderIndex, 25)
+        XCTAssertEqual(byName["Gutian rule"]?.orderIndex, 27)
+        XCTAssertEqual(byName["Dynasty of Isin"]?.orderIndex, 30)
+    }
+
+    func testFixEraOrderIndicesKeepsPreFloodAndUnknownErasStable() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Creation", orderIndex: 0))
+        context.insert(Era(name: "Age of the First Gods", orderIndex: 2))
+        context.insert(Era(name: "Early Dynastic Period", orderIndex: 9))
+        context.insert(Era(name: "My Custom Period", orderIndex: 40))
+        try? context.save()
+
+        Migration.fixEraOrderIndices(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let byName = Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0) })
+        XCTAssertEqual(byName["Creation"]?.orderIndex, 1)
+        XCTAssertEqual(byName["Age of the First Gods"]?.orderIndex, 0)
+        XCTAssertEqual(byName["Early Dynastic Period"]?.orderIndex, 9)
+        XCTAssertEqual(byName["My Custom Period"]?.orderIndex, 41, "unlisted era >= 9 keeps the +1 shift")
+    }
+
+    func testFixEraOrderIndicesIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Dynasty of Akkad", orderIndex: 523))
+        try? context.save()
+
+        Migration.fixEraOrderIndices(context: context)
+        Migration.fixEraOrderIndices(context: context)
+
+        let era = (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == "Dynasty of Akkad" })))?.first
+        XCTAssertEqual(era?.orderIndex, 25)
+    }
+
+    // MARK: - ensureAntediluvianChronology
+
+    private func eraBy(name: String, _ context: ModelContext) -> Era? {
+        (try? context.fetch(FetchDescriptor<Era>(predicate: #Predicate { $0.name == name })))?.first
+    }
+
+    private func figureBy(name: String, _ context: ModelContext) -> Figure? {
+        (try? context.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.name == name })))?.first
+    }
+
+    func testAntediluvianChronologySetsEraDateBands() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Creation", orderIndex: 0))
+        context.insert(Era(name: "Creation of Mankind", orderIndex: 4,
+                           startDate: MythologicalDate(startYear: -200000, endYear: -200000, era: "Creation of Mankind"),
+                           endDate: MythologicalDate(startYear: -100000, endYear: -100000, era: "Creation of Mankind")))
+        context.insert(Era(name: "Age of the Watchers", orderIndex: 1))
+        context.insert(Era(name: "Antediluvian Period", orderIndex: 5,
+                           startDate: MythologicalDate(startYear: -241200, endYear: -241200, era: "Antediluvian Period"),
+                           endDate: MythologicalDate(startYear: -28000, endYear: -28000, era: "Antediluvian Period")))
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(eraBy(name: "Creation", context)?.startDate.startYear, -300000)
+        XCTAssertEqual(eraBy(name: "Creation", context)?.endDate.endYear, -280000)
+        XCTAssertEqual(eraBy(name: "Creation of Mankind", context)?.startDate.startYear, -280000)
+        XCTAssertEqual(eraBy(name: "Creation of Mankind", context)?.endDate.endYear, -275000)
+        XCTAssertEqual(eraBy(name: "Age of the Watchers", context)?.startDate.startYear, -275000)
+        XCTAssertEqual(eraBy(name: "Age of the Watchers", context)?.endDate.endYear, -269200)
+        XCTAssertEqual(eraBy(name: "Antediluvian Period", context)?.startDate.startYear, -269200)
+        XCTAssertEqual(eraBy(name: "Antediluvian Period", context)?.endDate.endYear, -28000)
+    }
+
+    func testAntediluvianChronologyEraDatesIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Creation", orderIndex: 0))
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+        let first = eraBy(name: "Creation", context)?.startDate.startYear
+
+        Migration.ensureAntediluvianChronology(context: context)
+        XCTAssertEqual(eraBy(name: "Creation", context)?.startDate.startYear, first)
+    }
+
+    func testAntediluvianChronologyDoesNotOverwriteUserEditedEraDates() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Creation", orderIndex: 0,
+                           startDate: MythologicalDate(startYear: -100000, endYear: -100000, era: "Creation"),
+                           endDate: MythologicalDate(startYear: -90000, endYear: -90000, era: "Creation")))
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(eraBy(name: "Creation", context)?.startDate.startYear, -100000, "user-entered dates are never clobbered")
+    }
+
+    func testAntediluvianChronologyAssignsKingDates() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Antediluvian Period", orderIndex: 4)
+        context.insert(era)
+        for name in ["Alulim", "Alalngar", "En-men-lu-ana", "En-men-gal-ana", "Dumuzi the Shepherd", "En-sipad-zid-ana", "En-men-dur-ana", "Ubara-Tutu"] {
+            let f = Figure(name: name, source: "Sumerian King List")
+            f.era = era
+            context.insert(f)
+        }
+        let ziusudra = Figure(name: "Ziusudra",
+                              birthDate: MythologicalDate(year: -30000, era: "Antediluvian Period"),
+                              source: "Sumerian King List")
+        ziusudra.era = era
+        context.insert(ziusudra)
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(figureBy(name: "Alulim", context)?.birthDate.startYear, -269200)
+        XCTAssertEqual(figureBy(name: "Alulim", context)?.deathDate.endYear, -240400)
+        XCTAssertEqual(figureBy(name: "Alulim", context)?.decodedDateSource, .computed)
+        XCTAssertEqual(figureBy(name: "Dumuzi the Shepherd", context)?.birthDate.startYear, -132400)
+        XCTAssertEqual(figureBy(name: "Dumuzi the Shepherd", context)?.deathDate.endYear, -96400)
+        XCTAssertEqual(figureBy(name: "Ubara-Tutu", context)?.birthDate.startYear, -46600)
+        XCTAssertEqual(figureBy(name: "Ubara-Tutu", context)?.deathDate.endYear, -28000)
+        XCTAssertEqual(ziusudra.birthDate.startYear, -30000, "Ziusudra is the flood survivor, not one of the eight — untouched")
+    }
+
+    func testAntediluvianChronologyDoesNotOverwriteExistingKingDates() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Antediluvian Period", orderIndex: 4)
+        context.insert(era)
+        let alulim = Figure(name: "Alulim",
+                            birthDate: MythologicalDate(year: -111111, era: "Antediluvian Period"),
+                            source: "Sumerian King List")
+        alulim.era = era
+        context.insert(alulim)
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(alulim.birthDate.startYear, -111111, "a user-entered king date is never overwritten")
+    }
+
+    func testAntediluvianChronologyMovesFigures() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let firstGods = Era(name: "Age of the First Gods", orderIndex: 0)
+        let creation = Era(name: "Creation", orderIndex: 1)
+        let mankind = Era(name: "Creation of Mankind", orderIndex: 2)
+        let watchers = Era(name: "Age of the Watchers", orderIndex: 3)
+        let antediluvian = Era(name: "Antediluvian Period", orderIndex: 4)
+        for e in [firstGods, creation, mankind, watchers, antediluvian] { context.insert(e) }
+
+        func fig(_ name: String, _ era: Era?) -> Figure {
+            let f = Figure(name: name)
+            f.era = era
+            f.birthDate = MythologicalDate(year: nil, era: era?.name ?? "")
+            context.insert(f)
+            return f
+        }
+        let tiamat = fig("Tiamat", creation)
+        let an = fig("An", firstGods)
+        let michael = fig("Michael", creation)
+        let alulim = fig("Alulim", nil)
+        let dumuzi = fig("Dumuzi the Shepherd", firstGods)
+        let adapa = fig("Adapa", mankind)
+        let mushdamma = fig("Mushdamma", creation)
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(tiamat.era?.name, "Age of the First Gods")
+        XCTAssertEqual(tiamat.birthDate.era, "Age of the First Gods", "birth-era string updated so the launch link-resync keeps the move")
+        XCTAssertEqual(an.era?.name, "Creation")
+        XCTAssertEqual(an.birthDate.era, "Creation")
+        XCTAssertEqual(michael.era?.name, "Age of the Watchers")
+        XCTAssertEqual(alulim.era?.name, "Antediluvian Period")
+        XCTAssertEqual(alulim.birthDate.era, "Antediluvian Period")
+        XCTAssertEqual(dumuzi.era?.name, "Antediluvian Period")
+        XCTAssertEqual(adapa.era?.name, "Creation of Mankind", "already correct — no move")
+        XCTAssertEqual(mushdamma.era?.name, "Creation", "already in Creation — no move")
+    }
+
+    func testAntediluvianChronologyMoveIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let firstGods = Era(name: "Age of the First Gods", orderIndex: 0)
+        let creation = Era(name: "Creation", orderIndex: 1)
+        context.insert(firstGods); context.insert(creation)
+        let tiamat = Figure(name: "Tiamat")
+        tiamat.era = creation
+        tiamat.birthDate = MythologicalDate(year: nil, era: "Creation")
+        context.insert(tiamat)
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(tiamat.era?.name, "Age of the First Gods")
+    }
+
+    func testAntediluvianChronologySetsSuccessionOrder() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Antediluvian Period", orderIndex: 4)
+        context.insert(era)
+        let names = ["Ziusudra", "Alalngar", "En-men-lu-ana", "En-men-gal-ana", "Dumuzi the Shepherd", "En-sipad-zid-ana", "En-men-dur-ana", "Ubara-Tutu", "Alulim"]
+        for (i, name) in names.enumerated() {
+            let f = Figure(name: name, orderIndex: i == 0 ? 0 : 9 - i)
+            f.era = era
+            context.insert(f)
+        }
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(figureBy(name: "Alulim", context)?.orderIndex, 0)
+        XCTAssertEqual(figureBy(name: "Alalngar", context)?.orderIndex, 1)
+        XCTAssertEqual(figureBy(name: "Dumuzi the Shepherd", context)?.orderIndex, 4)
+        XCTAssertEqual(figureBy(name: "Ubara-Tutu", context)?.orderIndex, 7)
+        XCTAssertEqual(figureBy(name: "Ziusudra", context)?.orderIndex, 8)
+    }
+
+    func testFixEraOrderIndicesPreFloodSequence() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Creation", orderIndex: 0))
+        context.insert(Era(name: "Age of the Watchers", orderIndex: 1))
+        context.insert(Era(name: "Age of the First Gods", orderIndex: 2))
+        context.insert(Era(name: "Creation of Mankind", orderIndex: 4))
+        context.insert(Era(name: "Antediluvian Period", orderIndex: 5))
+        context.insert(Era(name: "The Great Flood", orderIndex: 7))
+        try? context.save()
+
+        Migration.fixEraOrderIndices(context: context)
+
+        let byName = Dictionary(uniqueKeysWithValues: ((try? context.fetch(FetchDescriptor<Era>())) ?? []).map { ($0.name, $0) })
+        XCTAssertEqual(byName["Age of the First Gods"]?.orderIndex, 0)
+        XCTAssertEqual(byName["Creation"]?.orderIndex, 1)
+        XCTAssertEqual(byName["Creation of Mankind"]?.orderIndex, 2)
+        XCTAssertEqual(byName["Age of the Watchers"]?.orderIndex, 3)
+        XCTAssertEqual(byName["Antediluvian Period"]?.orderIndex, 4)
+        XCTAssertEqual(byName["The Great Flood"]?.orderIndex, 7, "flood stays at the post-flood boundary (orderIndex >= 7)")
     }
 }

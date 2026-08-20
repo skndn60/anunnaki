@@ -5,11 +5,13 @@ import SwiftData
 
 enum SwimlaneMode {
     case mythological
+    case mythologicalTimed(minYear: Int, pointsPerYear: CGFloat)
     case historical(minYear: Int, pointsPerYear: CGFloat)
 
     var minYear: Int {
         switch self {
         case .mythological: return 0
+        case .mythologicalTimed(let minYear, _): return minYear
         case .historical(let minYear, _): return minYear
         }
     }
@@ -17,6 +19,7 @@ enum SwimlaneMode {
     var pointsPerYear: CGFloat {
         switch self {
         case .mythological: return 1
+        case .mythologicalTimed(_, let ppy): return ppy
         case .historical(_, let ppy): return ppy
         }
     }
@@ -148,9 +151,13 @@ struct EraSwimlaneRow: View {
     }
 
     private var eraStartX: CGFloat {
-        guard case .historical(let minYear, let ppy) = mode,
-              let sy = era.startDate.startYear else { return 0 }
-        return CGFloat(sy - minYear) * ppy
+        switch mode {
+        case .historical(let minYear, let ppy), .mythologicalTimed(let minYear, let ppy):
+            guard let sy = era.startDate.startYear else { return 0 }
+            return CGFloat(sy - minYear) * ppy
+        case .mythological:
+            return 0
+        }
     }
 
     @State private var showCityMap = false
@@ -192,8 +199,8 @@ struct EraSwimlaneRow: View {
             }
             if !dateRangeLabel.isEmpty {
                 Text(dateRangeLabel)
-                    .font(.system(.caption, design: .serif))
-                    .foregroundStyle(.tertiary)
+                    .font(.system(.callout, design: .serif))
+                    .foregroundStyle(.secondary)
             }
         }
         .padding(.leading, 4)
@@ -208,6 +215,8 @@ struct EraSwimlaneRow: View {
             }
         case .mythological:
             mythologicalSwimlane
+        case .mythologicalTimed:
+            mythologicalTimedSwimlane
         }
     }
 
@@ -218,18 +227,11 @@ struct EraSwimlaneRow: View {
         let chipWidth = FigureSwimlaneChip.chipWidth
         let minSpacing: CGFloat = 16
         var chipLayouts: [(figure: Figure, x: CGFloat, level: Int, chipY: CGFloat)] = []
-        var exactCount = 0
 
-        for figure in figures {
-            if let year = figure.birthDate.startYear {
-                let x = CGFloat(year - minYear) * ppy + chipWidth / 2
-                chipLayouts.append((figure, x, 0, 0))
-                exactCount += 1
-            }
-        }
-
-        let estimatedCount = figures.count - exactCount
-        if estimatedCount > 0 {
+        if SKLTimelineLayout.isDynastyEra(figures) {
+            // SKL dynasty: the SKL's ruler sequence is authoritative and its reign
+            // lengths/dates are not — place rulers in reign order at equal slots
+            // across the dynasty's own band (dates stay as "couleur locale").
             let eraStart = era.startDate.startYear ?? minYear
             let eraEnd: Int
             if let rawEnd = era.endDate.startYear ?? era.endDate.endYear, rawEnd > eraStart {
@@ -238,14 +240,42 @@ struct EraSwimlaneRow: View {
                 eraEnd = eraStart + 200
             }
             let span = max(1, eraEnd - eraStart)
-            let step = CGFloat(span) / CGFloat(estimatedCount + 1)
-            var estIdx = 0
+            let slots = SKLTimelineLayout.dynastySlotCenters(count: figures.count, spanYears: span)
+            for (i, figure) in SKLTimelineLayout.dynastyOrderedFigures(figures).enumerated() {
+                let year = eraStart + slots[i]
+                let x = CGFloat(year - minYear) * ppy + chipWidth / 2
+                chipLayouts.append((figure, x, 0, 0))
+            }
+        } else {
+            var exactCount = 0
+
             for figure in figures {
-                if figure.birthDate.startYear == nil {
-                    let estYear = eraStart + Int(step * CGFloat(estIdx + 1))
-                    let x = CGFloat(estYear - minYear) * ppy + chipWidth / 2
+                if let year = figure.birthDate.startYear {
+                    let x = CGFloat(year - minYear) * ppy + chipWidth / 2
                     chipLayouts.append((figure, x, 0, 0))
-                    estIdx += 1
+                    exactCount += 1
+                }
+            }
+
+            let estimatedCount = figures.count - exactCount
+            if estimatedCount > 0 {
+                let eraStart = era.startDate.startYear ?? minYear
+                let eraEnd: Int
+                if let rawEnd = era.endDate.startYear ?? era.endDate.endYear, rawEnd > eraStart {
+                    eraEnd = rawEnd
+                } else {
+                    eraEnd = eraStart + 200
+                }
+                let span = max(1, eraEnd - eraStart)
+                let step = CGFloat(span) / CGFloat(estimatedCount + 1)
+                var estIdx = 0
+                for figure in figures {
+                    if figure.birthDate.startYear == nil {
+                        let estYear = eraStart + Int(step * CGFloat(estIdx + 1))
+                        let x = CGFloat(estYear - minYear) * ppy + chipWidth / 2
+                        chipLayouts.append((figure, x, 0, 0))
+                        estIdx += 1
+                    }
                 }
             }
         }
@@ -280,7 +310,7 @@ struct EraSwimlaneRow: View {
         let minLevel = chipLayouts.map(\.level).min() ?? 0
         let maxLevel = chipLayouts.map(\.level).max() ?? 0
         let totalLevels = maxLevel - minLevel + 1
-        let contentHeight = max(swimlaneHeight, CGFloat(totalLevels) * 25 + 24)
+        let contentHeight = min(max(swimlaneHeight, CGFloat(totalLevels) * 25 + 24), swimlaneHeight * 3)
         let levelCenter = CGFloat(minLevel + maxLevel) / 2.0
         for i in chipLayouts.indices {
             chipLayouts[i].chipY = contentHeight / 2 + (CGFloat(chipLayouts[i].level) - levelCenter) * 25
@@ -393,6 +423,52 @@ struct EraSwimlaneRow: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(eraColor.opacity(0.25), lineWidth: 0.5)
+                )
+                .padding(.horizontal, 2)
+        )
+    }
+
+    private var mythologicalTimedSwimlane: some View {
+        let minYear = mode.minYear
+        let ppy = mode.pointsPerYear
+        let startX = eraStartX
+        let endX: CGFloat
+        if let sy = era.startDate.startYear, let ey = era.endDate.endYear, sy < ey {
+            endX = CGFloat(ey - minYear) * ppy
+        } else {
+            endX = startX + max(200 * ppy, 20)
+        }
+        let railWidth = max(0, (swimlaneWidth ?? 0) - startX)
+        return ZStack(alignment: .leading) {
+            eraBar(startX: startX, endX: endX, height: swimlaneHeight)
+            if figures.isEmpty {
+                Text("—")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .offset(x: startX + 4)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(figures) { figure in
+                            FigureSwimlaneChip(figure: figure, onSelect: onSelectFigure)
+                        }
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
+                }
+                .frame(width: railWidth, height: swimlaneHeight)
+                .offset(x: startX)
+            }
+        }
+        .frame(width: swimlaneWidth ?? 0, height: swimlaneHeight)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(
+                    LinearGradient(
+                        colors: [eraColor.opacity(0.06), eraColor.opacity(0.10)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
                 )
                 .padding(.horizontal, 2)
         )

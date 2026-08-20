@@ -482,17 +482,37 @@ package struct Migration {
     package static func fixEraOrderIndices(context: ModelContext) {
         let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
         let newOrder: [String: Int] = [
-            "Creation": 0,
-            "Age of the Watchers": 1,
-            "Age of the First Gods": 2,
-            "Anunnaki on Earth": 3,
-            "Creation of Mankind": 4,
-            "Antediluvian Period": 5,
+            "Age of the First Gods": 0,
+            "Creation": 1,
+            "Creation of Mankind": 2,
+            "Age of the Watchers": 3,
+            "Antediluvian Period": 4,
+            "Anunnaki on Earth": 5,
             "Antediluvian": 6,
             "SKL Antediluvian": 6,
             "The Great Flood": 7,
             "Post-Flood Kingdoms": 8,
             "Early Dynastic Period": 9,
+            "First dynasty of Kish": 11,
+            "First rulers of Uruk": 12,
+            "First dynasty of Ur": 13,
+            "Dynasty of Awan": 14,
+            "Second dynasty of Kish": 15,
+            "Dynasty of Hamazi": 16,
+            "Second dynasty of Uruk": 17,
+            "Second dynasty of Ur": 18,
+            "Dynasty of Adab": 19,
+            "Dynasty of Mari": 20,
+            "Third dynasty of Kish": 21,
+            "Dynasty of Akshak": 22,
+            "Fourth dynasty of Kish": 23,
+            "Third dynasty of Uruk": 24,
+            "Dynasty of Akkad": 25,
+            "Fourth dynasty of Uruk": 26,
+            "Gutian rule": 27,
+            "Fifth dynasty of Uruk": 28,
+            "Third dynasty of Ur": 29,
+            "Dynasty of Isin": 30,
         ]
         var changed = false
         for era in eras {
@@ -502,11 +522,112 @@ package struct Migration {
                     changed = true
                 }
             } else if era.orderIndex >= 9 {
-                // SKL dynasty eras — shift by +1 to account for the inserted eras
+                // Unlisted post-flood era — shift by +1 to account for the inserted eras
                 era.orderIndex = era.orderIndex + 1
                 changed = true
             }
         }
+        if changed { try? context.save() }
+    }
+
+    /// Establish the canonical pre-flood chronology. The eight SKL antediluvian kings
+    /// carry their (mythological but canonical) reign lengths, so we anchor the epoch
+    /// at the flood (−28,000 BCE) and back-propagate each reign to give every king a
+    /// concrete span: the eight reigns sum to 241,200 years, so the epoch runs
+    /// −269,200 → −28,000 BCE. The older mythological eras are ordered around it
+    /// (Age of the First Gods → Creation → Creation of Mankind → Age of the Watchers →
+    /// Antediluvian Period) and given sequential placeholder spans so every band on the
+    /// pre-flood timeline shows a date. User-approved figure moves place the primordial
+    /// gods in Age of the First Gods, the great gods in Creation, the archangels in Age
+    /// of the Watchers, and Alulim + Dumuzi the Shepherd into the Antediluvian Period.
+    /// Additive + idempotent; see PRE-FLOOD-TIMELINE.md for the full reasoning.
+    package static func ensureAntediluvianChronology(context: ModelContext) {
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let eraByName = Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0) })
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figureByName = Dictionary(uniqueKeysWithValues: allFigures.map { (Self.seedNameKey($0.name), $0) })
+        var changed = false
+
+        // 1. Era date bands — only corrected while they still hold the legacy seed
+        //    values (or are undated), so a user's later manual edit is never clobbered.
+        func applyEraDates(_ name: String, targetStart: Int, targetEnd: Int, legacyStart: Int?, legacyEnd: Int?) -> Bool {
+            guard let era = eraByName[name] else { return false }
+            let curStart = era.startDate.startYear
+            let curEnd = era.endDate.endYear
+            let isLegacy = (curStart == nil && curEnd == nil)
+                || (legacyStart != nil && curStart == legacyStart && curEnd == legacyEnd)
+            guard isLegacy else { return false }
+            let newStart = MythologicalDate(startYear: targetStart, endYear: targetStart, era: name)
+            let newEnd = MythologicalDate(startYear: targetEnd, endYear: targetEnd, era: name)
+            guard era.startDate != newStart || era.endDate != newEnd else { return false }
+            era.startDate = newStart
+            era.endDate = newEnd
+            return true
+        }
+        changed = applyEraDates("Age of the First Gods", targetStart: -450000, targetEnd: -300000, legacyStart: -450000, legacyEnd: -300000) || changed
+        changed = applyEraDates("Creation", targetStart: -300000, targetEnd: -280000, legacyStart: nil, legacyEnd: nil) || changed
+        changed = applyEraDates("Creation of Mankind", targetStart: -280000, targetEnd: -275000, legacyStart: -200000, legacyEnd: -100000) || changed
+        changed = applyEraDates("Age of the Watchers", targetStart: -275000, targetEnd: -269200, legacyStart: nil, legacyEnd: nil) || changed
+        changed = applyEraDates("Antediluvian Period", targetStart: -269200, targetEnd: -28000, legacyStart: -241200, legacyEnd: -28000) || changed
+        changed = applyEraDates("The Great Flood", targetStart: -28000, targetEnd: -27000, legacyStart: -28000, legacyEnd: -27000) || changed
+
+        // 2. Antediluvian king dates — computed by back-propagating each SKL reign
+        //    from the flood anchor. Only written where no date exists yet.
+        let kingReigns: [(name: String, birth: Int, death: Int)] = [
+            ("Alulim", -269200, -240400),
+            ("Alalngar", -240400, -204400),
+            ("En-men-lu-ana", -204400, -161200),
+            ("En-men-gal-ana", -161200, -132400),
+            ("Dumuzi the Shepherd", -132400, -96400),
+            ("En-sipad-zid-ana", -96400, -67600),
+            ("En-men-dur-ana", -67600, -46600),
+            ("Ubara-Tutu", -46600, -28000),
+        ]
+        for reign in kingReigns {
+            guard let figure = figureByName[Self.seedNameKey(reign.name)],
+                  figure.birthDate.startYear == nil else { continue }
+            figure.birthDate = MythologicalDate(startYear: reign.birth, endYear: reign.birth, era: "Antediluvian Period")
+            figure.deathDate = MythologicalDate(startYear: reign.death, endYear: reign.death, era: "Antediluvian Period")
+            figure.dateSource = Figure.DateSource.computed.rawValue
+            changed = true
+        }
+
+        // 3. User-approved figure reassignments. Each move only fires while the figure
+        //    sits in the legacy (wrong) era, so a later user move is never overridden.
+        func moveToEra(_ name: String, _ targetEraName: String, from legacyEraName: String?) {
+            guard let target = eraByName[targetEraName],
+                  let figure = figureByName[Self.seedNameKey(name)],
+                  (legacyEraName == nil ? figure.era == nil : figure.era?.name == legacyEraName),
+                  figure.era?.persistentModelID != target.persistentModelID else { return }
+            figure.era = target
+            figure.birthDate.era = targetEraName
+            figure.deathDate.era = targetEraName
+            changed = true
+        }
+        let primordialGods = ["Kishar", "Tiamat", "Apsu", "Nammu", "Anshar", "Anunnaki", "Igigi"]
+        for name in primordialGods { moveToEra(name, "Age of the First Gods", from: "Creation") }
+        let greatGods = ["An", "Enlil", "Enki", "Ninhursag", "Nanna", "Utu", "Inanna", "Marduk", "Nabu", "Nergal", "Ereshkigal", "Ningal", "Sarpanit", "Sud", "Antu", "Haia", "Ningikuga", "Ninurta", "Ninsun"]
+        for name in greatGods { moveToEra(name, "Creation", from: "Age of the First Gods") }
+        let archangels = ["Michael", "Gabriel", "Uriel", "Raphael", "Raguel", "Saraqael", "Remiel"]
+        for name in archangels { moveToEra(name, "Age of the Watchers", from: "Creation") }
+        moveToEra("Alulim", "Antediluvian Period", from: nil)
+        moveToEra("Dumuzi the Shepherd", "Antediluvian Period", from: "Age of the First Gods")
+
+        // 4. Antediluvian succession order — the SKL sequence is the authority
+        //    (Ziusudra, the flood survivor, comes last).
+        let antediluvianOrder: [(name: String, index: Int)] = [
+            ("Alulim", 0), ("Alalngar", 1), ("En-men-lu-ana", 2), ("En-men-gal-ana", 3),
+            ("Dumuzi the Shepherd", 4), ("En-sipad-zid-ana", 5), ("En-men-dur-ana", 6),
+            ("Ubara-Tutu", 7), ("Ziusudra", 8),
+        ]
+        for entry in antediluvianOrder {
+            guard let figure = figureByName[Self.seedNameKey(entry.name)],
+                  figure.era?.name == "Antediluvian Period",
+                  figure.orderIndex != entry.index else { continue }
+            figure.orderIndex = entry.index
+            changed = true
+        }
+
         if changed { try? context.save() }
     }
 
@@ -543,7 +664,7 @@ package struct Migration {
             let seedDesc = seedFig.figureDescription
             guard bcRegex.firstMatch(in: seedDesc, range: NSRange(seedDesc.startIndex..., in: seedDesc)) != nil else { continue }
 
-            guard let dbFig = allFigures.first(where: { $0.name == seedFig.name }) else { continue }
+            guard let dbFig = allFigures.first(where: { Self.seedNameKey($0.name) == Self.seedNameKey(seedFig.name) }) else { continue }
             let dbDesc = dbFig.figureDescription
             guard bcRegex.firstMatch(in: dbDesc, range: NSRange(dbDesc.startIndex..., in: dbDesc)) == nil else { continue }
 
@@ -566,6 +687,65 @@ package struct Migration {
             dbFig.figureDescription = updated
         }
         try? context.save()
+    }
+
+    /// Backfill `Era.startDate`/`endDate` from seed_data.json for eras whose
+    /// dates are still unknown. The seed has carried per-dynasty date ranges
+    /// since the live DB was first seeded, so older stores have NULL era dates
+    /// — which left undated dynasties (e.g. Second dynasty of Kish) floating in
+    /// the timeline's estimation window instead of their proper chronological
+    /// slot. Additive and idempotent: only fills eras with no known start year,
+    /// never overwrites user-entered dates.
+    package static func ensureEraDatesFromSeed(context: ModelContext) {
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "seed_data", withExtension: "json")
+        }()
+        guard let u = url, let data = try? Data(contentsOf: u),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else { return }
+
+        let allEras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        var changed = false
+        for seedEra in root.eras {
+            guard seedEra.startDate.startYear != nil else { continue }
+            guard let era = allEras.first(where: { $0.name == seedEra.name }) else { continue }
+            guard era.startDate.startYear == nil else { continue }
+            era.startDate = seedEra.startDate.toMythologicalDate()
+            era.endDate = seedEra.endDate.toMythologicalDate()
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    private static let listedReignRegex = try! NSRegularExpression(pattern: "\\(Listed reign:\\s*[\\d,]+\\s+years\\.\\)")
+
+    package static func ensureSKLGutianReignLengths(context: ModelContext) {
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "seed_data", withExtension: "json")
+        }()
+        guard let u = url, let data = try? Data(contentsOf: u),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else { return }
+
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for seedFig in root.figures {
+            guard seedFig.source.contains("Sumerian King List"),
+                  seedFig.birthDate.era == "Gutian rule" else { continue }
+            let seedDesc = seedFig.figureDescription
+            guard listedReignRegex.firstMatch(in: seedDesc, range: NSRange(seedDesc.startIndex..., in: seedDesc)) != nil else { continue }
+            guard let dbFig = allFigures.first(where: { Self.seedNameKey($0.name) == Self.seedNameKey(seedFig.name) && $0.birthDate.era == seedFig.birthDate.era }) else { continue }
+            guard listedReignRegex.firstMatch(in: dbFig.figureDescription, range: NSRange(dbFig.figureDescription.startIndex..., in: dbFig.figureDescription)) == nil else { continue }
+            if let suffixRange = seedDesc.range(of: "(Listed reign:") {
+                let suffix = String(seedDesc[suffixRange.lowerBound...]).trimmingCharacters(in: .whitespaces)
+                var updated = dbFig.figureDescription
+                if !updated.hasSuffix(".") { updated += "." }
+                updated += " " + suffix
+                dbFig.figureDescription = updated
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
     }
 
     /// Backfill citations for events that lack them.
@@ -1215,18 +1395,20 @@ package struct Migration {
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
 
         var expectedOrderIndex: [String: Int] = [:]
+        var expectedOrderEra: [String: String] = [:]
         var sklEraIndex: [String: Int] = [:]
         for seedFig in root.figures {
             guard seedFig.source.contains("Sumerian King List") else { continue }
             let era = seedFig.birthDate.era.isEmpty ? "Antediluvian" : seedFig.birthDate.era
             let idx = sklEraIndex[era, default: 0]
             expectedOrderIndex[seedFig.name] = idx
+            expectedOrderEra[seedFig.name] = era
             sklEraIndex[era] = idx + 1
         }
 
         var changed = false
         for (name, expectedIdx) in expectedOrderIndex {
-            guard let figure = allFigures.first(where: { $0.name == name }),
+            guard let figure = allFigures.first(where: { Self.seedNameKey($0.name) == Self.seedNameKey(name) && Self.seedNameKey($0.birthDate.era) == Self.seedNameKey(expectedOrderEra[name] ?? "") }),
                   figure.orderIndex != expectedIdx else { continue }
             figure.orderIndex = expectedIdx
             changed = true
@@ -1277,6 +1459,38 @@ package struct Migration {
         if changed { try? context.save() }
     }
 
+    package static func ensureComputedSKLDates(context: ModelContext) {
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let allEras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let eraOrder = allEras.reduce(into: [:]) { $0[$1.name] = $1.orderIndex }
+        let timelines = SKLDatePropagator.compute(figures: allFigures, eraOrder: eraOrder)
+        var changed = false
+        for timeline in timelines {
+            for reign in timeline.reigns {
+                guard reign.figure.birthDate.startYear == nil,
+                      let startBCE = reign.startBCE else { continue }
+                let endBCE = reign.endBCE ?? startBCE
+                reign.figure.birthDate = MythologicalDate(
+                    startYear: startBCE,
+                    endYear: endBCE,
+                    era: reign.figure.birthDate.era,
+                    isApproximate: true
+                )
+                if reign.figure.deathDate.endYear == nil {
+                    reign.figure.deathDate = MythologicalDate(
+                        startYear: nil,
+                        endYear: endBCE,
+                        era: reign.figure.deathDate.era,
+                        isApproximate: true
+                    )
+                }
+                reign.figure.dateSource = Figure.DateSource.computed.rawValue
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
+    }
+
     /// Reconciles `Figure.era` links so they always mirror the canonical era
     /// name (the `birthDate.era` string first, else the "Ruler from/in/of …"
     /// description prefix as a fallback). Runs every launch; idempotent and
@@ -1293,6 +1507,31 @@ package struct Migration {
             }
             let target = Self.resolveEraTarget(for: figure, eraByName: eraByName)
             if figure.era?.persistentModelID != target?.persistentModelID {
+                figure.era = target
+                changed = true
+            }
+        }
+        if changed { try? context.save() }
+    }
+
+    private static let eraTypoMap: [String: String] = [
+        "Guthian rule": "Gutian rule",
+    ]
+
+    package static func fixEraTypos(context: ModelContext) {
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let eraByName = eras.reduce(into: [:]) { $0[$1.name] = $1 }
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for figure in figures {
+            if let corrected = Self.eraTypoMap[figure.birthDate.era] {
+                figure.birthDate.era = corrected
+                figure.deathDate.era = corrected
+                changed = true
+            }
+            if let eraName = Self.eraTypoMap.values.first(where: { $0 == figure.birthDate.era }),
+               let target = eraByName[eraName],
+               figure.era?.persistentModelID != target.persistentModelID {
                 figure.era = target
                 changed = true
             }
@@ -1715,6 +1954,12 @@ package struct Migration {
         var s = name.trimmingCharacters(in: .whitespaces).lowercased()
         while s.hasPrefix("the ") { s = String(s.dropFirst(4)) }
         return s
+    }
+
+    /// Seed-to-DB name key tolerant of the spelling variants users accumulate
+    /// (e.g. seed "Apilkin" vs DB "Apil-kin"): lowercased, hyphens stripped.
+    private static func seedNameKey(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespaces).lowercased().replacingOccurrences(of: "-", with: "")
     }
 
     /// Author-era territory polygons for the SKL dynasties (lon, lat), keyed by

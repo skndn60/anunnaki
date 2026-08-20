@@ -31,6 +31,15 @@ package final class Figure {
     /// A title, not an alias, so it lives on the figure rather than as an AlternateName.
     package var epithet: String?
 
+    /// How the birth/death dates were determined: `.historical` (seed or user-entered)
+    /// or `.computed` (derived by SKLDatePropagator from anchor dates + reign lengths).
+    /// Nil defaults to `.historical` for backward compatibility.
+    package var dateSource: String?
+
+    package var decodedDateSource: DateSource {
+        DateSource(rawValue: dateSource ?? "") ?? .historical
+    }
+
     /// Designated portrait ("mugshot") — a crop of a statue photo, not every figure
     /// has one. The original `ImageAsset` stays whole; `mugshotCropRect` describes
     /// the normalized crop ("x,y,w,h") applied when rendering.
@@ -125,6 +134,18 @@ package final class Figure {
             case .female: return "♀"
             case .nonBinary: return "⚧"
             case .unknown: return "?"
+            }
+        }
+    }
+
+    package enum DateSource: String, Codable, CaseIterable {
+        case historical
+        case computed
+
+        package var label: String {
+            switch self {
+            case .historical: return "Historical"
+            case .computed: return "Computed"
             }
         }
     }

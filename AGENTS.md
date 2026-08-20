@@ -131,6 +131,110 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 
 ## Session Log
 
+### 2026-08-20 — Pre-flood timeline: antediluvian chronology + canonical era order
+
+**Context:** The user observed the Pre-Flood timeline "can hardly be called a timeline" — chips were laid in horizontal rails by insertion order, era lanes stacked by `orderIndex` with no time scale, and times appeared only as tiny captions on 3 of 5 eras. Investigation confirmed: no pre-flood figure had a date (`birthDate.sortValue == Int.min` for all), and the antediluvian epoch's seed band (−241,200 → −28,000) used the SKL's 241,200-year total as a *year* rather than a *duration*. The user approved: **back-propagate the eight antediluvian kings from the flood anchor** (their reign lengths are canonical and must not be adjusted), then order the mythological eras around the earliest anchored date and move figures to match. Full reasoning in `PRE-FLOOD-TIMELINE.md` (new — AGENTS.md stays lean).
+
+**Changes made:**
+- `Sources/MeCore/Store/Migration.swift` — New `ensureAntediluvianChronology(context:)`: (1) sets the six pre-flood era date bands (Age of the First Gods −450k→−300k, Creation −300k→−280k, Creation of Mankind −280k→−275k, Age of the Watchers −275k→−269.2k, Antediluvian Period −269.2k→−28k, Great Flood unchanged) but only while the era still holds the legacy seed value or is undated; (2) writes the eight kings' computed spans (Alulim −269,200→−240,400 … Ubara-Tutu −46,600→−28,000, `dateSource == .computed`) only where `birthDate.startYear == nil`; (3) moves figures to their approved eras (primordial gods → Age of the First Gods; great gods → Creation; archangels → Age of the Watchers; Alulim + Dumuzi the Shepherd → Antediluvian Period), updating both `figure.era` and the `birthDate.era`/`deathDate.era` strings so `ensureFigureEraLinks` keeps them next launch; each move only fires while the figure sits in the legacy era; (4) sets the antediluvian succession `orderIndex` (Alulim 0 … Ubara-Tutu 7, Ziusudra 8). `fixEraOrderIndices` pre-flood map renumbered: Age of the First Gods=0, Creation=1, Creation of Mankind=2, Age of the Watchers=3, Antediluvian Period=4 (Great Flood stays 7, preserving the `< 7` / `>= 7` pre/post-flood split).
+- `Sources/Me/Views/ContentView.swift` — `Migration.ensureAntediluvianChronology` added to the launch sequence after `ensureComputedSKLDates`.
+- `PRE-FLOOD-TIMELINE.md` — NEW. Full reasoning: the eight SKL reigns sum to 241,200 years → anchored epoch −269,200 → −28,000; era sequence rationale; figure reassignment list; data problems fixed (Alulim unassigned/invisible, Dumuzi the Shepherd mis-filed, Ziusudra ordered first); which dates are derived vs. invented placeholders.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 9 new tests: era date bands + idempotency + never-clobber-user-edits, king dates + no-overwrite, figure moves (+birth-era string + idempotency), succession order, `fixEraOrderIndices` new pre-flood sequence (flood stays at 7). Updated the prior `fixEraOrderIndices` test to the new map. **281 tests pass; `swift build` clean.**
+
+**Follow-up — pre-flood time axis + era boundary lines (same day).** The user asked why the eras weren't bordered vertically like post-flood; the answer was structural (pre-flood had no time axis to anchor lines to). Redesigned `TimelinePreView` to mirror the post-flood look: new `SwimlaneMode.mythologicalTimed(minYear:pointsPerYear:)` in `TimelineBase.swift` lays each era's tinted bar at its proportional x-extent on a shared axis (linear over the full −450,000 → −28,000 span, ~1600pt wide) with the chip rail inset to start at the era's left edge; `TimelinePreView` gained a BCE axis header (50k-year ticks) and full-height vertical boundary lines at every era start/end (deduped via a `Set<Int>`, matching the post-flood grid overlay pattern). Chips stay in scrollable rails — they can't be pinned to years (the great gods are undated and their eras are too narrow for positioned chips), which the user accepted ("doesn't need to be pixel-accurate"). `swift build` clean; 281 tests pass (one pre-existing order-dependent flake in `testAddEventWithPropagation…` passes in isolation).
+
+**Key decisions:**
+- The antediluvian kings' dates are **derived** (reign-sum back-propagation anchored at the flood), not invented; the earlier era bands are **explicitly documented placeholder spans** so every pre-flood band shows a date.
+- Every write is guarded: era bands only corrected from legacy/undated values, king dates only where nil, figure moves only from the legacy era — user edits made later always win (sacred-data rule, idempotent).
+- `birthDate.era` must stay in sync with `figure.era` because `ensureFigureEraLinks` re-resolves from that string on every launch.
+- `fixSKLFigureOrder`/`ensureComputedSKLDates` don't touch the antediluvian era (seed keys it under "Antediluvian", DB figures use "Antediluvian Period"), so the migration's sequence/dates survive.
+
+**Verify:** `swift build` clean; 281 tests pass. Manual: relaunch — Pre-Flood timeline now shows (top→bottom) Age of the First Gods → Creation → Creation of Mankind → Age of the Watchers → Antediluvian Period, each with a date caption; the eight kings are in SKL order and hovering a chip shows its computed reign span; Alulim and Dumuzi the Shepherd are present.
+
+**Relevant files:**
+- `PRE-FLOOD-TIMELINE.md` — Added
+- `Sources/MeCore/Store/Migration.swift` — Updated (`ensureAntediluvianChronology`, `fixEraOrderIndices` map)
+- `Sources/Me/Views/ContentView.swift` — Updated (launch sequence)
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-20 — Sequence-driven post-flood timeline: SKL as source of truth
+
+**Context:** The post-flood timeline still misrepresented the dynasties even after the era-date backfill: (1) rulers within a dynasty rendered in scrambled **insertion** order — `figuresInEra` sorts by `birthDate.sortValue`, and First dynasty of Kish's 23 kings are all undated (`Int.min`), so the stable sort preserved the DB's scrambled PK order (Zuqaqip, Zamug, Melem-Kish, Enmebaragesi, Babum, Kullassina-bel, Jushur, Etana…); (2) dated rulers **escaped their dynasty band** — Dynasty of Mari's kings carry computed dates (−1927…−1850) that contradict the era's −2350→−2300 slot, so chips were placed 400+ years outside the band; (3) the stale live-DB dynasty `orderIndex` values (509–528, vs the seed's canonical 11–30) made dynasty rows sort wrong. The user approved a **sequence-driven** approach: the SKL is the only source of truth for dynasty order and ruler succession; dates become "couleur locale". Decisions locked in via clarifying questions: **keep seed date windows** for dynasty bands (overlap allowed), **equal spacing** for ruler chips (reign-proportional rejected), and the proposed `Dynasty` entity was dropped — Era remains the model.
+
+**Changes made:**
+- `Sources/MeCore/Store/SKLTimelineLayout.swift` — NEW. Three pure `package static` helpers: `isDynastyEra(_ figures:)` (any figure's `source` contains `"Sumerian King List"`, matching the compound-string convention e.g. Etana's `"Sumerian King List; Sumerian mythology"`), `dynastyOrderedFigures(_:)` (sorted by `(orderIndex, name)` — orderIndex is the SKL reign sequence, name is the tie-break), `dynastySlotCenters(count:spanYears:)` — equal slots `Int((i+0.5)/n * span)` across the band, `n==1 → [span/2]`, clamps ≥ 1.
+- `Sources/Me/Views/TimelineBase.swift` — `EraSwimlaneRow.historicalSwimlane` (line ~214) branches on `SKLTimelineLayout.isDynastyEra`: dynasty eras place `dynastyOrderedFigures` at equal slots across the era's own band (`eraStart + slots[i]`, `x = (year - minYear) * ppy + chipWidth / 2`); the existing exact-date + estimate logic is preserved for non-dynasty eras. `chipLayouts.sort { $0.x < $1.x }` retained.
+- `Sources/MeCore/Store/Migration.swift` — `fixEraOrderIndices` (line ~482) extended with a `dynastyOrderIndex` map (First dynasty of Kish=11 … Dynasty of Isin=30, per seed_data.json); matching eras get canonical values; pre-flood names unchanged; unlisted eras `>= 9` keep the `+1` shift. Idempotent (only writes changed values).
+- `Sources/Me/Views/ContentView.swift` — explicit `Migration.fixEraOrderIndices` call added to the launch sequence (after `ensureSKLDomain`), so it runs reliably even though the seed path also invokes it.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 9 new tests: `isDynastyEra` (incl. compound-source + empty), `dynastyOrderedFigures` (scrambled PK order → SKL sequence; name tie-break), `dynastySlotCenters` (n=23/span=400 → 8…391 with midpoint 200; n=1 → span/2; count=0 clamp; n=3/span=100 → 16/50/83), `fixEraOrderIndices` renumbering (509→11, 528→30), pre-flood/unknown-era stability, idempotency. **272 tests pass; `swift build` clean.**
+
+**Key decisions:**
+- The SKL's ruler **sequence** is authoritative for dynasty timelines; its reign **lengths/dates** are not. Dynasty bands keep the seed's conventional date windows (overlap allowed — e.g. the two Kish dynasties legitimately abut), and ruler chips are evenly spread across that band regardless of computed dates, so no ruler can ever land outside its dynasty.
+- `dynastyOrderedFigures` uses `(orderIndex, name)` — the era's per-dynasty sequence counter — exactly the ordering `applyRegnalOrder`/`fixSKLFigureOrder` already enforce, so the timeline and the group pages agree on ruler succession.
+- The renumbering is additive + idempotent per the sacred-data rule (name→index map, only writes changes); the stale 509–528 values were simply never canonical.
+- `ensureComputedSKLDates` keeps writing computed dates (still used by figure detail + Dynasty Map) and is out of scope for the timeline fix; the mythological pre-flood timeline is untouched.
+- Equal spacing (not reign-proportional) is a deliberate visual choice — the timeline shows dynasty membership and succession, not reign length.
+
+**Verify:** `swift build` clean; 272 tests pass. Manual: relaunch — the migration renumbers dynasty eras on first run; the Post-Flood timeline shows First dynasty of Kish's 23 kings in SKL order (Jushur→Aga) spread across 2900–2500, Dynasty of Mari's rulers inside their −2350→−2300 band (no chips at −1927), and the Eras list / dynasty group ordering now use 11–30.
+
+**Relevant files:**
+- `Sources/MeCore/Store/SKLTimelineLayout.swift` — Added
+- `Sources/Me/Views/TimelineBase.swift` — Updated (`historicalSwimlane`)
+- `Sources/MeCore/Store/Migration.swift` — Updated (`fixEraOrderIndices`)
+- `Sources/Me/Views/ContentView.swift` — Updated (launch sequence)
+- `Tests/MeCoreTests/MeCoreTests.swift` — Updated
+
+### 2026-08-19 — Second dynasty of Kish timeline overlap: era-date backfill from seed
+
+**Context:** The user reported the timeline showing the Second dynasty of Kish "running 2900–2700 BCE", which overlaps the First dynasty of Kish's timeframe and "seems impossible". Investigation proved the span wasn't stored anywhere: the `Era` rows for **all** dynasties in the live DB had NULL dates (verified via `ZERA.ZSTARTYEAR`/`ZENDYEAR`), the figures had NULL dates, and neither seed copy had anchors for either Kish dynasty. The 2900–2700 BCE window was the timeline's **estimation heuristic** (`EraSwimlaneRow.historicalSwimlane` in TimelineBase.swift:232-241): undated eras default `eraStart = era.startDate.startYear ?? minYear` (−2900, the post-flood timeline start) and `eraEnd = eraStart + 200` (−2700), so every undated dynasty's chips land in the same first-200-years window — both Kish dynasties appeared to occupy 2900–2700.
+
+**Root cause:** The seed_data.json has carried correct per-dynasty date ranges since before the live DB was first seeded (First Kish −2900→−2500, First Uruk −2800→−2350, First Ur −2600→−2500, Awan −2500→−2400, Second Kish −2500→−2400, … Isin −2017→−1794). But the live DB's `Era` rows were created before those dates existed in the seed, and no migration ever backfilled them — so all dynasty eras sat at "unknown" and the timeline estimation invented overlapping spans. The propagator couldn't fix it: Second Kish's 7 mythological reigns sum to 1,737 years, so anchoring figures would produce an absurd span.
+
+**Changes made:**
+
+- `Sources/MeCore/Store/Migration.swift` — New `ensureEraDatesFromSeed(context:)` (after `ensureSKLAnchorDates`): reads seed_data.json, and for every seed era with a non-nil `startDate.startYear`, finds the DB era by exact name and writes `startDate`/`endDate` from the seed **only when the DB era's `startDate.startYear` is nil** — additive + idempotent, never overwrites user-entered era dates. This backfills all dynasty eras at once (Second Kish → −2500→−2400, its conventional slot after Awan), so the timeline stops inventing the 2900–2700 overlap.
+- `Sources/Me/Views/ContentView.swift` — `Migration.ensureEraDatesFromSeed` added to the launch sequence right after `ensureSKLAnchorDates`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 4 new tests: `testEnsureEraDatesFromSeedBackfillsSecondDynastyOfKish` (−2500/−2400 anchor, approximate), `testEnsureEraDatesFromSeedBackfillsAllDatedDynastyEras` (5 dynasties all filled), `testEnsureEraDatesFromSeedIsIdempotent`, `testEnsureEraDatesFromSeedNeverOverwritesExistingDates`. **263 tests pass; `swift build` clean.**
+
+**Key decisions:**
+- The fix is a **seed→DB era-date backfill** (matching the Gutian/anchor migration family) rather than a bespoke Second-Kish rule — the seed is the canonical source, every dynasty era gets its correct chronological slot, and no figure/description edits are needed.
+- Era dates stay on the `Era` rows only; figures remain undated (Second Kish's 1,737-year mythological reign sum makes figure-level propagation meaningless). The timeline's estimation then spreads each dynasty's chips across its own correct era span instead of the shared first-200-year window.
+- Post-flood timeline bounds are unchanged after backfill (First Kish starts −2900 = the previous fallback min; Isin ends −1794 = the fallback max), so the fix repositions dynasty rows without resizing the overall timeline. Pre-flood mythological eras also gain their seed date labels (e.g. Age of the First Gods −450,000→−300,000) — a visual improvement, not a regression.
+
+**Verify:** `swift build` clean; 263 tests pass. Manual: relaunch — the migration backfills era dates on first run; the Post-Flood timeline now shows Second dynasty of Kish in its own 2500–2400 BCE band (after Awan), no longer overlapping First Kish's 2900–2500 band.
+
+**Relevant files:**
+- `Sources/MeCore/Store/Migration.swift` — `ensureEraDatesFromSeed` added
+- `Sources/Me/Views/ContentView.swift` — launch sequence
+- `Tests/MeCoreTests/MeCoreTests.swift` — 4 new tests
+
+### 2026-08-19 — Gutian rule timeline: anchor + computed dates backfill
+
+**Context:** All 18 Gutian-rule rulers in the live DB had NULL birth/death dates (`ZSTARTYEAR`/`ZENDYEAR` empty) — the Gutian dynasty was the one SKL dynasty without an anchor, so `SKLDatePropagator` returned all-nil. The user approved anchoring the dynasty start at ~2200 BCE (per Wikipedia's "Gutian rule began around 2200 BCE").
+
+**Changes made:**
+
+- `Sources/MeCore/Resources/seed_data.json` + `Sources/Me/Resources/seed_data.json` — Appended `c. 2200–2194 BC` to **Inkishush's** `figureDescription` (first Gutian king, orderIndex 0, 6-year reign). `ensureSKLAnchorDates` picks it up on the next launch and appends the range to the DB description; the propagator anchors at Inkishush and forward-propagates the entire dynasty.
+- `Sources/MeCore/Store/Migration.swift` — New `seedNameKey(_:)` helper (lowercase + hyphen-stripped) for seed↔DB name matching, applied to three lookups so seed `Apilkin` matches DB `Apil-kin`:
+  - `ensureSKLAnchorDates` (name lookup)
+  - `ensureSKLGutianReignLengths` (name lookup — now also era-aware so the seed's Gutian `Puzur-Suen` can never touch the DB's Kish `Puzur-Suen`)
+  - `fixSKLFigureOrder` (name lookup — now also era-aware via a new `expectedOrderEra` map, same collision guard)
+- `Sources/Me/Views/ContentView.swift` — Moved `Migration.enrichSKLData` and `Migration.ensureComputedSKLDates` to **after** `Migration.fixSKLFigureOrder` in the launch sequence, so the propagator sees Apil-kin's corrected `orderIndex` (10) on the first run instead of the old 0.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 3 new tests: `testFixSKLFigureOrderFixesHyphenatedName` (Apil-kin → orderIndex 10), `testEnsureSKLGutianReignLengthsFixesHyphenatedName` (suffix `(Listed reign: 3 years.)` appended to the hyphenated DB figure), `testEnsureComputedSKLDatesPropagatesFullGutianDynastyFromAnchor` (all 19 seed kings get computed dates, contiguous chain, `dateSource == .computed`, last end -2072 = 2200 − 128 total reign-years). 259 tests pass; `swift build` clean.
+
+**Verified on the live DB** (backup at `/var/folders/.../T/opencode/Me.store.bak` before launch): all 18 Gutian figures now have `ZSTARTYEAR`/`ZENDYEAR` populated (Inkishush −2200→−2194 … Tirigan −2119→−2079), `ZDATESOURCE = 'computed'`, `Apil-kin` orderIndex fixed 0→10 with the `(Listed reign: 3 years.)` suffix. Dynasty of Akkad dates untouched.
+
+**Key decisions:**
+- The anchor lives on the **seed** (like every other anchored dynasty) rather than a bespoke migration — `ensureSKLAnchorDates` already existed, so this is purely a data edit + the name-matching robustness the `Apilkin`/`Apil-kin` spelling split exposed.
+- Reordering the launch sequence matters because `ensureComputedSKLDates` only writes dates where `birthDate.startYear == nil` — a first-run wrong-order computation would have persisted.
+- Era-awareness in `fixSKLFigureOrder`/`ensureSKLGutianReignLengths` guards against the seed's cross-era name collision (`Puzur-Suen` exists in both Kish and Gutian eras); the DB's single `Puzur-Suen` (Kish, orderIndex 15) is untouched, and the Gutian `Puzur-Suen` row itself is left uncreated (known data gap, additive-only policy).
+
+**Relevant files:**
+- `Sources/MeCore/Resources/seed_data.json`, `Sources/Me/Resources/seed_data.json` — Inkishush anchor
+- `Sources/MeCore/Store/Migration.swift` — `seedNameKey`, era-aware lookups in `ensureSKLAnchorDates`/`ensureSKLGutianReignLengths`/`fixSKLFigureOrder`
+- `Sources/Me/Views/ContentView.swift` — propagator migrations after `fixSKLFigureOrder`
+- `Tests/MeCoreTests/MeCoreTests.swift` — 3 new tests
+
 ### 2026-08-17 — SKL ordering fix + title-only text block visibility
 
 **Part 1 — SKL figure ordering (source matching).** Four SKL kings (Etana, Gilgamesh, Lugalbanda, Urukagina) had `orderIndex=0` instead of their correct positions (12, 36, 41, 44). Root cause: their `source` field contained compound strings like `"Sumerian King List; Sumerian mythology"` which failed the exact `==` match in `SeedData.swift:530` and `Migration.fixSKLFigureOrder:1220`. Fixed by changing to `.contains("Sumerian King List")` in both locations. Verified: Etana now gets `orderIndex=12` with `reignYears=1560`. On existing DBs, `fixSKLFigureOrder` migration auto-corrects on next launch. 244 tests pass.

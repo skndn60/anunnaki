@@ -11,11 +11,12 @@ package struct ReignLength {
 
     /// Extract a reign duration from a figure description. Tries the SKL's canonical
     /// "(Listed reign: X years.)" suffix first, then "Reigned/Ruled X years" (with
-    /// optional "for"/"around" and any capitalization).
+    /// optional "for"/"around" and any capitalization), then "reigning for X years".
     package static func parse(from description: String) -> ReignLength? {
         let patterns = [
             "[Ll]isted reign:\\s*([\\d,]+)\\s+years",
             "(?:[Rr]eigned|[Rr]uled)(?:\\s+for)?(?:\\s+around)?\\s+([\\d,]+)\\s+years",
+            "(?:possibly\\s+)?[Rr]eigning\\s+for\\s+([\\d,]+)\\s+years",
         ]
         for pattern in patterns {
             guard let regex = try? NSRegularExpression(pattern: pattern),
