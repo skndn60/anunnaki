@@ -12,22 +12,29 @@ struct PopupTableView: View {
         table.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
     }
 
-    private var figures: [Figure] {
-        table.figures
+    private var columns: [ColumnItem] {
+        switch table.columnMode {
+        case .figures:
+            return table.figures.map(ColumnItem.figure)
+        case .strings:
+            return table.columns
+                .sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
+                .map(ColumnItem.column)
+        }
     }
 
-    private func cellKey(attributeID: PersistentIdentifier, figureID: PersistentIdentifier) -> String {
-        "\(attributeID.hashValue)-\(figureID.hashValue)"
+    private func cellKey(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> String {
+        "\(attributeID.hashValue)-\(columnID.hashValue)"
     }
 
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(table.name)
-                    .font(.headline)
+                    .font(.title3)
                 if !table.tableDescription.isEmpty {
                     Text(table.tableDescription)
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -36,16 +43,16 @@ struct PopupTableView: View {
 
             Divider()
 
-            if figures.isEmpty || sortedAttributes.isEmpty {
+            if columns.isEmpty || sortedAttributes.isEmpty {
                 VStack(spacing: 12) {
                     Spacer()
                     Image(systemName: "tablecells")
                         .font(.system(size: 48))
                         .foregroundStyle(.secondary)
-                    Text(figures.isEmpty ? "No figures in this table" : "No attributes defined")
+                    Text(columns.isEmpty ? (table.columnMode == .strings ? "No columns in this table" : "No figures in this table") : "No attributes defined")
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                    Text("Add figures and attributes in the table settings")
+                    Text(table.columnMode == .strings ? "Add columns and attributes in the table settings" : "Add figures and attributes in the table settings")
                         .font(.body)
                         .foregroundStyle(.tertiary)
                     Spacer()
@@ -56,8 +63,8 @@ struct PopupTableView: View {
                         GridRow {
                             Color.clear
                                 .frame(width: 160, height: 120)
-                            ForEach(figures) { figure in
-                                FigureColumnHeader(figure: figure)
+                            ForEach(columns) { column in
+                                columnHeader(column)
                                     .frame(width: 180, height: 120)
                             }
                         }
@@ -67,9 +74,9 @@ struct PopupTableView: View {
                             GridRow {
                                 AttributeRowHeader(attribute: attribute)
                                     .frame(width: 160, height: 120)
-                                ForEach(figures) { figure in
+                                ForEach(columns) { column in
                                     CellView(
-                                        value: cellBinding(attributeID: attribute.persistentModelID, figureID: figure.persistentModelID),
+                                        value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
                                         isEditing: isEditing
                                     )
                                     .frame(width: 180, height: 120)
@@ -99,40 +106,75 @@ struct PopupTableView: View {
         .onAppear { loadCells() }
     }
 
+    @ViewBuilder
+    private func columnHeader(_ column: ColumnItem) -> some View {
+        switch column {
+        case .figure(let figure):
+            FigureColumnHeader(figure: figure)
+        case .column(let col):
+            StringColumnHeader(name: col.name)
+        }
+    }
+
     private func loadCells() {
         for cell in table.cells {
-            if let attrID = cell.attribute?.persistentModelID,
-               let figID = cell.figure?.persistentModelID {
-                cellValues[cellKey(attributeID: attrID, figureID: figID)] = cell.value ?? ""
+            if let attrID = cell.attribute?.persistentModelID {
+                if let figID = cell.figure?.persistentModelID {
+                    cellValues[cellKey(attributeID: attrID, columnID: figID)] = cell.value ?? ""
+                } else if let colID = cell.column?.persistentModelID {
+                    cellValues[cellKey(attributeID: attrID, columnID: colID)] = cell.value ?? ""
+                }
             }
         }
     }
 
-    private func cellBinding(attributeID: PersistentIdentifier, figureID: PersistentIdentifier) -> Binding<String> {
-        let key = cellKey(attributeID: attributeID, figureID: figureID)
+    private func cellBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<String> {
+        let key = cellKey(attributeID: attributeID, columnID: columnID)
         return Binding(
             get: { cellValues[key] ?? "" },
             set: { newValue in
                 cellValues[key] = newValue
-                saveCell(attributeID: attributeID, figureID: figureID, value: newValue)
+                saveCell(attributeID: attributeID, columnID: columnID, value: newValue)
             }
         )
     }
 
-    private func saveCell(attributeID: PersistentIdentifier, figureID: PersistentIdentifier, value: String) {
-        guard let attribute = table.attributes.first(where: { $0.persistentModelID == attributeID }),
-              let figure = table.figures.first(where: { $0.persistentModelID == figureID }) else { return }
+    private func saveCell(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, value: String) {
+        guard let attribute = table.attributes.first(where: { $0.persistentModelID == attributeID }) else { return }
 
         if let existing = table.cells.first(where: { cell in
-            cell.attribute?.persistentModelID == attributeID && cell.figure?.persistentModelID == figureID
+            cell.attribute?.persistentModelID == attributeID &&
+            (cell.figure?.persistentModelID ?? cell.column?.persistentModelID) == columnID
         }) {
             existing.value = value.isEmpty ? nil : value
         } else {
-            let cell = PopupTableCell(attribute: attribute, figure: figure, value: value.isEmpty ? nil : value)
-            table.cells.append(cell)
-            modelContext.insert(cell)
+            switch table.columnMode {
+            case .figures:
+                guard let figure = table.figures.first(where: { $0.persistentModelID == columnID }) else { return }
+                let cell = PopupTableCell(attribute: attribute, figure: figure, value: value.isEmpty ? nil : value)
+                table.cells.append(cell)
+                modelContext.insert(cell)
+            case .strings:
+                guard let column = table.columns.first(where: { $0.persistentModelID == columnID }) else { return }
+                let cell = PopupTableCell(attribute: attribute, column: column, value: value.isEmpty ? nil : value)
+                table.cells.append(cell)
+                modelContext.insert(cell)
+            }
         }
         try? modelContext.save()
+    }
+}
+
+/// One column of a PopupTable grid — either a Figure or a flat string label.
+private enum ColumnItem: Identifiable {
+    case figure(Figure)
+    case column(PopupTableColumn)
+
+    var id: PersistentIdentifier {
+        switch self {
+        case .figure(let figure): return figure.persistentModelID
+        case .column(let column): return column.persistentModelID
+        }
     }
 }
 
@@ -158,6 +200,24 @@ private struct FigureColumnHeader: View {
         }
         .padding(.horizontal, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(nsColor: .controlBackgroundColor))
+    }
+}
+
+private struct StringColumnHeader: View {
+    let name: String
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "textformat")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Text(name)
+                .font(.body.bold())
+                .lineLimit(2)
+        }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxHeight: .infinity)
         .background(Color(nsColor: .controlBackgroundColor))
     }
 }

@@ -30,17 +30,6 @@ struct PlaceListView: View {
         return filteredPlaces.first { $0.persistentModelID == id }
     }
 
-    private var backLabel: String? {
-        guard let history = coordinator?.history, history.count >= 2 else { return nil }
-        return history[history.count - 2].name
-    }
-
-    private var backAction: (() -> Void)? {
-        guard let history = coordinator?.history, history.count >= 2 else { return nil }
-        let index = history.count - 2
-        return { self.coordinator?.navigateToHistory(at: index) }
-    }
-
     private func effectiveSortName(_ place: Place) -> String {
         place.sortName.map { sortName(for: $0) } ?? sortName(for: place.name)
     }

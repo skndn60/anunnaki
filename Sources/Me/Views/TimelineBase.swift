@@ -1,17 +1,108 @@
 import SwiftUI
 import SwiftData
 
+// MARK: - Timeline Axis
+
+/// Piecewise year→x mapping that guarantees every dated era a minimum visual
+/// width, so narrow eras (e.g. Creation of Mankind) remain comfortable scrollable
+/// lanes instead of pin-thin slivers on a linear deep-time axis. Deep-time eras
+/// keep their proportional width; only undersized eras are stretched.
+struct TimelineAxis {
+    let minYear: Int
+    let maxYear: Int
+    let width: CGFloat
+
+    private struct Segment {
+        let startYear: Int
+        let endYear: Int
+        let startX: CGFloat
+        let endX: CGFloat
+
+        var yearSpan: Int { endYear - startYear }
+        var xSpan: CGFloat { endX - startX }
+    }
+
+    private let segments: [Segment]
+
+    private init(minYear: Int, maxYear: Int, width: CGFloat, segments: [Segment]) {
+        self.minYear = minYear
+        self.maxYear = maxYear
+        self.width = width
+        self.segments = segments
+    }
+
+    var averagePointsPerYear: CGFloat {
+        maxYear - minYear > 0 ? width / CGFloat(maxYear - minYear) : 1
+    }
+
+    func x(for year: Int) -> CGFloat {
+        guard let first = segments.first, let last = segments.last else { return 0 }
+        if year <= first.startYear { return first.startX }
+        if year >= last.endYear { return last.endX }
+        for segment in segments where year >= segment.startYear && year < segment.endYear {
+            let slope = segment.yearSpan > 0 ? segment.xSpan / CGFloat(segment.yearSpan) : 0
+            return segment.startX + CGFloat(year - segment.startYear) * slope
+        }
+        return 0
+    }
+
+    /// Builds an axis over [minYear, maxYear] where each dated era occupies at
+    /// least `minEraWidth` points; gaps between/around eras stay proportional to
+    /// `basePointsPerYear`. Eras are laid sequentially in chronological order.
+    static func minimumWidth(
+        minYear: Int,
+        maxYear: Int,
+        eras: [Era],
+        minEraWidth: CGFloat,
+        basePointsPerYear: CGFloat
+    ) -> TimelineAxis {
+        let dated: [(start: Int, end: Int)] = eras
+            .compactMap { era in
+                guard let start = era.startDate.startYear,
+                      let end = era.endDate.endYear,
+                      end > start else { return nil }
+                return (start, end)
+            }
+            .sorted { $0.start < $1.start }
+
+        var segments: [Segment] = []
+        var curX: CGFloat = 0
+        var cursorYear = minYear
+
+        func appendGap(from fromYear: Int, to toYear: Int) {
+            guard toYear > fromYear else { return }
+            let width = CGFloat(toYear - fromYear) * basePointsPerYear
+            segments.append(Segment(startYear: fromYear, endYear: toYear, startX: curX, endX: curX + width))
+            curX += width
+        }
+
+        for era in dated {
+            if era.start >= cursorYear {
+                appendGap(from: cursorYear, to: era.start)
+                let proportional = CGFloat(era.end - era.start) * basePointsPerYear
+                let width = max(proportional, minEraWidth)
+                segments.append(Segment(startYear: era.start, endYear: era.end, startX: curX, endX: curX + width))
+                curX += width
+                cursorYear = era.end
+            }
+        }
+        appendGap(from: cursorYear, to: maxYear)
+
+        return TimelineAxis(minYear: minYear, maxYear: maxYear, width: curX, segments: segments)
+    }
+}
+
 // MARK: - Swimlane Mode
 
 enum SwimlaneMode {
     case mythological
-    case mythologicalTimed(minYear: Int, pointsPerYear: CGFloat)
+    case mythologicalTimed(axis: TimelineAxis)
     case historical(minYear: Int, pointsPerYear: CGFloat)
 
     var minYear: Int {
         switch self {
         case .mythological: return 0
-        case .mythologicalTimed(let minYear, _): return minYear
+        case .mythologicalTimed(let axis): return axis.minYear
         case .historical(let minYear, _): return minYear
         }
     }
@@ -19,7 +110,7 @@ enum SwimlaneMode {
     var pointsPerYear: CGFloat {
         switch self {
         case .mythological: return 1
-        case .mythologicalTimed(_, let ppy): return ppy
+        case .mythologicalTimed(let axis): return axis.averagePointsPerYear
         case .historical(_, let ppy): return ppy
         }
     }
@@ -62,6 +153,7 @@ struct LegendIcon: View {
 struct FigureSwimlaneChip: View {
     let figure: Figure
     var onSelect: ((Figure) -> Void)?
+    var onHoverChange: ((Figure, Bool) -> Void)?
 
     @State private var isHovered = false
 
@@ -98,7 +190,10 @@ struct FigureSwimlaneChip: View {
         .shadow(color: isHovered ? chipColor.opacity(0.3) : .clear, radius: isHovered ? 6 : 0, y: isHovered ? 3 : 0)
         .offset(y: isHovered ? -3 : 0)
         .animation(.easeInOut(duration: 0.15), value: isHovered)
-        .onHover { isHovered = $0 }
+        .onHover { inside in
+            isHovered = inside
+            onHoverChange?(figure, inside)
+        }
         .help(figureHelp)
         .onTapGesture { onSelect?(figure) }
     }
@@ -123,8 +218,11 @@ struct EraSwimlaneRow: View {
     let swimlaneWidth: CGFloat?
     let swimlaneHeight: CGFloat
     let mode: SwimlaneMode
+    var showReignBars: Bool = true
     var onSelectFigure: ((Figure) -> Void)?
     var onSelectEvent: ((Event) -> Void)?
+
+    @State private var hoveredFigureID: PersistentIdentifier?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -152,9 +250,12 @@ struct EraSwimlaneRow: View {
 
     private var eraStartX: CGFloat {
         switch mode {
-        case .historical(let minYear, let ppy), .mythologicalTimed(let minYear, let ppy):
+        case .historical(let minYear, let ppy):
             guard let sy = era.startDate.startYear else { return 0 }
             return CGFloat(sy - minYear) * ppy
+        case .mythologicalTimed(let axis):
+            guard let sy = era.startDate.startYear else { return 0 }
+            return axis.x(for: sy)
         case .mythological:
             return 0
         }
@@ -215,8 +316,8 @@ struct EraSwimlaneRow: View {
             }
         case .mythological:
             mythologicalSwimlane
-        case .mythologicalTimed:
-            mythologicalTimedSwimlane
+        case .mythologicalTimed(let axis):
+            mythologicalTimedSwimlane(axis: axis)
         }
     }
 
@@ -335,37 +436,48 @@ struct EraSwimlaneRow: View {
         }
 
         return AnyView(ZStack(alignment: .leading) {
-            ForEach(figures) { figure in
-                if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
-                    let birthX = CGFloat(birthYear - minYear) * ppy
-                    let deathX = CGFloat(deathYear - minYear) * ppy
-                    let barWidth = max(4, deathX - birthX)
-                    RoundedRectangle(cornerRadius: 1.5)
-                        .fill((figure.figureType?.color ?? .gray).opacity(0.2))
-                        .frame(width: barWidth, height: 4)
-                        .position(x: birthX + barWidth / 2, y: contentHeight / 2 + 12)
+            if showReignBars {
+                ForEach(figures) { figure in
+                    if let birthYear = figure.birthDate.startYear, let deathYear = figure.deathDate.endYear {
+                        let birthX = CGFloat(birthYear - minYear) * ppy
+                        let deathX = CGFloat(deathYear - minYear) * ppy
+                        let barWidth = max(4, deathX - birthX)
+                        let isHovered = hoveredFigureID == figure.persistentModelID
+                        RoundedRectangle(cornerRadius: 1.5)
+                            .fill((figure.figureType?.color ?? .gray).opacity(isHovered ? 0.7 : 0.22))
+                            .frame(width: barWidth, height: isHovered ? 6 : 4)
+                            .position(x: birthX + barWidth / 2, y: contentHeight / 2 + 12)
+                            .onHover { inside in hoveredFigureID = inside ? figure.persistentModelID : nil }
+                            .help("\(figure.name) — \(figure.birthDate.displayLabel) → \(figure.deathDate.displayLabel)")
+                    }
                 }
             }
 
             eraBar(startX: eraStartX, endX: eraEndX, height: contentHeight)
 
             ForEach(chipLayouts, id: \.figure.id) { layout in
-                FigureSwimlaneChip(figure: layout.figure, onSelect: onSelectFigure)
-                    .position(x: layout.x, y: layout.chipY)
+                FigureSwimlaneChip(
+                    figure: layout.figure,
+                    onSelect: onSelectFigure,
+                    onHoverChange: { figure, inside in
+                        hoveredFigureID = inside ? figure.persistentModelID : nil
+                    }
+                )
+                .position(x: layout.x, y: layout.chipY)
             }
 
             ForEach(eventLayouts, id: \.event.id) { layout in
                 let color = layout.event.eventType?.color ?? .gray
                 VStack(spacing: 1) {
                     Image(systemName: layout.event.eventType?.icon ?? "flag.fill")
-                        .font(.system(size: 10))
+                        .font(.system(size: 14))
                         .foregroundStyle(color)
                     Text(layout.event.name)
-                        .font(.system(size: 8))
+                        .font(.system(size: 10))
                         .lineLimit(1)
                         .foregroundStyle(.secondary)
                 }
-                .frame(width: 60)
+                .frame(width: 80)
                 .position(x: layout.x, y: contentHeight - 10)
                 .help(layout.event.name)
                 .onTapGesture { onSelectEvent?(layout.event) }
@@ -428,15 +540,13 @@ struct EraSwimlaneRow: View {
         )
     }
 
-    private var mythologicalTimedSwimlane: some View {
-        let minYear = mode.minYear
-        let ppy = mode.pointsPerYear
+    private func mythologicalTimedSwimlane(axis: TimelineAxis) -> some View {
         let startX = eraStartX
         let endX: CGFloat
         if let sy = era.startDate.startYear, let ey = era.endDate.endYear, sy < ey {
-            endX = CGFloat(ey - minYear) * ppy
+            endX = axis.x(for: ey)
         } else {
-            endX = startX + max(200 * ppy, 20)
+            endX = startX + max(200 * axis.averagePointsPerYear, 20)
         }
         let railWidth = max(0, (swimlaneWidth ?? 0) - startX)
         return ZStack(alignment: .leading) {

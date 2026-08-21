@@ -41,6 +41,7 @@ package class QueryEngine {
         let eras: [Era]
         let figureTypes: [FigureType]
         let images: [ImageAsset]
+        let retriever: RetrievalIndex
     }
 
     private var cache: QueryCache?
@@ -156,7 +157,14 @@ package class QueryEngine {
             sources: context.fetchAll() as [Source],
             eras: context.fetchAll() as [Era],
             figureTypes: context.fetchAll() as [FigureType],
-            images: context.fetchAll() as [ImageAsset]
+            images: context.fetchAll() as [ImageAsset],
+            retriever: RetrievalIndex(
+                figures: context.fetchAll() as [Figure],
+                places: context.fetchAll() as [Place],
+                events: context.fetchAll() as [Event],
+                things: context.fetchAll() as [Thing],
+                alternateNames: context.fetchAll() as [AlternateName]
+            )
         )
 
         defer { cache = nil }
@@ -783,10 +791,28 @@ package class QueryEngine {
         let c = cache!
 
         var candidates: [(EntityRef, String, String)] = []
-        for figure in c.figures { candidates.append((.figure(figure), figure.name, figure.name.lowercased())) }
-        for place in c.places { candidates.append((.place(place), place.name, place.name.lowercased())) }
-        for event in c.events { candidates.append((.event(event), event.name, event.name.lowercased())) }
-        for thing in c.things { candidates.append((.thing(thing), thing.name, thing.name.lowercased())) }
+        for figure in c.figures {
+            candidates.append((.figure(figure), figure.name, figure.name.lowercased()))
+        }
+        for place in c.places {
+            candidates.append((.place(place), place.name, place.name.lowercased()))
+        }
+        for event in c.events {
+            candidates.append((.event(event), event.name, event.name.lowercased()))
+        }
+        for thing in c.things {
+            candidates.append((.thing(thing), thing.name, thing.name.lowercased()))
+        }
+        for figure in c.figures {
+            for alt in c.alternateNames where alt.figure?.persistentModelID == figure.persistentModelID {
+                candidates.append((.figure(figure), alt.name, alt.name.lowercased()))
+            }
+        }
+        for place in c.places {
+            for alt in c.alternateNames where alt.place?.persistentModelID == place.persistentModelID {
+                candidates.append((.place(place), alt.name, alt.name.lowercased()))
+            }
+        }
 
         candidates.sort { $0.2.count > $1.2.count }
 
@@ -992,24 +1018,7 @@ package class QueryEngine {
     // MARK: - Entity Resolution
 
     private func resolveFigure(_ name: String) -> Figure? {
-        let figures = cache!.figures
-        let query = name.lowercased()
-
-        if let match = figures.first(where: { $0.name.lowercased() == query }) {
-            return match
-        }
-        if let match = resolveFigureByAlternateName(name) {
-            return match
-        }
-        if let match = figures.first(where: { $0.name.lowercased().contains(query) }) {
-            return match
-        }
-        let queryWords = query.split(whereSeparator: { !$0.isLetter }).map(String.init)
-        if queryWords.count > 1,
-           let match = figures.first(where: { queryWords.contains($0.name.lowercased()) }) {
-            return match
-        }
-        return nil
+        cache!.retriever.resolveFigure(name)
     }
 
     private func resolveFigureByFallback(_ name: String) -> Figure? {
@@ -1058,30 +1067,15 @@ package class QueryEngine {
     }
 
     private func resolvePlace(_ name: String) -> Place? {
-        let places = cache!.places
-        let query = name.lowercased()
-        if let match = places.first(where: { $0.name.lowercased() == query }) {
-            return match
-        }
-        return places.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) })
+        cache!.retriever.resolvePlace(name)
     }
 
     private func resolveEvent(_ name: String) -> Event? {
-        let events = cache!.events
-        let query = name.lowercased()
-        if let match = events.first(where: { $0.name.lowercased() == query }) {
-            return match
-        }
-        return events.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) })
+        cache!.retriever.resolveEvent(name)
     }
 
     private func resolveThing(_ name: String) -> Thing? {
-        let things = cache!.things
-        let query = name.lowercased()
-        if let match = things.first(where: { $0.name.lowercased() == query }) {
-            return match
-        }
-        return things.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) })
+        cache!.retriever.resolveThing(name)
     }
 
     // MARK: - Relationship Finders

@@ -31,7 +31,7 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self
         ])
         if isDisk {
             let url = FileManager.default.temporaryDirectory
@@ -1043,6 +1043,105 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(dossier.event.name, "Creation of Humanity")
     }
 
+    // MARK: - RetrievalIndex (shared retrieval layer) Tests
+
+    func testRetrievalIndexMentionsAlternateName() {
+        let f = makeFixture()
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent],
+            things: [],
+            alternateNames: [AlternateName(figure: f.ninhursag, name: "Mami", tradition: .sumerian)]
+        )
+        let mentioned = index.figuresMentioned(in: "What do we know about Mami?")
+        XCTAssertTrue(mentioned.contains { $0.persistentModelID == f.ninhursag.persistentModelID })
+        XCTAssertFalse(mentioned.contains { $0.persistentModelID == f.enki.persistentModelID })
+    }
+
+    func testRetrievalIndexMentionsSingleTokenFallback() {
+        let f = makeFixture()
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent],
+            things: [],
+            alternateNames: []
+        )
+        let mentioned = index.eventsMentioned(in: "What created humanity?")
+        XCTAssertTrue(mentioned.contains { $0.persistentModelID == f.creationEvent.persistentModelID })
+    }
+
+    func testRetrievalIndexMentionsStopWordGuard() {
+        let f = makeFixture()
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent],
+            things: [],
+            alternateNames: []
+        )
+        XCTAssertFalse(index.figuresMentioned(in: "the").contains { $0.persistentModelID == f.enki.persistentModelID })
+        XCTAssertFalse(index.eventsMentioned(in: "was").contains { $0.persistentModelID == f.creationEvent.persistentModelID })
+    }
+
+    func testRetrievalIndexMentionsSortNameOverride() {
+        let f = makeFixture()
+        let flood = Event(name: "The Great Flood", sortName: "Flood")
+        f.context.insert(flood)
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent, flood],
+            things: [],
+            alternateNames: []
+        )
+        let mentioned = index.eventsMentioned(in: "What was the flood like?")
+        XCTAssertTrue(mentioned.contains { $0.persistentModelID == flood.persistentModelID })
+    }
+
+    func testRetrievalIndexResolveFigureByAlternateName() {
+        let f = makeFixture()
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent],
+            things: [],
+            alternateNames: [AlternateName(figure: f.enki, name: "Nudimmud", tradition: .akkadian)]
+        )
+        XCTAssertEqual(index.resolveFigure("Nudimmud")?.persistentModelID, f.enki.persistentModelID)
+        XCTAssertEqual(index.resolveFigure("Enki")?.persistentModelID, f.enki.persistentModelID)
+        XCTAssertEqual(index.resolveFigure("enk")?.persistentModelID, f.enki.persistentModelID)
+    }
+
+    func testRetrievalIndexResolutionParityWithQueryEngine() {
+        let f = makeFixture()
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent],
+            things: [],
+            alternateNames: [AlternateName(figure: f.enki, name: "Nudimmud", tradition: .akkadian)]
+        )
+        XCTAssertEqual(index.resolvePlace("Uruk")?.persistentModelID, f.uruk.persistentModelID)
+        XCTAssertEqual(index.resolvePlace("uk")?.persistentModelID, f.uruk.persistentModelID)
+        XCTAssertEqual(index.resolveEvent("Creation of Humanity")?.persistentModelID, f.creationEvent.persistentModelID)
+        XCTAssertNil(index.resolveFigure("zzznonexistent"))
+        XCTAssertNil(index.resolvePlace("Atlantis"))
+    }
+
+    func testQueryEngineStructuredPipelineResolvesAlternateName() {
+        let f = makeFixture()
+        f.context.insert(AlternateName(figure: f.ninhursag, name: "Mami", tradition: .sumerian))
+        try? f.context.save()
+
+        let result = f.engine.query("What is Mami?")
+        guard case .figure(let dossier) = result else {
+            return XCTFail("Expected .figure for alternate-name query, got \(result)")
+        }
+        XCTAssertEqual(dossier.figure.name, "Ninhursag")
+    }
+
     // MARK: - find* Tests
 
     func testFindChildren() {
@@ -1681,9 +1780,9 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self
         ])
-        let config = ModelConfiguration(schema: schema, url: url)
+        let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
             XCTFail("Could not open real store copy")
             return
@@ -1793,7 +1892,7 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self
         ])
         let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -4962,6 +5061,80 @@ func testRegnalKeyOrdersEventsByDate() {
 
         let fetched = ((try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []).first
         XCTAssertNil(fetched?.value)
+    }
+
+    func testPopupTableColumnModeDefaultsToFigures() {
+        let table = PopupTable(name: "T1")
+        XCTAssertEqual(table.columnMode, .figures)
+        XCTAssertNil(table.columnModeRawValue)
+    }
+
+    func testPopupTableColumnModeRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Worship")
+        table.columnMode = .strings
+        context.insert(table)
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        XCTAssertEqual(fetched?.columnMode, .strings)
+        XCTAssertEqual(fetched?.columnModeRawValue, "strings")
+    }
+
+    func testPopupTableColumnRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Worship")
+        context.insert(table)
+        let col = PopupTableColumn(table: table, name: "Sacrifice", orderIndex: 0)
+        context.insert(col)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<PopupTableColumn>()))?.first
+        XCTAssertEqual(fetched?.name, "Sacrifice")
+        XCTAssertEqual(fetched?.orderIndex, 0)
+        XCTAssertEqual(fetched?.table?.name, "Worship")
+        XCTAssertEqual(fetched?.table?.columns.count, 1)
+    }
+
+    func testPopupTableCellWithColumnRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Worship")
+        let attr = PopupTableAttribute(table: table, name: "Occasion")
+        let col = PopupTableColumn(table: table, name: "Sacrifice")
+        context.insert(table); context.insert(attr); context.insert(col)
+        let cell = PopupTableCell(table: table, attribute: attr, column: col, value: "New Moon")
+        context.insert(cell)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<PopupTableCell>()))?.first
+        XCTAssertEqual(fetched?.value, "New Moon")
+        XCTAssertEqual(fetched?.column?.name, "Sacrifice")
+        XCTAssertNil(fetched?.figure)
+        XCTAssertEqual(fetched?.attribute?.name, "Occasion")
+        XCTAssertEqual(col.cells.count, 1)
+    }
+
+    func testPopupTableColumnsCascadeDelete() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Worship")
+        let col = PopupTableColumn(table: table, name: "Sacrifice")
+        context.insert(table); context.insert(col)
+        let cell = PopupTableCell(table: table, column: col, value: "New Moon")
+        table.cells.append(cell)
+        context.insert(cell)
+        try? context.save()
+
+        context.delete(table)
+        try? context.save()
+
+        let columns = (try? context.fetch(FetchDescriptor<PopupTableColumn>())) ?? []
+        let cells = (try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []
+        XCTAssertTrue(columns.isEmpty)
+        XCTAssertTrue(cells.isEmpty)
     }
 
     // MARK: - SKLTimelineLayout

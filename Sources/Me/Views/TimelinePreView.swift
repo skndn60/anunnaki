@@ -9,6 +9,7 @@ struct TimelinePreView: View {
 
     private let swimlaneHeight: CGFloat = 64
     private let targetTimelineWidth: CGFloat = 1600
+    private let minEraWidth: CGFloat = 160
 
     private var preFloodEras: [Era] {
         eras.filter { $0.orderIndex < 7 }
@@ -30,12 +31,18 @@ struct TimelinePreView: View {
         max(1, maxYear - minYear)
     }
 
-    private var pointsPerYear: CGFloat {
-        targetTimelineWidth / CGFloat(span)
+    private var axis: TimelineAxis {
+        TimelineAxis.minimumWidth(
+            minYear: minYear,
+            maxYear: maxYear,
+            eras: preFloodErasWithFigures,
+            minEraWidth: minEraWidth,
+            basePointsPerYear: targetTimelineWidth / CGFloat(span)
+        )
     }
 
     private var timelineWidth: CGFloat {
-        CGFloat(span) * pointsPerYear
+        axis.width
     }
 
     var body: some View {
@@ -73,7 +80,7 @@ struct TimelinePreView: View {
 
         return ZStack(alignment: .topLeading) {
             ForEach(Array(ticks), id: \.self) { year in
-                let x = CGFloat(year - minYear) * pointsPerYear
+                let x = axis.x(for: year)
                 Text(NumberFormatter.localizedString(from: NSNumber(value: abs(year)), number: .decimal))
                     .font(.system(.callout, design: .serif))
                     .foregroundStyle(.primary)
@@ -107,7 +114,7 @@ struct TimelinePreView: View {
                         places: mapPlaces,
                         swimlaneWidth: timelineWidth,
                         swimlaneHeight: swimlaneHeight,
-                        mode: .mythologicalTimed(minYear: minYear, pointsPerYear: pointsPerYear),
+                        mode: .mythologicalTimed(axis: axis),
                         onSelectFigure: { detailFigure = $0 }
                     )
                 }
@@ -118,7 +125,7 @@ struct TimelinePreView: View {
                     let gridHeight = geo.size.height - headerHeight
                     ZStack(alignment: .topLeading) {
                         ForEach(Array(boundaryYears), id: \.self) { year in
-                            let x = CGFloat(year - minYear) * pointsPerYear
+                            let x = axis.x(for: year)
                             Rectangle()
                                 .fill(.black.opacity(0.35))
                                 .frame(width: 1, height: gridHeight)

@@ -115,11 +115,11 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
                     .font(.callout.bold())
                 Spacer()
                 Text("\(items.count)")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(color)
                 }
                 .buttonStyle(.plain)
@@ -128,7 +128,7 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
 
             if items.isEmpty {
                 Text("No \(title.lowercased())")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 4)
             } else {
@@ -139,13 +139,13 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
                                 .fill(item.uiColor)
                                 .frame(width: 14, height: 14)
                             Image(systemName: item.uiIcon)
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(item.uiColor)
                                 .frame(width: 12)
                             Text(item.uiName)
-                                .font(.caption)
+                                .font(.body)
                             Text("(\(item.countValue) \(item.countLabel))")
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(.tertiary)
                             Spacer()
                             Button("Edit") { editingItem = item }
@@ -153,7 +153,7 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
                                 .font(.caption)
                                 .foregroundColor(.accentColor)
                         }
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 5)
                         .padding(.horizontal, 6)
                         .background(.quaternary.opacity(0.15))
                         .cornerRadius(4)
@@ -195,11 +195,11 @@ private struct RelationshipTypeSubSection: View {
                     .font(.callout.bold())
                 Spacer()
                 Text("\(items.count)")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.purple)
                 }
                 .buttonStyle(.plain)
@@ -208,7 +208,7 @@ private struct RelationshipTypeSubSection: View {
 
             if items.isEmpty {
                 Text("No relationship types")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 4)
             } else {
@@ -219,20 +219,20 @@ private struct RelationshipTypeSubSection: View {
                                 .fill(item.color)
                                 .frame(width: 14, height: 14)
                             Image(systemName: item.icon)
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(item.color)
                                 .frame(width: 12)
                             Text(item.name)
-                                .font(.caption)
+                                .font(.body)
                             Text(item.category)
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(.tertiary)
                                 .padding(.horizontal, 4)
                                 .padding(.vertical, 1)
                                 .background(.quaternary.opacity(0.3))
                                 .cornerRadius(3)
                             Text("(\(item.relationships.count) relationships)")
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(.tertiary)
                             Spacer()
                             Button("Edit") { editingItem = item }
@@ -240,7 +240,7 @@ private struct RelationshipTypeSubSection: View {
                                 .font(.caption)
                                 .foregroundColor(.accentColor)
                         }
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 5)
                         .padding(.horizontal, 6)
                         .background(.quaternary.opacity(0.15))
                         .cornerRadius(4)
@@ -286,11 +286,11 @@ private struct RoleTypeSubSection<T: RoleTypeProtocol>: View {
                     .font(.callout.bold())
                 Spacer()
                 Text("\(items.count)")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(color)
                 }
                 .buttonStyle(.plain)
@@ -299,7 +299,7 @@ private struct RoleTypeSubSection<T: RoleTypeProtocol>: View {
 
             if items.isEmpty {
                 Text("No \(title.lowercased()) role types")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 4)
             } else {
@@ -310,18 +310,18 @@ private struct RoleTypeSubSection<T: RoleTypeProtocol>: View {
                                 .fill(item.uiColor)
                                 .frame(width: 14, height: 14)
                             Image(systemName: item.uiIcon)
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(item.uiColor)
                                 .frame(width: 12)
                             Text(item.uiName)
-                                .font(.caption)
+                                .font(.body)
                             Spacer()
                             Button("Edit") { editingItem = item }
                                 .buttonStyle(.plain)
-                                .font(.caption)
+                                .font(.callout)
                                 .foregroundColor(.accentColor)
                         }
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 5)
                         .padding(.horizontal, 6)
                         .background(.quaternary.opacity(0.15))
                         .cornerRadius(4)
@@ -684,11 +684,11 @@ private struct PantheonSubSection: View {
                     .font(.callout.bold())
                 Spacer()
                 Text("\(items.count)")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                 Button(action: { showingAdd = true }) {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(.teal)
                 }
                 .buttonStyle(.plain)
@@ -697,7 +697,7 @@ private struct PantheonSubSection: View {
 
             if items.isEmpty {
                 Text("No pantheons")
-                    .font(.caption)
+                    .font(.callout)
                     .foregroundStyle(.tertiary)
                     .padding(.leading, 4)
             } else {
@@ -708,19 +708,19 @@ private struct PantheonSubSection: View {
                                 .fill(item.color)
                                 .frame(width: 14, height: 14)
                             Image(systemName: item.icon)
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(item.color)
                                 .frame(width: 12)
                             Text(item.name)
-                                .font(.caption)
+                                .font(.body)
                             if !item.pantheonDescription.isEmpty {
                                 Text(item.pantheonDescription)
-                                    .font(.caption2)
+                                    .font(.caption)
                                     .foregroundStyle(.tertiary)
                                     .lineLimit(1)
                             }
                             Text("(\(item.figures.count) figures)")
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(.tertiary)
                             Spacer()
                             Button("Edit") { editingItem = item }
@@ -728,7 +728,7 @@ private struct PantheonSubSection: View {
                                 .font(.caption)
                                 .foregroundColor(.accentColor)
                         }
-                        .padding(.vertical, 3)
+                        .padding(.vertical, 5)
                         .padding(.horizontal, 6)
                         .background(.quaternary.opacity(0.15))
                         .cornerRadius(4)

@@ -35,6 +35,15 @@ struct SumerianKingListView: View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 header
+                // Breadcrumbs
+                let coordinatorHistory = coordinator?.history ?? []
+                if !coordinatorHistory.isEmpty {
+                    BreadcrumbBar(
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
+                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                        onClear: { coordinator?.history.removeAll() }
+                    )
+                }
                 Divider()
                 if sklFigures.isEmpty {
                     emptyState
@@ -177,7 +186,6 @@ struct SumerianKingListView: View {
             }
             .padding(.vertical, 8)
             FigureDetailView(figure: figure, onSelectFigure: { selected in
-                coordinator?.pushHistory(id: selected.persistentModelID, name: selected.name, item: .figures)
                 selectedFigureID = selected.persistentModelID
             }, onSelectPlace: { place in
                 coordinator?.navigateToPlace(place.persistentModelID, name: place.name)

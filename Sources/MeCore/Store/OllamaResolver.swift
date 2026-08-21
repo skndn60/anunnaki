@@ -68,20 +68,20 @@ package final class OllamaResolver: QueryResolver {
         let eras = (try? modelContext.fetch(FetchDescriptor<Era>(sortBy: [SortDescriptor(\.orderIndex)]))) ?? []
         let relationships = (try? modelContext.fetch(FetchDescriptor<Relationship>())) ?? []
 
-        let q = query.lowercased()
-
         // Entities actually referenced by the query are included in FULL detail,
-        // so the LLM always has the record(s) it is being asked about.
-        var highlightedFigures: [Figure] = []
-        var highlightedPlaces: [Place] = []
-        var highlightedEvents: [Event] = []
-        func mentions(_ name: String) -> Bool {
-            let n = name.lowercased()
-            return !n.isEmpty && (q.contains(n) || n.contains(q.trimmingCharacters(in: .punctuationCharacters).trimmingCharacters(in: .whitespaces)))
-        }
-        for f in figures where mentions(f.name) { highlightedFigures.append(f) }
-        for p in places where mentions(p.name) { highlightedPlaces.append(p) }
-        for e in events where mentions(e.name) { highlightedEvents.append(e) }
+        // so the LLM always has the record(s) it is being asked about. Matching
+        // uses the shared RetrievalIndex vocabulary (canonical name, alternate
+        // names, sort-name overrides) so it stays consistent with QueryEngine.
+        let index = RetrievalIndex(
+            figures: figures,
+            places: places,
+            events: events,
+            things: [],
+            alternateNames: (try? modelContext.fetch(FetchDescriptor<AlternateName>())) ?? []
+        )
+        let highlightedFigures = index.figuresMentioned(in: query)
+        let highlightedPlaces = index.placesMentioned(in: query)
+        let highlightedEvents = index.eventsMentioned(in: query)
 
         let overviewFigures = figures.filter { f in !highlightedFigures.contains { $0.persistentModelID == f.persistentModelID } }
         let overviewPlaces = places.filter { p in !highlightedPlaces.contains { $0.persistentModelID == p.persistentModelID } }

@@ -3,6 +3,7 @@ import SwiftData
 
 struct TimelineContainerView: View {
     @State private var selectedSegment: TimelineSegment = .pre
+    @AppStorage("timelineShowReignBars") private var showReignBars = false
     @Query private var figureTypes: [FigureType]
 
     enum TimelineSegment: String, CaseIterable {
@@ -18,7 +19,7 @@ struct TimelineContainerView: View {
             case .pre:
                 TimelinePreView()
             case .post:
-                TimelinePostView()
+                TimelinePostView(showReignBars: showReignBars)
             }
         }
     }
@@ -36,6 +37,11 @@ struct TimelineContainerView: View {
             .pickerStyle(.segmented)
             .frame(width: 220)
             Spacer()
+            if selectedSegment == .post {
+                Toggle("Reign bars", isOn: $showReignBars)
+                    .toggleStyle(.checkbox)
+                    .help("Show each ruler's reign/lifespan bar; hover a bar or its chip to see whose it is.")
+            }
             HStack(spacing: 12) {
                 ForEach(figureTypes) { type in
                     LegendIcon(icon: type.icon, color: type.color, label: type.name)

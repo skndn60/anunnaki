@@ -171,7 +171,17 @@ struct EntityGroupCollectionView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            ScrollView {
+            VStack(spacing: 0) {
+                // Breadcrumbs
+                let coordinatorHistory = coordinator?.history ?? []
+                if !coordinatorHistory.isEmpty {
+                    BreadcrumbBar(
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
+                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                        onClear: { coordinator?.history.removeAll() }
+                    )
+                }
+                ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     ancestorTrail
                     header
@@ -233,6 +243,7 @@ struct EntityGroupCollectionView: View {
                 }
                 .padding(24)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
 
             Group {

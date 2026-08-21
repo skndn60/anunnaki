@@ -13,12 +13,14 @@ struct PopupTableFormView: View {
     @State private var selectedFigureIDs: Set<PersistentIdentifier> = []
     @State private var attributeName: String = ""
     @State private var searchText: String = ""
+    @State private var columnMode: PopupTableColumnMode = .figures
+    @State private var columnName: String = ""
+    @State private var columnLabels: [String] = []
 
     private var currentTable: PopupTable? { workingTable ?? table }
 
-    private var filteredFigures: [Figure] {
-        guard !searchText.isEmpty else { return allFigures }
-        return allFigures.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    private var filteredFigures: [FigureSearchResult] {
+        searchFigures(allFigures, query: searchText)
     }
 
     var body: some View {
@@ -45,15 +47,62 @@ struct PopupTableFormView: View {
                         .lineLimit(2...4)
                 }
 
-                Section {
-                    FigurePickerSection(
-                        allFigures: allFigures,
-                        filteredFigures: filteredFigures,
-                        selectedFigureIDs: $selectedFigureIDs,
-                        searchText: $searchText
-                    )
-                } header: {
-                    Text("Figures (\(selectedFigureIDs.count) selected)")
+                Section("Columns") {
+                    Picker("Column mode", selection: $columnMode) {
+                        ForEach([PopupTableColumnMode.figures, .strings], id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .help("Figures uses deities across the top; Text labels uses flat strings (e.g. worship activities).")
+                }
+
+                if columnMode == .figures {
+                    Section {
+                        FigurePickerSection(
+                            allFigures: allFigures,
+                            filteredFigures: filteredFigures,
+                            selectedFigureIDs: $selectedFigureIDs,
+                            searchText: $searchText
+                        )
+                    } header: {
+                        Text("Figures (\(selectedFigureIDs.count) selected)")
+                    }
+                } else {
+                    Section("Text Columns") {
+                        HStack {
+                            TextField("New column label", text: $columnName)
+                                .textFieldStyle(.roundedBorder)
+                            Button(action: addColumnLabel) {
+                                Image(systemName: "plus")
+                            }
+                            .disabled(columnName.trimmingCharacters(in: .whitespaces).isEmpty)
+                        }
+                        if !columnLabels.isEmpty {
+                            ForEach(columnLabels.indices, id: \.self) { index in
+                                HStack {
+                                    Image(systemName: "textformat")
+                                        .font(.caption2)
+                                        .foregroundStyle(.tertiary)
+                                        .frame(width: 12)
+                                    Text(columnLabels[index])
+                                    Spacer()
+                                    Button(action: { columnLabels.remove(at: index) }) {
+                                        Image(systemName: "minus.circle")
+                                            .foregroundStyle(.red)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
+                            .onMove { from, to in
+                                columnLabels.move(fromOffsets: from, toOffset: to)
+                            }
+                        } else if columnName.isEmpty {
+                            Text("No columns yet")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
                 }
 
                 Section("Attributes") {
@@ -98,6 +147,10 @@ struct PopupTableFormView: View {
             workingTable = table
             name = table.name
             tableDescription = table.tableDescription
+            columnMode = table.columnMode
+            columnLabels = table.columns
+                .sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
+                .map(\.name)
             selectedFigureIDs = Set(table.figures.map(\.persistentModelID))
         } else {
             let newTable = PopupTable()
@@ -112,7 +165,43 @@ struct PopupTableFormView: View {
         if isNew { modelContext.insert(tbl) }
         tbl.name = name.trimmingCharacters(in: .whitespaces)
         tbl.tableDescription = tableDescription.trimmingCharacters(in: .whitespaces)
+        tbl.columnMode = columnMode
 
+        switch columnMode {
+        case .figures:
+            removeStringColumns(from: tbl)
+            syncFigureColumns(in: tbl)
+        case .strings:
+            removeFigureColumns(from: tbl)
+            syncStringColumns(in: tbl)
+        }
+
+        try? modelContext.save()
+        dismiss()
+    }
+
+    private func removeStringColumns(from tbl: PopupTable) {
+        for column in tbl.columns {
+            let doomed = tbl.cells.filter { $0.column?.persistentModelID == column.persistentModelID }
+            for cell in doomed {
+                tbl.cells.removeAll { $0.persistentModelID == cell.persistentModelID }
+                modelContext.delete(cell)
+            }
+            tbl.columns.removeAll { $0.persistentModelID == column.persistentModelID }
+            modelContext.delete(column)
+        }
+    }
+
+    private func removeFigureColumns(from tbl: PopupTable) {
+        tbl.figures = []
+        let figureCells = tbl.cells.filter { $0.figure != nil }
+        for cell in figureCells {
+            tbl.cells.removeAll { $0.persistentModelID == cell.persistentModelID }
+            modelContext.delete(cell)
+        }
+    }
+
+    private func syncFigureColumns(in tbl: PopupTable) {
         let currentFigureIDs = selectedFigureIDs
         let currentFigures = allFigures.filter { currentFigureIDs.contains($0.persistentModelID) }
         tbl.figures = currentFigures
@@ -129,7 +218,7 @@ struct PopupTableFormView: View {
         for figID in currentFigureIDs {
             guard let figure = allFigures.first(where: { $0.persistentModelID == figID }) else { continue }
             for attr in tbl.attributes {
-                let alreadyHasCell = existingCells.contains { cell in
+                let alreadyHasCell = tbl.cells.contains { cell in
                     cell.attribute?.persistentModelID == attr.persistentModelID &&
                     cell.figure?.persistentModelID == figID
                 }
@@ -140,9 +229,52 @@ struct PopupTableFormView: View {
                 }
             }
         }
+    }
 
-        try? modelContext.save()
-        dismiss()
+    private func syncStringColumns(in tbl: PopupTable) {
+        let currentLabels = columnLabels.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        let existingByName = Dictionary(uniqueKeysWithValues: tbl.columns.map { ($0.name, $0) })
+
+        for column in tbl.columns where !currentLabels.contains(column.name) {
+            let doomed = tbl.cells.filter { $0.column?.persistentModelID == column.persistentModelID }
+            for cell in doomed {
+                tbl.cells.removeAll { $0.persistentModelID == cell.persistentModelID }
+                modelContext.delete(cell)
+            }
+            tbl.columns.removeAll { $0.persistentModelID == column.persistentModelID }
+            modelContext.delete(column)
+        }
+
+        for (index, label) in currentLabels.enumerated() {
+            if let existing = existingByName[label] {
+                existing.orderIndex = index
+            } else {
+                let column = PopupTableColumn(name: label, orderIndex: index)
+                tbl.columns.append(column)
+                modelContext.insert(column)
+            }
+        }
+
+        for attr in tbl.attributes {
+            for column in tbl.columns {
+                let alreadyHasCell = tbl.cells.contains { cell in
+                    cell.attribute?.persistentModelID == attr.persistentModelID &&
+                    cell.column?.persistentModelID == column.persistentModelID
+                }
+                if !alreadyHasCell {
+                    let cell = PopupTableCell(attribute: attr, column: column)
+                    tbl.cells.append(cell)
+                    modelContext.insert(cell)
+                }
+            }
+        }
+    }
+
+    private func addColumnLabel() {
+        let label = columnName.trimmingCharacters(in: .whitespaces)
+        guard !label.isEmpty, !columnLabels.contains(label) else { return }
+        columnLabels.append(label)
+        columnName = ""
     }
 
     private func addAttribute() {
@@ -157,15 +289,30 @@ struct PopupTableFormView: View {
             cell.attribute = attr
         }
 
-        for figID in selectedFigureIDs {
-            let alreadyHasCell = table.cells.contains { cell in
-                cell.attribute?.persistentModelID == attr.persistentModelID &&
-                cell.figure?.persistentModelID == figID
+        switch columnMode {
+        case .figures:
+            for figID in selectedFigureIDs {
+                let alreadyHasCell = table.cells.contains { cell in
+                    cell.attribute?.persistentModelID == attr.persistentModelID &&
+                    cell.figure?.persistentModelID == figID
+                }
+                if !alreadyHasCell, let figure = allFigures.first(where: { $0.persistentModelID == figID }) {
+                    let cell = PopupTableCell(attribute: attr, figure: figure)
+                    table.cells.append(cell)
+                    modelContext.insert(cell)
+                }
             }
-            if !alreadyHasCell, let figure = allFigures.first(where: { $0.persistentModelID == figID }) {
-                let cell = PopupTableCell(attribute: attr, figure: figure)
-                table.cells.append(cell)
-                modelContext.insert(cell)
+        case .strings:
+            for column in table.columns {
+                let alreadyHasCell = table.cells.contains { cell in
+                    cell.attribute?.persistentModelID == attr.persistentModelID &&
+                    cell.column?.persistentModelID == column.persistentModelID
+                }
+                if !alreadyHasCell {
+                    let cell = PopupTableCell(attribute: attr, column: column)
+                    table.cells.append(cell)
+                    modelContext.insert(cell)
+                }
             }
         }
 
@@ -191,7 +338,7 @@ struct PopupTableFormView: View {
 
 private struct FigurePickerSection: View {
     let allFigures: [Figure]
-    let filteredFigures: [Figure]
+    let filteredFigures: [FigureSearchResult]
     @Binding var selectedFigureIDs: Set<PersistentIdentifier>
     @Binding var searchText: String
 
@@ -251,7 +398,8 @@ private struct FigurePickerSection: View {
 
             ScrollView {
                 LazyVStack(spacing: 2) {
-                    ForEach(filteredFigures) { figure in
+                    ForEach(filteredFigures) { result in
+                        let figure = result.figure
                         let isSelected = selectedFigureIDs.contains(figure.persistentModelID)
                         Button(action: {
                             if isSelected {
@@ -268,7 +416,7 @@ private struct FigurePickerSection: View {
                                         .foregroundStyle(type.color)
                                         .frame(width: 16)
                                 }
-                                Text(figure.name)
+                                Text(result.displayName)
                                     .font(.callout)
                                     .foregroundStyle(isSelected ? .primary : .secondary)
                                 if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {

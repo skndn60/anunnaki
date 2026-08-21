@@ -78,9 +78,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .dashboard: return .overview
         case .missionControl, .importWiki, .versions: return .tools
         case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .typeSettings, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary, .popupTables: return .data
+        case .figures, .places, .events, .relationships, .associations, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary, .popupTables: return .data
         case .sklMap, .theMes: return .history
-        case .appSettings, .dataIntegrity: return .housekeeping
+        case .typeSettings, .appSettings, .dataIntegrity: return .housekeeping
         }
     }
 

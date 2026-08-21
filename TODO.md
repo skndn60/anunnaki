@@ -25,20 +25,16 @@
 
 - [ ] **Product weaknesses:** See `PRODUCT_WEAKNESSES.md` — priorities are (1) data-entry speed/bulk ingestion, (2) source-discriminated lineage, (3) export/portability, (4) attribution nudging.
 
-- [ ] **Ollama context retrieval — expand `mentions` beyond exact `name`:** `OllamaResolver.buildContext` now includes RELEVANT *<TYPE>* sections (full untruncated records) for any figures/places/events whose name the query mentions, plus a truncated overview. But matching is exact-name-substring only, so aliases, paraphrases, and partial names ("the deluge", "kings list", "Enki" using an alternate name) still won't surface the record — reproducing the original "Great Flood" hallucination for differently-worded queries. Expand matching to also check:
-  - `AlternateName.name` (cross-cultural/aka aliases)
-  - `sortName` / `sortStart` display names
-  - single-token substring fallback (e.g. "flood" → "The Great Flood"), guarded against false positives.
-- [ ] **Retrieval divergence between QueryEngine and OllamaResolver:** The deterministic `QueryEngine` path and the Ollama fallback each build their own lookup/context entirely independently — fixes on one side don't propagate to the other. Consider a single shared retrieval layer (entity-matching helper) used by both so name/alias matching and contextual context stay consistent.
+- [x] **Ollama context retrieval — expand `mentions` beyond exact `name` — done 2026-08-21 via `RetrievalIndex`** (see divergence item below). Matching now includes alternate names, sort-name overrides, and a guarded single-token fallback. Leftover idea (not required): expand to `figureDescription`/`domain` prose matching (recall guard needed).
+- [x] **Retrieval divergence between QueryEngine and OllamaResolver — resolved 2026-08-21:** New shared `RetrievalIndex` (`Sources/MeCore/Store/EntityRetriever.swift`) centralizes the entity-matching vocabulary (canonical names + alternate names + sort-name overrides) and the mention predicate. `QueryEngine`'s `resolve*` methods and `extractEntity` now delegate to it (so the structured pipeline resolves aliases like "Mami" → Ninhursag), and `OllamaResolver.buildContext` uses it for its `RELEVANT *` highlighting. One shared matching layer, fixes propagate to both paths. 293 tests pass.
 
 - [ ] **Query date-range matcher (deterministic) — keep or remove:** Added `matchDateRangeQuery` to `QueryEngine` so "Was X between A and B BCE?" answers from the DB without Ollama. Now largely redundant for exact phrasing since Ollama answers correctly, but it's a deterministic fast path when Ollama is down. Leave in place unless it causes divergence/confusion.
 
-- [ ] **Lineage lines broken on recenter:** This issue was in the old overlay-based LineageTreeView and is no longer present in the current Canvas-based implementation. Remove if confirmed fixed.
 - [ ] **Lineage lines: consider PreferenceKey approach:** Named coordinate spaces are fragile. A `PreferenceKey` where each `FigureCardView` reports its frame via `.preference(key:value:)`, collected with `.onPreferenceChange`, would be more robust and avoid coordinate space mismatches entirely.
 
-- [ ] Lineage source discriminator: Decide whether to add source picker to lineage views
-- [ ] Lineage source discriminator: Promote Relationship.source from free-text to @Relationship with Source model
-- [ ] Lineage source discriminator: Implement display for contradictory traditions (e.g., Enuma Elish vs Atra-Hasis)
+- [x] Lineage source discriminator: Add source picker to lineage views — done 2026-08-15 (source filter menu in MiniLineageView, LineageTreeView, FigureLineageExplorer, LineageExplorerWindow)
+- [x] Lineage source discriminator: Promote Relationship.source from free-text to @Relationship with Source model — done 2026-08-15 (`Relationship.sourceRef: Source?` + `Source.relationships` inverse + `Migration.ensureRelationshipSources`)
+- [x] Lineage source discriminator: Display contradictory traditions (e.g., Enuma Elish vs Atra-Hasis) — done 2026-08-15 (`SourceBadgeView` on relationship rows + alternatives popovers)
 - [ ] Lineage source discriminator: Add source discrimination to QueryEngine/natural language queries
 - [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
 - [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
@@ -50,13 +46,8 @@
 - [ ] **Content attribution on text blocks (deferred 2026-08-08):** Text blocks in groups (`GroupTextBlockSheet`) currently have no way to attach `ContentAttribution`s — the model links only to Figure/Place/Event/Thing. Plan: add `groupTextBlock: GroupTextBlock?` to `ContentAttribution` (migration-safe optional) + inverse relationship on `GroupTextBlock`; add an attribution section to the sheet reusing the `ContentAttributionFormView` / `ContentAttributionSection` pattern.
 - [ ] **Write tests for Migration.swift:** 15% coverage, 368 lines, runs on every launch — highest risk for subtle bugs.
 - [ ] **Write tests for SKLDatePropagator.swift:** 0% coverage, 53 lines, BCE year math with edge cases (mythological reigns, negative years).
-- [ ] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView):**
-  - FigureFormView is done (3 steps, using WizardContainer)
-  - Replicate WizardContainer + step split for the other 3 form views
-- [ ] **Mixed-type groups (rulers + places in one group):** A group is currently locked to a single `entityType` — the Members picker and all views branch on `group.entityType`. User wants the first Sumerian King List dynasty group to hold both the rulers (figures) and the place ruled from. The data model already supports it (`FigureGroupAssociation` holds optional `figure`/`place`/`event`/`thing` refs, and `syncMembers` leaves other-type members untouched); only the UI blocks it. Needed:
-  - Members step in `FigureGroupFormView`: allow selecting more than one entity type into the same group
-  - `EntityGroupCollectionView`: render mixed members (it reads each association's actual type, but counts/detail panel branch on `entityType`)
-  - Relax sidebar + group-link filtering that matches `entityType == .figure` only
+- [x] **Wizardify remaining forms (PlaceFormView, EventFormView, ThingFormView) — completed:** All three now use `WizardContainer` (PlaceFormView, EventFormView, ThingFormView) alongside FigureFormView. TODO item was stale.
+- [x] **Mixed-type groups (rulers + places in one group) — done 2026-08-15:** `entityType` demoted to a soft classification (sidebar placement / figure-only chrome only); member picker and group pages accept figures + places + events + things freely. Smart groups stay type-scoped (mixed groups are manual-only).
 - [x] **FigureGroup kind/type system — completed 2026-07-31:**
   - `GroupKind` enum (`.standard`/`.enoch`/`.skl`/`.flood`) on `FigureGroup` as `kindRawValue: String?` (migration-safe) + computed `kind`. Default `.standard`.
   - Sidebar "Groups" section driven by `@Query(sort: \FigureGroup.orderIndex)` — new groups appear in the sidebar with zero code.

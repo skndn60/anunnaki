@@ -113,6 +113,16 @@ struct QueryView: View {
 
             Divider()
 
+            // Breadcrumbs
+            let coordinatorHistory = coordinator?.history ?? []
+            if !coordinatorHistory.isEmpty {
+                BreadcrumbBar(
+                    breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
+                    onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                    onClear: { coordinator?.history.removeAll() }
+                )
+            }
+
             // Results
             ScrollView {
                 if let result {

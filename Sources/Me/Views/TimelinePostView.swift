@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 struct TimelinePostView: View {
+    var showReignBars: Bool = true
     @Query(sort: \Era.orderIndex) private var eras: [Era]
     @Query private var figures: [Figure]
     @Query private var events: [Event]
@@ -119,6 +120,7 @@ struct TimelinePostView: View {
                             minYear: bceMinYear,
                             pointsPerYear: pointsPerYear
                         ),
+                        showReignBars: showReignBars,
                         onSelectFigure: { detailFigure = $0 },
                         onSelectEvent: { selectedEvent = $0 }
                     )
@@ -154,7 +156,13 @@ struct TimelinePostView: View {
     private func eventsInEra(_ era: Era, from events: [Event]) -> [Event] {
         events
             .filter { $0.era == era.name }
+            .filter { !Self.isReignEvent($0) }
             .sorted { ($0.date.startYear ?? Int.max) < ($1.date.startYear ?? Int.max) }
+    }
+
+    private static func isReignEvent(_ event: Event) -> Bool {
+        let name = event.name.lowercased()
+        return name.contains("reign") || name.contains("rules over")
     }
 
     private var emptyState: some View {

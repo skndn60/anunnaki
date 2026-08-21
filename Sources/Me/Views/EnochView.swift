@@ -59,6 +59,15 @@ struct EnochView: View {
         HStack(spacing: 0) {
             VStack(spacing: 0) {
                 header
+                // Breadcrumbs
+                let coordinatorHistory = coordinator?.history ?? []
+                if !coordinatorHistory.isEmpty {
+                    BreadcrumbBar(
+                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
+                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                        onClear: { coordinator?.history.removeAll() }
+                    )
+                }
                 Divider()
                 if !hasData {
                     emptyState
@@ -191,7 +200,6 @@ struct EnochView: View {
             }
             .padding(8)
             FigureDetailView(figure: figure, onSelectFigure: { selected in
-                coordinator?.pushHistory(id: selected.persistentModelID, name: selected.name, item: .figures)
                 selectedID = selected.persistentModelID
             }, onSelectPlace: { place in
                 selectedID = place.persistentModelID

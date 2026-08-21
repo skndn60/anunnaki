@@ -113,7 +113,9 @@ private struct PopupTableRow: View {
                 Text(table.name)
                     .font(.callout)
                     .lineLimit(1)
-                Text("\(table.figures.count) figures, \(table.attributes.count) attributes")
+                Text(table.columnMode == .strings
+                    ? "\(table.columns.count) columns, \(table.attributes.count) attributes"
+                    : "\(table.figures.count) figures, \(table.attributes.count) attributes")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
@@ -137,7 +139,11 @@ private struct PopupTableDetailView: View {
                 }
                 Divider()
                 HStack(spacing: 16) {
-                    Label("\(table.figures.count) figures", systemImage: "person.2")
+                    if table.columnMode == .strings {
+                        Label("\(table.columns.count) columns", systemImage: "textformat")
+                    } else {
+                        Label("\(table.figures.count) figures", systemImage: "person.2")
+                    }
                     Label("\(table.attributes.count) attributes", systemImage: "list.bullet")
                 }
                 .font(.caption)
@@ -163,7 +169,27 @@ private struct PopupTableDetailView: View {
                     }
                 }
 
-                if !table.figures.isEmpty {
+                if table.columnMode == .strings {
+                    if !table.columns.isEmpty {
+                        Divider()
+                        Text("Columns")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        ForEach(table.columns.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }) { column in
+                            HStack(spacing: 6) {
+                                Image(systemName: "textformat")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .frame(width: 12)
+                                Text(column.name)
+                                    .font(.callout)
+                                Spacer()
+                            }
+                            .padding(.vertical, 1)
+                        }
+                    }
+                } else if !table.figures.isEmpty {
                     Divider()
                     Text("Figures")
                         .font(.caption)
@@ -183,9 +209,11 @@ private struct PopupTableDetailView: View {
                     }
                 }
 
-                if table.figures.isEmpty || table.attributes.isEmpty {
+                if (table.columnMode == .strings ? table.columns.isEmpty : table.figures.isEmpty) || table.attributes.isEmpty {
                     Divider()
-                    Text("Add figures and attributes to start comparing")
+                    Text(table.columnMode == .strings
+                        ? "Add columns and attributes to start comparing"
+                        : "Add figures and attributes to start comparing")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                         .frame(maxWidth: .infinity, alignment: .center)

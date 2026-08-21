@@ -61,7 +61,7 @@ struct MeApp: App {
 
     package static let sharedContainer: ModelContainer = {
         let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, EventFigureAssociation.self, EventFigureRoleType.self, DataVersion.self, StickyNote.self, Thing.self, ThingType.self, ThingFigureAssociation.self, ThingFigureRoleType.self, ThingPlaceAssociation.self, ThingPlaceRoleType.self, ThingEventAssociation.self, ThingEventRoleType.self, Agent.self, CollectedDatum.self, BlindSpot.self, BlockedSource.self, DictionaryEntry.self, FigureGroup.self, FigureGroupAssociation.self, ContentAttribution.self, GroupTextBlock.self,             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self])
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self])
 
         let forceReseed = CommandLine.arguments.contains("--reseed")
         let storeURL = storeURL()
