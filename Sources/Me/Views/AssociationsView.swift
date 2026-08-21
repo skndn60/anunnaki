@@ -586,11 +586,12 @@ struct AddPlacePlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var places: [Place]
     @Query(sort: \PlacePlaceRoleType.name) private var roleTypes: [PlacePlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var fromPlace: Place?
     @State private var toPlace: Place?
     @State private var selectedRoleType: PlacePlaceRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
 
@@ -623,7 +624,7 @@ struct AddPlacePlaceAssociationForm: View {
                     filter: { $0.name.localizedCaseInsensitiveContains($1) }
                 )
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -638,7 +639,7 @@ struct AddPlacePlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = PlacePlaceAssociation(fromPlace: fromPlace, toPlace: toPlace, roleType: selectedRoleType, source: source)
+        let assoc = PlacePlaceAssociation(fromPlace: fromPlace, toPlace: toPlace, roleType: selectedRoleType, source: selectedSource?.name ?? "")
         modelContext.insert(assoc)
         dismiss()
     }
@@ -913,12 +914,13 @@ struct EditPlacePlaceAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var places: [Place]
     @Query(sort: \PlacePlaceRoleType.name) private var roleTypes: [PlacePlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
     let assoc: PlacePlaceAssociation
 
     @State private var fromPlace: Place?
     @State private var toPlace: Place?
     @State private var selectedRoleType: PlacePlaceRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
 
@@ -951,7 +953,7 @@ struct EditPlacePlaceAssociationForm: View {
                     filter: { $0.name.localizedCaseInsensitiveContains($1) }
                 )
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -967,7 +969,7 @@ struct EditPlacePlaceAssociationForm: View {
             fromPlace = assoc.fromPlace
             toPlace = assoc.toPlace
             selectedRoleType = assoc.roleType
-            source = assoc.source
+            selectedSource = sources.first { $0.name.compare(assoc.source, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }
         }
     }
 
@@ -975,7 +977,7 @@ struct EditPlacePlaceAssociationForm: View {
         assoc.fromPlace = fromPlace
         assoc.toPlace = toPlace
         assoc.roleType = selectedRoleType
-        assoc.source = source
+        assoc.source = selectedSource?.name ?? ""
         dismiss()
     }
 }

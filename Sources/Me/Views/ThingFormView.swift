@@ -48,6 +48,7 @@ struct ThingFormView: View {
             saveLabel: saveButtonLabel,
             iconName: selectedThingType?.icon ?? "shippingbox",
             iconColor: selectedThingType?.color ?? .brown,
+            entityName: name,
             onCancel: { dismiss() },
             onBack: { currentStep -= 1 },
             onNext: { currentStep += 1 },

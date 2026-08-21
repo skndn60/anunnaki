@@ -10,6 +10,9 @@ struct WizardContainer<Content: View>: View {
     let saveLabel: String
     let iconName: String?
     let iconColor: Color?
+    /// The entity's name, shown in small type under the title on later steps
+    /// so the user doesn't have to go back to the first screen to see it.
+    var entityName: String? = nil
     let onCancel: () -> Void
     let onBack: () -> Void
     let onNext: () -> Void
@@ -27,6 +30,16 @@ struct WizardContainer<Content: View>: View {
                     .font(.title3.bold())
                     .padding(.top)
                     .padding(.horizontal)
+
+                if let entityName, !entityName.isEmpty, step > 0 {
+                    Text(entityName)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .padding(.horizontal)
+                        .padding(.top, 2)
+                }
 
                 stepIndicator
                     .padding(.vertical, 8)

@@ -84,6 +84,7 @@ struct EventFormView: View {
             saveLabel: saveButtonLabel,
             iconName: eventType?.icon ?? "calendar.badge.clock",
             iconColor: eventType?.color ?? .orange,
+            entityName: name,
             onCancel: { dismiss() },
             onBack: { currentStep -= 1 },
             onNext: { currentStep += 1 },

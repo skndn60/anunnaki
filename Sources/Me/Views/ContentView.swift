@@ -235,6 +235,7 @@ struct ContentView: View {
                     Migration.ensureDynastyBoundaries(context: modelContext)
                     Migration.removeOrphanedGroupAssociations(context: modelContext)
                     Migration.ensureRelationshipSources(context: modelContext)
+                    Migration.ensureRoleReverseNames(context: modelContext)
                     Migration.ensureAutoTags(context: modelContext)
                     Migration.ensureRefinedDomainTags(context: modelContext)
 

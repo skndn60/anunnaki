@@ -3,10 +3,13 @@ import SwiftUI
 import SwiftData
 
 @Model
-package final class ThingFigureRoleType {
+package final class ThingFigureRoleType: RoleTypeDisplay {
     package var name: String
     package var icon: String
     package var colorHex: String
+    /// How the role reads from the other side (e.g. a figure's view of a thing
+    /// ownership link). Optional for migration safety; falls back to `name`.
+    package var reverseName: String?
 
     @Relationship(deleteRule: .deny, inverse: \ThingFigureAssociation.roleType)
     package var associations: [ThingFigureAssociation] = []
@@ -15,9 +18,10 @@ package final class ThingFigureRoleType {
         Color(hex: colorHex)
     }
 
-    package init(name: String, icon: String, colorHex: String) {
+    package init(name: String, icon: String, colorHex: String, reverseName: String? = nil) {
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
+        self.reverseName = reverseName
     }
 }

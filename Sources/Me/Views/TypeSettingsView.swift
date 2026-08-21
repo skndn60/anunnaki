@@ -522,6 +522,7 @@ private struct RoleTypeEditSheetView<T: RoleTypeProtocol>: View {
     let item: T?
 
     @State private var name = ""
+    @State private var reverseName = ""
     @State private var icon = ""
     @State private var color: Color = .gray
 
@@ -534,6 +535,8 @@ private struct RoleTypeEditSheetView<T: RoleTypeProtocol>: View {
                 .padding()
             Form {
                 TextField("Name", text: $name, prompt: Text("e.g. Located Within, Caused"))
+                TextField("Reverse Name", text: $reverseName, prompt: Text("e.g. Contains (read from the other side)"))
+                    .help("How this role reads from the other entity's perspective. Leave empty to reuse the name.")
                 TextField("SF Symbol", text: $icon, prompt: Text("e.g. arrow.right.circle"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
             }
@@ -548,23 +551,27 @@ private struct RoleTypeEditSheetView<T: RoleTypeProtocol>: View {
             }
             .padding()
         }
-        .frame(width: 380, height: 300)
+        .frame(width: 380, height: 360)
         .onAppear { loadIfEditing() }
     }
 
     private func loadIfEditing() {
         guard let item else { return }
         name = item.name
+        reverseName = item.reverseName ?? ""
         icon = item.uiIcon
         color = item.uiColor
     }
 
     private func save() {
+        let trimmedReverse = reverseName.trimmingCharacters(in: .whitespacesAndNewlines)
         if let existing = item {
             existing.name = name
+            existing.reverseName = trimmedReverse.isEmpty ? nil : trimmedReverse
             (existing as? any IconColorSettable)?.setIcon(icon)
             (existing as? any IconColorSettable)?.setColorHex(color.hex)
         } else if let made = T.make(name: name, icon: icon, colorHex: color.hex) {
+            made.reverseName = trimmedReverse.isEmpty ? nil : trimmedReverse
             modelContext.insert(made)
         }
         try? modelContext.save()
@@ -586,6 +593,7 @@ private protocol EntityTypeProtocol: PersistentModel {
 
 private protocol RoleTypeProtocol: PersistentModel {
     var name: String { get set }
+    var reverseName: String? { get set }
     var uiName: String { get }
     var uiIcon: String { get }
     var uiColor: Color { get }

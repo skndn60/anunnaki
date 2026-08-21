@@ -214,6 +214,7 @@ struct FigureGroupFormView: View {
             saveLabel: saveButtonLabel,
             iconName: icon,
             iconColor: Color(hex: colorHex),
+            entityName: name,
             onCancel: { dismiss() },
             onBack: { currentStep -= 1 },
             onNext: { currentStep += 1 },

@@ -50,7 +50,7 @@ struct ThingsSection: View {
                                     .font(.callout)
                                     .fontWeight(.medium)
                                 HStack(spacing: 4) {
-                                    Text(assoc.roleType?.name ?? "—")
+                                    Text(assoc.roleType?.displayName(isReverse: true) ?? "—")
                                         .font(.caption2)
                                         .padding(.horizontal, 4)
                                         .padding(.vertical, 1)

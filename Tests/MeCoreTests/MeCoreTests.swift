@@ -5460,4 +5460,72 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(byName["Antediluvian Period"]?.orderIndex, 4)
         XCTAssertEqual(byName["The Great Flood"]?.orderIndex, 7, "flood stays at the post-flood boundary (orderIndex >= 7)")
     }
+
+    // MARK: - Role Type Reverse Names Tests
+
+    func testRoleTypeDisplayNameForwardAndReverse() {
+        let role = PlacePlaceRoleType(name: "Located Within", icon: "arrow.down", colorHex: "34C759", reverseName: "Contains")
+        XCTAssertEqual(role.displayName(isReverse: false), "Located Within")
+        XCTAssertEqual(role.displayName(isReverse: true), "Contains")
+    }
+
+    func testRoleTypeDisplayNameFallsBackToNameWhenNoReverse() {
+        let role = EventEventRoleType(name: "Parallels", icon: "equal", colorHex: "34C759")
+        XCTAssertEqual(role.displayName(isReverse: false), "Parallels")
+        XCTAssertEqual(role.displayName(isReverse: true), "Parallels", "no reverseName set → fall back to forward name")
+    }
+
+    func testEnsureRoleReverseNamesBackfillsAllKinds() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensurePlacePlaceRoleTypesExist(context: context)
+        Migration.ensureEventEventRoleTypesExist(context: context)
+        Migration.ensureEventPlaceRoleTypesExist(context: context)
+        Migration.ensureFigurePlaceRoleTypesExist(context: context)
+        Migration.ensureThingFigureRoleTypesExist(context: context)
+        Migration.ensureThingPlaceRoleTypesExist(context: context)
+        Migration.ensureThingEventRoleTypesExist(context: context)
+
+        Migration.ensureRoleReverseNames(context: context)
+
+        let ppa = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
+        XCTAssertEqual(ppa.first { $0.name == "Located Within" }?.reverseName, "Contains")
+        let eee = (try? context.fetch(FetchDescriptor<EventEventRoleType>())) ?? []
+        XCTAssertEqual(eee.first { $0.name == "Caused" }?.reverseName, "Caused By")
+        XCTAssertEqual(eee.first { $0.name == "Precedes" }?.reverseName, "Follows")
+        let epa = (try? context.fetch(FetchDescriptor<EventPlaceRoleType>())) ?? []
+        XCTAssertEqual(epa.first { $0.name == "Occurred At" }?.reverseName, "Site Of")
+        let fpa = (try? context.fetch(FetchDescriptor<FigurePlaceRoleType>())) ?? []
+        XCTAssertEqual(fpa.first { $0.name == "Patron Deity" }?.reverseName, "Patron Of")
+        let tfa = (try? context.fetch(FetchDescriptor<ThingFigureRoleType>())) ?? []
+        XCTAssertEqual(tfa.first { $0.name == "Owned By" }?.reverseName, "Owns")
+        let tpa = (try? context.fetch(FetchDescriptor<ThingPlaceRoleType>())) ?? []
+        XCTAssertEqual(tpa.first { $0.name == "Located At" }?.reverseName, "Houses")
+        let tea = (try? context.fetch(FetchDescriptor<ThingEventRoleType>())) ?? []
+        XCTAssertEqual(tea.first { $0.name == "Used In" }?.reverseName, "Used")
+    }
+
+    func testEnsureRoleReverseNamesIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensurePlacePlaceRoleTypesExist(context: context)
+        Migration.ensureRoleReverseNames(context: context)
+        Migration.ensureRoleReverseNames(context: context)
+        let roles = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
+        XCTAssertEqual(roles.first { $0.name == "Located Within" }?.reverseName, "Contains")
+    }
+
+    func testEnsureRoleReverseNamesNeverOverwritesUserValue() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensurePlacePlaceRoleTypesExist(context: context)
+        let roles = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
+        roles.first { $0.name == "Located Within" }?.reverseName = "Encloses"
+        try? context.save()
+
+        Migration.ensureRoleReverseNames(context: context)
+
+        let after = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
+        XCTAssertEqual(after.first { $0.name == "Located Within" }?.reverseName, "Encloses", "user-set reverse name must win")
+    }
 }

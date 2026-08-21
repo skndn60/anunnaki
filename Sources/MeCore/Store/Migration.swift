@@ -372,6 +372,86 @@ package struct Migration {
         try? context.save()
     }
 
+    // MARK: - Role Type Reverse Names
+
+    /// Backfills `reverseName` for role types so associations read correctly from
+    /// both sides (e.g. "Located Within" reads as "Contains" from the other
+    /// place). Additive + idempotent — only writes where `reverseName == nil`,
+    /// so user-entered reverse names always win.
+    package static func ensureRoleReverseNames(context: ModelContext) {
+        func backfill<T: RoleTypeDisplay>(_ type: T.Type, _ map: [String: String]) where T: PersistentModel {
+            guard let items = try? context.fetch(FetchDescriptor<T>()) else { return }
+            var changed = false
+            for item in items {
+                guard let reverse = map[item.name], reverse.isEmpty == false else { continue }
+                if let settable = item as? RoleReverseNameSettable, settable.reverseName == nil {
+                    settable.reverseName = reverse
+                    changed = true
+                }
+            }
+            if changed { try? context.save() }
+        }
+
+        backfill(PlacePlaceRoleType.self, [
+            "Located Within": "Contains",
+            "Near To": "Near To",
+            "Part Of": "Contains",
+            "Ruled From": "Ruled From",
+            "Connected To": "Connected To",
+            "Opposed To": "Opposed To",
+        ])
+        backfill(EventEventRoleType.self, [
+            "Caused": "Caused By",
+            "Motivated": "Motivated By",
+            "Precedes": "Follows",
+            "Follows": "Precedes",
+            "Related To": "Related To",
+            "Contradicts": "Contradicted By",
+            "Parallels": "Parallels",
+        ])
+        backfill(EventPlaceRoleType.self, [
+            "Occurred At": "Site Of",
+            "Started At": "Start Site Of",
+            "Ended At": "End Site Of",
+            "Passed Through": "Passed Through",
+        ])
+        backfill(FigurePlaceRoleType.self, [
+            "Patron Deity": "Patron Of",
+            "Ruler": "Ruled By",
+            "Builder": "Built By",
+            "Founder": "Founded By",
+            "Born At": "Birthplace Of",
+            "Died At": "Deathplace Of",
+            "Resident Of": "Home To",
+            "Imprisoned At": "Prison Of",
+            "Worshipped At": "Worshipped By",
+            "Exiled To": "Exile Site Of",
+        ])
+        backfill(ThingFigureRoleType.self, [
+            "Owned By": "Owns",
+            "Used By": "Uses",
+            "Created By": "Created",
+            "Wielded By": "Wields",
+            "Gifted To": "Received From",
+            "Sacred To": "Sacred To",
+            "Associated With": "Associated With",
+        ])
+        backfill(ThingPlaceRoleType.self, [
+            "Located At": "Houses",
+            "Housed At": "Houses",
+            "Used At": "Place Of Use",
+            "Created At": "Place Of Creation",
+            "Associated With": "Associated With",
+        ])
+        backfill(ThingEventRoleType.self, [
+            "Used In": "Used",
+            "Created During": "Created",
+            "Central To": "Central To",
+            "Appears In": "Featured In",
+            "Associated With": "Associated With",
+        ])
+    }
+
     /// Add Duttur (mother of Dumuzi & Geshtinanna) and parent relationships
     /// so sibling inference via shared parents works for Dumuzi <-> Geshtinanna.
     package static func ensureDumuziFamilyExists(context: ModelContext) {

@@ -3,10 +3,13 @@ import SwiftUI
 import SwiftData
 
 @Model
-package final class FigurePlaceRoleType: Equatable {
+package final class FigurePlaceRoleType: Equatable, RoleTypeDisplay {
     package var name: String
     package var icon: String
     package var colorHex: String
+    /// How the role reads from the other side (e.g. a place's view of a patron
+    /// deity). Optional for migration safety; falls back to `name`.
+    package var reverseName: String?
 
     @Relationship(deleteRule: .deny, inverse: \FigurePlaceAssociation.roleType)
     package var associations: [FigurePlaceAssociation] = []
@@ -15,10 +18,11 @@ package final class FigurePlaceRoleType: Equatable {
         Color(hex: colorHex)
     }
 
-    package init(name: String, icon: String, colorHex: String) {
+    package init(name: String, icon: String, colorHex: String, reverseName: String? = nil) {
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
+        self.reverseName = reverseName
     }
 
     package static func == (lhs: FigurePlaceRoleType, rhs: FigurePlaceRoleType) -> Bool {

@@ -53,6 +53,7 @@ struct PlaceFormView: View {
             saveLabel: saveButtonLabel,
             iconName: placeType?.icon ?? "mappin.and.ellipse",
             iconColor: placeType?.color ?? .blue,
+            entityName: name,
             onCancel: { dismiss() },
             onBack: { currentStep -= 1 },
             onNext: { currentStep += 1 },

@@ -61,6 +61,7 @@ struct FigureFormView: View {
             saveLabel: saveButtonLabel,
             iconName: selectedFigureType?.icon ?? "person.fill",
             iconColor: selectedFigureType?.color ?? .gray,
+            entityName: name,
             onCancel: { dismiss() },
             onBack: { currentStep -= 1 },
             onNext: { currentStep += 1 },
