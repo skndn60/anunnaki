@@ -13,6 +13,9 @@ struct WizardContainer<Content: View>: View {
     /// The entity's name, shown in small type under the title on later steps
     /// so the user doesn't have to go back to the first screen to see it.
     var entityName: String? = nil
+    /// Offer "Save Now" on every step except the last, committing without
+    /// walking through the remaining screens. Defaults to on.
+    var showSaveNow: Bool = true
     let onCancel: () -> Void
     let onBack: () -> Void
     let onNext: () -> Void
@@ -131,6 +134,10 @@ struct WizardContainer<Content: View>: View {
                 Button("Back", action: onBack)
             }
             if step < totalSteps - 1 {
+                if showSaveNow {
+                    Button("Save Now", action: onSave)
+                        .disabled(!canGoNext)
+                }
                 Button("Next", action: onNext)
                     .keyboardShortcut(.defaultAction)
                     .disabled(!canGoNext)
