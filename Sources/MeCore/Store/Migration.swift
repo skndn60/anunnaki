@@ -1850,6 +1850,7 @@ package struct Migration {
     /// Additive + idempotent.
     package static func ensureEverydayLifeEpisodes(context: ModelContext) {
         func key(_ s: String) -> String { NameDuplicateCheck.normalizedKey(s) }
+        let stickyText = "Import daily life events"
 
         // MARK: types
 
@@ -1915,6 +1916,7 @@ package struct Migration {
                 longitude: config.lon
             )
             context.insert(place)
+            context.insert(StickyNote(text: stickyText, place: place))
             placeByKey[key(config.name)] = place
         }
 
@@ -1985,6 +1987,7 @@ package struct Migration {
                 source: config.source
             )
             context.insert(figure)
+            context.insert(StickyNote(text: stickyText, figure: figure))
             figureByKey[key(config.name)] = figure
             createdFigures += 1
         }
@@ -2121,6 +2124,7 @@ package struct Migration {
             )
             for assoc in event.placeAssociations { assoc.event = event }
             context.insert(event)
+            context.insert(StickyNote(text: stickyText, event: event))
             createdEvents += 1
         }
 

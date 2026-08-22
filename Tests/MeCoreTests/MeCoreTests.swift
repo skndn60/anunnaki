@@ -3911,6 +3911,13 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertTrue(assocs.contains {
             $0.figure?.name == "Ashurnasirpal II" && $0.place?.name == "Kalhu" && $0.roleType?.name == "Ruler"
         })
+
+        let stickies = (try? context.fetch(FetchDescriptor<StickyNote>())) ?? []
+        XCTAssertEqual(stickies.count, 28, "one sticky on each created figure, place, and event")
+        XCTAssertEqual(Set(stickies.map(\.text)), Set(["Import daily life events"]))
+        XCTAssertEqual(stickies.filter { $0.figure != nil }.count, 12)
+        XCTAssertEqual(stickies.filter { $0.place != nil }.count, 6)
+        XCTAssertEqual(stickies.filter { $0.event != nil }.count, 10)
     }
 
     func testEverydayLifeEpisodesAreIdempotent() {
@@ -3927,6 +3934,7 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Place>())) ?? -1, 6)
         XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Relationship>())) ?? -1, 4)
         XCTAssertEqual((try? context.fetchCount(FetchDescriptor<FigurePlaceAssociation>())) ?? -1, 12)
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<StickyNote>())) ?? -1, 28)
     }
 
     func testEverydayLifeEpisodesSkipExistingUserData() {
@@ -3973,6 +3981,11 @@ func testRegnalKeyOrdersEventsByDate() {
         let placeAssocCount = (try? context.fetchCount(FetchDescriptor<EventPlaceAssociation>())) ?? -1
         XCTAssertEqual(placeAssocCount, 10,
                        "all imported episode places except those of the user's own Poor Man of Nippur")
+
+        let stickies = (try? context.fetch(FetchDescriptor<StickyNote>())) ?? []
+        XCTAssertFalse(stickies.contains { $0.figure === usersEa }, "no import sticky on the user's own figure")
+        XCTAssertFalse(stickies.contains { $0.event === usersEvent }, "no import sticky on the user's own event")
+        XCTAssertFalse(stickies.contains { $0.place === usersPlace }, "no import sticky on the user's own place")
     }
 
     // MARK: - FigurePlaceAssociation confidence qualifier
