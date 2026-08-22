@@ -233,7 +233,7 @@ struct PopupTableFormView: View {
 
     private func syncStringColumns(in tbl: PopupTable) {
         let currentLabels = columnLabels.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-        let existingByName = Dictionary(uniqueKeysWithValues: tbl.columns.map { ($0.name, $0) })
+        let existingByName = Dictionary(tbl.columns.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
 
         for column in tbl.columns where !currentLabels.contains(column.name) {
             let doomed = tbl.cells.filter { $0.column?.persistentModelID == column.persistentModelID }

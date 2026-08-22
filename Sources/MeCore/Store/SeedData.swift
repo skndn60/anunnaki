@@ -519,7 +519,7 @@ package struct SeedData {
         }
         let typesByName: [String: FigureType] = {
             let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
-            return Dictionary(uniqueKeysWithValues: types.map { ($0.name, $0) })
+            return Dictionary(types.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         }()
 
         // MARK: - Figures
@@ -574,7 +574,7 @@ package struct SeedData {
         }
         let placeTypesByName: [String: PlaceType] = {
             let types = (try? context.fetch(FetchDescriptor<PlaceType>())) ?? []
-            return Dictionary(uniqueKeysWithValues: types.map { ($0.name, $0) })
+            return Dictionary(types.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         }()
 
         // MARK: - Places
@@ -603,7 +603,7 @@ package struct SeedData {
         }
         let eventTypesByName: [String: EventType] = {
             let types = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
-            return Dictionary(uniqueKeysWithValues: types.map { ($0.name, $0) })
+            return Dictionary(types.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         }()
 
         // MARK: - Events
@@ -996,7 +996,7 @@ package struct SeedData {
         }
 
         let placeTypes = (try? context.fetch(FetchDescriptor<PlaceType>())) ?? []
-        let placeTypesByName = Dictionary(uniqueKeysWithValues: placeTypes.map { ($0.name, $0) })
+        let placeTypesByName = Dictionary(placeTypes.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
 
         let placeConfigs: [(name: String, typeName: String, modernLocation: String, description: String, source: String, lat: Double?, lon: Double?)] = [
             ("Mount Hermon", "Mountain", "Anti-Lebanon mountain range, on the border between Syria and Lebanon",
@@ -1026,7 +1026,7 @@ package struct SeedData {
         }
 
         let eventTypes = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
-        let eventTypesByName = Dictionary(uniqueKeysWithValues: eventTypes.map { ($0.name, $0) })
+        let eventTypesByName = Dictionary(eventTypes.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
 
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
         let figuresByName = Dictionary(grouping: allFigures, by: { $0.name }).compactMapValues(\.first)

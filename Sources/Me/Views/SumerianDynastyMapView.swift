@@ -140,7 +140,7 @@ struct SumerianDynastyMapView: View {
     ))
 
     private var eraOrder: [String: Int] {
-        Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0.orderIndex) })
+        Dictionary(eras.map { ($0.name, $0.orderIndex) }, uniquingKeysWith: { first, _ in first })
     }
 
     private var sklFigures: [Figure] {

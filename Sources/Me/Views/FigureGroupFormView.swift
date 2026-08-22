@@ -668,10 +668,10 @@ struct FigureGroupFormView: View {
         memberSingular = group.memberSingular ?? ""
         memberPlural = group.memberPlural ?? ""
         loadRule(from: group.decodedFilter)
-        selectedMemberAliases = Dictionary(uniqueKeysWithValues: group.figureAssociations.compactMap { assoc in
+        selectedMemberAliases = Dictionary(group.figureAssociations.compactMap { assoc in
             guard let id = memberID(assoc) else { return nil }
             return (id, assoc.displayName ?? "")
-        })
+        }, uniquingKeysWith: { first, _ in first })
         if let agg = group.decodedAggregation {
             aggregationEnabled = true
             aggregationOperation = agg.operation

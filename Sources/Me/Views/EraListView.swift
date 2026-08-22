@@ -139,6 +139,7 @@ struct EraFormView: View {
     @Environment(\.dismiss) var dismiss
 
     let era: Era?
+    @Query private var allEras: [Era]
 
     @State private var name = ""
     @State private var orderIndex = 0
@@ -147,6 +148,13 @@ struct EraFormView: View {
     @State private var endDate: MythologicalDate = .unknown
 
     private var isEditing: Bool { era != nil }
+
+    private var duplicateNameWarning: String? {
+        let others = allEras
+            .filter { $0.persistentModelID != era?.persistentModelID }
+            .map(\.name)
+        return NameDuplicateCheck.warning(candidate: name, existingNames: others)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -157,6 +165,12 @@ struct EraFormView: View {
             Form {
                 Section("Era Details") {
                     TextField("Name", text: $name, prompt: Text("e.g. Before the Flood"))
+                        .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
+                    if let duplicate = duplicateNameWarning {
+                        Label("An era named \"\(duplicate)\" already exists — continuing will create another one.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.callout.bold())
+                            .foregroundStyle(.orange)
+                    }
                     Stepper("Order: \(orderIndex)", value: $orderIndex, in: 0...100)
                 }
 

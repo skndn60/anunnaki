@@ -3904,6 +3904,23 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(Set(FigurePlaceAssociation.Confidence.allCases), [.possible, .disputed])
     }
 
+    // MARK: - NameDuplicateCheck
+
+    func testNameDuplicateCheckNormalizationCollidesSpellingVariants() {
+        XCTAssertEqual(NameDuplicateCheck.normalizedKey("Ea-nasir"), "eanasir")
+        XCTAssertEqual(NameDuplicateCheck.normalizedKey("Ea Nasir"), "eanasir")
+        XCTAssertEqual(NameDuplicateCheck.normalizedKey("  UR-AS  "), "uras")
+    }
+
+    func testNameDuplicateCheckWarningFindsAndFormatsMatches() {
+        let existing = ["Uras", "Ur-as", "Enlil", "Dagan"]
+        XCTAssertEqual(NameDuplicateCheck.warning(candidate: "URAS!", existingNames: existing), "Ur-as, Uras")
+        XCTAssertNil(NameDuplicateCheck.warning(candidate: "Nanna", existingNames: existing))
+        XCTAssertNil(NameDuplicateCheck.warning(candidate: "", existingNames: existing))
+        XCTAssertNil(NameDuplicateCheck.warning(candidate: "   ", existingNames: existing))
+        XCTAssertNil(NameDuplicateCheck.warning(candidate: "Uras", existingNames: []))
+    }
+
     // MARK: - Propagator: ignore non-reign prose dates
 
     func testPropagatorIgnoresMidTextTabletDate() {

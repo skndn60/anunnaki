@@ -369,10 +369,11 @@ struct PlaceDetailView: View {
                 }()
 
                 let figureDisplayNames: [PersistentIdentifier: String] = Dictionary(
-                    uniqueKeysWithValues: place.figureAssociations.compactMap { assoc in
+                    place.figureAssociations.compactMap { assoc in
                         guard let fig = assoc.figure, let name = assoc.displayName, !name.isEmpty else { return nil }
                         return (fig.persistentModelID, name)
-                    }
+                    },
+                    uniquingKeysWith: { first, _ in first }
                 )
 
                 Divider()

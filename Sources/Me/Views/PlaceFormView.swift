@@ -8,6 +8,7 @@ struct PlaceFormView: View {
     let place: Place?
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
     @Query(sort: \Source.name) private var sources: [Source]
+    @Query private var allPlaces: [Place]
 
     @State private var name = ""
     @State private var sortName = ""
@@ -40,6 +41,13 @@ struct PlaceFormView: View {
     private var saveButtonLabel: String {
         if isEditing { return "Finish and Save" }
         return "Finish and Create"
+    }
+
+    private var duplicateNameWarning: String? {
+        let others = allPlaces
+            .filter { $0.persistentModelID != place?.persistentModelID }
+            .map(\.name)
+        return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
 
     var body: some View {
@@ -85,7 +93,13 @@ struct PlaceFormView: View {
             Section("Identity") {
                 TextField("Name", text: $name, prompt: Text("e.g. Uruk, Eridu, Kur"))
                     .textFieldStyle(.roundedBorder)
+                    .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                     .help("The primary name of this place")
+                if let duplicate = duplicateNameWarning {
+                    Label("A place named \"\(duplicate)\" already exists — continuing will create another one.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.bold())
+                        .foregroundStyle(.orange)
+                }
                 TextField("Sort Name", text: $sortName, prompt: Text("Leave blank to auto-derive from name"))
                     .textFieldStyle(.roundedBorder)
                 Picker("Type", selection: $placeType) {

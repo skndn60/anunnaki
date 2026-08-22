@@ -8,6 +8,7 @@ struct EventFormView: View {
     let event: Event?
     @Query private var figures: [Figure]
     @Query private var places: [Place]
+    @Query private var allEvents: [Event]
     @Query(sort: \EventType.name) private var eventTypes: [EventType]
     @Query(sort: \Era.orderIndex) private var eras: [Era]
     @Query(sort: \EventPlaceRoleType.name) private var eventPlaceRoleTypes: [EventPlaceRoleType]
@@ -52,6 +53,13 @@ struct EventFormView: View {
     private var saveButtonLabel: String {
         if isEditing { return "Finish and Save" }
         return "Finish and Create"
+    }
+
+    private var duplicateNameWarning: String? {
+        let others = allEvents
+            .filter { $0.persistentModelID != event?.persistentModelID }
+            .map(\.name)
+        return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
 
     private var selectedFigures: [Figure] {
@@ -117,6 +125,12 @@ struct EventFormView: View {
             Section("Event Details") {
                 TextField("Name", text: $name, prompt: Text("e.g. Slaying of Tiamat"))
                     .textFieldStyle(.roundedBorder)
+                    .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
+                if let duplicate = duplicateNameWarning {
+                    Label("An event named \"\(duplicate)\" already exists — continuing will create another one.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.bold())
+                        .foregroundStyle(.orange)
+                }
                 Picker("Type", selection: $eventType) {
                     ForEach(eventTypes, id: \.persistentModelID) { type in
                         Text(type.name).tag(type as EventType?)

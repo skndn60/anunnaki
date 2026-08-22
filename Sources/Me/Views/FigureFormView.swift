@@ -9,6 +9,7 @@ struct FigureFormView: View {
     @Query private var figureTypes: [FigureType]
     @Query(sort: \Source.name) private var sources: [Source]
     @Query(sort: \Pantheon.name) private var pantheons: [Pantheon]
+    @Query private var allFigures: [Figure]
 
     @State private var name = ""
     @State private var disambiguation = ""
@@ -48,6 +49,13 @@ struct FigureFormView: View {
     private var saveButtonLabel: String {
         if isEditing { return "Finish and Save" }
         return "Finish and Create"
+    }
+
+    private var duplicateNameWarning: String? {
+        let others = allFigures
+            .filter { $0.persistentModelID != figure?.persistentModelID }
+            .map(\.name)
+        return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
 
     var body: some View {
@@ -95,7 +103,13 @@ struct FigureFormView: View {
             Section("Identity") {
                 TextField("Name", text: $name)
                     .textFieldStyle(.roundedBorder)
+                    .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                     .help("The primary name of this figure")
+                if let duplicate = duplicateNameWarning {
+                    Label("A figure named \"\(duplicate)\" already exists — continuing will create another one.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.bold())
+                        .foregroundStyle(.orange)
+                }
                 TextField("Disambiguation", text: $disambiguation, prompt: Text("e.g. Fourth dynasty of Kish"))
                     .textFieldStyle(.roundedBorder)
                     .help("Optional context to distinguish from other figures with the same name")

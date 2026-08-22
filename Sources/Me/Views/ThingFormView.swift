@@ -8,6 +8,7 @@ struct ThingFormView: View {
     let thing: Thing?
     @Query private var thingTypes: [ThingType]
     @Query(sort: \Source.name) private var sources: [Source]
+    @Query private var allThings: [Thing]
 
     @State private var name = ""
     @State private var thingDescription = ""
@@ -35,6 +36,13 @@ struct ThingFormView: View {
     private var saveButtonLabel: String {
         if isEditing { return "Finish and Save" }
         return "Finish and Create"
+    }
+
+    private var duplicateNameWarning: String? {
+        let others = allThings
+            .filter { $0.persistentModelID != thing?.persistentModelID }
+            .map(\.name)
+        return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
 
     var body: some View {
@@ -79,7 +87,13 @@ struct ThingFormView: View {
             Section("Identity") {
                 TextField("Name", text: $name, prompt: Text("e.g. Tablet of Destinies"))
                     .textFieldStyle(.roundedBorder)
+                    .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                     .help("The name of this artifact, object, or item")
+                if let duplicate = duplicateNameWarning {
+                    Label("A thing named \"\(duplicate)\" already exists — continuing will create another one.", systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.bold())
+                        .foregroundStyle(.orange)
+                }
 
                 if !thingTypes.isEmpty {
                     Picker("Type", selection: $selectedThingType) {
