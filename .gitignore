@@ -81,6 +81,6 @@ playground.xcworkspace/
 tmp/
 
 # Personal analysis docs (kept local only)
-ARCHITECTURAL_WEAKNESSES_CRITIQUE.md
-PRODUCT_WEAKNESSES.md
+docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md
+docs/PRODUCT_WEAKNESSES.md
 .aider*

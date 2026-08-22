@@ -620,7 +620,7 @@ package struct Migration {
     /// pre-flood timeline shows a date. User-approved figure moves place the primordial
     /// gods in Age of the First Gods, the great gods in Creation, the archangels in Age
     /// of the Watchers, and Alulim + Dumuzi the Shepherd into the Antediluvian Period.
-    /// Additive + idempotent; see PRE-FLOOD-TIMELINE.md for the full reasoning.
+    /// Additive + idempotent; see docs/PRE-FLOOD-TIMELINE.md for the full reasoning.
     package static func ensureAntediluvianChronology(context: ModelContext) {
         let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
         let eraByName = Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0) })
