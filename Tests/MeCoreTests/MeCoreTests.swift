@@ -3796,6 +3796,73 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(igigi?.figureType?.persistentModelID, existingType.persistentModelID, "Igigi joins the reused type")
     }
 
+    // MARK: - ORACC deity import
+
+    func testEnsureOraccDeityImportsCreatesAllSevenWithStickies() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureOraccDeityImports(context: context)
+
+        let expected: Set<String> = ["Gula", "Dagan", "Damu", "Girra", "Ninsi'anna", "Tašmetu", "Lugalirra"]
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(Set(figures.map(\.name)), expected)
+
+        for figure in figures {
+            XCTAssertEqual(figure.figureType?.name, "Deity")
+            XCTAssertEqual(figure.source.contains("ORACC"), true)
+            XCTAssertEqual(figure.stickies.count, 1)
+            XCTAssertEqual(figure.stickies.first?.text, "IMPORTED FROM ORACC")
+            XCTAssertEqual(figure.stickies.first?.isResolved, false)
+        }
+
+        let gula = figures.first { $0.name == "Gula" }
+        XCTAssertEqual(gula?.gender, .female)
+
+        let altNames = (try? context.fetch(FetchDescriptor<AlternateName>())) ?? []
+        XCTAssertEqual(altNames.count, 6)
+        XCTAssertEqual(
+            Set(altNames.map(\.name)),
+            Set(["Ninkarrak", "Dagon", "Bilgi", "Ninsianna", "Tashmetu", "Lugal-irra"])
+        )
+    }
+
+    func testEnsureOraccDeityImportsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureOraccDeityImports(context: context)
+        Migration.ensureOraccDeityImports(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 7)
+        let stickies = figures.flatMap(\.stickies)
+        XCTAssertEqual(stickies.count, 7)
+    }
+
+    func testEnsureOraccDeityImportsSkipsExistingNamesAndAliases() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let existing = Figure(name: "Dagan", figureDescription: "User's own Dagan")
+        context.insert(existing)
+        try? context.save()
+
+        Migration.ensureOraccDeityImports(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 7, "6 imports + the user's own Dagan")
+        XCTAssertEqual(figures.first { $0.name == "Dagan" }?.figureDescription, "User's own Dagan", "existing figure untouched")
+        XCTAssertNil(figures.first { $0.name == "Dagan" }?.stickies.first, "no sticky on pre-existing figure")
+
+        let dagan = figures.first { $0.name == "Dagan" }
+        let dagonAlt = (try? context.fetch(FetchDescriptor<AlternateName>()))?
+            .first { $0.name == "Dagon" }
+        XCTAssertNil(dagonAlt, "Dagan was skipped entirely — no alias may attach to a skipped name either")
+        _ = dagan
+    }
+
     // MARK: - Propagator: ignore non-reign prose dates
 
     func testPropagatorIgnoresMidTextTabletDate() {

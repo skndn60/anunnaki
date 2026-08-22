@@ -8,6 +8,23 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-08-22 — ORACC cross-check: import of 7 missing deities
+
+**Context:** The user supplied the ORACC AMGG list of deities (oracc.museum.upenn.edu/amgg/Listofdeities, 43 articles) and asked for a cross-check against the database. Comparison ran against a **copy** of `Me.store` (live store never touched): 106 divine-type figures + 144 alternate names. Result: ~34 covered (incl. standard pairs An/Anu, Enki/Ea, Iškur/Adad…), 4 romanization-only differences (Baba=Bau, Nidaba=Nisaba, Ninisinna=Ninisina, Ninsumun=Ninsun), 2 alias-covered (Erra→Nergal, Ninlil→Sud), and **7 missing outright**: Gula/Ninkarrak, Dagan, Damu, Girra, Ninsi'anna, Tašmetu, Lugalirra.
+
+**Changes made:**
+- `Sources/MeCore/Store/Migration.swift` — New `ensureOraccDeityImports(context:)`: creates the 7 deities (title/domain/description/gender from domain knowledge; `source` = "ORACC AMGG"), each with an unresolved sticky note **"IMPORTED FROM ORACC"**, plus 6 alternate names (Ninkarrak, Dagon→Hebrew Bible form, Bilgi, Ninsianna, Tashmetu ASCII, Lugal-irra). Get-or-creates the "Deity" FigureType if absent (star.fill / 007AFF, matching SeedData).
+- `Sources/Me/Views/ContentView.swift` — Migration added to the launch sequence after `ensureMesopotamianPantheons`.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 3 tests: creates all 7 with stickies + aliases; idempotent double-run; skips when the name already exists as a figure (user data untouched, no stray alias).
+
+**Key decisions:**
+- Import via the established idempotent launch-migration layer — never direct SQL against the live store.
+- Skip rule checks figure names *and* alternate names case-insensitively; anything pre-existing wins and receives nothing.
+- Eras deliberately left unassigned — consistent with the same-day decision that era membership stays derived, never hand-set at entry time.
+- Erra and Ninlil stay aliases for now (defensible identifications); promotion to standalone figures can be a later call.
+
+**Verify:** `swift build` clean; 301 tests pass. Manual: next launch creates the 7 figures (visible in Figures list, Deity filter); each carries the yellow-style sticky "IMPORTED FROM ORACC" on its detail page.
+
 ### 2026-08-22 — Docs reorganization: AGENTS.md slimmed, all docs moved into `docs/`
 
 **Context:** AGENTS.md had grown to 1,899 lines / ~230 KB — 93% of it session log (73 entries, some appended past the Hard Constraints/Interaction Guidelines headings). The user approved three moves: (1) archive the whole session log into a dedicated file (same precedent as the 2026-08-05 TODO split), (2) promote durable lessons buried in old entries into Coding Conventions, (3) move all documents into a `docs/` folder except AGENTS.md.
@@ -26,6 +43,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 - Future sessions append entries here, at the top, and promote recurring lessons into AGENTS.md instead of re-explaining them.
 
 **Verify:** `grep -c '^### 2026' docs/SESSION_LOG.md` == 74 (73 archived + this one); root holds only AGENTS.md/README.md/CONTRIBUTING.md; no dangling references to moved filenames outside historical entries; `swift build` clean.
+
+**Follow-up — era membership stays derived, no picker (same day, decision only).** While reviewing the model, the agent proposed adding an explicit era picker to the figure form / a members list on EraDetailView. The user declined: it would force figuring out each figure's era at data-entry time — another step in the path whose speed is priority #1. **Decision: do NOT add manual era-assignment UI.** Era association remains derived (seed data, launch migrations like `ensureAntediluvianChronology`, and the birth/death-date era strings via `FigureFormView`). Future sessions should not re-propose this; if era triage ever becomes painful, revisit as an automatic suggestion, not a required field.
 
 ### 2026-08-20 — Pre-flood timeline: antediluvian chronology + canonical era order
 

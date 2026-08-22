@@ -1758,6 +1758,90 @@ package struct Migration {
         try? context.save()
     }
 
+    /// Imports deities found missing in the ORACC AMGG cross-check (2026-08-22).
+    /// Skips any name already present as a figure or as an alternate name, so
+    /// user-entered data always wins. Each import gets a sticky note
+    /// "IMPORTED FROM ORACC". Additive + idempotent.
+    package static func ensureOraccDeityImports(context: ModelContext) {
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figureNames = Set(allFigures.map { $0.name.lowercased() })
+        let altNames = Set((try? context.fetch(FetchDescriptor<AlternateName>()))?.map { $0.name.lowercased() } ?? [])
+        func isKnown(_ n: String) -> Bool {
+            figureNames.contains(n.lowercased()) || altNames.contains(n.lowercased())
+        }
+
+        let deityPredicate = #Predicate<FigureType> { $0.name == "Deity" }
+        let deityType: FigureType
+        if let existing = try? context.fetch(FetchDescriptor<FigureType>(predicate: deityPredicate)).first {
+            deityType = existing
+        } else {
+            let created = FigureType(name: "Deity", icon: "star.fill", colorHex: "007AFF")
+            context.insert(created)
+            deityType = created
+        }
+
+        let undated = MythologicalDate(year: nil, era: "", isApproximate: true)
+
+        let oraccDeities: [(
+            name: String,
+            gender: Figure.Gender,
+            title: String,
+            domain: String,
+            description: String,
+            alternates: [(name: String, tradition: AlternateName.Tradition, note: String)]
+        )] = [
+            ("Gula", .female, "Goddess of Healing", "Healing, Medicine, Physicians",
+             "The great healing goddess, 'the great physician', patroness of doctors and exorcists; her sacred animal is the dog. Chief cult centre Isin, also prominent at Nippur and Uruk. Wife of Ninurta in the standard pantheon (of Pabilsag or Nergal in other traditions). Worshipped under many names, including Ninkarrak.",
+             [("Ninkarrak", .akkadian, "Distinct healing goddess often identified with Gula (ORACC treats them in one article)")]),
+            ("Dagan", .male, "Grain God of the Middle Euphrates", "Grain, Royal Legitimacy",
+             "West Semitic grain god whose cult was centred on the middle Euphrates (Tuttul, Mari, Ebla) long before he appears in Mesopotamian sources. In Old Babylonian royal ideology he grants kingship and legitimacy; Sargonic kings styled themselves servants of Dagan. Known as Dagon in the Hebrew Bible.",
+             [("Dagon", .hebrew, "Hebrew Bible form of the name")]),
+            ("Damu", .male, "God of Healing and Renewal", "Healing, Lament, Renewal",
+             "Sumerian god of healing of the dying-rising child-deity type; son of Nininisinna (in other traditions of Gula or Bau). His disappearance and return were lamented ritually during the summer months.",
+             []),
+            ("Girra", .male, "God of Fire", "Fire, Light, Purification",
+             "God of fire and light, invoked in purification rituals against witchcraft; known to the Akkadians as Bilgi. Often paired with the fire god Gibil and placed in the circle of Erra in first-millennium theology.",
+             [("Bilgi", .akkadian, "Akkadian form of the name")]),
+            ("Ninsi'anna", .female, "Venus Deity", "Venus, Stars",
+             "'Redoubtable star of heaven' — the planet Venus as a deity. Originally a Venus aspect of Inana, she developed into an independent goddess (at times understood as male) during the Old Babylonian period.",
+             [("Ninsianna", .sumerian, "Spelling variant")]),
+            ("Tašmetu", .female, "Consort of Nabu", "Love, Song, Intercession",
+             "Akkadian goddess, consort of Nabu, celebrated as the ideal bride in Akkadian love songs. Intercessor for humans before her exalted husband; associated with love, desire, and song.",
+             [("Tashmetu", .akkadian, "ASCII spelling variant")]),
+            ("Lugalirra", .male, "Underworld God, Twin of Meslamtaea", "Underworld",
+             "'Great king' — underworld god, twin brother of Meslamtaea; together the pair act as gatekeepers of the netherworld within the circle of Nergal (whose byname Meslamtaea also is). Worshipped especially at Kisiga.",
+             [("Lugal-irra", .sumerian, "Hyphenated spelling variant")]),
+        ]
+
+        var created = 0
+        for deity in oraccDeities where !isKnown(deity.name) {
+            let figure = Figure(
+                name: deity.name,
+                title: deity.title,
+                figureType: deityType,
+                gender: deity.gender,
+                domain: deity.domain,
+                figureDescription: deity.description,
+                birthDate: undated,
+                deathDate: undated,
+                source: "ORACC AMGG (oracc.museum.upenn.edu/amgg)"
+            )
+            context.insert(figure)
+            for alt in deity.alternates where !isKnown(alt.name) {
+                context.insert(AlternateName(
+                    figure: figure,
+                    name: alt.name,
+                    tradition: alt.tradition,
+                    nameType: .spelling,
+                    note: alt.note
+                ))
+            }
+            context.insert(StickyNote(text: "IMPORTED FROM ORACC", figure: figure))
+            created += 1
+        }
+        if created > 0 { try? context.save() }
+    }
+
     /// Links every `Relationship.sourceRef` to the `Source` entity named by its
     /// free-text `source` string. Existing Source names match case-insensitively
     /// ("Adapa myth" → seeded "Adapa Myth"); multi-text strings such as

@@ -222,6 +222,7 @@ struct ContentView: View {
                     Migration.ensureEpithets(context: modelContext)
                     Migration.ensureDivineCollectives(context: modelContext)
                     Migration.ensureMesopotamianPantheons(context: modelContext)
+                    Migration.ensureOraccDeityImports(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
                     Migration.ensureFigureGroupKinds(context: modelContext)
                     Migration.removeFloodPlaceholder(context: modelContext)
