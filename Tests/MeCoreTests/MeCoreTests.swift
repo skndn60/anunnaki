@@ -5421,6 +5421,29 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(eraBy(name: "Creation", context)?.startDate.startYear, -100000, "user-entered dates are never clobbered")
     }
 
+    func testAntediluvianChronologyToleratesDuplicateFigureNames() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Creation", orderIndex: 0))
+        let era = Era(name: "Antediluvian Period", orderIndex: 4)
+        context.insert(era)
+        context.insert(Figure(name: "Uras", title: "patron god of Dilbat"))
+        context.insert(Figure(name: "Ur-As", source: "user-added duplicate"))
+        let alulim = Figure(name: "Alulim", source: "Sumerian King List")
+        alulim.era = era
+        context.insert(alulim)
+        try? context.save()
+
+        Migration.ensureAntediluvianChronology(context: context)
+
+        XCTAssertEqual(figureBy(name: "Alulim", context)?.birthDate.startYear, -269200,
+                       "migration keeps working on canonical names despite duplicate user data")
+        XCTAssertEqual(eraBy(name: "Creation", context)?.startDate.startYear, -300000)
+        let urasCount = ((try? context.fetch(FetchDescriptor<Figure>())) ?? [])
+            .filter { ["Uras", "Ur-As"].contains($0.name) }.count
+        XCTAssertEqual(urasCount, 2, "migration never deletes user data")
+    }
+
     func testAntediluvianChronologyAssignsKingDates() {
         let container = makeContainer()
         let context = container.mainContext

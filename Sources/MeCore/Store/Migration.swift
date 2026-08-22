@@ -623,9 +623,9 @@ package struct Migration {
     /// Additive + idempotent; see docs/PRE-FLOOD-TIMELINE.md for the full reasoning.
     package static func ensureAntediluvianChronology(context: ModelContext) {
         let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
-        let eraByName = Dictionary(uniqueKeysWithValues: eras.map { ($0.name, $0) })
+        let eraByName = Dictionary(eras.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        let figureByName = Dictionary(uniqueKeysWithValues: allFigures.map { (Self.seedNameKey($0.name), $0) })
+        let figureByName = Dictionary(allFigures.map { (Self.seedNameKey($0.name), $0) }, uniquingKeysWith: { first, _ in first })
         var changed = false
 
         // 1. Era date bands — only corrected while they still hold the legacy seed
