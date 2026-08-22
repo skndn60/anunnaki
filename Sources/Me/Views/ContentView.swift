@@ -231,6 +231,7 @@ struct ContentView: View {
                     Migration.enrichSKLData(context: modelContext)
                     Migration.ensureComputedSKLDates(context: modelContext)
                     Migration.ensureAntediluvianChronology(context: modelContext)
+                    Migration.ensureEverydayLifeEpisodes(context: modelContext)
                     Migration.ensureDynastyGroups(context: modelContext)
 
                     Migration.ensureDynastyBoundaries(context: modelContext)

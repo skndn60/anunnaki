@@ -3863,6 +3863,118 @@ func testRegnalKeyOrdersEventsByDate() {
         _ = dagan
     }
 
+    // MARK: - Everyday-life episodes import
+
+    private func seedEverydayLifeTypeTables(context: ModelContext) {
+        Migration.ensureRelationTypesExist(context: context)
+        Migration.ensureEventPlaceRoleTypesExist(context: context)
+        Migration.ensureFigurePlaceRoleTypesExist(context: context)
+        SeedData.ensureTypesExist(context: context)
+    }
+
+    func testEverydayLifeEpisodesCreateFiguresEventsPlacesAndRelationships() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+        seedEverydayLifeTypeTables(context: context)
+
+        Migration.ensureEverydayLifeEpisodes(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 12)
+        XCTAssertEqual(figures.first { $0.name == "Taram-Kubi" }?.gender, .female)
+
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        XCTAssertEqual(events.count, 10)
+        XCTAssertEqual(Set(events.map(\.eventType?.name)), Set(["Daily Life"]))
+        let banquet = events.first { $0.name == "Ashurnasirpal II's Banquet at Kalhu" }
+        XCTAssertEqual(banquet?.date.startYear, -879)
+        XCTAssertEqual(banquet?.date.isApproximate, false)
+        XCTAssertTrue(banquet?.involvedFigures.contains { $0.name == "Ashurnasirpal II" } ?? false)
+
+        let letters = events.first { $0.name == "Taram-Kubi's Letters Home" }
+        let roleByPlace = Dictionary((letters?.placeAssociations ?? []).map {
+            ($0.place?.name ?? "", $0.roleType?.name ?? "")
+        }, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(roleByPlace["Assur"], "Started At")
+        XCTAssertEqual(roleByPlace["Kanesh"], "Ended At")
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.count, 6)
+        XCTAssertEqual(places.first { $0.name == "Kanesh" }?.latitude ?? 0, 38.8522, accuracy: 0.0001)
+
+        let relationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(relationships.count, 4, "two spouses plus Zizizi's father and mother")
+
+        let assocs = (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? []
+        XCTAssertEqual(assocs.count, 12)
+        XCTAssertTrue(assocs.contains {
+            $0.figure?.name == "Ashurnasirpal II" && $0.place?.name == "Kalhu" && $0.roleType?.name == "Ruler"
+        })
+    }
+
+    func testEverydayLifeEpisodesAreIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+        seedEverydayLifeTypeTables(context: context)
+
+        Migration.ensureEverydayLifeEpisodes(context: context)
+        Migration.ensureEverydayLifeEpisodes(context: context)
+
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Figure>())) ?? -1, 12)
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Event>())) ?? -1, 10)
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Place>())) ?? -1, 6)
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Relationship>())) ?? -1, 4)
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<FigurePlaceAssociation>())) ?? -1, 12)
+    }
+
+    func testEverydayLifeEpisodesSkipExistingUserData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let usersEa = Figure(name: "Ea Nasir", figureDescription: "User's own Ea-nasir entry")
+        let usersEvent = Event(name: "Poor Man of Nippur", eventDescription: "User's own write-up")
+        let usersPlace = Place(name: "Ur", modernLocation: "")
+        context.insert(usersEa)
+        context.insert(usersEvent)
+        context.insert(usersPlace)
+        try? context.save()
+        seedEverydayLifeTypeTables(context: context)
+
+        Migration.ensureEverydayLifeEpisodes(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 12, "the user's differently-spaced 'Ea Nasir' must suppress the import")
+        XCTAssertEqual(
+            figures.filter { NameDuplicateCheck.normalizedKey($0.name) == "eanasir" }.count,
+            1,
+            "no duplicate under any spelling"
+        )
+        XCTAssertEqual(
+            figures.first { NameDuplicateCheck.normalizedKey($0.name) == "eanasir" }?.figureDescription,
+            "User's own Ea-nasir entry",
+            "existing figure untouched"
+        )
+
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        XCTAssertEqual(events.count, 10, "nine imports plus the user's own Poor Man of Nippur")
+        XCTAssertEqual(events.first { $0.name == "Poor Man of Nippur" }?.eventDescription, "User's own write-up")
+
+        let complaint = events.first { $0.name == "The Complaint Tablet to Ea-nasir" }
+        XCTAssertTrue(
+            complaint?.involvedFigures.contains { $0 === usersEa } ?? false,
+            "the episode must link to the user's existing figure rather than creating another"
+        )
+
+        let urPlaces = ((try? context.fetch(FetchDescriptor<Place>())) ?? []).filter { $0.name == "Ur" }
+        XCTAssertEqual(urPlaces.count, 1)
+        XCTAssertEqual(urPlaces.first?.modernLocation, "", "the user's bare Ur stays bare")
+
+        let placeAssocCount = (try? context.fetchCount(FetchDescriptor<EventPlaceAssociation>())) ?? -1
+        XCTAssertEqual(placeAssocCount, 10,
+                       "all imported episode places except those of the user's own Poor Man of Nippur")
+    }
+
     // MARK: - FigurePlaceAssociation confidence qualifier
 
     func testFigurePlaceAssociationConfidenceRoundTrip() {
