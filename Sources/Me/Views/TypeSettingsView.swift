@@ -133,7 +133,7 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
                     .padding(.leading, 4)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(items, id: \.persistentModelID) { item in
+                    ForEach(Array(items.enumerated()), id: \.element.persistentModelID) { index, item in
                         HStack(spacing: 8) {
                             Circle()
                                 .fill(item.uiColor)
@@ -155,8 +155,7 @@ private struct EntityTypeSubSection<T: EntityTypeProtocol>: View {
                         }
                         .padding(.vertical, 5)
                         .padding(.horizontal, 6)
-                        .background(.quaternary.opacity(0.15))
-                        .cornerRadius(4)
+                        .alternatingRowBackground(index: index)
                     }
                 }
             }
@@ -213,7 +212,7 @@ private struct RelationshipTypeSubSection: View {
                     .padding(.leading, 4)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(items, id: \.persistentModelID) { item in
+                    ForEach(Array(items.enumerated()), id: \.element.persistentModelID) { index, item in
                         HStack(spacing: 8) {
                             Circle()
                                 .fill(item.color)
@@ -242,8 +241,7 @@ private struct RelationshipTypeSubSection: View {
                         }
                         .padding(.vertical, 5)
                         .padding(.horizontal, 6)
-                        .background(.quaternary.opacity(0.15))
-                        .cornerRadius(4)
+                        .alternatingRowBackground(index: index)
                     }
                 }
             }
@@ -304,7 +302,7 @@ private struct RoleTypeSubSection<T: RoleTypeProtocol>: View {
                     .padding(.leading, 4)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(items, id: \.persistentModelID) { item in
+                    ForEach(Array(items.enumerated()), id: \.element.persistentModelID) { index, item in
                         HStack(spacing: 8) {
                             Circle()
                                 .fill(item.uiColor)
@@ -323,8 +321,7 @@ private struct RoleTypeSubSection<T: RoleTypeProtocol>: View {
                         }
                         .padding(.vertical, 5)
                         .padding(.horizontal, 6)
-                        .background(.quaternary.opacity(0.15))
-                        .cornerRadius(4)
+                        .alternatingRowBackground(index: index)
                     }
                 }
             }
@@ -710,7 +707,7 @@ private struct PantheonSubSection: View {
                     .padding(.leading, 4)
             } else {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(items, id: \.persistentModelID) { item in
+                    ForEach(Array(items.enumerated()), id: \.element.persistentModelID) { index, item in
                         HStack(spacing: 8) {
                             Circle()
                                 .fill(item.color)
@@ -738,8 +735,7 @@ private struct PantheonSubSection: View {
                         }
                         .padding(.vertical, 5)
                         .padding(.horizontal, 6)
-                        .background(.quaternary.opacity(0.15))
-                        .cornerRadius(4)
+                        .alternatingRowBackground(index: index)
                     }
                 }
             }
