@@ -4786,7 +4786,10 @@ func testRegnalKeyOrdersEventsByDate() {
 
         let figNames = group.figureAssociations.compactMap { $0.figure?.name }.sorted()
         XCTAssertEqual(figNames, ["Enki", "Mami"])
-        XCTAssertEqual(group.figureAssociations.first?.propagatedFromEventName, "The Flood")
+        XCTAssertTrue(
+            group.figureAssociations.filter { $0.event == nil }
+                .allSatisfy { $0.propagatedFromEventName == "The Flood" },
+            "every propagated member carries the source event name (order-independent)" )
 
         let placeNames = group.figureAssociations.compactMap { $0.place?.name }
         XCTAssertEqual(placeNames, ["Eridu"])
