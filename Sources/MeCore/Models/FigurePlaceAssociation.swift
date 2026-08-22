@@ -5,6 +5,18 @@ import SwiftData
 /// E.g. Nanna/Sin is the patron deity of Ur, Gilgamesh is the ruler of Uruk.
 @Model
 package final class FigurePlaceAssociation {
+    package enum Confidence: String, Codable, CaseIterable, Hashable {
+        case possible
+        case disputed
+
+        package var label: String {
+            switch self {
+            case .possible: return "possible"
+            case .disputed: return "disputed"
+            }
+        }
+    }
+
     package var figure: Figure?
     package var place: Place?
     package var roleType: FigurePlaceRoleType?
@@ -12,6 +24,9 @@ package final class FigurePlaceAssociation {
     package var comments: String?
     /// Override the display name for this figure in this place's context (e.g. "Noah" for Ziusudra)
     package var displayName: String?
+    /// Epistemic qualifier: sources hedge the claim ("possibly had a temple there").
+    /// nil = plainly asserted, no qualifier shown.
+    package var confidence: Confidence?
 
     package init(
         figure: Figure? = nil,
@@ -19,7 +34,8 @@ package final class FigurePlaceAssociation {
         roleType: FigurePlaceRoleType? = nil,
         source: String = "",
         comments: String? = nil,
-        displayName: String? = nil
+        displayName: String? = nil,
+        confidence: Confidence? = nil
     ) {
         self.figure = figure
         self.place = place
@@ -27,5 +43,6 @@ package final class FigurePlaceAssociation {
         self.source = source
         self.comments = comments
         self.displayName = displayName
+        self.confidence = confidence
     }
 }

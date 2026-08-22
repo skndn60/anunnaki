@@ -193,6 +193,12 @@ struct FigurePlaceAssociationRow: View {
                     .font(.callout)
                     .foregroundStyle(.secondary)
             }
+            if let confidence = association.confidence {
+                Text("(\(confidence.label))")
+                    .font(.caption2)
+                    .italic()
+                    .foregroundStyle(confidence == .disputed ? Color.orange : Color.secondary)
+            }
             Spacer()
             if !association.source.isEmpty {
                 Text(association.source)
@@ -226,6 +232,12 @@ struct FigurePlaceAssociationDossierRow: View {
                 Text("?")
                     .font(.callout)
                     .foregroundStyle(.secondary)
+            }
+            if let confidence = association.confidence {
+                Text("(\(confidence.label))")
+                    .font(.caption2)
+                    .italic()
+                    .foregroundStyle(confidence == .disputed ? Color.orange : Color.secondary)
             }
             Spacer()
             if !association.source.isEmpty {

@@ -3863,6 +3863,47 @@ func testRegnalKeyOrdersEventsByDate() {
         _ = dagan
     }
 
+    // MARK: - FigurePlaceAssociation confidence qualifier
+
+    func testFigurePlaceAssociationConfidenceRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let gula = Figure(name: "Gula", figureDescription: "Healing goddess")
+        let nippur = Place(name: "Nippur", placeDescription: "City of Enlil")
+        context.insert(gula)
+        context.insert(nippur)
+        let assoc = FigurePlaceAssociation(
+            figure: gula,
+            place: nippur,
+            roleType: nil,
+            source: "AMGG, s.v. Gula",
+            confidence: .possible
+        )
+        context.insert(assoc)
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? []
+        XCTAssertEqual(fetched.count, 1)
+        XCTAssertEqual(fetched.first?.confidence, .possible)
+        XCTAssertEqual(fetched.first?.confidence?.label, "possible")
+    }
+
+    func testFigurePlaceAssociationConfidenceDefaultsToNilAndSupportsDisputed() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigurePlaceAssociation(source: "plain claim"))
+        context.insert(FigurePlaceAssociation(source: "conflicting traditions", confidence: .disputed))
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? []
+        XCTAssertEqual(fetched.count, 2)
+        XCTAssertEqual(fetched.first { $0.source == "plain claim" }?.confidence, nil)
+        XCTAssertEqual(fetched.first { $0.source == "conflicting traditions" }?.confidence, .disputed)
+        XCTAssertEqual(fetched.first { $0.source == "conflicting traditions" }?.confidence?.label, "disputed")
+
+        XCTAssertEqual(Set(FigurePlaceAssociation.Confidence.allCases), [.possible, .disputed])
+    }
+
     // MARK: - Propagator: ignore non-reign prose dates
 
     func testPropagatorIgnoresMidTextTabletDate() {

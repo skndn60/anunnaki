@@ -324,6 +324,7 @@ struct AddFigurePlaceAssociationForm: View {
     @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
+    @State private var confidence: FigurePlaceAssociation.Confidence?
     @State private var source = ""
     @State private var comments = ""
     @State private var figureSearchText = ""
@@ -474,6 +475,15 @@ struct AddFigurePlaceAssociationForm: View {
                     }
                 }
 
+                Section("Confidence") {
+                    Picker("Confidence", selection: $confidence) {
+                        Text("Asserted").tag(nil as FigurePlaceAssociation.Confidence?)
+                        ForEach(FigurePlaceAssociation.Confidence.allCases, id: \.self) { c in
+                            Text(c.label).tag(c)
+                        }
+                    }
+                }
+
                 Section("Source") {
                     TextField("Source", text: $source)
                 }
@@ -494,7 +504,7 @@ struct AddFigurePlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = FigurePlaceAssociation(figure: selectedFigure?.figure, place: selectedPlace, roleType: selectedRoleType, source: source, comments: comments.isEmpty ? nil : comments, displayName: selectedFigure?.matchedAlternateName)
+        let assoc = FigurePlaceAssociation(figure: selectedFigure?.figure, place: selectedPlace, roleType: selectedRoleType, source: source, comments: comments.isEmpty ? nil : comments, displayName: selectedFigure?.matchedAlternateName, confidence: confidence)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -721,6 +731,7 @@ struct EditFigurePlaceAssociationForm: View {
     @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
+    @State private var confidence: FigurePlaceAssociation.Confidence?
     @State private var source = ""
     @State private var comments = ""
     @State private var figureSearchText = ""
@@ -870,6 +881,14 @@ struct EditFigurePlaceAssociationForm: View {
                         }
                     }
                 }
+                Section("Confidence") {
+                    Picker("Confidence", selection: $confidence) {
+                        Text("Asserted").tag(nil as FigurePlaceAssociation.Confidence?)
+                        ForEach(FigurePlaceAssociation.Confidence.allCases, id: \.self) { c in
+                            Text(c.label).tag(c)
+                        }
+                    }
+                }
                 Section("Source") {
                     TextField("Source", text: $source)
                 }
@@ -894,6 +913,7 @@ struct EditFigurePlaceAssociationForm: View {
             }
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
+            confidence = assoc.confidence
             source = assoc.source
             comments = assoc.comments ?? ""
         }
@@ -904,6 +924,7 @@ struct EditFigurePlaceAssociationForm: View {
         assoc.displayName = selectedFigure?.matchedAlternateName
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
+        assoc.confidence = confidence
         assoc.source = source
         assoc.comments = comments.isEmpty ? nil : comments
         dismiss()
