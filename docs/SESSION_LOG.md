@@ -68,6 +68,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Style (same morning) — `76aeda9`:** Cell editor sheet (double-click) looked squished: its Form drew a grouped inset box flush against the dividers/edges. Rebuilt in the DescriptionEditorSheet house style — plain VStack with 16pt header padding, uppercase caption labels, rounded-border value field, labelsHidden picker, content area with horizontal+vertical padding, padded button row; height trimmed to 300 to kill dead space.
 
+**Micro (same morning) — `1b6d283`:** Cell editor margins nudged +5px all around (header/buttons 16→20pt, content horizontal→20pt) per user's look-and-feel pass.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
