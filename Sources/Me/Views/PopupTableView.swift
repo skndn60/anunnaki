@@ -92,12 +92,26 @@ struct PopupTableView: View {
                                     CellView(
                                         value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
                                         isEditing: isEditing,
-                                        hasOwnSource: !(cellSources[key] ?? "").isEmpty,
-                                        onOpenEditor: {
-                                            openCellEditor(attributeID: attribute.persistentModelID, columnID: column.id)
-                                        }
+                                        hasOwnSource: !(cellSources[key] ?? "").isEmpty
                                     )
                                     .frame(width: 180, height: 120)
+                                    .contextMenu {
+                                        Button("Edit Value & Source\u{2026}") {
+                                            openCellEditor(attributeID: attribute.persistentModelID, columnID: column.id)
+                                        }
+                                        if !(cellSources[key] ?? "").isEmpty,
+                                           let cell = table.cells.first(where: { cell in
+                                               cell.attribute?.persistentModelID == attribute.persistentModelID &&
+                                               (cell.figure?.persistentModelID ?? cell.column?.persistentModelID) == column.id
+                                           }) {
+                                            Divider()
+                                            Button("Clear Source", role: .destructive) {
+                                                cell.setSourceText(nil, context: modelContext)
+                                                try? modelContext.save()
+                                                loadCells()
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -278,7 +292,6 @@ private struct CellView: View {
     @Binding var value: String
     let isEditing: Bool
     var hasOwnSource: Bool = false
-    var onOpenEditor: () -> Void = {}
 
     var body: some View {
         Group {
@@ -303,11 +316,9 @@ private struct CellView: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .padding(3)
-                    .help("Has its own source (double-click to view)")
+                    .help("Has its own source (right-click to edit)")
             }
         }
-        .contentShape(Rectangle())
-        .onTapGesture(count: 2, perform: onOpenEditor)
     }
 }
 
