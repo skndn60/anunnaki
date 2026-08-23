@@ -52,6 +52,15 @@ struct PopupTableListView: View {
                     List(tables, selection: $selectedTableID) { table in
                         PopupTableRow(table: table)
                             .tag(table.persistentModelID)
+                            .contextMenu {
+                                Button("Open Grid") { showingGrid = table }
+                                Button("Edit") { editingTable = table }
+                                Divider()
+                                Button("Delete", role: .destructive) {
+                                    selectedTableID = nil
+                                    modelContext.delete(table)
+                                }
+                            }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                 }

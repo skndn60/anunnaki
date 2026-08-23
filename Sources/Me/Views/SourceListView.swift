@@ -56,6 +56,14 @@ struct SourceListView: View {
                     List(sortedSources, selection: $selectedSourceID) { source in
                         SourceRow(source: source)
                             .tag(source.persistentModelID)
+                            .contextMenu {
+                                Button("Edit") { editingSource = source }
+                                Divider()
+                                Button("Delete", role: .destructive) {
+                                    selectedSourceID = nil
+                                    modelContext.delete(source)
+                                }
+                            }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                 }

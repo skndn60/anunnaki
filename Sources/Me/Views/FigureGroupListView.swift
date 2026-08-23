@@ -76,6 +76,14 @@ struct FigureGroupListView: View {
                             FigureGroupRow(group: row.group)
                                 .tag(row.group.persistentModelID)
                                 .padding(.leading, CGFloat(row.depth) * 14)
+                                .contextMenu {
+                                    Button("Edit") { editingGroup = row.group }
+                                    Divider()
+                                    Button("Delete", role: .destructive) {
+                                        selectedGroupID = row.group.persistentModelID
+                                        showDeleteConfirm = true
+                                    }
+                                }
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))

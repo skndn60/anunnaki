@@ -110,6 +110,14 @@ struct DictionaryListView: View {
                                 ForEach(group.entries) { entry in
                                     DictionaryRow(entry: entry, showSumerian: sortOrder == .sumerian, searchText: searchText, onDoubleClick: { editingEntry = entry })
                                         .tag(entry.persistentModelID)
+                                        .contextMenu {
+                                            Button("Edit") { editingEntry = entry }
+                                            Divider()
+                                            Button("Delete", role: .destructive) {
+                                                selectedEntryID = entry.persistentModelID
+                                                showDeleteConfirm = true
+                                            }
+                                        }
                                 }
                             }
                         }

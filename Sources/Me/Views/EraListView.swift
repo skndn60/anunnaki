@@ -56,6 +56,14 @@ struct EraListView: View {
                     List(eras, selection: $selectedEraID) { era in
                         EraRow(era: era)
                             .tag(era.persistentModelID)
+                            .contextMenu {
+                                Button("Edit") { editingEra = era }
+                                Divider()
+                                Button("Delete", role: .destructive) {
+                                    selectedEraID = era.persistentModelID
+                                    showDeleteConfirm = true
+                                }
+                            }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                 }
