@@ -60,6 +60,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Micro (same morning) — `45b3682`:** ~5px vertical padding around the grid header's source label so it breathes between the divider above and the grid below.
 
+**Micro (same morning) — `f5bb82d`:** 5px gap between the description text and that divider (it sat too tight).
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
