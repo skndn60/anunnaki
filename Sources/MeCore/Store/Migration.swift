@@ -2301,9 +2301,52 @@ package struct Migration {
 
     private static func primarySourceName(from raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return nil }
+        guard !trimmed.isEmpty, trimmed.count >= 3 else { return nil }
         let first = trimmed.split(separator: ",").first.map(String.init) ?? trimmed
-        return first.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = first.trimmingCharacters(in: .whitespacesAndNewlines)
+        return name.count >= 3 ? name : nil
+    }
+
+    /// Cleans up debris produced by junk free-text source strings. A typo like
+    /// `"d"` on a relationship's `source` field used to materialize a bare
+    /// `Source` row via `ensureRelationshipSources`; deleting that row only
+    /// nullified the link while the string survived, so every launch recreated
+    /// it. Blank any sub-3-character source strings (detaching via the
+    /// annotated side), then delete sources that are pure machine debris:
+    /// sub-3-character name, all metadata empty, no citations/attachments/
+    /// relationships. Anything with real metadata or references is never
+    /// touched. Additive + idempotent.
+    package static func ensureJunkSourceStringsCleaned(context: ModelContext) {
+        let relationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        var changed = false
+        for relationship in relationships {
+            let trimmed = relationship.source.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, trimmed.count < 3 else { continue }
+            if let source = relationship.sourceRef {
+                source.relationships.removeAll { $0 == relationship }
+            }
+            relationship.source = ""
+            changed = true
+        }
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        for source in sources where source.name.trimmingCharacters(in: .whitespacesAndNewlines).count < 3 {
+            let isDebris = source.author.isEmpty
+                && source.language.isEmpty
+                && source.period.isEmpty
+                && source.sourceDescription.isEmpty
+                && source.publicationInfo.isEmpty
+                && source.url.isEmpty
+                && source.citations.isEmpty
+                && source.attachments.isEmpty
+                && source.relationships.isEmpty
+            if isDebris {
+                context.delete(source)
+                changed = true
+            }
+        }
+
+        if changed { try? context.save() }
     }
 
     /// Tag every entity that has no tags yet using `TagEngine`'s rule-based

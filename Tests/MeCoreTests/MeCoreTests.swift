@@ -2923,6 +2923,58 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertFalse(enumaElish.relationships.contains(where: { $0.persistentModelID == rel.persistentModelID }))
     }
 
+    func testJunkSourceCleanupBlanksShortStringAndDeletesDebrisSource() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let debris = Source(name: "d")
+        let rel = Relationship(source: "d")
+        context.insert(debris)
+        context.insert(rel)
+        debris.relationships.append(rel)
+        try? context.save()
+
+        Migration.ensureJunkSourceStringsCleaned(context: context)
+        XCTAssertEqual(rel.source, "")
+        XCTAssertNil(rel.sourceRef)
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertTrue(allSources.isEmpty)
+
+        Migration.ensureRelationshipSources(context: context)
+        let afterRescan: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertTrue(afterRescan.isEmpty)
+        XCTAssertNil(rel.sourceRef)
+    }
+
+    func testJunkSourceCleanupKeepsSourcesWithMetadataOrReferences() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let curatedShort = Source(name: "d", author: "Someone")
+        let referenced = Source(name: "ab")
+        let rel = Relationship(source: "")
+        context.insert(curatedShort)
+        context.insert(referenced)
+        context.insert(rel)
+        referenced.relationships.append(rel)
+        try? context.save()
+
+        Migration.ensureJunkSourceStringsCleaned(context: context)
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertEqual(Set(allSources.map(\.persistentModelID)), Set([curatedShort.persistentModelID, referenced.persistentModelID]))
+    }
+
+    func testJunkSourceCleanupLeavesLegitSourceStringsAlone() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rel = Relationship(source: "SKL")
+        context.insert(rel)
+        try? context.save()
+
+        Migration.ensureJunkSourceStringsCleaned(context: context)
+        XCTAssertEqual(rel.source, "SKL")
+        Migration.ensureRelationshipSources(context: context)
+        XCTAssertEqual(rel.sourceRef?.name, "SKL")
+    }
+
     func testRelationshipSourceDisplayNameFallsBackToString() {
         let container = makeContainer()
         let context = container.mainContext
