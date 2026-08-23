@@ -72,6 +72,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Interaction change (same morning) — `6dc1656`:** User rejected double-click as the cell-editor trigger — "seldom, if anywhere in the app, a thing". Grid cells now open the editor via right-click context menu (Edit Value & Source…), plus a destructive Clear Source entry when the cell has its own source. Double-tap gesture removed; badge help text updated to "right-click to edit"; inline Edit-mode typing unchanged. Consistent with the list-row context menus everywhere else. 339/339 green.
 
+**Style (same morning) — `afa1406`:** Corner doc.text badge replaced by a footnote-style bold superscript `*` directly after the value text (user picked it from four options; "the icon looks very lost there"). Marker only renders on non-empty values with their own source; tooltip moved to the whole cell. 339/339 green.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
