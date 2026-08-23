@@ -32,6 +32,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Micro (same morning) — `91b7974`:** Copy-name-to-clipboard button in the FigureDetailView header, superscript position after the name (borderless `doc.on.doc`, flips to green checkmark ~1.5 s via NSPasteboard).
 
+**Follow-up (same morning) — `cf8f76f`:** New `nameVariant` consistency rule (user request): descriptions mentioning a figure/alias with collapsed spelling ("Enbiishtar" vs "Enbi-Ishtar") get flagged with the registered form — sloppy spellings break auto-linking, which matches exact names. Implementation: separator-collapsed scan over NameDuplicateCheck.normalizedKey buckets (first-letter), word-boundary checks against the ORIGINAL string (so "Anu" never fires inside "Anunnaki", possessives like "Inanna's" never flag), keys <4 chars and keys shared by several distinct spellings (homonyms) skipped. 3 tests. 326/326 green.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
