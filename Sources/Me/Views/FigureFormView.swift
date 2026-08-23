@@ -206,11 +206,24 @@ struct FigureFormView: View {
         .formStyle(.grouped)
     }
 
+    private var genderWordingHint: String? {
+        ConsistencyEngine.genderConflict(
+            gender: gender,
+            title: title,
+            figureDescription: figureDescription
+        )?.message
+    }
+
     private var descriptionStep: some View {
         Form {
             Section("Description") {
                 RichTextEditorSection(richData: $richDescription, plainText: $figureDescription)
                     .frame(minHeight: 200)
+                if let hint = genderWordingHint {
+                    Label(hint, systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout.bold())
+                        .foregroundStyle(.orange)
+                }
             }
         }
         .formStyle(.grouped)

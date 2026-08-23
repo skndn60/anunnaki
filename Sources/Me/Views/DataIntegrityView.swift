@@ -4,6 +4,7 @@ import SwiftData
 struct DataIntegrityView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var issues: [IntegrityIssue] = []
+    @State private var findings: [ConsistencyFinding] = []
     @State private var isScanning = false
 
     var body: some View {
@@ -13,7 +14,7 @@ struct DataIntegrityView: View {
                     Text("Data Integrity")
                         .font(.title2)
                         .fontWeight(.semibold)
-                    Text("Check for orphaned associations, broken propagation links, and duplicate memberships.")
+                    Text("Structural checks (orphaned associations, broken propagation, duplicate memberships) plus content-consistency checks: gender vs wording, role genders, parent cycles, date logic, era references, ambiguous aliases.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -29,7 +30,7 @@ struct DataIntegrityView: View {
             if isScanning {
                 ProgressView("Scanning…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if issues.isEmpty {
+            } else if issues.isEmpty && findings.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.largeTitle)
@@ -64,6 +65,26 @@ struct DataIntegrityView: View {
                         }
                         .padding(.vertical, 4)
                     }
+
+                    if !findings.isEmpty {
+                        Section("Content Consistency (\(findings.count))") {
+                            ForEach(findings) { finding in
+                                HStack(spacing: 12) {
+                                    Image(systemName: finding.severity.icon)
+                                        .foregroundStyle(finding.severity == .warning ? Color.orange : Color.blue)
+                                        .frame(width: 16)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text("\(finding.entityKind): \(finding.entityName)")
+                                            .font(.callout)
+                                        Text(finding.message)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -73,6 +94,7 @@ struct DataIntegrityView: View {
     private func scan() {
         isScanning = true
         issues = []
+        findings = []
 
         Task { @MainActor in
             var found: [IntegrityIssue] = []
@@ -155,6 +177,19 @@ struct DataIntegrityView: View {
                     ))
                 }
             }
+
+            let allFigures = (try? modelContext.fetch(FetchDescriptor<Figure>())) ?? []
+            let allRelationships = (try? modelContext.fetch(FetchDescriptor<Relationship>())) ?? []
+            let allAlternateNames = (try? modelContext.fetch(FetchDescriptor<AlternateName>())) ?? []
+            let allEvents = (try? modelContext.fetch(FetchDescriptor<Event>())) ?? []
+            let allEras = (try? modelContext.fetch(FetchDescriptor<Era>())) ?? []
+            findings = ConsistencyEngine.runAll(
+                figures: allFigures,
+                relationships: allRelationships,
+                alternateNames: allAlternateNames,
+                events: allEvents,
+                eras: allEras
+            )
 
             issues = found
             isScanning = false

@@ -3988,6 +3988,193 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertFalse(stickies.contains { $0.place === usersPlace }, "no import sticky on the user's own place")
     }
 
+    // MARK: - ConsistencyEngine
+
+    private func runConsistency(_ context: ModelContext) -> [ConsistencyFinding] {
+        ConsistencyEngine.runAll(
+            figures: (try? context.fetch(FetchDescriptor<Figure>())) ?? [],
+            relationships: (try? context.fetch(FetchDescriptor<Relationship>())) ?? [],
+            alternateNames: (try? context.fetch(FetchDescriptor<AlternateName>())) ?? [],
+            events: (try? context.fetch(FetchDescriptor<Event>())) ?? [],
+            eras: (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        )
+    }
+
+    private func makeRelationType(_ name: String, in context: ModelContext) -> RelationshipType {
+        let type = RelationshipType(name: name, icon: "link", colorHex: "8E8E93", category: "family")
+        context.insert(type)
+        return type
+    }
+
+    func testPronounRuleFlagsOnlyOppositePronouns() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "MaleWithShe", gender: .male,
+                              figureDescription: "She guards her city."))
+        context.insert(Figure(name: "FemaleWithHe", gender: .female,
+                              figureDescription: "He rules; his word is law."))
+        context.insert(Figure(name: "MixedPronouns", gender: .male,
+                              figureDescription: "He and his wife — she outlived him."))
+        context.insert(Figure(name: "SubstringSafety", gender: .male,
+                              figureDescription: "Lord of history here; heir to everything."))
+        context.insert(Figure(name: "UnknownGender", gender: .unknown,
+                              figureDescription: "She appears in her temple."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .pronounGender }
+        XCTAssertEqual(Set(findings.map(\.entityName)), Set(["MaleWithShe", "FemaleWithHe"]))
+    }
+
+    func testGenderedNounRuleUsesWholeWords() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "MaleGoddessWording", title: "Patron of Dilbat", gender: .male,
+                              figureDescription: "A goddess of farming boundaries."))
+        context.insert(Figure(name: "FemaleGodWording", gender: .female,
+                              figureDescription: "A goddess who advised the king of Kish."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .genderedNoun }
+        XCTAssertEqual(findings.count, 1, "\"god\" inside 'goddess' must not leak into the masculine set")
+        XCTAssertEqual(findings.first?.entityName, "MaleGoddessWording")
+
+        let consistent = runConsistency(context).filter { $0.entityName == "FemaleGodWording" }
+        XCTAssertTrue(consistent.isEmpty,
+                      "goddess + king is mixed wording — skipped, and 'kingdom' never counts as 'king'")
+    }
+
+    func testRoleGenderRuleFlagsContradictingEndpoints() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fatherType = makeRelationType("Father", in: context)
+        let motherType = makeRelationType("Mother", in: context)
+        let spouseType = makeRelationType("Spouse", in: context)
+        let mom = Figure(name: "Mom", gender: .female)
+        let dad = Figure(name: "Dad", gender: .male)
+        let son = Figure(name: "Son", gender: .male)
+        context.insert(mom); context.insert(dad); context.insert(son)
+        context.insert(Relationship(fromFigure: dad, toFigure: son, relationshipType: fatherType))
+        context.insert(Relationship(fromFigure: mom, toFigure: son, relationshipType: motherType))
+        context.insert(Relationship(fromFigure: mom, toFigure: dad, relationshipType: spouseType))
+        try? context.save()
+        XCTAssertEqual(runConsistency(context).filter { $0.kind == .roleGender }.count, 0)
+
+        context.insert(Relationship(fromFigure: mom, toFigure: son, relationshipType: fatherType))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .roleGender }
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertTrue(findings[0].message.contains("listed in the \"Father\" role"))
+    }
+
+    func testParentCycleRuleFlagsMutualAndSelfParentage() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fatherType = makeRelationType("Father", in: context)
+        let motherType = makeRelationType("Mother", in: context)
+        let creatorType = makeRelationType("Creator", in: context)
+        let a = Figure(name: "A", gender: .male)
+        let b = Figure(name: "B", gender: .male)
+        let c = Figure(name: "C", gender: .male)
+        let d = Figure(name: "D", gender: .male)
+        context.insert(a); context.insert(b); context.insert(c); context.insert(d)
+        context.insert(Relationship(fromFigure: a, toFigure: b, relationshipType: fatherType))
+        context.insert(Relationship(fromFigure: b, toFigure: a, relationshipType: motherType))
+        context.insert(Relationship(fromFigure: c, toFigure: c, relationshipType: fatherType))
+        context.insert(Relationship(fromFigure: d, toFigure: d, relationshipType: creatorType, source: ""))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .parentCycle }
+        XCTAssertEqual(findings.count, 2, "mutual pair reported once despite two edges; self-creation via Creator is legitimate")
+        XCTAssertEqual(Set(findings.map(\.entityName)), Set(["A ↔ B", "C"]))
+    }
+
+    func testInvertedLifeDatesRule() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(
+            name: "TimeTraveller",
+            figureDescription: "Born late, died earlier.",
+            birthDate: MythologicalDate(year: -100),
+            deathDate: MythologicalDate(year: -500)
+        ))
+        context.insert(Figure(
+            name: "NormalLife",
+            figureDescription: "",
+            birthDate: MythologicalDate(year: -500),
+            deathDate: MythologicalDate(year: -450)
+        ))
+        context.insert(Figure(name: "Immortal", figureDescription: ""))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .invertedDates }
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertEqual(findings.first?.entityName, "TimeTraveller")
+    }
+
+    func testUnknownEraReferenceRule() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Old Babylonian Period"))
+        context.insert(Figure(
+            name: "TypoKing",
+            figureDescription: "",
+            birthDate: MythologicalDate(year: -1800, era: "Old Babylonain Peroid"),
+            deathDate: MythologicalDate(year: -1750, era: "Old Babylonian Period")
+        ))
+        context.insert(Event(
+            name: "Some Event",
+            eventDescription: "",
+            era: "Ur Iii Periode"
+        ))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .unknownEra }.map(\.message)
+        XCTAssertEqual(findings.count, 2)
+        XCTAssertTrue(findings.contains { $0.contains("Birth date") && $0.contains("Old Babylonain Peroid") })
+        XCTAssertTrue(findings.contains { $0.contains("Ur Iii Periode") },
+                      "normalized matching means the valid death-era string passes while typos surface")
+    }
+
+    func testAmbiguousAliasRule() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let f1 = Figure(name: "First")
+        let f2 = Figure(name: "Second")
+        let f3 = Figure(name: "Third")
+        context.insert(f1); context.insert(f2); context.insert(f3)
+        context.insert(AlternateName(figure: f1, name: "Ninsianna"))
+        context.insert(AlternateName(figure: f2, name: "Ninsi'anna"))
+        context.insert(AlternateName(figure: f3, name: "Ninsianna"))
+        context.insert(AlternateName(figure: f1, name: "Unique Alias"))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .ambiguousAlias }
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertEqual(findings.first?.entityName, "Ninsianna")
+        XCTAssertEqual(findings.first?.message, "The name \"Ninsianna\" is attached to multiple figures: First, Second, Third.")
+    }
+
+    func testStubFigureRule() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Bare Name"))
+        context.insert(Figure(name: "Exempt Stub", figureDescription: ""))
+        if let exempt = try? context.fetch(FetchDescriptor<Figure>(predicate: #Predicate { $0.name == "Exempt Stub" })).first {
+            exempt.coverageExempt = true
+        }
+        let rich = Figure(name: "Rich Figure", domain: "Wisdom", figureDescription: "Full record.")
+        let linked = Figure(name: "Linked Stub")
+        context.insert(rich)
+        context.insert(linked)
+        context.insert(Relationship(fromFigure: rich, toFigure: linked,
+                                    relationshipType: makeRelationType("Father", in: context)))
+        try? context.save()
+
+        let stubs = runConsistency(context).filter { $0.kind == .stubFigure }.map(\.entityName)
+        XCTAssertEqual(stubs, ["Bare Name"])
+    }
+
     // MARK: - FigurePlaceAssociation confidence qualifier
 
     func testFigurePlaceAssociationConfidenceRoundTrip() {
