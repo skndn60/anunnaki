@@ -39,6 +39,10 @@ struct PopupTableView: View {
                         .font(.body)
                         .foregroundStyle(.secondary)
                 }
+                if !table.tableDescription.isEmpty,
+                   let tableSource = table.source, !tableSource.isEmpty {
+                    Divider()
+                }
                 if let tableSource = table.source, !tableSource.isEmpty {
                     Label(tableSource, systemImage: "doc.text")
                         .font(.caption)
