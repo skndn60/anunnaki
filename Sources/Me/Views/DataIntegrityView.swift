@@ -366,12 +366,14 @@ struct DataIntegrityView: View {
         let allAlternateNames = (try? modelContext.fetch(FetchDescriptor<AlternateName>())) ?? []
         let allEvents = (try? modelContext.fetch(FetchDescriptor<Event>())) ?? []
         let allEras = (try? modelContext.fetch(FetchDescriptor<Era>())) ?? []
+        let allPopupTables = (try? modelContext.fetch(FetchDescriptor<PopupTable>())) ?? []
         return ConsistencyEngine.runAll(
             figures: allFigures,
             relationships: allRelationships,
             alternateNames: allAlternateNames,
             events: allEvents,
-            eras: allEras
+            eras: allEras,
+            popupTables: allPopupTables
         ).filter { finding in
             !(finding.kind == .parentCycle && !finding.entityName.contains("↔"))
         }

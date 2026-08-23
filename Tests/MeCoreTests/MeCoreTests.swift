@@ -5714,6 +5714,66 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertTrue(a.popupTables.isEmpty)
     }
 
+    // MARK: - AI-draft table findings
+
+    private func makeCell(_ context: ModelContext, table: PopupTable, value: String?, source: String?) -> PopupTableCell {
+        let cell = PopupTableCell(value: value, source: source)
+        cell.table = table
+        table.cells.append(cell)
+        context.insert(cell)
+        return cell
+    }
+
+    func testAIDraftTableFindingReportsUnsourcedCells() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        table.setSourceText("AI-generated (Gemini)", context: context)
+        for _ in 0..<2 { makeCell(context, table: table, value: "x", source: nil) }
+        makeCell(context, table: table, value: "y", source: "Enuma Elish")
+        makeCell(context, table: table, value: "z", source: nil)
+        try? context.save()
+
+        let findings = ConsistencyEngine.checkAIDraftTables(tables: [table])
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertEqual(findings.first?.kind, .aiDraftTable)
+        XCTAssertEqual(findings.first?.severity, .info)
+        XCTAssertEqual(findings.first?.entityKind, "Comparison Table")
+        XCTAssertTrue(findings.first?.message.contains("table-wide source is AI-generated") ?? false)
+        XCTAssertTrue(findings.first?.message.contains("3 of 4 cells have no individual source") ?? false)
+    }
+
+    func testRealSourcedTableProducesNoAIDraftFinding() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Kings")
+        table.setSourceText("Sumerian King List", context: context)
+        makeCell(context, table: table, value: "a", source: nil)
+        try? context.save()
+
+        XCTAssertTrue(ConsistencyEngine.checkAIDraftTables(tables: [table]).isEmpty)
+
+        var runAllFindings = ConsistencyEngine.runAll(
+            figures: [], relationships: [], alternateNames: [], events: [], eras: [],
+            popupTables: [table]
+        )
+        XCTAssertFalse(runAllFindings.contains { $0.kind == .aiDraftTable })
+    }
+
+    func testCellOnlyAIDraftCitationsFlagged() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Mixed Provenance")
+        makeCell(context, table: table, value: "a", source: "Gemini draft")
+        makeCell(context, table: table, value: "b", source: "Enuma Elish")
+        try? context.save()
+
+        let findings = ConsistencyEngine.checkAIDraftTables(tables: [table])
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertTrue(findings.first?.message.contains("1 cell cites AI-generated content") ?? false)
+        XCTAssertTrue(findings.first?.message.contains("All 2 cells carry their own source.") ?? false)
+    }
+
     func testPopupTableRoundTrip() {
         let container = makeContainer()
         let context = container.mainContext

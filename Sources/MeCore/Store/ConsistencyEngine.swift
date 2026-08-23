@@ -14,6 +14,7 @@ package struct ConsistencyFinding: Identifiable {
         case ambiguousAlias
         case stubFigure
         case nameVariant
+        case aiDraftTable
     }
 
     package enum Severity: String {
@@ -424,12 +425,66 @@ package enum ConsistencyEngine {
 
     // MARK: - Entry point
 
+    /// True when a source string points at LLM-generated placeholder content
+    /// rather than a citable work. Matched on the normalized key so spacing,
+    /// casing, and punctuation variants all count.
+    package static func isAIDraftSourceName(_ name: String) -> Bool {
+        let key = NameDuplicateCheck.normalizedKey(name)
+        return key.contains("gemini")
+            || key.contains("aigenerated")
+            || key.contains("chatgpt")
+            || key.contains("claude")
+            || key.contains("llm")
+    }
+
+    /// Flags comparison tables whose provenance still rests on AI-generated
+    /// content — either via the table-wide source or individual cells — and
+    /// reports how many cells lack their own verified source yet.
+    package static func checkAIDraftTables(tables: [PopupTable]) -> [ConsistencyFinding] {
+        var findings: [ConsistencyFinding] = []
+        for table in tables {
+            let tableIsDraft = table.source.map { isAIDraftSourceName($0) } ?? false
+            let draftCellCount = table.cells.filter { $0.source.map { isAIDraftSourceName($0) } ?? false }.count
+            guard tableIsDraft || draftCellCount > 0 else { continue }
+
+            let unsourcedCount = table.cells.filter {
+                ($0.source ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }.count
+            let total = table.cells.count
+
+            var parts: [String] = []
+            if tableIsDraft {
+                parts.append("table-wide source is AI-generated content")
+            }
+            if draftCellCount > 0 {
+                parts.append("\(draftCellCount) cell\(draftCellCount == 1 ? "" : "s") cit\(draftCellCount == 1 ? "es" : "e") AI-generated content")
+            }
+            let coverage: String
+            if total == 0 {
+                coverage = "The table has no cells yet."
+            } else if unsourcedCount == 0 {
+                coverage = "All \(total) cells carry their own source."
+            } else {
+                coverage = "\(unsourcedCount) of \(total) cells have no individual source yet."
+            }
+            findings.append(ConsistencyFinding(
+                kind: .aiDraftTable,
+                severity: .info,
+                entityKind: "Comparison Table",
+                entityName: table.name,
+                message: "Comparison table \"\(table.name)\": \(parts.joined(separator: "; ")). \(coverage)"
+            ))
+        }
+        return findings
+    }
+
     package static func runAll(
         figures: [Figure],
         relationships: [Relationship],
         alternateNames: [AlternateName],
         events: [Event],
-        eras: [Era]
+        eras: [Era],
+        popupTables: [PopupTable] = []
     ) -> [ConsistencyFinding] {
         let eraKeys = Set(eras.map { NameDuplicateCheck.normalizedKey($0.name) })
         let mentionIndex = mentionGenderIndex(figures: figures)
@@ -454,6 +509,7 @@ package enum ConsistencyEngine {
         findings += checkAmbiguousAliases(alternateNames: alternateNames)
         findings += checkStubFigures(figures: figures)
         findings += checkNameVariants(figures: figures)
+        findings += checkAIDraftTables(tables: popupTables)
 
         return findings.sorted {
             ($0.entityName, $0.kind.rawValue) < ($1.entityName, $1.kind.rawValue)
