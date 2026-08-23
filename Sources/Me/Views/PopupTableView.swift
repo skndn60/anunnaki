@@ -312,8 +312,15 @@ private struct TableCellEditor: View {
     let tableSource: String
     var onSaved: () -> Void
     @State private var value: String = ""
-    @State private var sourceText: String = ""
+    @State private var sourceSelection: String = ""
     @State private var loaded = false
+    @Query private var allSources: [Source]
+
+    private var availableSourceNames: [String] {
+        var names = Set(allSources.map(\.name))
+        if !sourceSelection.isEmpty { names.insert(sourceSelection) }
+        return names.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -335,8 +342,12 @@ private struct TableCellEditor: View {
                         .lineLimit(2...5)
                 }
                 Section("Source") {
-                    TextField(tableSource.isEmpty ? "Source" : "Source (empty = \(tableSource))", text: $sourceText)
-                        .textFieldStyle(.roundedBorder)
+                    Picker("Source", selection: $sourceSelection) {
+                        Text(tableSource.isEmpty ? "None" : "Inherit table (\(tableSource))").tag("")
+                        ForEach(availableSourceNames, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
                 }
             }
 
@@ -356,7 +367,7 @@ private struct TableCellEditor: View {
             guard !loaded else { return }
             loaded = true
             value = cell.value ?? ""
-            sourceText = cell.source ?? ""
+            sourceSelection = cell.source ?? ""
         }
     }
 
@@ -368,7 +379,7 @@ private struct TableCellEditor: View {
     private func save() {
         let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
         cell.value = trimmedValue.isEmpty ? nil : trimmedValue
-        cell.setSourceText(sourceText, context: modelContext)
+        cell.setSourceText(sourceSelection.isEmpty ? nil : sourceSelection, context: modelContext)
         try? modelContext.save()
         onSaved()
         dismiss()

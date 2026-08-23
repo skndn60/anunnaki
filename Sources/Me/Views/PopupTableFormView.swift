@@ -10,7 +10,14 @@ struct PopupTableFormView: View {
     @State private var workingTable: PopupTable?
     @State private var name: String = ""
     @State private var tableDescription: String = ""
-    @State private var sourceName: String = ""
+    @State private var sourceSelection: String = ""
+    @Query private var allSources: [Source]
+
+    private var availableSourceNames: [String] {
+        var names = Set(allSources.map(\.name))
+        if !sourceSelection.isEmpty { names.insert(sourceSelection) }
+        return names.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    }
     @State private var selectedFigureIDs: Set<PersistentIdentifier> = []
     @State private var attributeName: String = ""
     @State private var searchText: String = ""
@@ -46,8 +53,13 @@ struct PopupTableFormView: View {
                     TextField("Name", text: $name)
                     TextField("Description", text: $tableDescription, axis: .vertical)
                         .lineLimit(2...4)
-                    TextField("Source (whole table)", text: $sourceName)
-                        .help("Attributes all cell values to one source. Individual cells can override this with their own source.")
+                    Picker("Source", selection: $sourceSelection) {
+                        Text("None").tag("")
+                        ForEach(availableSourceNames, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .help("Attributes all cell values to one source. Individual cells can override this with their own source.")
                 }
 
                 Section("Columns") {
@@ -150,7 +162,7 @@ struct PopupTableFormView: View {
             workingTable = table
             name = table.name
             tableDescription = table.tableDescription
-            sourceName = table.source ?? ""
+            sourceSelection = table.source ?? ""
             columnMode = table.columnMode
             columnLabels = table.columns
                 .sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
@@ -169,7 +181,7 @@ struct PopupTableFormView: View {
         if isNew { modelContext.insert(tbl) }
         tbl.name = name.trimmingCharacters(in: .whitespaces)
         tbl.tableDescription = tableDescription.trimmingCharacters(in: .whitespaces)
-        tbl.setSourceText(sourceName, context: modelContext)
+        tbl.setSourceText(sourceSelection.isEmpty ? nil : sourceSelection, context: modelContext)
         tbl.columnMode = columnMode
 
         switch columnMode {
