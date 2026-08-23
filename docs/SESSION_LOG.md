@@ -62,6 +62,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Micro (same morning) — `f5bb82d`:** 5px gap between the description text and that divider (it sat too tight).
 
+**Feature (same morning) — `7250a33`:** Context-menu parity across list screens. Inventory showed 4 of 9 entity lists had row context menus (Figure/Place/Event/Thing) while Era, Source, Dictionary, Figure Group, and Comparison Table rows had none. All five now mirror their detail toolbar exactly: Edit + Delete (confirm-alert flows set selection first so the existing presenting: alerts fire; Source and Comparison Table keep their immediate-delete behavior; Comparison Table also gets "Open Grid"). Detail panels deliberately stay context-menu-free per user decision — right-click lives on list rows only. 336/336 green.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
