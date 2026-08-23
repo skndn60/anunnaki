@@ -23,6 +23,7 @@ struct DataIntegrityView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var store = DataIntegrityScanStore.shared
     @State private var isScanning = false
+    var coordinator: NavigationCoordinator?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -125,12 +126,25 @@ struct DataIntegrityView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if row.record.entityKind == "Figure",
+               let figure = figure(named: row.record.entityKey) {
+                Button("Open") {
+                    coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
+                }
+                .buttonStyle(.borderless)
+                .controlSize(.small)
+            }
             Button("Dismiss") { dismiss(row) }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
+    }
+
+    private func figure(named name: String) -> Figure? {
+        let fetch = FetchDescriptor<Figure>(predicate: #Predicate { $0.name == name })
+        return try? modelContext.fetch(fetch).first
     }
 
     private func severityIcon(_ row: FindingRow) -> String {

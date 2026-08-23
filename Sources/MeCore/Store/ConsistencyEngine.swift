@@ -86,9 +86,9 @@ package enum ConsistencyEngine {
         return (words.intersection(feminineNouns), words.intersection(masculineNouns))
     }
 
-    private static func conflictMessage(expected: Figure.Gender, found: String, evidence: [String]) -> String {
+    private static func conflictMessage(actual: Figure.Gender, found: String, evidence: [String]) -> String {
         let quoted = evidence.map { "\"\($0)\"" }.sorted().joined(separator: ", ")
-        return "Text says \(found) (\(quoted)) but the figure is marked \(expected.rawValue)."
+        return "Text says \(found) (\(quoted)) but the figure is marked \(actual.rawValue)."
     }
 
     /// Combined pronoun + gendered-noun check for one figure's description and
@@ -128,11 +128,11 @@ package enum ConsistencyEngine {
         }
         let nouns = genderedNounSignals(in: text)
         if !expectedFemale && !nouns.feminine.isEmpty && nouns.masculine.isEmpty && !competing.contains(.female) {
-            return (.genderedNoun, conflictMessage(expected: .female, found: "feminine wording",
+            return (.genderedNoun, conflictMessage(actual: .male, found: "feminine wording",
                                                    evidence: Array(nouns.feminine)))
         }
         if expectedFemale && !nouns.masculine.isEmpty && nouns.feminine.isEmpty && !competing.contains(.male) {
-            return (.genderedNoun, conflictMessage(expected: .male, found: "masculine wording",
+            return (.genderedNoun, conflictMessage(actual: .female, found: "masculine wording",
                                                    evidence: Array(nouns.masculine)))
         }
         return nil
@@ -372,8 +372,13 @@ package enum ConsistencyEngine {
             let text = figure.figureDescription
             guard !text.isEmpty else { continue }
             let scalars = Array(text)
+            // Letters/digits form tokens; hyphens and apostrophes count as
+            // word-interior so "Puzur-Suen" cannot split into a bare "Suen"
+            // that then collides with the god "Su'en".
             func isWordChar(_ index: Int) -> Bool {
-                index >= 0 && index < scalars.count && (scalars[index].isLetter || scalars[index].isNumber)
+                index >= 0 && index < scalars.count &&
+                (scalars[index].isLetter || scalars[index].isNumber ||
+                 scalars[index] == "-" || scalars[index] == "'")
             }
             var collapsed: [Character] = []
             var originIndices: [Int] = []

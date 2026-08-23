@@ -358,6 +358,8 @@ struct ContentView: View {
                             LineageTreeView(coordinator: coordinator)
                         } else if selectedItem == .query {
                             QueryView(coordinator: coordinator)
+                        } else if selectedItem == .dataIntegrity {
+                            DataIntegrityView(coordinator: coordinator)
                         } else {
                             selectedItem.destination
                         }

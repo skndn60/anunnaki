@@ -4266,6 +4266,19 @@ func testRegnalKeyOrdersEventsByDate() {
                       "\"…of Ur (Ur III…\" is two mentions of Ur, not a misspelling of the figure Urur")
     }
 
+    func testNameVariantRuleDoesNotSplitHyphenatedNames() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Su'en", gender: .male))
+        context.insert(Figure(name: "Yarlaganda", gender: .male, figureDescription:
+            "Yarlaganda succeeded Puzur-Suen and his reign represents the twilight of the Gutian era."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .nameVariant }
+        XCTAssertTrue(findings.isEmpty,
+                      "the \"Suen\" inside \"Puzur-Suen\" is a name segment, not a variant of \"Su'en\"")
+    }
+
     // MARK: - Consistency repairs & historical period eras
 
     private func makeGenderedPair(_ context: ModelContext) -> (male: Figure, female: Figure) {
