@@ -26,6 +26,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Follow-up (same morning) — `346144d`:** Findings now persist. New `FindingDismissal` @Model (kindRaw|entityKey signature, added to schema — lightweight migration, table starts empty); `DataIntegrityScanStore` (ObservableObject singleton) holds scan results so they survive sidebar navigation (ContentView recreates views per selection, killing @State). Every issue and finding row gets a Dismiss button → persisted dismissal suppresses that exact flag on future scans; "Clear Dismissals (n)" header button restores them. 323/323 green.
 
+**Follow-up (same morning) — `c45ccbc`:** User rejected the dismissals-only persistence as counter-intuitive: closing the app must NOT lose the queue. Redesigned to the user's exact flow: scan writes results into a new `IntegrityFinding` @Model table (the work queue); rows survive relaunches and navigation; rows leave only via Fix, Dismiss, or an explicit new Scan. On relaunch, Fix buttons are relinked by re-detecting the problem live (signature match) — already-repaired-but-not-dismissed rows stay visible with Dismiss only. `ConsistencyFinding.Severity` gained a String rawValue for storage. 323/323 green.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
