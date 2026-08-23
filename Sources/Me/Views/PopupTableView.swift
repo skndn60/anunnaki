@@ -308,7 +308,7 @@ private struct CellView: View {
                         .lineLimit(4)
                     if hasOwnSource && !value.isEmpty {
                         Text("*")
-                            .font(.footnote.bold())
+                            .font(.subheadline.bold())
                             .foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
