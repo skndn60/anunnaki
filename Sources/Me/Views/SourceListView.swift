@@ -5,6 +5,10 @@ import SwiftData
 struct SourceListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var sources: [Source]
+
+    private var sortedSources: [Source] {
+        sources.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
     @AppStorage("sourceDetailWidth") private var detailWidth: Double = 320
     @State private var showingAddSheet = false
     @State private var editingSource: Source?
@@ -49,7 +53,7 @@ struct SourceListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(sources, selection: $selectedSourceID) { source in
+                    List(sortedSources, selection: $selectedSourceID) { source in
                         SourceRow(source: source)
                             .tag(source.persistentModelID)
                     }
