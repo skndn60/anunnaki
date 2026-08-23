@@ -342,33 +342,46 @@ private struct TableCellEditor: View {
 
             Divider()
 
-            Form {
-                Section("Value") {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("VALUE")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     TextField("Value", text: $value, axis: .vertical)
-                        .lineLimit(2...5)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(3...6)
                 }
-                Section("Source") {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SOURCE")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                     Picker("Source", selection: $sourceSelection) {
                         Text(tableSource.isEmpty ? "None" : "Inherit table (\(tableSource))").tag("")
                         ForEach(availableSourceNames, id: \.self) { name in
                             Text(name).tag(name)
                         }
                     }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
+            .padding(.horizontal)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             Divider()
 
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }
+                    .keyboardShortcut(.cancelAction)
                 Button("Save") { save() }
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
             .padding()
         }
-        .frame(width: 420, height: 320)
+        .frame(width: 420, height: 300)
         .onAppear {
             guard !loaded else { return }
             loaded = true
