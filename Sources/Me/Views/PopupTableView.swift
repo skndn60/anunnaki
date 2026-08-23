@@ -301,24 +301,25 @@ private struct CellView: View {
                     .font(.body)
                     .padding(.horizontal, 6)
             } else {
-                Text(value.isEmpty ? "—" : value)
-                    .font(.body)
-                    .foregroundStyle(value.isEmpty ? .tertiary : .primary)
-                    .padding(.horizontal, 6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(alignment: .top, spacing: 1) {
+                    Text(value.isEmpty ? "—" : value)
+                        .font(.body)
+                        .foregroundStyle(value.isEmpty ? .tertiary : .primary)
+                        .lineLimit(4)
+                    if hasOwnSource && !value.isEmpty {
+                        Text("*")
+                            .font(.footnote.bold())
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
-        .overlay(alignment: .topTrailing) {
-            if !isEditing && hasOwnSource {
-                Image(systemName: "doc.text")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .padding(3)
-                    .help("Has its own source (right-click to edit)")
-            }
-        }
+        .help(hasOwnSource ? "Has its own source (right-click to edit)" : "")
     }
 }
 
