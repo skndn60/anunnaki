@@ -25,6 +25,7 @@ struct DataIntegrityView: View {
     @State private var isScanning = false
     @State private var descriptionEditFigure: Figure?
     @State private var wizardFigure: Figure?
+    @State private var showDuplicateMergeSheet = false
     var coordinator: NavigationCoordinator?
 
     var body: some View {
@@ -34,7 +35,7 @@ struct DataIntegrityView: View {
                     Text("Data Integrity")
                         .font(.title2)
                         .fontWeight(.semibold)
-                    Text("Structural checks (orphaned associations, broken propagation, duplicate memberships) plus content-consistency checks: gender vs wording, role genders, parent cycles, date logic, era references, ambiguous aliases. Results persist until fixed or dismissed.")
+                    Text("Structural checks (orphaned associations, broken propagation, duplicate memberships), content-consistency checks (gender vs wording, role genders, parent cycles, date logic, era references, ambiguous aliases), and duplicate-name search with merge. Results persist until fixed or dismissed.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -43,6 +44,12 @@ struct DataIntegrityView: View {
                     Button("Clear Dismissals (\(store.dismissalCount))") { clearDismissals() }
                         .buttonStyle(.bordered)
                 }
+                Button {
+                    showDuplicateMergeSheet = true
+                } label: {
+                    Label("Find Duplicates…", systemImage: "person.crop.circle.badge.questionmark")
+                }
+                .buttonStyle(.bordered)
                 Button("Scan") { scan() }
                     .buttonStyle(.borderedProminent)
                     .disabled(isScanning)
@@ -92,6 +99,9 @@ struct DataIntegrityView: View {
         }
         .sheet(item: $wizardFigure) { figure in
             FigureFormView(figure: figure)
+        }
+        .sheet(isPresented: $showDuplicateMergeSheet) {
+            DuplicateMergeView()
         }
     }
 

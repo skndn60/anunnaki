@@ -127,7 +127,6 @@ struct ContentView: View {
     @State private var showBackupSheet = false
     @State private var showFromTextSheet = false
     @State private var showFromTextHistorySheet = false
-    @State private var showDuplicateMergeSheet = false
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -425,15 +424,6 @@ struct ContentView: View {
 
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        showDuplicateMergeSheet = true
-                    } label: {
-                        Image(systemName: "person.crop.circle.badge.plus")
-                    }
-                    .help("Find and merge duplicate entities")
-                }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
                         showBackupSheet = true
                     } label: {
                         Image(systemName: "archivebox")
@@ -449,9 +439,6 @@ struct ContentView: View {
             }
             .sheet(isPresented: $showBackupSheet) {
                 BackupSheet()
-            }
-            .sheet(isPresented: $showDuplicateMergeSheet) {
-                DuplicateMergeView()
             }
             .onReceive(NotificationCenter.default.publisher(for: .showBackupSheet)) { _ in
                 showBackupSheet = true
