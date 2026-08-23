@@ -8,6 +8,18 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-08-23 — First real scan triaged; repairs + period eras prepped
+
+**Context:** The user ran Data Integrity on their live DB (~30 findings). Triage against a read-only copy (`/var/folders/.../T/opencode/triage.store`) confirmed: 4 genuine role-gender edges (two "Mother" edges hanging on the male Uras PK 52 — tradition gives Ninsun/Ninisina the goddess Uraš as mother; Rachujal ♀ typed Father of Rashujal ♂, plus a bogus self-Mother edge), 3 event-era labels with no matching Era entity (Old Assyrian / Old Babylonian / Neo-Assyrian Periods), 3 stubs (`Enbi-Ishtar`, `Lamech`, `Mesh-ki-ang-Nanna II` — the last likely an accidental duplicate of SKL king Mesh-ki-ang-Nanna), zero ambiguous aliases. SQL can't do word-boundary pronoun checks — the app scan stays authoritative there.
+
+**Changes made:**
+- `521d705` — `Migration.ensureConsistentParentRoles(context:)`: (1) re-points Mother→Ninsun/Ninisina edges from the male Uras (matched by normalized name + gender + "Dilbat" title) to his female namesake, only when exactly one exists; (2) re-types Rachujal—Father→Rashujal to Mother. The self-referential Rashujal edge is deliberately untouched — deleting user rows is never automatic. Guard-fires-without-namesake tested.
+- Same commit — `Migration.ensureHistoricalPeriodEras(context:)`: check-by-name creation of Old Assyrian (−2000..−1750), Old Babylonian (−1894..−1595), Neo-Assyrian (−911..−609) as Era lanes 31–33. **Critical catch:** `fixEraOrderIndices`'s else-branch bumps unlisted post-flood eras by +1 *every launch* (infinite drift), so all three names are registered in its map too. Wired both migrations into ContentView after `ensureEverydayLifeEpisodes`. 5 new tests.
+
+**Key decisions:** Repairs are surgical (exact name+gender+title conditions), never blind re-pointing; content stubs are left to the user (Lamech might be Enoch-tradition Lamech — authoring that description is a curation call); duplicate merging stays in the DuplicateMerger UI.
+
+**Verify:** build clean; **322/322 tests pass** (+5). On next launch: Uras/Rachujal edges repaired, three period eras appear as timeline lanes, era-reference findings clear; remaining manual items: delete the Rashujal self-edge, resolve Mesh-ki-ang-Nanna II duplicate, enrich two stubs.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
