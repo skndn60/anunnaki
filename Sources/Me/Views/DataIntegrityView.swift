@@ -23,6 +23,8 @@ struct DataIntegrityView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var store = DataIntegrityScanStore.shared
     @State private var isScanning = false
+    @State private var descriptionEditFigure: Figure?
+    @State private var wizardFigure: Figure?
     var coordinator: NavigationCoordinator?
 
     var body: some View {
@@ -85,6 +87,12 @@ struct DataIntegrityView: View {
             refreshDismissalCount()
             if store.rows.isEmpty { restoreQueue() }
         }
+        .sheet(item: $descriptionEditFigure) { figure in
+            QueueDescriptionEditor(figure: figure)
+        }
+        .sheet(item: $wizardFigure) { figure in
+            FigureFormView(figure: figure)
+        }
     }
 
     private func issueRow(_ row: FindingRow) -> some View {
@@ -126,6 +134,20 @@ struct DataIntegrityView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            Menu {
+                if row.record.entityKind == "Figure" {
+                    Button("Edit Description\u{2026}") { beginDescriptionEdit(row) }
+                    Button("Open Edit Wizard\u{2026}") { wizardFigure = figure(named: row.record.entityKey) }
+                    Divider()
+                }
+                Button("Copy Finding Text") { copyFinding(row.record.detail) }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+            }
+            .menuStyle(.borderlessButton)
+            .controlSize(.small)
+            .fixedSize()
+            .help("Actions")
             if row.record.entityKind == "Figure",
                let figure = figure(named: row.record.entityKey) {
                 Button("Open") {
@@ -140,6 +162,15 @@ struct DataIntegrityView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 4)
+    }
+
+    private func beginDescriptionEdit(_ row: FindingRow) {
+        descriptionEditFigure = figure(named: row.record.entityKey)
+    }
+
+    private func copyFinding(_ text: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
     }
 
     private func figure(named name: String) -> Figure? {
@@ -413,5 +444,33 @@ struct IntegrityIssue: Identifiable {
 private extension String {
     func droppingPrefix(_ prefix: String) -> String {
         hasPrefix(prefix) ? String(dropFirst(prefix.count)) : self
+    }
+}
+
+private struct QueueDescriptionEditor: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    let figure: Figure
+    @State private var richDescription: Data?
+    @State private var plainDescription = ""
+    @State private var loaded = false
+
+    var body: some View {
+        DescriptionEditorSheet(
+            entityName: figure.name,
+            richDescription: $richDescription,
+            plainDescription: $plainDescription,
+            onSave: {
+                figure.richDescription = richDescription
+                figure.figureDescription = plainDescription
+                try? modelContext.save()
+            }
+        )
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            richDescription = figure.richDescription
+            plainDescription = figure.figureDescription
+        }
     }
 }
