@@ -4187,6 +4187,46 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(stubs, ["Bare Name"])
     }
 
+    func testNameVariantRuleFlagsCollapsedSpelling() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Enbi-Ishtar", gender: .male, figureDescription:
+            "King of Kish in the Early Dynastic period. The cult of Enbiishtar flourished at Kish."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .nameVariant }
+        XCTAssertEqual(findings.count, 1)
+        XCTAssertTrue(findings[0].message.contains("Enbiishtar"))
+        XCTAssertTrue(findings[0].message.contains("Enbi-Ishtar"))
+    }
+
+    func testNameVariantRuleAcceptsExactSpellingsAndWordBoundaries() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Anu", gender: .male))
+        context.insert(Figure(name: "Inanna", gender: .female))
+        context.insert(Figure(name: "Enbi-Ishtar", gender: .male, figureDescription:
+            "King of Kish who honored Inanna and Anu. The Anunnaki judged mortals; Enbi-Ishtar reigned."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .nameVariant }
+        XCTAssertTrue(findings.isEmpty,
+                      "exact mentions stay silent and \"Anu\" inside \"Anunnaki\" must not fire")
+    }
+
+    func testNameVariantRuleSkipsAmbiguousKeys() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Ea-nasir", gender: .male))
+        context.insert(Figure(name: "Ea Nasir", gender: .male))
+        context.insert(Figure(name: "Scribe", figureDescription:
+            "Complaints against Eanasir are the earliest customer reviews."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .nameVariant }
+        XCTAssertTrue(findings.isEmpty, "a key shared by several spellings cannot recommend one")
+    }
+
     // MARK: - Consistency repairs & historical period eras
 
     private func makeGenderedPair(_ context: ModelContext) -> (male: Figure, female: Figure) {

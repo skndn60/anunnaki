@@ -13,6 +13,7 @@ package struct ConsistencyFinding: Identifiable {
         case unknownEra
         case ambiguousAlias
         case stubFigure
+        case nameVariant
     }
 
     package enum Severity: String {
@@ -281,6 +282,73 @@ package enum ConsistencyEngine {
         }
     }
 
+    /// Finds description mentions that normalize to a registered figure name
+    /// or alias but are spelled differently ("Enbiishtar" vs "Enbi-Ishtar").
+    /// Sloppy spellings also break the auto-link feature, which matches exact
+    /// names. Matching runs over separator-collapsed text with word-boundary
+    /// checks against the ORIGINAL string, so "Anu" never fires inside
+    /// "Anunnaki", and possessives ("Inanna's") never flag. Keys shorter than
+    /// four characters and keys shared by several distinct spellings (Uraš-style
+    /// homonyms) are skipped — too noisy or impossible to recommend a form.
+    private static func checkNameVariants(figures: [Figure]) -> [ConsistencyFinding] {
+        var displaysByKey: [String: Set<String>] = [:]
+        for figure in figures {
+            if !figure.name.isEmpty {
+                displaysByKey[NameDuplicateCheck.normalizedKey(figure.name), default: []]
+                    .insert(figure.name)
+            }
+            for alt in figure.alternateNames where !alt.name.isEmpty {
+                displaysByKey[NameDuplicateCheck.normalizedKey(alt.name), default: []]
+                    .insert(alt.name)
+            }
+        }
+        var buckets: [Character: [(key: [Character], display: String)]] = [:]
+        for (key, displays) in displaysByKey {
+            guard key.count >= 4, displays.count == 1, let display = displays.first else { continue }
+            let chars = Array(key)
+            buckets[chars[0], default: []].append((chars, display))
+        }
+
+        var findings: [ConsistencyFinding] = []
+        for figure in figures {
+            let text = figure.figureDescription
+            guard !text.isEmpty else { continue }
+            let scalars = Array(text)
+            func isWordChar(_ index: Int) -> Bool {
+                index >= 0 && index < scalars.count && (scalars[index].isLetter || scalars[index].isNumber)
+            }
+            var collapsed: [Character] = []
+            var originIndices: [Int] = []
+            for (i, ch) in scalars.enumerated() where ch.isLetter || ch.isNumber {
+                collapsed.append(Character(ch.lowercased()))
+                originIndices.append(i)
+            }
+
+            var reported: Set<String> = []
+            for start in 0..<collapsed.count {
+                guard let candidates = buckets[collapsed[start]], !candidates.isEmpty else { continue }
+                for entry in candidates {
+                    let keyChars = entry.key
+                    let end = start + keyChars.count
+                    guard end <= collapsed.count,
+                          collapsed[start..<end].elementsEqual(keyChars) else { continue }
+                    guard !isWordChar(originIndices[start] - 1),
+                          !isWordChar(originIndices[end - 1] + 1) else { continue }
+                    let written = String(scalars[originIndices[start]...originIndices[end - 1]])
+                    if written.lowercased() != entry.display.lowercased(),
+                       reported.insert(entry.display).inserted {
+                        findings.append(ConsistencyFinding(
+                            kind: .nameVariant, severity: .warning, entityKind: "Figure",
+                            entityName: figure.name,
+                            message: "Description writes \"\(written)\"; the registered name is \"\(entry.display)\". Auto-linking misses variant spellings."
+                        ))
+                    }
+                }
+            }
+        }
+        return findings
+    }
+
     // MARK: - Entry point
 
     package static func runAll(
@@ -309,6 +377,7 @@ package enum ConsistencyEngine {
         findings += checkParentCycles(relationships: relationships)
         findings += checkAmbiguousAliases(alternateNames: alternateNames)
         findings += checkStubFigures(figures: figures)
+        findings += checkNameVariants(figures: figures)
 
         return findings.sorted {
             ($0.entityName, $0.kind.rawValue) < ($1.entityName, $1.kind.rawValue)
