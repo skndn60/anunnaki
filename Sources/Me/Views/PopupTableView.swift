@@ -47,6 +47,7 @@ struct PopupTableView: View {
                     Label(tableSource, systemImage: "doc.text")
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .padding(.vertical, 3)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
