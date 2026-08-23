@@ -36,6 +36,7 @@ struct FigureDetailView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var copiedName = false
     init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil, backLabel: String? = nil, onBack: (() -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
@@ -186,6 +187,21 @@ struct FigureDetailView: View {
                 HStack(spacing: 6) {
                     Text(figure.name)
                         .font(.title2.bold())
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(figure.name, forType: .string)
+                        copiedName = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            if copiedName { copiedName = false }
+                        }
+                    } label: {
+                        Image(systemName: copiedName ? "checkmark" : "doc.on.doc")
+                            .font(.caption2)
+                            .foregroundStyle(copiedName ? Color.green : Color.secondary)
+                    }
+                    .buttonStyle(.borderless)
+                    .baselineOffset(9)
+                    .help("Copy name to clipboard")
                     Text(figure.gender.symbol)
                         .font(.title3)
                         .foregroundStyle(.secondary)
