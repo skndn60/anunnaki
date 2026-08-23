@@ -4253,6 +4253,19 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertTrue(findings.isEmpty, "a key shared by several spellings cannot recommend one")
     }
 
+    func testNameVariantRuleDoesNotFuseAdjacentMentionsAcrossPunctuation() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Urur", gender: .male))
+        context.insert(Figure(name: "Lu-Enlilla", gender: .male, figureDescription:
+            "Merchant during the Third Dynasty of Ur (Ur III period). Acting on behalf of the Temple of Nanna at Ur."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .nameVariant }
+        XCTAssertTrue(findings.isEmpty,
+                      "\"…of Ur (Ur III…\" is two mentions of Ur, not a misspelling of the figure Urur")
+    }
+
     // MARK: - Consistency repairs & historical period eras
 
     private func makeGenderedPair(_ context: ModelContext) -> (male: Figure, female: Figure) {

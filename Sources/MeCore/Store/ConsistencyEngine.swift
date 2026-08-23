@@ -392,7 +392,17 @@ package enum ConsistencyEngine {
                           collapsed[start..<end].elementsEqual(keyChars) else { continue }
                     guard !isWordChar(originIndices[start] - 1),
                           !isWordChar(originIndices[end - 1] + 1) else { continue }
-                    let written = String(scalars[originIndices[start]...originIndices[end - 1]])
+                    let spanStart = originIndices[start]
+                    let spanEnd = originIndices[end - 1]
+                    let span = scalars[spanStart...spanEnd]
+                    // A genuine variant only differs in casing and simple
+                    // separators. Spans crossing other punctuation ("…of Ur (Ur
+                    // III…" fusing into "Urur") are two separate mentions.
+                    let plausibleVariant = span.allSatisfy {
+                        $0.isLetter || $0.isNumber || $0 == "-" || $0 == " " || $0 == "'"
+                    }
+                    guard plausibleVariant else { continue }
+                    let written = String(span)
                     if written.lowercased() != entry.display.lowercased(),
                        reported.insert(entry.display).inserted {
                         findings.append(ConsistencyFinding(
