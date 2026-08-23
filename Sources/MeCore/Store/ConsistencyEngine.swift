@@ -15,7 +15,7 @@ package struct ConsistencyFinding: Identifiable {
         case stubFigure
     }
 
-    package enum Severity {
+    package enum Severity: String {
         /// Very likely wrong — worth fixing.
         case warning
         /// Worth a look, but has legitimate explanations.
