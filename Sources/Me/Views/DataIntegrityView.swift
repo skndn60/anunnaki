@@ -155,6 +155,25 @@ struct DataIntegrityView: View {
                 }
             }
 
+            let allRelationships = (try? modelContext.fetch(FetchDescriptor<Relationship>())) ?? []
+            let parentKeywords = ["father", "mother", "parent"]
+            for rel in allRelationships {
+                guard let from = rel.fromFigure, rel.toFigure === from,
+                      let typeName = rel.relationshipType?.name,
+                      parentKeywords.contains(where: { typeName.lowercased() == $0 }) else { continue }
+                found.append(IntegrityIssue(
+                    kind: .selfParentEdge,
+                    title: "Self-referential parent edge: \(from.name)",
+                    description: "\(from.name) is listed as their own \(typeName.lowercased()). Deleting this relationship resolves the contradiction.",
+                    isFixable: true,
+                    fixAction: { context in
+                        from.outgoingRelationships.removeAll { $0.persistentModelID == rel.persistentModelID }
+                        from.incomingRelationships.removeAll { $0.persistentModelID == rel.persistentModelID }
+                        context.delete(rel)
+                    }
+                ))
+            }
+
             var seen = Set<String>()
             for assoc in allAssocs {
                 guard let groupID = assoc.group?.persistentModelID else { continue }
@@ -179,7 +198,6 @@ struct DataIntegrityView: View {
             }
 
             let allFigures = (try? modelContext.fetch(FetchDescriptor<Figure>())) ?? []
-            let allRelationships = (try? modelContext.fetch(FetchDescriptor<Relationship>())) ?? []
             let allAlternateNames = (try? modelContext.fetch(FetchDescriptor<AlternateName>())) ?? []
             let allEvents = (try? modelContext.fetch(FetchDescriptor<Event>())) ?? []
             let allEras = (try? modelContext.fetch(FetchDescriptor<Era>())) ?? []
@@ -189,7 +207,9 @@ struct DataIntegrityView: View {
                 alternateNames: allAlternateNames,
                 events: allEvents,
                 eras: allEras
-            )
+            ).filter { finding in
+                !(finding.kind == .parentCycle && !finding.entityName.contains("↔"))
+            }
 
             issues = found
             isScanning = false
@@ -217,11 +237,12 @@ private struct IntegrityIssue: Identifiable {
         case orphaned
         case brokenPropagation
         case duplicate
+        case selfParentEdge
     }
 
     var severityIcon: String {
         switch kind {
-        case .emptyEntity, .orphaned: return "exclamationmark.triangle.fill"
+        case .emptyEntity, .orphaned, .selfParentEdge: return "exclamationmark.triangle.fill"
         case .brokenPropagation: return "link.badge.xmark"
         case .duplicate: return "doc.on.doc.fill"
         }
@@ -229,7 +250,7 @@ private struct IntegrityIssue: Identifiable {
 
     var severityColor: Color {
         switch kind {
-        case .emptyEntity, .orphaned: return .orange
+        case .emptyEntity, .orphaned, .selfParentEdge: return .orange
         case .brokenPropagation: return .red
         case .duplicate: return .blue
         }

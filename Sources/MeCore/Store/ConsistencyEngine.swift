@@ -204,10 +204,11 @@ package enum ConsistencyEngine {
                 other.fromFigure === to && other.toFigure === from
             }
             guard hasMutual else { continue }
+            let names = [from.name, to.name].sorted()
             findings.append(ConsistencyFinding(
                 kind: .parentCycle, severity: .warning, entityKind: "Relationship",
-                entityName: "\(from.name) ↔ \(to.name)",
-                message: "\(from.name) and \(to.name) are each listed as the other's parent."
+                entityName: "\(names[0]) ↔ \(names[1])",
+                message: "\(names[0]) and \(names[1]) are each listed as the other's parent."
             ))
         }
         return findings
@@ -245,7 +246,12 @@ package enum ConsistencyEngine {
             let distinctFigures = Dictionary(grouping: entries, by: \.figureName)
             guard distinctFigures.count > 1 else { return nil }
             let holders = distinctFigures.keys.sorted().joined(separator: ", ")
-            let alias = entries[0].name
+            let spellings = Dictionary(grouping: entries, by: \.name)
+            let alias = spellings.max { lhs, rhs in
+                lhs.value.count != rhs.value.count
+                    ? lhs.value.count < rhs.value.count
+                    : lhs.key > rhs.key
+            }?.key ?? entries[0].name
             return ConsistencyFinding(
                 kind: .ambiguousAlias, severity: .warning, entityKind: "AlternateName",
                 entityName: alias,
