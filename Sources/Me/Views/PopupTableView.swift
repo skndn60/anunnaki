@@ -42,6 +42,7 @@ struct PopupTableView: View {
                 if !table.tableDescription.isEmpty,
                    let tableSource = table.source, !tableSource.isEmpty {
                     Divider()
+                        .padding(.top, 5)
                 }
                 if let tableSource = table.source, !tableSource.isEmpty {
                     Label(tableSource, systemImage: "doc.text")
