@@ -30,6 +30,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Follow-up (same morning) — `cd30a29`:** User called free-text era entry iffy (typo = silent link failure) and disliked needing a birth year. Free-text Period fields replaced by pickers over existing eras (names snapshotted off-render per the macOS 26 faulting rule): MythologicalDateEditor gains `showsPeriodField` and a menu picker (with "(not in era list)" fallback for legacy strings); FigureFormView gets a standalone Period section in the birth step bound to `birthDate.era` — deliberately that string, because Migration reconciles `figure.era` from it every launch (figure.era is derived data), and it works with zero dates. Save path unchanged (`Migration.era(named:)`). Event form still has its own era text field — candidate for same treatment later. 323/323 green.
 
+**Micro (same morning) — `91b7974`:** Copy-name-to-clipboard button in the FigureDetailView header, superscript position after the name (borderless `doc.on.doc`, flips to green checkmark ~1.5 s via NSPasteboard).
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
