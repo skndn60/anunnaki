@@ -8,6 +8,20 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-08-23 — Content-consistency engine in Data Integrity
+
+**Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
+
+**Changes made:**
+- `688e252` — New `Sources/MeCore/Store/ConsistencyEngine.swift`: pure static rules over fetched arrays returning `ConsistencyFinding` (kind/severity/entity/message), no mutation, fully unit-testable. Eight rules: (1) pronoun-vs-gender — flags only when ALL pronouns point opposite ("she/her" on a Male); mixed text stays silent; whole-word tokens so "history"/"here" never count; (2) gendered-noun-vs-gender — goddess/queen/priestess/wife/mother/daughter/sister/widow vs god/king/priest/husband/father/son/brother/prince as exact words ("goddess" never leaks "god", "kingdom" never counts "king"); (3) relationship-role-vs-gender — Father/Husband/Brother expect male, Mother/Wife/Sister female; parent roles bind FROM only, spouse/sibling roles bind both endpoints; son/daughter omitted (ambiguous direction); (4) parent cycles — self-parentage and mutual A↔B pairs among father/mother/parent edges (index-pair scan visits each unordered pair once; Creator self-creation deliberately allowed); (5) death-before-birth date inversion; (6) era-reference typos — birth/death/event era strings not matching any Era name via `NameDuplicateCheck.normalizedKey` (info-level); (7) ambiguous aliases — same normalized alternate name attached to 2+ figures; (8) stub figures — bare-name records with no description/domain/relationships/events/places and not coverage-exempt (info).
+- `Sources/Me/Views/DataIntegrityView.swift` — Scan now also runs `runAll`; findings render in a "Content Consistency (n)" section below structural issues (orange = warning, blue = info); empty-state requires both lists clear.
+- `Sources/Me/Views/FigureFormView.swift` — Live hint on the Description step: while typing, `genderConflict(gender:title:figureDescription:)` shows the same bold-orange warning inline, so the Uraš class of mistake is caught at entry time.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 8 rule tests incl. negative cases (mixed text skipped, substring safety, Creator exemption, valid era passes).
+
+**Key decisions:** Findings are advisory only — no auto-fixes for content (human judgment required), unlike structural issues that keep their Fix buttons. Mixed-signal texts are deliberately silent. Son/daughter role genders skipped pending a direction convention.
+
+**Verify:** `swift build` clean; **317/317 tests pass** (+8). 
+
 ### 2026-08-22 — Everyday-life episodes, duplicate-name safety, confidence qualifier, Save Now, launch-crash fix
 
 **Context:** A multi-feature session. It began with the plan to import ten curated everyday-life episodes (Ea-nasir's complaint tablet, Schooldays, the Kültepe family letters, Ashurnasirpal II's banquet, etc. — plan worked out with the user and parked in `docs/NEXT_SESSION_HANDOFF.md`) as a counterweight to the mythological corpus. Along the way: a real launch crash surfaced from the user's live database, the user requested a way to express hedged claims, asked for a mid-wizard save button, tested duplicate handling and asked for louder warnings — and confirmed via scholarship that an apparent "duplicate" was actually two legitimate deities.
