@@ -24,6 +24,10 @@ package final class PopupTable: Identifiable {
     package var tableDescription: String
     /// "figures" or "strings"; nil = figures (backward compat). Optional for migration safety.
     package var columnModeRawValue: String?
+    /// Default source attribution for the whole table ("all values from X").
+    /// Cells may override with their own source. Optional for migration safety.
+    package var source: String?
+    package var sourceRef: Source?
 
     @Relationship(deleteRule: .cascade, inverse: \PopupTableAttribute.table)
     package var attributes: [PopupTableAttribute] = []
@@ -45,5 +49,25 @@ package final class PopupTable: Identifiable {
     package init(name: String = "", tableDescription: String = "") {
         self.name = name
         self.tableDescription = tableDescription
+    }
+
+    /// Updates the table's free-text source and its Source-row link. Matching is
+    /// case-insensitive by name against EXISTING sources only — junk strings
+    /// stay inert text, nothing is ever created. Links are established via the
+    /// annotated side (`Source.popupTables`) per the codebase convention.
+    package func setSourceText(_ raw: String?, context: ModelContext) {
+        let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if let existing = sourceRef {
+            existing.popupTables.removeAll { $0 == self }
+        }
+        sourceRef = nil
+        source = trimmed.isEmpty ? nil : trimmed
+        guard !trimmed.isEmpty else { return }
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        if let match = sources.first(where: { $0.name.caseInsensitiveCompare(trimmed) == .orderedSame }) {
+            match.popupTables.append(self)
+            sourceRef = match
+        }
     }
 }

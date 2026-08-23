@@ -5644,6 +5644,76 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertTrue(table.cells.isEmpty)
     }
 
+    // MARK: - PopupTable cell/table sources
+
+    func testCellSourceLinksExistingSourceCaseInsensitivelyWithoutCreating() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let source = Source(name: "Enuma Elish")
+        context.insert(source)
+        let table = PopupTable(name: "T")
+        context.insert(table)
+        let cell = PopupTableCell(attribute: nil, figure: nil, value: "Sky father")
+        table.cells.append(cell)
+        context.insert(cell)
+        try? context.save()
+
+        cell.setSourceText("enuma elish", context: context)
+        XCTAssertEqual(cell.source, "enuma elish")
+        XCTAssertEqual(cell.sourceRef?.name, "Enuma Elish")
+        XCTAssertTrue(source.popupTableCells.contains(where: { $0 == cell }))
+
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertEqual(allSources.count, 1, "must never create a new Source row")
+
+        cell.setSourceText("", context: context)
+        XCTAssertNil(cell.source)
+        XCTAssertNil(cell.sourceRef)
+        XCTAssertTrue(source.popupTableCells.isEmpty)
+    }
+
+    func testTableSourceLinksAndDetachesIndependentlyOfCells() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let source = Source(name: "SKL")
+        context.insert(source)
+        let table = PopupTable(name: "Kings")
+        context.insert(table)
+        try? context.save()
+
+        table.setSourceText("skl", context: context)
+        XCTAssertEqual(table.sourceRef?.name, "SKL")
+        XCTAssertTrue(source.popupTables.contains(where: { $0 == table }))
+        XCTAssertNotEqual(table.sourceRef, source.popupTableCells.first?.sourceRef)
+
+        table.setSourceText("Some other work", context: context)
+        XCTAssertEqual(table.source, "Some other work")
+        XCTAssertNil(table.sourceRef, "no matching Source row → text stays inert, link cleared")
+        XCTAssertTrue(source.popupTables.isEmpty)
+
+        let allSources: [Source] = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        XCTAssertEqual(allSources.count, 1)
+    }
+
+    func testRepointingSourceMovesLinkBetweenRows() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let a = Source(name: "Atra-Hasis")
+        let b = Source(name: "Enuma Elish")
+        context.insert(a)
+        context.insert(b)
+        let table = PopupTable(name: "T")
+        context.insert(table)
+        try? context.save()
+
+        table.setSourceText("Atra-Hasis", context: context)
+        XCTAssertTrue(a.popupTables.contains(where: { $0 == table }))
+
+        table.setSourceText("enuma elish", context: context)
+        XCTAssertTrue(b.popupTables.contains(where: { $0 == table }))
+        XCTAssertTrue(a.popupTables.isEmpty)
+    }
+
     func testPopupTableRoundTrip() {
         let container = makeContainer()
         let context = container.mainContext

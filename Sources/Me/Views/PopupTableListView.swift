@@ -137,6 +137,12 @@ private struct PopupTableDetailView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                if let tableSource = table.source, !tableSource.isEmpty {
+                    Label(tableSource, systemImage: "doc.text")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .help("Table-wide source; individual cells may override")
+                }
                 Divider()
                 HStack(spacing: 16) {
                     if table.columnMode == .strings {

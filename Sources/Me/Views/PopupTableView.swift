@@ -6,7 +6,9 @@ struct PopupTableView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var cellValues: [String: String] = [:]
+    @State private var cellSources: [String: String] = [:]
     @State private var isEditing = false
+    @State private var editingCell: PopupTableCell?
 
     private var sortedAttributes: [PopupTableAttribute] {
         table.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
@@ -35,6 +37,11 @@ struct PopupTableView: View {
                 if !table.tableDescription.isEmpty {
                     Text(table.tableDescription)
                         .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                if let tableSource = table.source, !tableSource.isEmpty {
+                    Label(tableSource, systemImage: "doc.text")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
@@ -75,9 +82,14 @@ struct PopupTableView: View {
                                 AttributeRowHeader(attribute: attribute)
                                     .frame(width: 160, height: 120)
                                 ForEach(columns) { column in
+                                    let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
                                     CellView(
                                         value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
-                                        isEditing: isEditing
+                                        isEditing: isEditing,
+                                        hasOwnSource: !(cellSources[key] ?? "").isEmpty,
+                                        onOpenEditor: {
+                                            openCellEditor(attributeID: attribute.persistentModelID, columnID: column.id)
+                                        }
                                     )
                                     .frame(width: 180, height: 120)
                                 }
@@ -104,6 +116,11 @@ struct PopupTableView: View {
         }
         .frame(minWidth: 700, minHeight: 400)
         .onAppear { loadCells() }
+        .sheet(item: $editingCell) { cell in
+            TableCellEditor(cell: cell, tableSource: table.source ?? "") {
+                loadCells()
+            }
+        }
     }
 
     @ViewBuilder
@@ -117,15 +134,50 @@ struct PopupTableView: View {
     }
 
     private func loadCells() {
+        cellValues = [:]
+        cellSources = [:]
         for cell in table.cells {
             if let attrID = cell.attribute?.persistentModelID {
                 if let figID = cell.figure?.persistentModelID {
-                    cellValues[cellKey(attributeID: attrID, columnID: figID)] = cell.value ?? ""
+                    loadCell(cell, key: cellKey(attributeID: attrID, columnID: figID))
                 } else if let colID = cell.column?.persistentModelID {
-                    cellValues[cellKey(attributeID: attrID, columnID: colID)] = cell.value ?? ""
+                    loadCell(cell, key: cellKey(attributeID: attrID, columnID: colID))
                 }
             }
         }
+    }
+
+    private func loadCell(_ cell: PopupTableCell, key: String) {
+        cellValues[key] = cell.value ?? ""
+        cellSources[key] = cell.source ?? ""
+    }
+
+    /// Finds or creates the cell for this attribute/column intersection.
+    private func ensureCell(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> PopupTableCell? {
+        if let existing = table.cells.first(where: { cell in
+            cell.attribute?.persistentModelID == attributeID &&
+            (cell.figure?.persistentModelID ?? cell.column?.persistentModelID) == columnID
+        }) {
+            return existing
+        }
+
+        guard let attribute = table.attributes.first(where: { $0.persistentModelID == attributeID }) else { return nil }
+        let cell: PopupTableCell
+        switch table.columnMode {
+        case .figures:
+            guard let figure = table.figures.first(where: { $0.persistentModelID == columnID }) else { return nil }
+            cell = PopupTableCell(attribute: attribute, figure: figure)
+        case .strings:
+            guard let column = table.columns.first(where: { $0.persistentModelID == columnID }) else { return nil }
+            cell = PopupTableCell(attribute: attribute, column: column)
+        }
+        table.cells.append(cell)
+        modelContext.insert(cell)
+        return cell
+    }
+
+    private func openCellEditor(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) {
+        editingCell = ensureCell(attributeID: attributeID, columnID: columnID)
     }
 
     private func cellBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<String> {
@@ -140,27 +192,8 @@ struct PopupTableView: View {
     }
 
     private func saveCell(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, value: String) {
-        guard let attribute = table.attributes.first(where: { $0.persistentModelID == attributeID }) else { return }
-
-        if let existing = table.cells.first(where: { cell in
-            cell.attribute?.persistentModelID == attributeID &&
-            (cell.figure?.persistentModelID ?? cell.column?.persistentModelID) == columnID
-        }) {
-            existing.value = value.isEmpty ? nil : value
-        } else {
-            switch table.columnMode {
-            case .figures:
-                guard let figure = table.figures.first(where: { $0.persistentModelID == columnID }) else { return }
-                let cell = PopupTableCell(attribute: attribute, figure: figure, value: value.isEmpty ? nil : value)
-                table.cells.append(cell)
-                modelContext.insert(cell)
-            case .strings:
-                guard let column = table.columns.first(where: { $0.persistentModelID == columnID }) else { return }
-                let cell = PopupTableCell(attribute: attribute, column: column, value: value.isEmpty ? nil : value)
-                table.cells.append(cell)
-                modelContext.insert(cell)
-            }
-        }
+        guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
+        cell.value = value.isEmpty ? nil : value
         try? modelContext.save()
     }
 }
@@ -238,6 +271,9 @@ private struct AttributeRowHeader: View {
 private struct CellView: View {
     @Binding var value: String
     let isEditing: Bool
+    var hasOwnSource: Bool = false
+    var onOpenEditor: () -> Void = {}
+
     var body: some View {
         Group {
             if isEditing {
@@ -255,5 +291,86 @@ private struct CellView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(nsColor: .windowBackgroundColor))
+        .overlay(alignment: .topTrailing) {
+            if !isEditing && hasOwnSource {
+                Image(systemName: "doc.text")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .padding(3)
+                    .help("Has its own source (double-click to view)")
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2, perform: onOpenEditor)
+    }
+}
+
+private struct TableCellEditor: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    let cell: PopupTableCell
+    let tableSource: String
+    var onSaved: () -> Void
+    @State private var value: String = ""
+    @State private var sourceText: String = ""
+    @State private var loaded = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(cell.attribute?.name ?? "Cell")
+                    .font(.headline)
+                Text(inheritedHint)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding()
+
+            Divider()
+
+            Form {
+                Section("Value") {
+                    TextField("Value", text: $value, axis: .vertical)
+                        .lineLimit(2...5)
+                }
+                Section("Source") {
+                    TextField(tableSource.isEmpty ? "Source" : "Source (empty = \(tableSource))", text: $sourceText)
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+
+            Divider()
+
+            HStack {
+                Spacer()
+                Button("Cancel") { dismiss() }
+                Button("Save") { save() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+        }
+        .frame(width: 420, height: 320)
+        .onAppear {
+            guard !loaded else { return }
+            loaded = true
+            value = cell.value ?? ""
+            sourceText = cell.source ?? ""
+        }
+    }
+
+    private var inheritedHint: String {
+        if tableSource.isEmpty { return "No table-wide source set." }
+        return "Cells without their own source inherit the table's source: \(tableSource)"
+    }
+
+    private func save() {
+        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        cell.value = trimmedValue.isEmpty ? nil : trimmedValue
+        cell.setSourceText(sourceText, context: modelContext)
+        try? modelContext.save()
+        onSaved()
+        dismiss()
     }
 }

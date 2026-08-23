@@ -24,6 +24,16 @@ package final class Source {
     @Relationship(deleteRule: .nullify, inverse: \Relationship.sourceRef)
     package var relationships: [Relationship] = []
 
+    /// Comparison-table cells citing this source. Set links via this side
+    /// (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \PopupTableCell.sourceRef)
+    package var popupTableCells: [PopupTableCell] = []
+
+    /// Comparison tables whose content is attributed to this source. Set links
+    /// via this side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \PopupTable.sourceRef)
+    package var popupTables: [PopupTable] = []
+
     package enum SourceType: String, Codable, CaseIterable, Hashable {
         case ancientText = "Ancient Text"
         case tablet = "Tablet"
