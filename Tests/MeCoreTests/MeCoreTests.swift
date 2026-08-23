@@ -4175,6 +4175,117 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(stubs, ["Bare Name"])
     }
 
+    // MARK: - Consistency repairs & historical period eras
+
+    private func makeGenderedPair(_ context: ModelContext) -> (male: Figure, female: Figure) {
+        let male = Figure(name: "Uras", title: "patron god of Dilbat", gender: .male)
+        let female = Figure(name: "Uras", gender: .female)
+        context.insert(male)
+        context.insert(female)
+        return (male, female)
+    }
+
+    func testRepairMovesUrasMotherEdgesToTheGoddess() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let (male, goddess) = makeGenderedPair(context)
+        let ninsun = Figure(name: "Ninsun", gender: .female)
+        let ninisina = Figure(name: "Ninisina", gender: .female)
+        let other = Figure(name: "Unrelated Child", gender: .female)
+        context.insert(ninsun); context.insert(ninisina); context.insert(other)
+        let motherType = makeRelationType("Mother", in: context)
+        context.insert(Relationship(fromFigure: male, toFigure: ninsun, relationshipType: motherType))
+        context.insert(Relationship(fromFigure: male, toFigure: ninisina, relationshipType: motherType))
+        context.insert(Relationship(fromFigure: male, toFigure: other, relationshipType: motherType))
+        try? context.save()
+
+        Migration.ensureConsistentParentRoles(context: context)
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(edges.filter { $0.toFigure === ninsun || $0.toFigure === ninisina }
+            .compactMap(\.fromFigure), [goddess, goddess])
+        XCTAssertEqual(edges.filter { $0.toFigure === other }.first?.fromFigure, male,
+                       "edges to other children are untouched — scoped strictly to Ninsun/Ninisina")
+
+        Migration.ensureConsistentParentRoles(context: context)
+        XCTAssertEqual(edges.filter { $0.fromFigure === goddess }.count, 2, "idempotent")
+    }
+
+    func testRepairNoOpsWhenNoFemaleNamesakeExists() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let loneMale = Figure(name: "Uras", title: "patron god of Dilbat", gender: .male)
+        let ninsun = Figure(name: "Ninsun", gender: .female)
+        context.insert(loneMale); context.insert(ninsun)
+        context.insert(Relationship(fromFigure: loneMale, toFigure: ninsun,
+                                    relationshipType: makeRelationType("Mother", in: context)))
+        try? context.save()
+
+        Migration.ensureConsistentParentRoles(context: context)
+
+        let edge = (try? context.fetch(FetchDescriptor<Relationship>()))?.first
+        XCTAssertEqual(edge?.fromFigure, loneMale,
+                       "without a female namesake the edge must stay — no blind re-pointing")
+    }
+
+    func testRepairRetypesRachujalFatherEdgeAndLeavesSelfEdge() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let rachujal = Figure(name: "Rachujal", gender: .female)
+        let rashujal = Figure(name: "Rashujal", gender: .male)
+        context.insert(rachujal); context.insert(rashujal)
+        let fatherType = makeRelationType("Father", in: context)
+        let motherType = makeRelationType("Mother", in: context)
+        context.insert(Relationship(fromFigure: rachujal, toFigure: rashujal, relationshipType: fatherType))
+        let selfEdge = Relationship(fromFigure: rashujal, toFigure: rashujal, relationshipType: motherType)
+        context.insert(selfEdge)
+        try? context.save()
+
+        Migration.ensureConsistentParentRoles(context: context)
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(edges.first { $0.fromFigure === rachujal }?.relationshipType?.name, "Mother")
+        XCTAssertEqual(edges.first { $0.fromFigure === rashujal && $0.toFigure === rashujal }?.relationshipType?.name,
+                       "Mother", "the self-edge is user data — it stays until removed by hand")
+    }
+
+    func testHistoricalPeriodErasCreatedOrderedAndDriftProof() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureHistoricalPeriodEras(context: context)
+        Migration.fixEraOrderIndices(context: context)
+        Migration.fixEraOrderIndices(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(eras.count, 3)
+        let byName = Dictionary(eras.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(byName["Old Assyrian Period"]?.orderIndex, 31)
+        XCTAssertEqual(byName["Old Babylonian Period"]?.orderIndex, 32)
+        XCTAssertEqual(byName["Neo-Assyrian Period"]?.orderIndex, 33)
+        XCTAssertEqual(byName["Old Babylonian Period"]?.startDate.startYear, -1894)
+        XCTAssertEqual(byName["Neo-Assyrian Period"]?.endDate.endYear, -609)
+
+        Migration.ensureHistoricalPeriodEras(context: context)
+        XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Era>())) ?? -1, 3, "check-by-name idempotency")
+    }
+
+    func testHistoricalPeriodErasSkipExistingUserEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let usersEra = Era(name: "Old Babylonian Period")
+        usersEra.eraDescription = "User's own write-up"
+        context.insert(usersEra)
+        try? context.save()
+
+        Migration.ensureHistoricalPeriodEras(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(eras.count, 3, "user's era suppresses creation; the other two still arrive")
+        XCTAssertEqual(eras.first { $0.name == "Old Babylonian Period" }?.eraDescription, "User's own write-up")
+    }
+
     // MARK: - FigurePlaceAssociation confidence qualifier
 
     func testFigurePlaceAssociationConfidenceRoundTrip() {

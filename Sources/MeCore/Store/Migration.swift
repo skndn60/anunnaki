@@ -593,6 +593,9 @@ package struct Migration {
             "Fifth dynasty of Uruk": 28,
             "Third dynasty of Ur": 29,
             "Dynasty of Isin": 30,
+            "Old Assyrian Period": 31,
+            "Old Babylonian Period": 32,
+            "Neo-Assyrian Period": 33,
         ]
         var changed = false
         for era in eras {
@@ -2169,6 +2172,92 @@ package struct Migration {
         }
 
         if createdFigures > 0 || createdEvents > 0 { try? context.save() }
+    }
+
+    /// Repairs the four parent-role edges the consistency scan proved contradictory,
+    /// scoped narrowly so nothing else can ever match:
+    /// 1. "Mother of Ninsun/Ninisina" edges hang on the MALE Uras ("patron god of
+    ///    Dilbat") — tradition gives both goddesses the FEMALE Uraš (earth, consort
+    ///    of An) as mother, so the edges are re-pointed to her when she exists.
+    /// 2. Rachujal (described as a matriarch) is listed as Father of Rashujal —
+    ///    re-typed to Mother. The bogus self-referential "Rashujal mother of
+    ///    Rashujal" edge is deliberately LEFT ALONE (deleting user rows is never
+    ///    automatic); it keeps surfacing in Data Integrity until removed by hand.
+    /// Additive/idempotent; fires only on these exact normalized-name + gender
+    /// conditions.
+    package static func ensureConsistentParentRoles(context: ModelContext) {
+        func key(_ s: String) -> String { NameDuplicateCheck.normalizedKey(s) }
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let types = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
+        let motherType = types.first { $0.name == "Mother" }
+        let fatherType = types.first { $0.name == "Father" }
+        var changed = false
+
+        // 1. Uras: male Dilbat patron must not mother anyone.
+        let maleUras = allFigures.first {
+            key($0.name) == "uras" && $0.gender == .male && $0.title.localizedCaseInsensitiveContains("Dilbat")
+        }
+        let femaleUrasList = allFigures.filter { key($0.name) == "uras" && $0.gender == .female }
+        if let maleUras, let goddess = femaleUrasList.first, femaleUrasList.count == 1,
+           let motherType {
+            let childrenKeys: Set<String> = ["ninsun", "ninisina"]
+            let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+            for edge in edges where edge.relationshipType === motherType &&
+                edge.fromFigure === maleUras &&
+                edge.toFigure.map({ childrenKeys.contains(key($0.name)) }) == true {
+                edge.fromFigure = goddess
+                changed = true
+            }
+        }
+
+        // 2. Rachujal the matriarch was typed Father instead of Mother.
+        if let motherType, let fatherType,
+           let rachujal = allFigures.first(where: { key($0.name) == "rachujal" }),
+           let rashujal = allFigures.first(where: { key($0.name) == "rashujal" }) {
+            let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+            for edge in edges where edge.relationshipType === fatherType &&
+                edge.fromFigure === rachujal && edge.toFigure === rashujal {
+                edge.relationshipType = motherType
+                changed = true
+            }
+        }
+
+        if changed { try? context.save() }
+    }
+
+    /// Creates the three historical period labels that events reference but which
+    /// the seed never included as Era entities (Old Assyrian, Old Babylonian,
+    /// Neo-Assyrian). Lanes are appended AFTER the seeded dynasty lanes (31–33);
+    /// they are ALSO registered in `fixEraOrderIndices`'s name map, because its
+    /// catch-all otherwise bumps unlisted post-flood eras by +1 on every launch.
+    /// Check-by-name creation; existing eras are never modified.
+    package static func ensureHistoricalPeriodEras(context: ModelContext) {
+        let existingKeys = Set(((try? context.fetch(FetchDescriptor<Era>())) ?? [])
+            .map { NameDuplicateCheck.normalizedKey($0.name) })
+        let configs: [(name: String, order: Int, description: String, start: Int, end: Int)] = [
+            ("Old Assyrian Period", 31,
+             "Period of the Assyrian merchant colonies (kārum) in Anatolia, best known from the Kültepe letter archives.",
+             -2000, -1750),
+            ("Old Babylonian Period", 32,
+             "Amorite-led era opening with Hammurabi's dynasty at Babylon; the language of its cuneiform records became the classical Babylonian of scribal training.",
+             -1894, -1595),
+            ("Neo-Assyrian Period", 33,
+             "The last great Assyrian empire, from Ashurnasirpal II's refoundation of Kalhu to the fall of Nineveh.",
+             -911, -609),
+        ]
+        var createdAny = false
+        for config in configs where !existingKeys.contains(NameDuplicateCheck.normalizedKey(config.name)) {
+            let era = Era(
+                name: config.name,
+                orderIndex: config.order,
+                eraDescription: config.description,
+                startDate: MythologicalDate(year: config.start, isApproximate: true),
+                endDate: MythologicalDate(year: config.end, isApproximate: true)
+            )
+            context.insert(era)
+            createdAny = true
+        }
+        if createdAny { try? context.save() }
     }
 
     /// Links every `Relationship.sourceRef` to the `Source` entity named by its
