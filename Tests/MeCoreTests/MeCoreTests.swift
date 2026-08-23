@@ -4025,6 +4025,18 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(Set(findings.map(\.entityName)), Set(["MaleWithShe", "FemaleWithHe"]))
     }
 
+    func testPronounRuleIgnoresSingleBackwardReference() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Dumuzi", gender: .male, figureDescription:
+            "Shepherd god and consort of Inanna. Sent to the underworld as her substitute."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .pronounGender }
+        XCTAssertTrue(findings.isEmpty,
+                      "a lone \"her\" pointing back at a named woman is coreference, not misgendering")
+    }
+
     func testGenderedNounRuleUsesWholeWords() {
         let container = makeContainer()
         let context = container.mainContext

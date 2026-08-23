@@ -91,8 +91,12 @@ package enum ConsistencyEngine {
     }
 
     /// Combined pronoun + gendered-noun check for one figure's description and
-    /// title. Only flags when ALL signals point the opposite way — mixed text
-    /// stays silent because it may legitimately describe several people.
+    /// title. Pronouns must appear at least TWICE in the opposite direction to
+    /// flag: a lone backward-referring pronoun ("…consort of Inanna. Sent to the
+    /// underworld as her substitute.") usually points at the other person, while
+    /// genuinely misgendered text ("She guards her temple") repeats itself.
+    /// Mixed-signal text always stays silent because it may describe several
+    /// people. Gendered nouns flag on their own since they are unambiguous.
     package static func genderConflict(
         gender: Figure.Gender, title: String, figureDescription: String
     ) -> (kind: ConsistencyFinding.Kind, message: String)? {
@@ -105,10 +109,10 @@ package enum ConsistencyEngine {
         let expectedFemale = gender == .female
         let text = title + " " + figureDescription
         let pronouns = pronounSignals(in: text)
-        if !expectedFemale && pronouns.female > 0 && pronouns.male == 0 {
+        if !expectedFemale && pronouns.female >= 2 && pronouns.male == 0 {
             return (.pronounGender, "Description uses \"she/her\" but the figure is marked Male.")
         }
-        if expectedFemale && pronouns.male > 0 && pronouns.female == 0 {
+        if expectedFemale && pronouns.male >= 2 && pronouns.female == 0 {
             return (.pronounGender, "Description uses \"he/him\" but the figure is marked Female.")
         }
         let nouns = genderedNounSignals(in: text)
