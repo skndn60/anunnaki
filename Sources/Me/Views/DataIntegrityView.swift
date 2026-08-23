@@ -1,10 +1,16 @@
 import SwiftUI
 import SwiftData
 
+final class DataIntegrityScanStore: ObservableObject {
+    @Published var issues: [IntegrityIssue] = []
+    @Published var findings: [ConsistencyFinding] = []
+    @Published var dismissalCount = 0
+    static let shared = DataIntegrityScanStore()
+}
+
 struct DataIntegrityView: View {
     @Environment(\.modelContext) private var modelContext
-    @State private var issues: [IntegrityIssue] = []
-    @State private var findings: [ConsistencyFinding] = []
+    @ObservedObject private var store = DataIntegrityScanStore.shared
     @State private var isScanning = false
 
     var body: some View {
@@ -14,11 +20,15 @@ struct DataIntegrityView: View {
                     Text("Data Integrity")
                         .font(.title2)
                         .fontWeight(.semibold)
-                    Text("Structural checks (orphaned associations, broken propagation, duplicate memberships) plus content-consistency checks: gender vs wording, role genders, parent cycles, date logic, era references, ambiguous aliases.")
+                    Text("Structural checks (orphaned associations, broken propagation, duplicate memberships) plus content-consistency checks: gender vs wording, role genders, parent cycles, date logic, era references, ambiguous aliases. Flags persist until dismissed.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
+                if store.dismissalCount > 0 {
+                    Button("Clear Dismissals (\(store.dismissalCount))") { clearDismissals() }
+                        .buttonStyle(.bordered)
+                }
                 Button("Scan") { scan() }
                     .buttonStyle(.borderedProminent)
                     .disabled(isScanning)
@@ -30,7 +40,7 @@ struct DataIntegrityView: View {
             if isScanning {
                 ProgressView("Scanning…")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if issues.isEmpty && findings.isEmpty {
+            } else if store.issues.isEmpty && store.findings.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.largeTitle)
@@ -44,7 +54,7 @@ struct DataIntegrityView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 List {
-                    ForEach(issues) { issue in
+                    ForEach(store.issues) { issue in
                         HStack(spacing: 12) {
                             Image(systemName: issue.severityIcon)
                                 .foregroundStyle(issue.severityColor)
@@ -62,13 +72,17 @@ struct DataIntegrityView: View {
                                     .buttonStyle(.bordered)
                                     .controlSize(.small)
                             }
+                            Button("Dismiss") { dismiss(issue) }
+                                .buttonStyle(.borderless)
+                                .controlSize(.small)
+                                .foregroundStyle(.secondary)
                         }
                         .padding(.vertical, 4)
                     }
 
-                    if !findings.isEmpty {
-                        Section("Content Consistency (\(findings.count))") {
-                            ForEach(findings) { finding in
+                    if !store.findings.isEmpty {
+                        Section("Content Consistency (\(store.findings.count))") {
+                            ForEach(store.findings) { finding in
                                 HStack(spacing: 12) {
                                     Image(systemName: finding.severity.icon)
                                         .foregroundStyle(finding.severity == .warning ? Color.orange : Color.blue)
@@ -80,6 +94,11 @@ struct DataIntegrityView: View {
                                             .font(.caption)
                                             .foregroundStyle(.secondary)
                                     }
+                                    Spacer()
+                                    Button("Dismiss") { dismiss(finding) }
+                                        .buttonStyle(.borderless)
+                                        .controlSize(.small)
+                                        .foregroundStyle(.secondary)
                                 }
                                 .padding(.vertical, 4)
                             }
@@ -89,12 +108,13 @@ struct DataIntegrityView: View {
             }
         }
         .frame(minWidth: 500, minHeight: 400)
+        .onAppear { refreshDismissalCount() }
     }
 
     private func scan() {
         isScanning = true
-        issues = []
-        findings = []
+        store.issues = []
+        store.findings = []
 
         Task { @MainActor in
             var found: [IntegrityIssue] = []
@@ -201,7 +221,7 @@ struct DataIntegrityView: View {
             let allAlternateNames = (try? modelContext.fetch(FetchDescriptor<AlternateName>())) ?? []
             let allEvents = (try? modelContext.fetch(FetchDescriptor<Event>())) ?? []
             let allEras = (try? modelContext.fetch(FetchDescriptor<Era>())) ?? []
-            findings = ConsistencyEngine.runAll(
+            let engineFindings = ConsistencyEngine.runAll(
                 figures: allFigures,
                 relationships: allRelationships,
                 alternateNames: allAlternateNames,
@@ -211,7 +231,10 @@ struct DataIntegrityView: View {
                 !(finding.kind == .parentCycle && !finding.entityName.contains("↔"))
             }
 
-            issues = found
+            let dismissed = Set(((try? modelContext.fetch(FetchDescriptor<FindingDismissal>())) ?? []).map(\.signature))
+            store.issues = found.filter { !dismissed.contains("issue.\($0.kind.rawValue)|\($0.title)") }
+            store.findings = engineFindings.filter { !dismissed.contains("\($0.kind.rawValue)|\($0.entityName)") }
+            refreshDismissalCount()
             isScanning = false
         }
     }
@@ -220,11 +243,37 @@ struct DataIntegrityView: View {
         guard let action = issue.fixAction else { return }
         action(modelContext)
         try? modelContext.save()
-        issues.removeAll { $0.id == issue.id }
+        store.issues.removeAll { $0.id == issue.id }
+    }
+
+    private func dismiss(_ issue: IntegrityIssue) {
+        modelContext.insert(FindingDismissal(kindRaw: "issue.\(issue.kind.rawValue)", entityKey: issue.title))
+        try? modelContext.save()
+        store.issues.removeAll { $0.id == issue.id }
+        refreshDismissalCount()
+    }
+
+    private func dismiss(_ finding: ConsistencyFinding) {
+        modelContext.insert(FindingDismissal(kindRaw: finding.kind.rawValue, entityKey: finding.entityName))
+        try? modelContext.save()
+        store.findings.removeAll { $0.id == finding.id }
+        refreshDismissalCount()
+    }
+
+    private func clearDismissals() {
+        let all = (try? modelContext.fetch(FetchDescriptor<FindingDismissal>())) ?? []
+        for dismissal in all { modelContext.delete(dismissal) }
+        try? modelContext.save()
+        store.dismissalCount = 0
+    }
+
+    private func refreshDismissalCount() {
+        var descriptor = FetchDescriptor<FindingDismissal>()
+        store.dismissalCount = (try? modelContext.fetchCount(descriptor)) ?? 0
     }
 }
 
-private struct IntegrityIssue: Identifiable {
+struct IntegrityIssue: Identifiable {
     let id = UUID()
     let kind: IssueKind
     let title: String
@@ -232,7 +281,7 @@ private struct IntegrityIssue: Identifiable {
     let isFixable: Bool
     let fixAction: ((ModelContext) -> Void)?
 
-    enum IssueKind {
+    enum IssueKind: String {
         case emptyEntity
         case orphaned
         case brokenPropagation
