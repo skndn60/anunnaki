@@ -22,6 +22,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Follow-up (same morning) — `35e891f`:** Self-parent edges moved from advisory to the click-to-Fix pattern (DataIntegrityView detects them directly and deletes on button press; engine findings for self-loops filtered out to avoid double-reporting — mutual A↔B pairs stay advisory). Two nondeterminism bugs surfaced by test flakiness: cycle-pair labels now use sorted endpoint names, ambiguous-alias findings pick the most frequent spelling (alphabetical tie-break). 322/322 green.
 
+**Follow-up (same morning) — `6d65160`:** First real false positive: Dumuzi (male) flagged for "…consort of Inanna. Sent to the underworld as her substitute." — the lone "her" refers back to Inanna, not the subject. Coreference resolution is out of scope; instead the pronoun rule now requires **≥2 opposite-gender pronoun tokens** (genuinely misgendered text repeats itself; a single backward reference usually points at the named other person). Gendered-noun rule unchanged (nouns are unambiguous). Regression test with the exact Dumuzi wording. 323/323 green.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
