@@ -97,9 +97,16 @@ package enum ConsistencyEngine {
     /// underworld as her substitute.") usually points at the other person, while
     /// genuinely misgendered text ("She guards her temple") repeats itself.
     /// Mixed-signal text always stays silent because it may describe several
-    /// people. Gendered nouns flag on their own since they are unambiguous.
+    /// people. Gendered nouns flag on their own since they are unambiguous —
+    /// UNLESS the text also mentions another figure of the conflicting gender
+    /// (`mentionIndex`), who may own those words instead ("…him" after naming
+    /// Enki; "born to mother Nammu"). Callers should pass an index built by
+    /// `mentionGenderIndex`; empty defaults keep the old behavior. `ownKeys`
+    /// excludes the figure's own names so homonyms cannot silence genuine
+    /// findings about themselves.
     package static func genderConflict(
-        gender: Figure.Gender, title: String, figureDescription: String
+        gender: Figure.Gender, title: String, figureDescription: String,
+        mentionIndex: [String: Figure.Gender] = [:], ownKeys: Set<String> = []
     ) -> (kind: ConsistencyFinding.Kind, message: String)? {
         switch gender {
         case .male, .female:
@@ -109,30 +116,81 @@ package enum ConsistencyEngine {
         }
         let expectedFemale = gender == .female
         let text = title + " " + figureDescription
+        let competing = mentionedOtherGenders(
+            in: text, index: mentionIndex, ownKeys: ownKeys
+        )
         let pronouns = pronounSignals(in: text)
-        if !expectedFemale && pronouns.female >= 2 && pronouns.male == 0 {
+        if !expectedFemale && pronouns.female >= 2 && pronouns.male == 0 && !competing.contains(.female) {
             return (.pronounGender, "Description uses \"she/her\" but the figure is marked Male.")
         }
-        if expectedFemale && pronouns.male >= 2 && pronouns.female == 0 {
+        if expectedFemale && pronouns.male >= 2 && pronouns.female == 0 && !competing.contains(.male) {
             return (.pronounGender, "Description uses \"he/him\" but the figure is marked Female.")
         }
         let nouns = genderedNounSignals(in: text)
-        if !expectedFemale && !nouns.feminine.isEmpty && nouns.masculine.isEmpty {
+        if !expectedFemale && !nouns.feminine.isEmpty && nouns.masculine.isEmpty && !competing.contains(.female) {
             return (.genderedNoun, conflictMessage(expected: .female, found: "feminine wording",
                                                    evidence: Array(nouns.feminine)))
         }
-        if expectedFemale && !nouns.masculine.isEmpty && nouns.feminine.isEmpty {
+        if expectedFemale && !nouns.masculine.isEmpty && nouns.feminine.isEmpty && !competing.contains(.male) {
             return (.genderedNoun, conflictMessage(expected: .male, found: "masculine wording",
                                                    evidence: Array(nouns.masculine)))
         }
         return nil
     }
 
+    /// Maps each figure name / alias to its gender, for the third-party mention
+    /// veto. Keys claimed by different genders become `.unknown` (never veto).
+    package static func mentionGenderIndex(figures: [Figure]) -> [String: Figure.Gender] {
+        var index: [String: Figure.Gender] = [:]
+        func insert(_ raw: String, _ gender: Figure.Gender) {
+            let key = NameDuplicateCheck.normalizedKey(raw)
+            guard !key.isEmpty else { return }
+            if let existing = index[key] {
+                if existing != gender { index[key] = .unknown }
+            } else {
+                index[key] = gender
+            }
+        }
+        for figure in figures {
+            insert(figure.name, figure.gender)
+            for alt in figure.alternateNames where !alt.name.isEmpty {
+                insert(alt.name, figure.gender)
+            }
+        }
+        return index
+    }
+
+    /// Genders of OTHER registered figures whose names appear in the text,
+    /// matched as whole-token sequences (up to four tokens, punctuation
+    /// stripped per token — handles multi-word and hyphenated names alike).
+    private static func mentionedOtherGenders(
+        in text: String, index: [String: Figure.Gender], ownKeys: Set<String>
+    ) -> Set<Figure.Gender> {
+        let tokens: [String] = text.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber })
+            .map { String($0.filter { $0.isLetter || $0.isNumber }) }
+            .filter { !$0.isEmpty }
+        var genders: Set<Figure.Gender> = []
+        for start in tokens.indices {
+            var joined = ""
+            for token in tokens[start..<min(start + 4, tokens.count)] {
+                joined += token
+                guard let candidate = index[joined], candidate != .unknown, !ownKeys.contains(joined) else {
+                    continue
+                }
+                genders.insert(candidate)
+            }
+        }
+        return genders
+    }
+
     // MARK: - Rules
 
-    private static func checkGenderWording(figure: Figure) -> [ConsistencyFinding] {
+    private static func checkGenderWording(
+        figure: Figure, mentionIndex: [String: Figure.Gender], ownKeys: Set<String>
+    ) -> [ConsistencyFinding] {
         guard let result = genderConflict(
-            gender: figure.gender, title: figure.title, figureDescription: figure.figureDescription
+            gender: figure.gender, title: figure.title, figureDescription: figure.figureDescription,
+            mentionIndex: mentionIndex, ownKeys: ownKeys
         ) else { return [] }
         return [ConsistencyFinding(
             kind: result.kind,
@@ -359,10 +417,13 @@ package enum ConsistencyEngine {
         eras: [Era]
     ) -> [ConsistencyFinding] {
         let eraKeys = Set(eras.map { NameDuplicateCheck.normalizedKey($0.name) })
+        let mentionIndex = mentionGenderIndex(figures: figures)
 
         var findings: [ConsistencyFinding] = []
         for figure in figures {
-            findings += checkGenderWording(figure: figure)
+            var ownKeys = Set([figure.name].map { NameDuplicateCheck.normalizedKey($0) })
+            ownKeys.formUnion(figure.alternateNames.map { NameDuplicateCheck.normalizedKey($0.name) })
+            findings += checkGenderWording(figure: figure, mentionIndex: mentionIndex, ownKeys: ownKeys)
             findings += checkInvertedDates(figure: figure)
             findings += unknownEraFindings(eraString: figure.birthDate.era, label: "Birth date",
                                            entityKind: "Figure", entityName: figure.name, knownKeys: eraKeys)

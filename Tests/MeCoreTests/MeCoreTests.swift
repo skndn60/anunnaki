@@ -4037,6 +4037,32 @@ func testRegnalKeyOrdersEventsByDate() {
                       "a lone \"her\" pointing back at a named woman is coreference, not misgendering")
     }
 
+    func testPronounRuleDefersToMentionedFigureOfSameGender() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Enki", gender: .male, figureDescription: "God of fresh water and crafts."))
+        context.insert(Figure(name: "Ninkasi", gender: .female, figureDescription:
+            "Goddess of beer. Enki blessed her brew; mortals praised him for the recipe he shared."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .pronounGender }
+        XCTAssertTrue(findings.isEmpty,
+                      "\"he/him\" after naming male Enki belongs to him, not female Ninkasi")
+    }
+
+    func testPronounRuleStillFlagsWhenHomonymKeysAreAmbiguous() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Nanna", gender: .male))
+        context.insert(Figure(name: "Nanna", gender: .female, figureDescription:
+            "Nanna brewed the ritual beer. He tasted it first; he approved the batch."))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .pronounGender }
+        XCTAssertEqual(findings.count, 1,
+                       "a homonymous name claimed by both genders must never veto genuine findings")
+    }
+
     func testGenderedNounRuleUsesWholeWords() {
         let container = makeContainer()
         let context = container.mainContext

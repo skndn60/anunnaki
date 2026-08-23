@@ -207,7 +207,10 @@ struct FigureFormView: View {
             MythologicalDateEditor(label: "Birth / Origin", date: $birthDate, showsPeriodField: false)
         }
         .formStyle(.grouped)
-        .task { loadEraNames() }
+        .task {
+            loadEraNames()
+            loadMentionIndex()
+        }
     }
 
     private var deathStep: some View {
@@ -222,19 +225,26 @@ struct FigureFormView: View {
         .formStyle(.grouped)
     }
 
-    private var genderWordingHint: String? {
-        ConsistencyEngine.genderConflict(
-            gender: gender,
-            title: title,
-            figureDescription: figureDescription
-        )?.message
-    }
-
     @State private var eraNames: [String] = []
+    @State private var mentionIndex: [String: Figure.Gender] = [:]
 
     private func loadEraNames() {
         let descriptor = FetchDescriptor<Era>(sortBy: [SortDescriptor(\Era.orderIndex)])
         eraNames = ((try? modelContext.fetch(descriptor)) ?? []).map(\.name)
+    }
+
+    private func loadMentionIndex() {
+        mentionIndex = ConsistencyEngine.mentionGenderIndex(figures: allFigures)
+    }
+
+    private var genderWordingHint: String? {
+        ConsistencyEngine.genderConflict(
+            gender: gender,
+            title: title,
+            figureDescription: figureDescription,
+            mentionIndex: mentionIndex,
+            ownKeys: [NameDuplicateCheck.normalizedKey(name)]
+        )?.message
     }
 
     private var descriptionStep: some View {
