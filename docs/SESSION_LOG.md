@@ -8,6 +8,10 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-08-23 — Integrity work queue + consistency engine hardening (full day)
+
+**Day summary:** Started as scan triage + repair migrations, grew into the Data Integrity screen becoming the app's curation cockpit. Commit index (chronological): `521d705` repair misgendered edges + period eras → `35e891f` self-parent click-to-Fix, deterministic labels → `688e252` content-consistency engine (8 rules) → `6d65160` pronoun ≥2 threshold (Dumuzi FP) → `346144d`/`c45ccbc` persistent work queue after user rejected dismissals-only design → `cd30a29` era pickers replace free text → `91b7974` copy-name button → `cf8f76f` nameVariant rule → `9696a3d` third-party-mention veto (Ninkasi FP) → `5d3c7e4` punctuation-fusion fix (Urur FP) → `d58a412` hyphen-split fix (Yarlaganda/"Su'en" FP), noun-message gender fix, Open navigation → `bf58838` row Actions menu (edit description inline, wizard, copy text). Test count 317 → 330. Debugging lesson of the day: copying only `Me.store` misses recent writes living in the `-wal` sidecar — always copy `.store` **and** `-wal`/`-shm` together.
+
 ### 2026-08-23 — First real scan triaged; repairs + period eras prepped
 
 **Context:** The user ran Data Integrity on their live DB (~30 findings). Triage against a read-only copy (`/var/folders/.../T/opencode/triage.store`) confirmed: 4 genuine role-gender edges (two "Mother" edges hanging on the male Uras PK 52 — tradition gives Ninsun/Ninisina the goddess Uraš as mother; Rachujal ♀ typed Father of Rashujal ♂, plus a bogus self-Mother edge), 3 event-era labels with no matching Era entity (Old Assyrian / Old Babylonian / Neo-Assyrian Periods), 3 stubs (`Enbi-Ishtar`, `Lamech`, `Mesh-ki-ang-Nanna II` — the last likely an accidental duplicate of SKL king Mesh-ki-ang-Nanna), zero ambiguous aliases. SQL can't do word-boundary pronoun checks — the app scan stays authoritative there.
