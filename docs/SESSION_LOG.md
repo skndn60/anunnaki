@@ -56,6 +56,10 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Follow-up (same morning) — `dafa269`:** User rejected free-text entry for the new source fields — both became menu Pickers over the Source library ("None" / "Inherit table (X)" zero-option + alphabetically sorted names, `availableSourceNames` keeps a legacy unmatched value selectable so nothing is silently dropped). Selection feeds the same `setSourceText` path, so linking/detaching behavior is unchanged. 336/336 green.
 
+**Micro (same morning) — `c2ea326`:** Thin Divider between table description and table-wide source in the comparison-table grid header (shown only when both exist).
+
+**Micro (same morning) — `45b3682`:** ~5px vertical padding around the grid header's source label so it breathes between the divider above and the grid below.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
