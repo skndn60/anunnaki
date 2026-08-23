@@ -338,7 +338,7 @@ private struct TableCellEditor: View {
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
+            .padding(20)
 
             Divider()
 
@@ -365,8 +365,8 @@ private struct TableCellEditor: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .padding(.horizontal)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             Divider()
@@ -379,7 +379,7 @@ private struct TableCellEditor: View {
                     .buttonStyle(.borderedProminent)
                     .keyboardShortcut(.defaultAction)
             }
-            .padding()
+            .padding(20)
         }
         .frame(width: 420, height: 300)
         .onAppear {
