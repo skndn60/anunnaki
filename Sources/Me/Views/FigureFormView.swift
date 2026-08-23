@@ -189,9 +189,25 @@ struct FigureFormView: View {
 
     private var birthStep: some View {
         Form {
-            MythologicalDateEditor(label: "Birth / Origin", date: $birthDate)
+            Section("Period") {
+                Picker("Period", selection: $birthDate.era) {
+                    Text("None").tag("")
+                    ForEach(eraNames, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                    if !birthDate.era.isEmpty && !eraNames.contains(birthDate.era) {
+                        Text("\(birthDate.era) (not in era list)").tag(birthDate.era)
+                    }
+                }
+                Text("Which timeline era the figure belongs to — independent of any dates.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            MythologicalDateEditor(label: "Birth / Origin", date: $birthDate, showsPeriodField: false)
         }
         .formStyle(.grouped)
+        .task { loadEraNames() }
     }
 
     private var deathStep: some View {
@@ -212,6 +228,13 @@ struct FigureFormView: View {
             title: title,
             figureDescription: figureDescription
         )?.message
+    }
+
+    @State private var eraNames: [String] = []
+
+    private func loadEraNames() {
+        let descriptor = FetchDescriptor<Era>(sortBy: [SortDescriptor(\Era.orderIndex)])
+        eraNames = ((try? modelContext.fetch(descriptor)) ?? []).map(\.name)
     }
 
     private var descriptionStep: some View {

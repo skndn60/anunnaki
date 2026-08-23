@@ -1,12 +1,18 @@
 import SwiftUI
+import SwiftData
 
 struct MythologicalDateEditor: View {
     let label: String
     @Binding var date: MythologicalDate
+    /// The figure form supplies its own standalone Period picker instead, so
+    /// the era link stays independent of any dates.
+    var showsPeriodField: Bool = true
 
+    @Environment(\.modelContext) private var modelContext
     @State private var startYearString: String = ""
     @State private var endYearString: String = ""
     @State private var isBCE: Bool = true
+    @State private var eraNames: [String] = []
 
     var body: some View {
         Section(label) {
@@ -42,8 +48,17 @@ struct MythologicalDateEditor: View {
 
             Toggle("Approximate", isOn: $date.isApproximate)
 
-            TextField("Period", text: $date.era, prompt: Text("e.g. Pre-Sumerian"))
-            .textFieldStyle(.roundedBorder)
+            if showsPeriodField {
+                Picker("Period", selection: $date.era) {
+                    Text("None").tag("")
+                    ForEach(eraNames, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                    if !date.era.isEmpty && !eraNames.contains(date.era) {
+                        Text("\(date.era) (not in era list)").tag(date.era)
+                    }
+                }
+            }
 
             HStack {
                 Text("Preview:")
@@ -54,6 +69,12 @@ struct MythologicalDateEditor: View {
             .font(.caption)
         }
         .onAppear { loadFromDate() }
+        .task { loadEraNames() }
+    }
+
+    private func loadEraNames() {
+        let descriptor = FetchDescriptor<Era>(sortBy: [SortDescriptor(\Era.orderIndex)])
+        eraNames = ((try? modelContext.fetch(descriptor)) ?? []).map(\.name)
     }
 
     private func loadFromDate() {
