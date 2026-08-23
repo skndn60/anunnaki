@@ -20,6 +20,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Verify:** build clean; **322/322 tests pass** (+5). On next launch: Uras/Rachujal edges repaired, three period eras appear as timeline lanes, era-reference findings clear; remaining manual items: delete the Rashujal self-edge, resolve Mesh-ki-ang-Nanna II duplicate, enrich two stubs.
 
+**Follow-up (same morning) — `35e891f`:** Self-parent edges moved from advisory to the click-to-Fix pattern (DataIntegrityView detects them directly and deletes on button press; engine findings for self-loops filtered out to avoid double-reporting — mutual A↔B pairs stay advisory). Two nondeterminism bugs surfaced by test flakiness: cycle-pair labels now use sorted endpoint names, ambiguous-alias findings pick the most frequent spelling (alphabetical tie-break). 322/322 green.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
