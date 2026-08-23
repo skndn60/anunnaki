@@ -46,6 +46,8 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 **Follow-up (same morning) — `bf58838`:** Queue rows became actionable (user request — avoid view-switching): every row gets an ellipsis Actions menu; Figure rows add "Edit Description…" (reuses DescriptionEditorSheet via new QueueDescriptionEditor wrapper that buffers rich/plain state and commits onSave) and "Open Edit Wizard…" (FigureFormView sheet), plus "Copy Finding Text" everywhere (NSPasteboard). Existing Open/Dismiss/Fix buttons unchanged. Note: rows stay in queue after edits until dismissed or rescanned. 330/330 green.
 
+**Micro (same morning) — duplicate search consolidated:** The global-toolbar "find duplicates" button was the odd one out now that Data Integrity is the housekeeping home. Entry point moved into the Data Integrity header ("Find Duplicates…" bordered button next to Scan, opening the unchanged DuplicateMergeView sheet); ContentView loses the toolbar item, its state, and its sheet. Duplicate-name search remains an on-demand tool, NOT part of scan() — it's interactive merging, not advisory findings.
+
 ### 2026-08-23 — Content-consistency engine in Data Integrity
 
 **Context:** The user asked for dataset-consistency rules beyond duplicate names, citing the Uraš gender/description mismatch as the motivating example. Discovery: a **DataIntegrityView** already existed (Housekeeping → Data Integrity, born silently inside commit `105a43a` on 2026-08-18 with no commit-message or session-log trace — the user did not remember it) hosting four structural group checks with one-click fixes. It became the host for content rules.
