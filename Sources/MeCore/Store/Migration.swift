@@ -2692,3 +2692,43 @@ package struct Migration {
     }
 
 }
+
+extension Migration {
+    /// Backfill ActivityLogEntry.user links for entries written before the
+    /// key-based relation existed (they only carry the userName snapshot).
+    /// Idempotent: only touches entries whose user is nil and whose snapshot
+    /// name matches exactly one user (case-insensitive).
+    package static func ensureActivityLogUserLinks(context: ModelContext) {
+        let entries = (try? context.fetch(FetchDescriptor<ActivityLogEntry>())) ?? []
+        let unlinked = entries.filter { $0.user == nil && !$0.userName.isEmpty }
+        guard !unlinked.isEmpty else { return }
+
+        let users = (try? context.fetch(FetchDescriptor<User>())) ?? []
+        guard !users.isEmpty else { return }
+
+        var changed = false
+        for entry in unlinked {
+            let matches = users.filter { $0.name.caseInsensitiveCompare(entry.userName) == .orderedSame }
+            guard matches.count == 1, let user = matches.first else { continue }
+            entry.user = user
+            user.activityLogEntries?.append(entry)
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+}
+
+extension Migration {
+    /// Promote the earliest-created user to administrator when no admin exists.
+    /// Idempotent: fires only while the store has zero administrators, so a
+    /// later admin demotion or role edit is never overridden.
+    package static func ensureFirstUserIsAdmin(context: ModelContext) {
+        let users = (try? context.fetch(FetchDescriptor<User>())) ?? []
+        guard !users.isEmpty else { return }
+        guard !users.contains(where: \.isAdministrator) else { return }
+
+        let first = users.min { ($0.createdAt, $0.name) < ($1.createdAt, $1.name) }
+        first?.isAdmin = true
+        try? context.save()
+    }
+}

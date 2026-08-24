@@ -5,6 +5,7 @@ import SwiftData
 struct PlaceListView: View {
     var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
     @Query private var places: [Place]
     @State private var showingAddSheet = false
@@ -287,6 +288,7 @@ struct PlaceListView: View {
 
     private func deletePlace(_ place: Place) {
         if selectedPlaceID == place.persistentModelID { selectedPlaceID = nil }
+        ActivityLogger.record(action: .deleted, entityType: "Place", entityName: place.name, context: modelContext, session: userSession)
         withAnimation { modelContext.delete(place) }
     }
 }

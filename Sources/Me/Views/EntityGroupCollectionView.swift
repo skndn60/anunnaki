@@ -95,6 +95,7 @@ struct EntityGroupCollectionView: View {
     var coordinator: NavigationCoordinator?
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
     @State private var searchText = ""
     @State private var expandedGroups: Set<PersistentIdentifier> = []
@@ -756,12 +757,16 @@ struct EntityGroupCollectionView: View {
 
     private func deleteSelected() {
         if let figure = detailItem?.figure {
+            ActivityLogger.record(action: .deleted, entityType: "Figure", entityName: figure.name, context: modelContext, session: userSession)
             modelContext.delete(figure)
         } else if let place = detailItem?.place {
+            ActivityLogger.record(action: .deleted, entityType: "Place", entityName: place.name, context: modelContext, session: userSession)
             modelContext.delete(place)
         } else if let event = detailItem?.event {
+            ActivityLogger.record(action: .deleted, entityType: "Event", entityName: event.name, context: modelContext, session: userSession)
             modelContext.delete(event)
         } else if let thing = detailItem?.thing {
+            ActivityLogger.record(action: .deleted, entityType: "Thing", entityName: thing.name, context: modelContext, session: userSession)
             modelContext.delete(thing)
         }
         detailItem = nil

@@ -3,6 +3,7 @@ import SwiftData
 
 struct PlaceFormView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.dismiss) var dismiss
 
     let place: Place?
@@ -199,6 +200,7 @@ struct PlaceFormView: View {
             place.tags = selectedTags
             place.foundedDate = foundedDate
             RecentEditStore.trackEdit(entityType: "Place", entityName: place.name)
+            ActivityLogger.record(action: .updated, entityType: "Place", entityName: place.name, context: modelContext, session: userSession)
         } else {
             let newPlace = Place(
                 name: name, placeType: placeType,
@@ -213,6 +215,7 @@ struct PlaceFormView: View {
             newPlace.foundedDate = foundedDate
             modelContext.insert(newPlace)
             RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
+            ActivityLogger.record(action: .created, entityType: "Place", entityName: newPlace.name, context: modelContext, session: userSession)
         }
         try? modelContext.save()
         showSuccessAlert = true

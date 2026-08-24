@@ -5,6 +5,7 @@ import SwiftData
 struct EventListView: View {
     var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
     @Query private var events: [Event]
     @State private var showingAddSheet = false
@@ -282,6 +283,7 @@ struct EventListView: View {
 
     private func deleteEvent(_ event: Event) {
         if selectedEventID == event.persistentModelID { selectedEventID = nil }
+        ActivityLogger.record(action: .deleted, entityType: "Event", entityName: event.name, context: modelContext, session: userSession)
         withAnimation { modelContext.delete(event) }
     }
 }

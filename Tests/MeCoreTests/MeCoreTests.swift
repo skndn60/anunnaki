@@ -31,7 +31,8 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self,
+            User.self, ActivityLogEntry.self
         ])
         if isDisk {
             let url = FileManager.default.temporaryDirectory
@@ -6387,5 +6388,268 @@ func testRegnalKeyOrdersEventsByDate() {
 
         let after = (try? context.fetch(FetchDescriptor<PlacePlaceRoleType>())) ?? []
         XCTAssertEqual(after.first { $0.name == "Located Within" }?.reverseName, "Encloses", "user-set reverse name must win")
+    }
+
+    // MARK: - AuthService
+
+    func testRegisterCreatesUserWithHashedPassword() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let user = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+
+        XCTAssertEqual(user.name, "Rogier")
+        XCTAssertFalse(user.passwordHash.isEmpty)
+        XCTAssertFalse(user.passwordSalt.isEmpty)
+        XCTAssertNotEqual(user.passwordHash, "test1234", "password must never be stored in plaintext")
+
+        let all = try context.fetch(FetchDescriptor<User>())
+        XCTAssertEqual(all.count, 1)
+    }
+
+    func testRegisterRejectsDuplicateNameCaseInsensitive() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        _ = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+        XCTAssertThrowsError(try AuthService.register(name: "rogier", password: "other1234", context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .nameTaken)
+        }
+    }
+
+    func testRegisterRejectsShortNameAndPassword() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        XCTAssertThrowsError(try AuthService.register(name: "R", password: "test1234", context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .nameTooShort)
+        }
+        XCTAssertThrowsError(try AuthService.register(name: "Rogier", password: "abc", context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .passwordTooShort)
+        }
+    }
+
+    func testLoginSucceedsWithCorrectPassword() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        _ = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+
+        let user = try AuthService.login(name: "  rogier  ", password: "test1234", context: context)
+        XCTAssertEqual(user.name, "Rogier")
+        XCTAssertNotNil(user.lastLoginAt)
+    }
+
+    func testLoginFailsWithWrongPassword() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        _ = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+
+        XCTAssertThrowsError(try AuthService.login(name: "Rogier", password: "wrongpass", context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .invalidCredentials)
+        }
+    }
+
+    func testLoginFailsForUnknownUser() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        XCTAssertThrowsError(try AuthService.login(name: "Nobody", password: "test1234", context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .invalidCredentials)
+        }
+    }
+
+    func testDeactivatedUserCannotLogIn() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let backup = try AuthService.createUser(name: "Backup", password: "test1234", isAdmin: true, actor: nil, context: context)
+        let user = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+        try AuthService.deactivate(user, actor: backup, context: context)
+        XCTAssertFalse(user.isAccountActive)
+
+        XCTAssertThrowsError(try AuthService.login(name: "Rogier", password: "test1234", context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .accountDeactivated)
+        }
+
+        try AuthService.reactivate(user, actor: backup, context: context)
+        XCTAssertTrue(user.isAccountActive)
+        XCTAssertNotNil(try AuthService.login(name: "Rogier", password: "test1234", context: context))
+    }
+
+    func testCannotDeactivateLastActiveAccount() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let chief = try AuthService.createUser(name: "Chief", password: "test1234", isAdmin: true, actor: nil, context: context)
+        let deputy = try AuthService.createUser(name: "Deputy", password: "test1234", isAdmin: true, actor: chief, context: context)
+        let worker = try AuthService.createUser(name: "Worker", password: "test1234", isAdmin: false, actor: chief, context: context)
+
+        try AuthService.deactivate(worker, actor: chief, context: context)
+        try AuthService.deactivate(deputy, actor: chief, context: context)
+        XCTAssertTrue(chief.isAccountActive)
+
+        XCTAssertThrowsError(try AuthService.deactivate(chief, actor: deputy, context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .lastActiveAdmin)
+        }
+        XCTAssertTrue(chief.isAccountActive)
+
+        try AuthService.reactivate(deputy, actor: chief, context: context)
+        try AuthService.deactivate(chief, actor: deputy, context: context)
+        XCTAssertFalse(chief.isAccountActive)
+    }
+
+    func testCannotDeactivateSelf() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let chief = try AuthService.createUser(name: "Chief", password: "test1234", isAdmin: true, actor: nil, context: context)
+
+        XCTAssertThrowsError(try AuthService.deactivate(chief, actor: chief, context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .cannotDeactivateSelf)
+        }
+    }
+
+    func testOnlyAdminsCanManageAccountsAndCreateUsers() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let admin = try AuthService.createUser(name: "Chief", password: "test1234", isAdmin: true, actor: nil, context: context)
+        let plain = try AuthService.createUser(name: "Worker", password: "test1234", isAdmin: false, actor: admin, context: context)
+        XCTAssertTrue(admin.isAdministrator)
+        XCTAssertFalse(plain.isAdministrator)
+
+        XCTAssertThrowsError(try AuthService.deactivate(admin, actor: plain, context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .notAuthorized)
+        }
+        try AuthService.deactivate(plain, actor: admin, context: context)
+        XCTAssertFalse(plain.isAccountActive)
+
+        XCTAssertThrowsError(try AuthService.createUser(name: "Third", password: "test1234", isAdmin: false, actor: plain, context: context)) { error in
+            XCTAssertEqual(error as? AuthServiceError, .notAuthorized)
+        }
+    }
+
+    func testFirstUserIsPromotedToAdminByMigration() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let first = try AuthService.register(name: "Alice", password: "test1234", context: context)
+        let second = try AuthService.register(name: "Bob", password: "test1234", context: context)
+        XCTAssertFalse(first.isAdministrator)
+
+        Migration.ensureFirstUserIsAdmin(context: context)
+        XCTAssertTrue(first.isAdmin ?? false)
+        XCTAssertFalse(second.isAdministrator)
+    }
+
+    func testFirstUserIsAdminMigrationKeepsAtLeastOneAdmin() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let first = try AuthService.register(name: "Alice", password: "test1234", context: context)
+        let second = try AuthService.register(name: "Bob", password: "test1234", context: context)
+        XCTAssertFalse(first.isAdministrator)
+
+        Migration.ensureFirstUserIsAdmin(context: context)
+        XCTAssertTrue(first.isAdmin ?? false)
+        XCTAssertFalse(second.isAdministrator)
+
+        first.isAdmin = false
+        try? context.save()
+
+        Migration.ensureFirstUserIsAdmin(context: context)
+        XCTAssertTrue(first.isAdmin ?? false, "store must never be left without an administrator")
+        XCTAssertFalse(second.isAdministrator, "earliest-created user is promoted, not others")
+    }
+
+    func testHasAnyUser() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        XCTAssertFalse(AuthService.hasAnyUser(context: context))
+        _ = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+        XCTAssertTrue(AuthService.hasAnyUser(context: context))
+    }
+
+    // MARK: - ActivityLogger
+
+    func testActivityLoggerRecordsEntryWithUserAttribution() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let user = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+        let session = UserSession(currentUser: user)
+
+        ActivityLogger.record(action: .created, entityType: "Figure", entityName: "Enki", details: "via form", context: context, session: session)
+
+        let entries = try context.fetch(FetchDescriptor<ActivityLogEntry>())
+        XCTAssertEqual(entries.count, 1)
+        XCTAssertEqual(entries.first?.user?.persistentModelID, user.persistentModelID, "entry must reference the user by key")
+        XCTAssertEqual(entries.first?.displayUserName, "Rogier")
+        XCTAssertEqual(entries.first?.actionType, .created)
+        XCTAssertEqual(entries.first?.entityType, "Figure")
+        XCTAssertEqual(entries.first?.linkedEntityName, "Enki")
+        XCTAssertEqual(entries.first?.details, "via form")
+        XCTAssertEqual((user.activityLogEntries ?? []).count, 1, "inverse side must be linked")
+    }
+
+    func testActivityLoggerFallsBackToUnknownWithoutSession() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        ActivityLogger.record(action: .updated, entityType: "Place", entityName: "Uruk", context: context, session: nil)
+
+        let entries = try? context.fetch(FetchDescriptor<ActivityLogEntry>())
+        XCTAssertEqual(entries?.count, 1)
+        XCTAssertEqual(entries?.first?.userName, ActivityLogger.unknownUserName)
+        XCTAssertEqual(entries?.first?.actionType, .updated)
+    }
+
+    func testActivityLoggerRecordsAllActionTypes() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let session = UserSession()
+
+        ActivityLogger.record(action: .created, entityType: "Event", entityName: "The Flood", context: context, session: session)
+        ActivityLogger.record(action: .updated, entityType: "Event", entityName: "The Flood", context: context, session: session)
+        ActivityLogger.record(action: .deleted, entityType: "Event", entityName: "The Flood", context: context, session: session)
+
+        let entries = (try? context.fetch(FetchDescriptor<ActivityLogEntry>())) ?? []
+        XCTAssertEqual(entries.map(\.actionType), [.created, .updated, .deleted])
+    }
+
+    func testActivityLogEntriesSurviveUserDeletion() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let user = try AuthService.register(name: "Temp", password: "test1234", context: context)
+        let session = UserSession(currentUser: user)
+
+        ActivityLogger.record(action: .created, entityType: "Figure", entityName: "Inanna", context: context, session: session)
+
+        context.delete(user)
+        try? context.save()
+
+        let entries = (try? context.fetch(FetchDescriptor<ActivityLogEntry>())) ?? []
+        XCTAssertEqual(entries.count, 1, "audit entries must survive user deletion")
+        XCTAssertEqual(entries.first?.user, nil, "link is nullified when user is hard-deleted")
+        XCTAssertEqual(entries.first?.displayUserName, "Temp", "name snapshot keeps attribution readable")
+    }
+
+    func testActivityLogUserLinkBackfillMigration() throws {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let user = try AuthService.register(name: "Rogier", password: "test1234", context: context)
+
+        let legacyEntry = ActivityLogEntry(userName: "rogier", action: .updated, entityType: "Place", entityName: "Uruk")
+        context.insert(legacyEntry)
+        let orphanEntry = ActivityLogEntry(userName: "Ghost", action: .deleted, entityType: "Event", entityName: "The Flood")
+        context.insert(orphanEntry)
+        try? context.save()
+
+        Migration.ensureActivityLogUserLinks(context: context)
+
+        XCTAssertEqual(legacyEntry.user?.persistentModelID, user.persistentModelID, "legacy entry must be linked by snapshot name")
+        XCTAssertNil(orphanEntry.user, "entries without a matching user stay unlinked")
+        XCTAssertEqual(orphanEntry.displayUserName, "Ghost")
     }
 }

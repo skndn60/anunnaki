@@ -39,6 +39,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case appSettings = "App Settings"
     case dataIntegrity = "Data Integrity"
     case popupTables = "Comparison Tables"
+    case activityLog = "Activity Log"
 
     var icon: String {
         switch self {
@@ -70,6 +71,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .appSettings: return "gearshape"
         case .dataIntegrity: return "checkmark.shield"
         case .popupTables: return "tablecells"
+        case .activityLog: return "list.bullet.clipboard"
         }
     }
 
@@ -80,7 +82,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
         case .figures, .places, .events, .relationships, .associations, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary, .popupTables: return .data
         case .sklMap, .theMes: return .history
-        case .typeSettings, .appSettings, .dataIntegrity: return .housekeeping
+        case .typeSettings, .appSettings, .dataIntegrity, .activityLog: return .housekeeping
         }
     }
 
@@ -115,6 +117,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .appSettings: AppSettingsView()
         case .dataIntegrity: DataIntegrityView()
         case .popupTables: PopupTableListView()
+        case .activityLog: ActivityLogView()
         }
     }
 }
@@ -122,6 +125,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
 struct ContentView: View {
     @State private var coordinator = NavigationCoordinator()
     @State private var isSeeding = true
+    @State private var userSession = UserSession()
     @State private var globalSearchText = ""
     @State private var showRecoveryAlert = MeApp.recoveryError != nil
     @State private var showBackupSheet = false
@@ -236,6 +240,8 @@ struct ContentView: View {
                     Migration.ensureDynastyGroups(context: modelContext)
 
                     Migration.ensureDynastyBoundaries(context: modelContext)
+                    Migration.ensureActivityLogUserLinks(context: modelContext)
+                    Migration.ensureFirstUserIsAdmin(context: modelContext)
                     Migration.removeOrphanedGroupAssociations(context: modelContext)
                     Migration.ensureJunkSourceStringsCleaned(context: modelContext)
                     Migration.ensureRelationshipSources(context: modelContext)
@@ -247,6 +253,8 @@ struct ContentView: View {
                 }
                 isSeeding = false
             }
+        } else if userSession.currentUser == nil {
+            LoginView(session: userSession)
         } else {
             NavigationSplitView {
                 List(selection: $coordinator.selection) {
@@ -445,6 +453,7 @@ struct ContentView: View {
                 showBackupSheet = true
             }
             .environment(\.navigationCoordinator, coordinator)
+            .environment(\.userSession, userSession)
         }
     }
 }

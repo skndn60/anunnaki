@@ -3,6 +3,7 @@ import SwiftData
 
 struct FigureFormView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.dismiss) var dismiss
 
     let figure: Figure?
@@ -337,6 +338,7 @@ struct FigureFormView: View {
             figure.pantheons = selectedPantheons
             pruneOrphanedPantheonAssociations(figure)
             RecentEditStore.trackEdit(entityType: "Figure", entityName: figure.name)
+            ActivityLogger.record(action: .updated, entityType: "Figure", entityName: figure.name, context: modelContext, session: userSession)
         } else {
             let newFigure = Figure(
                 name: name, disambiguation: disambiguation.isEmpty ? nil : disambiguation, title: title, figureType: selectedFigureType,
@@ -354,6 +356,7 @@ struct FigureFormView: View {
             newFigure.era = Migration.era(named: birthDate.era, context: modelContext)
             modelContext.insert(newFigure)
             RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
+            ActivityLogger.record(action: .created, entityType: "Figure", entityName: newFigure.name, context: modelContext, session: userSession)
         }
         try? modelContext.save()
         showSuccessAlert = true

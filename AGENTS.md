@@ -96,6 +96,8 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 
 - **Comments**: None in source files (agent should not add comments).
 - **Naming**: Swift conventions (camelCase properties, PascalCase types). Models use `figureDescription`, `eventDescription`, `placeDescription` (not `desc`).
+- **Never name a `@Model` property `entityName`** — SwiftData aborts (`swift_dynamicCastFailure`, SIGABRT) reading such properties even in trivial tests. Use `linkedEntityName` (stored) or `safeEntityName` (computed) as in `Citation`/`ActivityLogEntry`.
+- **`#Unique` requires macOS 15** — the app targets macOS 14; enforce uniqueness in service code instead (see `AuthService`).
 - **SwiftUI**: Use `@Query` for fetches, `@Environment(\.modelContext)` for mutations. Prefer `NavigationSplitView` with sidebar.
 - **Optional strings**: Default to `""` not `nil` for string fields. Optional `PersistentIdentifier` for selection state.
 - **Breadcrumbs**: Tuple type `[(id: PersistentIdentifier, name: String)]` consistent across list views.

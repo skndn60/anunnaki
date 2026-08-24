@@ -3,6 +3,7 @@ import SwiftData
 
 struct ThingFormView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.dismiss) var dismiss
 
     let thing: Thing?
@@ -168,6 +169,7 @@ struct ThingFormView: View {
             thing.thingType = selectedThingType
             thing.tags = selectedTags
             RecentEditStore.trackEdit(entityType: "Thing", entityName: thing.name)
+            ActivityLogger.record(action: .updated, entityType: "Thing", entityName: thing.name, context: modelContext, session: userSession)
         } else {
             let newThing = Thing(name: name, thingDescription: thingDescription, source: source)
             newThing.richDescription = richDescription
@@ -175,6 +177,7 @@ struct ThingFormView: View {
             newThing.tags = selectedTags
             modelContext.insert(newThing)
             RecentEditStore.trackEdit(entityType: "Thing", entityName: newThing.name)
+            ActivityLogger.record(action: .created, entityType: "Thing", entityName: newThing.name, context: modelContext, session: userSession)
         }
         try? modelContext.save()
         showSuccessAlert = true

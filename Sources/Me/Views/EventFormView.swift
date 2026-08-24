@@ -3,6 +3,7 @@ import SwiftData
 
 struct EventFormView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.dismiss) var dismiss
 
     let event: Event?
@@ -400,6 +401,7 @@ struct EventFormView: View {
             }
             event.tags = selectedTags
             RecentEditStore.trackEdit(entityType: "Event", entityName: event.name)
+            ActivityLogger.record(action: .updated, entityType: "Event", entityName: event.name, context: modelContext, session: userSession)
         } else {
             let newEvent = Event(
                 name: name, eventType: eventType,
@@ -412,6 +414,7 @@ struct EventFormView: View {
             newEvent.richDescription = richDescription
             modelContext.insert(newEvent)
             RecentEditStore.trackEdit(entityType: "Event", entityName: newEvent.name)
+            ActivityLogger.record(action: .created, entityType: "Event", entityName: newEvent.name, context: modelContext, session: userSession)
             for sel in placeSelections {
                 let assoc = EventPlaceAssociation(event: newEvent, place: sel.place, roleType: sel.roleType)
                 modelContext.insert(assoc)

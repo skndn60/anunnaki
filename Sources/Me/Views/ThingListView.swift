@@ -4,6 +4,7 @@ import SwiftData
 struct ThingListView: View {
     var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
     @Query(sort: \Thing.name) private var things: [Thing]
     @State private var showingAddSheet = false
@@ -306,6 +307,7 @@ struct ThingListView: View {
 
     private func deleteThing(_ thing: Thing) {
         if selectedThingID == thing.persistentModelID { selectedThingID = nil }
+        ActivityLogger.record(action: .deleted, entityType: "Thing", entityName: thing.name, context: modelContext, session: userSession)
         withAnimation { modelContext.delete(thing) }
     }
 }

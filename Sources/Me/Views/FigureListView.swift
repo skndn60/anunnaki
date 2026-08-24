@@ -26,6 +26,7 @@ private struct FigureRowDisplay: Identifiable {
 struct FigureListView: View {
     var coordinator: NavigationCoordinator?
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
     @Query private var figures: [Figure]
     @Query private var figureTypes: [FigureType]
@@ -421,6 +422,7 @@ struct FigureListView: View {
             selectedFigureID = nil
         }
         Task { @MainActor in
+            ActivityLogger.record(action: .deleted, entityType: "Figure", entityName: figure.name, context: modelContext, session: userSession)
             modelContext.delete(figure)
         }
     }
