@@ -11,6 +11,7 @@ struct AssociationsView: View {
     @Query private var relationships: [Relationship]
 
     @State private var selectedTab = 0
+    @State private var filterText = ""
     @State private var showingAddFigurePlace = false
     @State private var showingAddPlacePlace = false
     @State private var showingAddEventEvent = false
@@ -48,6 +49,16 @@ struct AssociationsView: View {
                     Text("Event ↔ Event (\(eventEventAssocs.count))").tag(4)
                 }
                 .pickerStyle(.segmented)
+
+                HStack(spacing: 4) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .allowsHitTesting(false)
+                    TextField("Filter by name, role, source\u{2026}", text: $filterText)
+                        .textFieldStyle(.roundedBorder)
+                        .frame(width: 200)
+                }
 
                 Button(action: { addForCurrentTab() }) {
                     Label("Add", systemImage: "plus")
@@ -120,16 +131,54 @@ struct AssociationsView: View {
         }
     }
 
+    private func matchesFilter(_ terms: String...) -> Bool {
+        guard !filterText.isEmpty else { return true }
+        let query = filterText.lowercased()
+        return terms.contains { $0.lowercased().contains(query) }
+    }
+
+    private var filteredRelationships: [Relationship] {
+        relationships.filter { rel in
+            matchesFilter(rel.fromFigure?.name ?? "", rel.toFigure?.name ?? "", rel.relationshipType?.name ?? "", rel.source)
+        }
+    }
+
+    private var filteredFigurePlaceAssocs: [FigurePlaceAssociation] {
+        figurePlaceAssocs.filter { assoc in
+            matchesFilter(assoc.figure?.name ?? "", assoc.displayName ?? "", assoc.place?.name ?? "", assoc.roleType?.name ?? "", assoc.source)
+        }
+    }
+
+    private var filteredPlacePlaceAssocs: [PlacePlaceAssociation] {
+        placePlaceAssocs.filter { assoc in
+            matchesFilter(assoc.fromPlace?.name ?? "", assoc.toPlace?.name ?? "", assoc.roleType?.name ?? "", assoc.source)
+        }
+    }
+
+    private var filteredEventPlaceAssocs: [EventPlaceAssociation] {
+        eventPlaceAssocs.filter { assoc in
+            matchesFilter(assoc.event?.name ?? "", assoc.place?.name ?? "", assoc.roleType?.name ?? "", assoc.source)
+        }
+    }
+
+    private var filteredEventEventAssocs: [EventEventAssociation] {
+        eventEventAssocs.filter { assoc in
+            matchesFilter(assoc.fromEvent?.name ?? "", assoc.toEvent?.name ?? "", assoc.roleType?.name ?? "", assoc.source)
+        }
+    }
+
     // MARK: - Figure ↔ Figure
 
     private var figureRelationshipsList: some View {
         Group {
             if relationships.isEmpty {
                 emptyState("No figure relationships", "Add family connections between figures.")
+            } else if filteredRelationships.isEmpty {
+                noMatches
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(relationships.enumerated()), id: \.element.id) { index, rel in
+                        ForEach(Array(filteredRelationships.enumerated()), id: \.element.id) { index, rel in
                             HStack(spacing: 10) {
                                 Text(rel.fromFigure?.name ?? "?").fontWeight(.medium)
                                 Image(systemName: rel.relationshipType?.icon ?? "questionmark").font(.caption).foregroundStyle(rel.relationshipType?.color ?? .gray)
@@ -162,10 +211,12 @@ struct AssociationsView: View {
         Group {
             if figurePlaceAssocs.isEmpty {
                 emptyState("No figure-place associations", "Add patron deity, ruler, or other connections.")
+            } else if filteredFigurePlaceAssocs.isEmpty {
+                noMatches
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(figurePlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
+                        ForEach(Array(filteredFigurePlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
                             HStack(spacing: 10) {
                                 Circle().fill(assoc.figure?.figureType?.color ?? .gray).frame(width: 8, height: 8)
                                 Text(assoc.displayName.map { "\(assoc.figure?.name ?? "?") as \($0)" } ?? (assoc.figure?.name ?? "?")).fontWeight(.medium)
@@ -196,10 +247,12 @@ struct AssociationsView: View {
         Group {
             if placePlaceAssocs.isEmpty {
                 emptyState("No place-place associations", "Add containment or proximity relationships.")
+            } else if filteredPlacePlaceAssocs.isEmpty {
+                noMatches
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(placePlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
+                        ForEach(Array(filteredPlacePlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
                             HStack(spacing: 10) {
                                 Image(systemName: assoc.fromPlace?.placeType?.icon ?? "mappin").font(.caption).foregroundStyle(.teal)
                                 Text(assoc.fromPlace?.name ?? "?").fontWeight(.medium)
@@ -230,10 +283,12 @@ struct AssociationsView: View {
         Group {
             if eventPlaceAssocs.isEmpty {
                 emptyState("No event-place associations", "Add location associations to events.")
+            } else if filteredEventPlaceAssocs.isEmpty {
+                noMatches
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(eventPlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
+                        ForEach(Array(filteredEventPlaceAssocs.enumerated()), id: \.element.id) { index, assoc in
                             HStack(spacing: 10) {
                                 Image(systemName: assoc.event?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.event?.eventType?.color ?? .gray)
                                 Text(assoc.event?.name ?? "?").fontWeight(.medium)
@@ -264,10 +319,12 @@ struct AssociationsView: View {
         Group {
             if eventEventAssocs.isEmpty {
                 emptyState("No event-event associations", "Add causal or sequential links between events.")
+            } else if filteredEventEventAssocs.isEmpty {
+                noMatches
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
-                        ForEach(Array(eventEventAssocs.enumerated()), id: \.element.id) { index, assoc in
+                        ForEach(Array(filteredEventEventAssocs.enumerated()), id: \.element.id) { index, assoc in
                             HStack(spacing: 10) {
                                 Image(systemName: assoc.fromEvent?.eventType?.icon ?? "bolt").font(.caption).foregroundStyle(assoc.fromEvent?.eventType?.color ?? .gray)
                                 Text(assoc.fromEvent?.name ?? "?").fontWeight(.medium)
@@ -306,6 +363,19 @@ struct AssociationsView: View {
             Spacer()
             Text(title).font(.callout).foregroundStyle(.secondary)
             Text(subtitle).font(.caption).foregroundStyle(.tertiary)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var noMatches: some View {
+        VStack(spacing: 8) {
+            Spacer()
+            Image(systemName: "magnifyingglass")
+                .foregroundStyle(.tertiary)
+            Text("No associations match \"\(filterText)\"")
+                .font(.callout)
+                .foregroundStyle(.secondary)
             Spacer()
         }
         .frame(maxWidth: .infinity)

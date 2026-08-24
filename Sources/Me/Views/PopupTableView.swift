@@ -7,8 +7,7 @@ struct PopupTableView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var cellValues: [String: String] = [:]
     @State private var cellSources: [String: String] = [:]
-    @State private var isEditing = false
-    @State private var editingCell: PopupTableCell?
+    @State private var activeCell: ActiveCell?
 
     private var sortedAttributes: [PopupTableAttribute] {
         table.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
@@ -33,10 +32,10 @@ struct PopupTableView: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(table.name)
-                    .font(.title3)
+                    .font(.title2)
                 if !table.tableDescription.isEmpty {
                     Text(table.tableDescription)
-                        .font(.body)
+                        .font(.title3)
                         .foregroundStyle(.secondary)
                 }
                 if !table.tableDescription.isEmpty,
@@ -91,27 +90,18 @@ struct PopupTableView: View {
                                     let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
                                     CellView(
                                         value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
-                                        isEditing: isEditing,
-                                        hasOwnSource: !(cellSources[key] ?? "").isEmpty
+                                        hasOwnSource: !(cellSources[key] ?? "").isEmpty,
+                                        onOpen: {
+                                            activeCell = ActiveCell(
+                                                attributeID: attribute.persistentModelID,
+                                                columnID: column.id,
+                                                attributeName: attribute.name,
+                                                columnName: columnName(column),
+                                                source: cellSources[key] ?? ""
+                                            )
+                                        }
                                     )
                                     .frame(width: 180, height: 120)
-                                    .contextMenu {
-                                        Button("Edit Value & Source\u{2026}") {
-                                            openCellEditor(attributeID: attribute.persistentModelID, columnID: column.id)
-                                        }
-                                        if !(cellSources[key] ?? "").isEmpty,
-                                           let cell = table.cells.first(where: { cell in
-                                               cell.attribute?.persistentModelID == attribute.persistentModelID &&
-                                               (cell.figure?.persistentModelID ?? cell.column?.persistentModelID) == column.id
-                                           }) {
-                                            Divider()
-                                            Button("Clear Source", role: .destructive) {
-                                                cell.setSourceText(nil, context: modelContext)
-                                                try? modelContext.save()
-                                                loadCells()
-                                            }
-                                        }
-                                    }
                                 }
                             }
                         }
@@ -125,10 +115,6 @@ struct PopupTableView: View {
 
             HStack {
                 Spacer()
-                Button(action: { isEditing.toggle() }) {
-                    Label(isEditing ? "Done" : "Edit", systemImage: isEditing ? "checkmark" : "pencil")
-                }
-                .buttonStyle(.bordered)
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.cancelAction)
             }
@@ -136,10 +122,16 @@ struct PopupTableView: View {
         }
         .frame(minWidth: 700, minHeight: 400)
         .onAppear { loadCells() }
-        .sheet(item: $editingCell) { cell in
-            TableCellEditor(cell: cell, tableSource: table.source ?? "") {
-                loadCells()
-            }
+        .popover(item: $activeCell, arrowEdge: .bottom) { cell in
+            CellEditPopover(
+                cell: cell,
+                value: cellBinding(attributeID: cell.attributeID, columnID: cell.columnID),
+                tableSource: table.source ?? "",
+                onSaveSource: {
+                    saveSource(attributeID: cell.attributeID, columnID: cell.columnID, source: $0)
+                },
+                onClose: { activeCell = nil }
+            )
         }
     }
 
@@ -150,6 +142,13 @@ struct PopupTableView: View {
             FigureColumnHeader(figure: figure)
         case .column(let col):
             StringColumnHeader(name: col.name)
+        }
+    }
+
+    private func columnName(_ column: ColumnItem) -> String {
+        switch column {
+        case .figure(let figure): return figure.name
+        case .column(let col): return col.name
         }
     }
 
@@ -196,8 +195,11 @@ struct PopupTableView: View {
         return cell
     }
 
-    private func openCellEditor(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) {
-        editingCell = ensureCell(attributeID: attributeID, columnID: columnID)
+    private func saveSource(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, source: String?) {
+        guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
+        cell.setSourceText(source, context: modelContext)
+        try? modelContext.save()
+        loadCells()
     }
 
     private func cellBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<String> {
@@ -288,48 +290,22 @@ private struct AttributeRowHeader: View {
     }
 }
 
-private struct CellView: View {
-    @Binding var value: String
-    let isEditing: Bool
-    var hasOwnSource: Bool = false
+private struct ActiveCell: Identifiable {
+    let attributeID: PersistentIdentifier
+    let columnID: PersistentIdentifier
+    let attributeName: String
+    let columnName: String
+    let source: String
 
-    var body: some View {
-        Group {
-            if isEditing {
-                TextField("", text: $value)
-                    .textFieldStyle(.plain)
-                    .font(.body)
-                    .padding(.horizontal, 6)
-            } else {
-                HStack(alignment: .top, spacing: 1) {
-                    Text(value.isEmpty ? "—" : value)
-                        .font(.body)
-                        .foregroundStyle(value.isEmpty ? .tertiary : .primary)
-                        .lineLimit(4)
-                    if hasOwnSource && !value.isEmpty {
-                        Text("*")
-                            .font(.subheadline.bold())
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(nsColor: .windowBackgroundColor))
-        .help(hasOwnSource ? "Has its own source (right-click to edit)" : "")
-    }
+    var id: String { "\(attributeID.hashValue)-\(columnID.hashValue)" }
 }
 
-private struct TableCellEditor: View {
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    let cell: PopupTableCell
+private struct CellEditPopover: View {
+    let cell: ActiveCell
+    @Binding var value: String
     let tableSource: String
-    var onSaved: () -> Void
-    @State private var value: String = ""
+    var onSaveSource: (String?) -> Void
+    var onClose: () -> Void
     @State private var sourceSelection: String = ""
     @State private var loaded = false
     @Query private var allSources: [Source]
@@ -341,78 +317,74 @@ private struct TableCellEditor: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(cell.attribute?.name ?? "Cell")
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(cell.attributeName)
                     .font(.headline)
-                Text(inheritedHint)
-                    .font(.caption)
+                Text(cell.columnName)
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(20)
-
             Divider()
-
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("VALUE")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    TextField("Value", text: $value, axis: .vertical)
-                        .textFieldStyle(.roundedBorder)
-                        .lineLimit(3...6)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("SOURCE")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    Picker("Source", selection: $sourceSelection) {
-                        Text(tableSource.isEmpty ? "None" : "Inherit table (\(tableSource))").tag("")
-                        ForEach(availableSourceNames, id: \.self) { name in
-                            Text(name).tag(name)
-                        }
+            TextEditor(text: $value)
+                .font(.title3)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("SOURCE")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Picker("Source", selection: Binding(
+                    get: { sourceSelection },
+                    set: { sourceSelection = $0; onSaveSource($0.isEmpty ? nil : $0) }
+                )) {
+                    Text(tableSource.isEmpty ? "None" : "Inherit table (\(tableSource))").tag("")
+                    ForEach(availableSourceNames, id: \.self) { name in
+                        Text(name).tag(name)
                     }
-                    .labelsHidden()
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-
-            Divider()
-
             HStack {
                 Spacer()
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Button("Save") { save() }
+                Button("Done") { onClose() }
                     .buttonStyle(.borderedProminent)
-                    .keyboardShortcut(.defaultAction)
             }
-            .padding(20)
         }
-        .frame(width: 420, height: 300)
+        .padding(14)
+        .frame(width: 440, height: 380)
         .onAppear {
             guard !loaded else { return }
             loaded = true
-            value = cell.value ?? ""
-            sourceSelection = cell.source ?? ""
+            sourceSelection = cell.source
         }
     }
+}
 
-    private var inheritedHint: String {
-        if tableSource.isEmpty { return "No table-wide source set." }
-        return "Cells without their own source inherit the table's source: \(tableSource)"
-    }
+private struct CellView: View {
+    @Binding var value: String
+    var hasOwnSource: Bool = false
+    var onOpen: (() -> Void)? = nil
 
-    private func save() {
-        let trimmedValue = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        cell.value = trimmedValue.isEmpty ? nil : trimmedValue
-        cell.setSourceText(sourceSelection.isEmpty ? nil : sourceSelection, context: modelContext)
-        try? modelContext.save()
-        onSaved()
-        dismiss()
+    var body: some View {
+        HStack(alignment: .top, spacing: 1) {
+            Text(value.isEmpty ? "—" : value)
+                .font(.title3)
+                .foregroundStyle(value.isEmpty ? .tertiary : .primary)
+                .lineLimit(4)
+            if hasOwnSource && !value.isEmpty {
+                Text("*")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .background(Color(nsColor: .windowBackgroundColor))
+        .help(hasOwnSource ? "Has its own source (*). Click to open editor." : "")
+        .onTapGesture { onOpen?() }
     }
 }
+

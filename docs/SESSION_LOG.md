@@ -8,6 +8,24 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-08-25 — Associations filter, table typography, and the comparison-table popover editor
+
+**Context:** Three threads in one session: (1) user spotted two suspicious "Ur" associations and had no way to filter the five association tabs; (2) readability bump requested for comparison tables ("over the full board: title, description, cell content"); (3) thread 2 surfaced a long-standing editing bug — bullet-point cell values can't be entered because the inline editor commits on Return — which escalated into a full redesign of how table cells are edited.
+
+**Changes made:**
+- **AssociationsView filter** (`Sources/Me/Views/AssociationsView.swift`): shared search field beside the tab picker; `matchesFilter` (case-insensitive contains) runs over BOTH endpoint names, role name, display name, and source for each tab's rows via per-tab `filtered*` computed properties; dedicated "No associations match …" empty state distinct from the no-data state. Typing "Ur" isolates Ur-involving rows regardless of which side of the pair it sits on.
+- **PopupTableView font bumps**: title `.title3→.title2`, description `.body→.title3`, cell display text AND edit fields `.body→.title3`.
+- **Multiline editing saga (4 iterations, user-tested each):** single-line TextField commits on Return (no Shift+Return escape hatch on macOS) → `TextField(axis:.vertical)` STILL commits on Return under macOS Tahoe 26.5 → raw `TextEditor` in the cell worked for newlines but exposed truncation at the fixed 180×120 frame → dynamic content-driven row heights (newline-aware line estimate, 120–480pt cap) worked but user rejected it: live height reflow made scrolling jittery. **Final design: keep fixed cells, move detail+editing into popovers.**
+- **Popover editor consolidation:** clicking ANY cell (empty ones too) opens `CellEditPopover` (440×380): attribute+column header, full-height title3 `TextEditor` bound to the existing live-saving `cellBinding` (per-keystroke `saveCell`), SOURCE picker (inherit-table option, saves immediately via new `saveSource` helper reusing `ensureCell`), Done button; Esc/outside click dismisses. Removed entirely: the global Edit/Done toggle + grid-wide inline editors, the right-click Edit/Clear-Source context menu (source management absorbed by the picker — "None"/inherit clears), and the old `TableCellEditor` sheet (~90 lines).
+
+**Key decisions:** Overview-in-grid / detail-on-demand beats adaptive cells — stable layout outweighs showing everything at once; every click opens an EDITABLE popover (no read-only mode — flagged to user, lock toggle available if accidental edits become a problem); macOS lesson recorded: on macOS 26, `TextField(axis:.vertical)` still submits on Return — `TextEditor` is the only reliable multiline control.
+
+**Verify:** `swift build` clean after each iteration; full suite **357/357 tests pass** (UI-only changes, no model/schema edits).
+
+**Files touched:** Sources/Me/Views/AssociationsView.swift; Sources/Me/Views/PopupTableView.swift; docs/SESSION_LOG.md.
+
+---
+
 ### 2026-08-24 — Users, login, and activity log (steps 1–5 of 5)
 
 **Context:** User identified the two main missing features: user registration/login and an activity/change log. Requirements clarified: simple name+password registration stored in the existing SwiftData DB (no backend — "planning ahead" for multi-user despite being a single-user app); the log tracks per-user activities and therefore requires the user concept. User also asked that add/update/delete user facilities exist "at some stage" (deferred — candidate home: App Settings).
