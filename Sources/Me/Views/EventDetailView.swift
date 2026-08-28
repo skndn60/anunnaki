@@ -410,7 +410,7 @@ struct EventDetailView: View {
                     title: "Images",
                     images: event.images,
                     onLinkImage: { asset in
-                        asset.events.append(event)
+                        event.images.append(asset)
                     },
                     onSelectImage: onSelectImage
                 )

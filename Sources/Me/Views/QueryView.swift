@@ -453,7 +453,7 @@ struct FigureDossierView: View {
                     title: "Images (\(dossier.figure.images.count))",
                     images: dossier.figure.images,
                     onLinkImage: { asset in
-                        asset.figures.append(dossier.figure)
+                        dossier.figure.images.append(asset)
                     }
                 )
                 .padding(.top, 4)
@@ -543,7 +543,7 @@ struct PlaceDossierView: View {
                     title: "Images (\(dossier.place.images.count))",
                     images: dossier.place.images,
                     onLinkImage: { asset in
-                        asset.places.append(dossier.place)
+                        dossier.place.images.append(asset)
                     }
                 )
                 .padding(.top, 4)
@@ -630,7 +630,7 @@ struct EventDossierView: View {
                     title: "Images (\(dossier.event.images.count))",
                     images: dossier.event.images,
                     onLinkImage: { asset in
-                        asset.events.append(dossier.event)
+                        dossier.event.images.append(asset)
                     }
                 )
                 .padding(.top, 4)

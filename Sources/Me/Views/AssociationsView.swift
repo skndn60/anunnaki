@@ -390,12 +390,13 @@ struct AddFigurePlaceAssociationForm: View {
     @Query private var figures: [Figure]
     @Query private var places: [Place]
     @Query(sort: \FigurePlaceRoleType.name) private var roleTypes: [FigurePlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var confidence: FigurePlaceAssociation.Confidence?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var comments = ""
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
@@ -555,7 +556,7 @@ struct AddFigurePlaceAssociationForm: View {
                 }
 
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
 
                 Section("Comments") {
@@ -574,7 +575,7 @@ struct AddFigurePlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = FigurePlaceAssociation(figure: selectedFigure?.figure, place: selectedPlace, roleType: selectedRoleType, source: source, comments: comments.isEmpty ? nil : comments, displayName: selectedFigure?.matchedAlternateName, confidence: confidence)
+        let assoc = FigurePlaceAssociation(figure: selectedFigure?.figure, place: selectedPlace, roleType: selectedRoleType, source: selectedSource?.name ?? "", comments: comments.isEmpty ? nil : comments, displayName: selectedFigure?.matchedAlternateName, confidence: confidence)
         modelContext.insert(assoc)
         dismiss()
     }
@@ -730,11 +731,12 @@ struct AddEventEventAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var events: [Event]
     @Query(sort: \EventEventRoleType.name) private var roleTypes: [EventEventRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var fromEvent: Event?
     @State private var toEvent: Event?
     @State private var selectedRoleType: EventEventRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
 
@@ -767,7 +769,7 @@ struct AddEventEventAssociationForm: View {
                     filter: { $0.name.localizedCaseInsensitiveContains($1) }
                 )
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -782,7 +784,7 @@ struct AddEventEventAssociationForm: View {
     }
 
     private func save() {
-        let assoc = EventEventAssociation(fromEvent: fromEvent, toEvent: toEvent, roleType: selectedRoleType, source: source)
+        let assoc = EventEventAssociation(fromEvent: fromEvent, toEvent: toEvent, roleType: selectedRoleType, source: selectedSource?.name ?? "")
         modelContext.insert(assoc)
         dismiss()
     }
@@ -796,13 +798,14 @@ struct EditFigurePlaceAssociationForm: View {
     @Query private var figures: [Figure]
     @Query private var places: [Place]
     @Query(sort: \FigurePlaceRoleType.name) private var roleTypes: [FigurePlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
     let assoc: FigurePlaceAssociation
 
     @State private var selectedFigure: FigureSearchResult?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: FigurePlaceRoleType?
     @State private var confidence: FigurePlaceAssociation.Confidence?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var comments = ""
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
@@ -960,7 +963,7 @@ struct EditFigurePlaceAssociationForm: View {
                     }
                 }
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
 
                 Section("Comments") {
@@ -984,7 +987,7 @@ struct EditFigurePlaceAssociationForm: View {
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
             confidence = assoc.confidence
-            source = assoc.source
+            selectedSource = sources.first(where: { $0.name == assoc.source })
             comments = assoc.comments ?? ""
         }
     }
@@ -995,7 +998,7 @@ struct EditFigurePlaceAssociationForm: View {
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
         assoc.confidence = confidence
-        assoc.source = source
+        assoc.source = selectedSource?.name ?? ""
         assoc.comments = comments.isEmpty ? nil : comments
         dismiss()
     }
@@ -1077,12 +1080,13 @@ struct EditEventEventAssociationForm: View {
     @Environment(\.dismiss) var dismiss
     @Query private var events: [Event]
     @Query(sort: \EventEventRoleType.name) private var roleTypes: [EventEventRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
     let assoc: EventEventAssociation
 
     @State private var fromEvent: Event?
     @State private var toEvent: Event?
     @State private var selectedRoleType: EventEventRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var fromSearchText = ""
     @State private var toSearchText = ""
 
@@ -1115,7 +1119,7 @@ struct EditEventEventAssociationForm: View {
                     filter: { $0.name.localizedCaseInsensitiveContains($1) }
                 )
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -1131,7 +1135,7 @@ struct EditEventEventAssociationForm: View {
             fromEvent = assoc.fromEvent
             toEvent = assoc.toEvent
             selectedRoleType = assoc.roleType
-            source = assoc.source
+            selectedSource = sources.first(where: { $0.name == assoc.source })
         }
     }
 
@@ -1139,7 +1143,7 @@ struct EditEventEventAssociationForm: View {
         assoc.fromEvent = fromEvent
         assoc.toEvent = toEvent
         assoc.roleType = selectedRoleType
-        assoc.source = source
+        assoc.source = selectedSource?.name ?? ""
         dismiss()
     }
 }
@@ -1261,11 +1265,12 @@ struct AddEventPlaceAssociationForm: View {
     @Query private var events: [Event]
     @Query private var places: [Place]
     @Query(sort: \EventPlaceRoleType.name) private var roleTypes: [EventPlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var selectedEvent: Event?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: EventPlaceRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var eventSearchText = ""
     @State private var placeSearchText = ""
 
@@ -1298,7 +1303,7 @@ struct AddEventPlaceAssociationForm: View {
                     filter: { $0.name.localizedCaseInsensitiveContains($1) }
                 )
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -1313,7 +1318,7 @@ struct AddEventPlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = EventPlaceAssociation(event: selectedEvent, place: selectedPlace, roleType: selectedRoleType, source: source)
+        let assoc = EventPlaceAssociation(event: selectedEvent, place: selectedPlace, roleType: selectedRoleType, source: selectedSource?.name ?? "")
         modelContext.insert(assoc)
         dismiss()
     }
@@ -1324,12 +1329,13 @@ struct EditEventPlaceAssociationForm: View {
     @Query private var events: [Event]
     @Query private var places: [Place]
     @Query(sort: \EventPlaceRoleType.name) private var roleTypes: [EventPlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
     let assoc: EventPlaceAssociation
 
     @State private var selectedEvent: Event?
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: EventPlaceRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var eventSearchText = ""
     @State private var placeSearchText = ""
 
@@ -1362,7 +1368,7 @@ struct EditEventPlaceAssociationForm: View {
                     filter: { $0.name.localizedCaseInsensitiveContains($1) }
                 )
                 Section("Source") {
-                    TextField("Source", text: $source)
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -1378,7 +1384,7 @@ struct EditEventPlaceAssociationForm: View {
             selectedEvent = assoc.event
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
-            source = assoc.source
+            selectedSource = sources.first(where: { $0.name == assoc.source })
         }
     }
 
@@ -1386,7 +1392,7 @@ struct EditEventPlaceAssociationForm: View {
         assoc.event = selectedEvent
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
-        assoc.source = source
+        assoc.source = selectedSource?.name ?? ""
         dismiss()
     }
 }

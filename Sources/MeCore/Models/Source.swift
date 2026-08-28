@@ -29,6 +29,11 @@ package final class Source {
     @Relationship(deleteRule: .nullify, inverse: \PopupTableCell.sourceRef)
     package var popupTableCells: [PopupTableCell] = []
 
+    /// Comparison-table cell attributions (many-to-many) linking to this Source.
+    /// Set links via this annotated side per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \CellSource.sourceRef)
+    package var cellListSources: [CellSource] = []
+
     /// Comparison tables whose content is attributed to this source. Set links
     /// via this side (the annotated inverse) per the codebase convention.
     @Relationship(deleteRule: .nullify, inverse: \PopupTable.sourceRef)
@@ -64,5 +69,27 @@ package final class Source {
         self.sourceDescription = sourceDescription
         self.publicationInfo = publicationInfo
         self.url = url
+    }
+
+    /// Finds the `Source` row that best matches a free-text citation name.
+    /// Matches exactly (normalized: case/hyphen/space/punctuation-insensitive)
+    /// first, then by containment so "An=Anum" links to "Lexical God List
+    /// An = Anum (Tablet IV)". Among containment matches the shortest (most
+    /// specific) name wins, and the candidate must be at least 3 characters so
+    /// shared single words don't create spurious links.
+    package static func bestMatch(forCandidate candidate: String, among sources: [Source]) -> Source? {
+        let candidateKey = NameDuplicateCheck.normalizedKey(candidate)
+        guard !candidateKey.isEmpty else { return nil }
+
+        if let exact = sources.first(where: { NameDuplicateCheck.normalizedKey($0.name) == candidateKey }) {
+            return exact
+        }
+
+        let contained = sources.filter { source in
+            let sk = NameDuplicateCheck.normalizedKey(source.name)
+            guard sk != candidateKey, candidateKey.count >= 3 else { return false }
+            return sk.contains(candidateKey) || candidateKey.contains(sk)
+        }.sorted { $0.name.count < $1.name.count }
+        return contained.first
     }
 }

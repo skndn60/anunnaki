@@ -17,10 +17,10 @@ struct PlaceFormView: View {
     @State private var modernLocation = ""
     @State private var placeDescription = ""
     @State private var richDescription: Data? = nil
-    @State private var source = ""
-    @State private var showCustomSourceField = false
+    @State private var selectedSource: Source?
     @State private var latitudeStr = ""
     @State private var longitudeStr = ""
+    @State private var coordinatesUnknown = false
     @State private var selectedTags: [Tag] = []
     @State private var foundedDate: MythologicalDate = .unknown
 
@@ -108,22 +108,7 @@ struct PlaceFormView: View {
                         Text(type.name).tag(type as PlaceType?)
                     }
                 }
-                Picker("Source", selection: $source) {
-                    Text("None").tag("")
-                    ForEach(sources) { s in
-                        Text(s.name).tag(s.name)
-                    }
-                    Divider()
-                    Text("Custom\u{2026}").tag("__custom__")
-                }
-                .onChange(of: source) { _, newValue in
-                    showCustomSourceField = newValue == "__custom__"
-                    if showCustomSourceField { source = "" }
-                }
-                if showCustomSourceField {
-                    TextField("Source name", text: $source, prompt: Text("e.g. Sumerian King List"))
-                        .textFieldStyle(.roundedBorder)
-                }
+                SourcePickerView(selection: $selectedSource, sources: sources)
             }
         }
         .formStyle(.grouped)
@@ -144,6 +129,13 @@ struct PlaceFormView: View {
                     TextField("Longitude", text: $longitudeStr, prompt: Text("e.g. 45.637"))
                         .textFieldStyle(.roundedBorder)
                 }
+                Toggle("Exact site not identified", isOn: $coordinatesUnknown)
+                    .help("Mark this when the actual ancient site has not been found, so no real coordinates are available. This exempts the place from the 'no coordinates' check.")
+            }
+            if coordinatesUnknown {
+                Text("Leave latitude and longitude blank. The place is recorded as having no known location.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -178,9 +170,10 @@ struct PlaceFormView: View {
         modernLocation = place.modernLocation
         placeDescription = place.placeDescription
         richDescription = place.richDescription
-        source = place.source
+        selectedSource = sources.first(where: { $0.name == place.source })
         latitudeStr = place.latitude.map { String($0) } ?? ""
         longitudeStr = place.longitude.map { String($0) } ?? ""
+        coordinatesUnknown = place.coordinatesUnknown ?? false
         selectedTags = place.tags
         foundedDate = place.foundedDate ?? .unknown
     }
@@ -193,9 +186,10 @@ struct PlaceFormView: View {
             place.modernLocation = modernLocation
             place.placeDescription = placeDescription
             place.richDescription = richDescription
-            place.source = source
+            place.source = selectedSource?.name ?? ""
             place.latitude = Double(latitudeStr)
             place.longitude = Double(longitudeStr)
+            place.coordinatesUnknown = coordinatesUnknown
             place.isConcept = false
             place.tags = selectedTags
             place.foundedDate = foundedDate
@@ -205,7 +199,7 @@ struct PlaceFormView: View {
             let newPlace = Place(
                 name: name, placeType: placeType,
                 modernLocation: modernLocation,
-                placeDescription: placeDescription, source: source,
+                placeDescription: placeDescription, source: selectedSource?.name ?? "",
                 latitude: Double(latitudeStr),
                 longitude: Double(longitudeStr)
             )
@@ -213,6 +207,7 @@ struct PlaceFormView: View {
             newPlace.richDescription = richDescription
             newPlace.tags = selectedTags
             newPlace.foundedDate = foundedDate
+            newPlace.coordinatesUnknown = coordinatesUnknown
             modelContext.insert(newPlace)
             RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
             ActivityLogger.record(action: .created, entityType: "Place", entityName: newPlace.name, context: modelContext, session: userSession)

@@ -3,6 +3,16 @@ import SwiftData
 
 package struct Migration {
 
+    /// Order-independent pair of PersistentIdentifiers for set membership checks.
+    private struct StaticIdentifier: Hashable {
+        let a: PersistentIdentifier
+        let b: PersistentIdentifier
+        init(_ x: PersistentIdentifier, _ y: PersistentIdentifier) {
+            if x.hashValue <= y.hashValue { (a, b) = (x, y) }
+            else { (a, b) = (y, x) }
+        }
+    }
+
     package static let defaultRelationTypes: [(name: String, icon: String, colorHex: String, category: String)] = [
         ("Father", "arrow.down", "007AFF", "parent"),
         ("Mother", "arrow.down", "FF2D55", "parent"),
@@ -555,6 +565,45 @@ package struct Migration {
         filteredRoot.figurePlaceAssociations = root.figurePlaceAssociations?.filter { importedIds.contains($0.figureId) }
 
         SeedData.importFrom(root: filteredRoot, context: context)
+    }
+
+    /// Import deities from missing_deities_import.json.
+    /// Uses figureName (not figureId) for alternate names — resolves at import time.
+    /// Each imported figure gets a sticky note "FROM 26-08-2026 IMPORT".
+    /// Additive + idempotent.
+    package static func ensureMissingDeitiesImportExist(context: ModelContext) {
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
+
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "missing_deities_import", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "missing_deities_import", withExtension: "json")
+        }()
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+            return
+        }
+
+        let toImport = root.figures.filter { !existingNames.contains($0.name.lowercased()) }
+        guard !toImport.isEmpty else { return }
+
+        // Import figures via SeedData.importFrom (filters alt names by figureId)
+        let importedIds = Set(toImport.map(\.id))
+        var filteredRoot = root
+        filteredRoot.figures = toImport
+        filteredRoot.alternateNames = root.alternateNames.filter { importedIds.contains($0.figureId ?? "") }
+        SeedData.importFrom(root: filteredRoot, context: context)
+
+        // Add sticky notes to all newly imported figures
+        let stickyPrefix = "FROM 26-08-2026 IMPORT"
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let importedNames = Set(toImport.map { $0.name.lowercased() })
+        for figure in allFigures where importedNames.contains(figure.name.lowercased()) {
+            let alreadyHas = figure.stickies.contains { $0.text.hasPrefix(stickyPrefix) }
+            guard !alreadyHas else { continue }
+            context.insert(StickyNote(text: stickyPrefix, figure: figure))
+        }
+        try? context.save()
     }
 
     /// Update era orderIndex values to match current seed data ordering.
@@ -2307,6 +2356,47 @@ package struct Migration {
         return name.count >= 3 ? name : nil
     }
 
+    /// Back-links free-text `CellSource`s on comparison-table cells to matching
+    /// `Source` rows using lenient matching (e.g. "An=Anum" -> "Lexical God
+    /// List An = Anum (Tablet IV)"). Additive and idempotent; links are set via
+    /// the annotated side (`Source.cellListSources`).
+    package static func ensureCellSourceLinksExist(context: ModelContext) {
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let cellSources = (try? context.fetch(FetchDescriptor<CellSource>())) ?? []
+        var changed = false
+        for cellSource in cellSources where cellSource.sourceRef == nil {
+            guard let match = Source.bestMatch(forCandidate: cellSource.source, among: sources) else { continue }
+            if match.cellListSources.contains(where: { $0 === cellSource }) { continue }
+            match.cellListSources.append(cellSource)
+            cellSource.sourceRef = match
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    /// Backfills the standard Mesopotamian god list "An = Anum" as a Source row
+    /// so comparison-table cells can cite it as a verified work. Additive and
+    /// check-by-name: never duplicates an existing source. No URL (the text is
+    /// not freely available online), which keeps `sourceWithoutURL` from firing.
+    package static func ensureAnAnumGodListSourceExists(context: ModelContext) {
+        let name = "Lexical God List An = Anum (Tablet IV)"
+        let existing = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        guard !existing.contains(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else { return }
+
+        let source = Source(
+            name: name,
+            sourceType: .tablet,
+            author: "",
+            language: "Sumerian/Akkadian",
+            period: "Old Babylonian",
+            sourceDescription: "The An = Anum god list enumerates the chief Mesopotamian deities and their summus deus theology.",
+            publicationInfo: "Tablet IV",
+            url: ""
+        )
+        context.insert(source)
+        try? context.save()
+    }
+
     /// Cleans up debris produced by junk free-text source strings. A typo like
     /// `"d"` on a relationship's `source` field used to materialize a bare
     /// `Source` row via `ensureRelationshipSources`; deleting that row only
@@ -2730,5 +2820,166 @@ extension Migration {
         let first = users.min { ($0.createdAt, $0.name) < ($1.createdAt, $1.name) }
         first?.isAdmin = true
         try? context.save()
+    }
+
+    /// Marks figures that already had syncretised deity names in the database
+    /// before the 2026-08-26 missing-deities import. Each gets a sticky note
+    /// so the user can review the relationship. Additive + idempotent.
+    package static func markPreExistingSyncretisms(context: ModelContext) {
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figureByName: [String: Figure] = Dictionary(uniqueKeysWithValues: figures.map { ($0.name.lowercased(), $0) })
+
+        let syncretisms: [(existingName: String, altName: String)] = [
+            ("Ninhursag", "Ki"),
+            ("Nergal", "Erra"),
+            ("Marduk", "Asarluhi"),
+            ("Kug-Bau", "Bau"),
+            ("Damkina", ""),
+        ]
+
+        let stickyPrefix = "FROM 26-08-2026 IMPORT"
+        var changed = false
+        for (existingName, altName) in syncretisms {
+            guard let figure = figureByName[existingName.lowercased()] else { continue }
+            let alreadyHas = figure.stickies.contains { $0.text.hasPrefix(stickyPrefix) }
+            guard !alreadyHas else { continue }
+            let note = altName.isEmpty
+                ? stickyPrefix
+                : "\(stickyPrefix) — \(altName) was already an alternate name"
+            context.insert(StickyNote(text: note, figure: figure))
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    /// Ensures canonical spouse and family links for key deity couples.
+    /// Dynamically detects all couples that share a child (via Mother/Father
+    /// relationships) but have no Spouse relationship between them, and creates
+    /// the missing link. Also fixes Asarluhi's mother from Ninhursag to Damkina
+    /// where applicable. Additive + idempotent.
+    package static func ensureCanonicalDeityFamilies(context: ModelContext) {
+        func key(_ s: String) -> String { NameDuplicateCheck.normalizedKey(s) }
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let figureByName: [String: Figure] = Dictionary(
+            allFigures.map { (key($0.name), $0) }, uniquingKeysWith: { first, _ in first })
+
+        let types = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
+        let motherType = types.first { $0.name == "Mother" }
+        let fatherType = types.first { $0.name == "Father" }
+        let spouseType = types.first { $0.name == "Spouse" }
+        guard let motherType, let fatherType else { return }
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        var changed = false
+
+        // Build spouse pair set (bidirectional)
+        var spousePairs: Set<StaticIdentifier> = []
+        if let spouseType {
+            for edge in edges where edge.relationshipType === spouseType {
+                if let from = edge.fromFigure, let to = edge.toFigure {
+                    spousePairs.insert(StaticIdentifier(from.persistentModelID, to.persistentModelID))
+                }
+            }
+        }
+
+        // Build parent maps: child → {mothers, fathers}
+        var childMothers: [PersistentIdentifier: Set<PersistentIdentifier>] = [:]
+        var childFathers: [PersistentIdentifier: Set<PersistentIdentifier>] = [:]
+        for edge in edges {
+            guard let from = edge.fromFigure, let to = edge.toFigure else { continue }
+            if edge.relationshipType === motherType {
+                childMothers[to.persistentModelID, default: []].insert(from.persistentModelID)
+            } else if edge.relationshipType === fatherType {
+                childFathers[to.persistentModelID, default: []].insert(from.persistentModelID)
+            }
+        }
+
+        // Find all couples with shared children but no Spouse link
+        let idToFigure: [PersistentIdentifier: Figure] = Dictionary(
+            allFigures.map { ($0.persistentModelID, $0) }, uniquingKeysWith: { first, _ in first })
+
+        var fixedPairs: Set<StaticIdentifier> = []
+        if let spouseType {
+            for (childId, mothers) in childMothers {
+                guard let fathers = childFathers[childId] else { continue }
+                for motherId in mothers {
+                    for fatherId in fathers {
+                        let pair = StaticIdentifier(motherId, fatherId)
+                        guard !fixedPairs.contains(pair) else { continue }
+                        if !spousePairs.contains(pair),
+                           let mother = idToFigure[motherId],
+                           let father = idToFigure[fatherId] {
+                            let rel = Relationship(fromFigure: father, toFigure: mother, relationshipType: spouseType, source: "Mythological tradition")
+                            context.insert(rel)
+                            fixedPairs.insert(pair)
+                            changed = true
+                        }
+                    }
+                }
+            }
+        }
+
+        // Fix Asarluhi's mother: reassign from Ninhursag to Damkina
+        if let damkina = figureByName["damkina"], let ninhursag = figureByName["ninhursag"] {
+            for childName in ["asarluhi", "asalluhi"] {
+                guard let child = figureByName[childName] else { continue }
+                for edge in edges where edge.relationshipType === motherType &&
+                    edge.fromFigure === ninhursag && edge.toFigure === child {
+                    edge.fromFigure = damkina
+                    changed = true
+                }
+            }
+        }
+
+        if changed { try? context.save() }
+    }
+
+    /// Ensures bidirectional consistency for relationship types that are
+    /// inherently mutual (Spouse, Consort, Sibling, Ally, Enemy). If X→Y
+    /// exists but Y→X does not, creates the reverse link preserving the
+    /// original source. Additive + idempotent.
+    package static func ensureBidirectionalRelationshipConsistency(context: ModelContext) {
+        let bidirectionalTypes: Set<String> = ["Spouse", "Consort", "Sibling", "Ally", "Enemy"]
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        var changed = false
+
+        // Build a set of existing directed edges
+        struct EdgeKey: Hashable {
+            let from: PersistentIdentifier
+            let to: PersistentIdentifier
+            let type: String
+        }
+        var existing = Set<EdgeKey>()
+        for edge in edges {
+            guard let from = edge.fromFigure, let to = edge.toFigure,
+                  let typeName = edge.relationshipType?.name else { continue }
+            existing.insert(EdgeKey(from: from.persistentModelID, to: to.persistentModelID, type: typeName))
+        }
+
+        // For each edge, check if the reverse exists; if not, create it
+        for edge in edges {
+            guard let from = edge.fromFigure, let to = edge.toFigure,
+                  let typeName = edge.relationshipType?.name,
+                  bidirectionalTypes.contains(typeName) else { continue }
+
+            let reverse = EdgeKey(from: to.persistentModelID, to: from.persistentModelID, type: typeName)
+            guard !existing.contains(reverse) else { continue }
+
+            let rel = Relationship(
+                fromFigure: to,
+                toFigure: from,
+                relationshipType: edge.relationshipType,
+                source: edge.source,
+                sourceRef: edge.sourceRef,
+                isPreferred: edge.isPreferred ?? false,
+                groupID: edge.groupID
+            )
+            context.insert(rel)
+            existing.insert(reverse)
+            changed = true
+        }
+
+        if changed { try? context.save() }
     }
 }

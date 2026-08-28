@@ -158,19 +158,32 @@ struct RichTextEditor: NSViewRepresentable {
             let range = tv.selectedRange()
             let effectiveRange = range.length == 0 ? NSRange(location: 0, length: storage.length) : range
 
-            let plainText = storage.attributedSubstring(from: effectiveRange).string
+            let rawText = storage.attributedSubstring(from: effectiveRange).string
+            let lines = rawText.components(separatedBy: "\n")
+            let cleaned = lines.map { line -> String in
+                if line.hasPrefix("•\t") {
+                    return String(line.dropFirst(2))
+                } else if line.hasPrefix("• ") {
+                    return String(line.dropFirst(2))
+                }
+                return line
+            }.joined(separator: "\n")
+
             let defaultFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
             let defaultColor = NSColor.textColor
+            let defaultStyle = NSMutableParagraphStyle()
 
-            let replacement = NSAttributedString(string: plainText, attributes: [
+            let replacement = NSAttributedString(string: cleaned, attributes: [
                 .font: defaultFont,
                 .foregroundColor: defaultColor,
+                .paragraphStyle: defaultStyle,
             ])
             storage.replaceCharacters(in: effectiveRange, with: replacement)
 
             tv.typingAttributes = [
                 .font: defaultFont,
                 .foregroundColor: defaultColor,
+                .paragraphStyle: defaultStyle,
             ]
             tv.needsDisplay = true
 

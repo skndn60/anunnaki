@@ -131,6 +131,10 @@ struct ContentView: View {
     @State private var showBackupSheet = false
     @State private var showFromTextSheet = false
     @State private var showFromTextHistorySheet = false
+    @State private var showNewFigureSheet = false
+    @State private var showNewPlaceSheet = false
+    @State private var showNewEventSheet = false
+    @State private var showNewThingSheet = false
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -226,6 +230,10 @@ struct ContentView: View {
                     Migration.ensureDivineCollectives(context: modelContext)
                     Migration.ensureMesopotamianPantheons(context: modelContext)
                     Migration.ensureOraccDeityImports(context: modelContext)
+                    Migration.markPreExistingSyncretisms(context: modelContext)
+                    Migration.ensureMissingDeitiesImportExist(context: modelContext)
+                    Migration.ensureCanonicalDeityFamilies(context: modelContext)
+                    Migration.ensureBidirectionalRelationshipConsistency(context: modelContext)
                     Migration.ensureDefaultFigureGroups(context: modelContext)
                     Migration.ensureFigureGroupKinds(context: modelContext)
                     Migration.removeFloodPlaceholder(context: modelContext)
@@ -243,6 +251,8 @@ struct ContentView: View {
                     Migration.ensureActivityLogUserLinks(context: modelContext)
                     Migration.ensureFirstUserIsAdmin(context: modelContext)
                     Migration.removeOrphanedGroupAssociations(context: modelContext)
+                    Migration.ensureAnAnumGodListSourceExists(context: modelContext)
+                    Migration.ensureCellSourceLinksExist(context: modelContext)
                     Migration.ensureJunkSourceStringsCleaned(context: modelContext)
                     Migration.ensureRelationshipSources(context: modelContext)
                     Migration.ensureRoleReverseNames(context: modelContext)
@@ -449,8 +459,32 @@ struct ContentView: View {
             .sheet(isPresented: $showBackupSheet) {
                 BackupSheet()
             }
+            .sheet(isPresented: $showNewFigureSheet) {
+                FigureFormView(figure: nil)
+            }
+            .sheet(isPresented: $showNewPlaceSheet) {
+                PlaceFormView(place: nil)
+            }
+            .sheet(isPresented: $showNewEventSheet) {
+                EventFormView(event: nil)
+            }
+            .sheet(isPresented: $showNewThingSheet) {
+                ThingFormView(thing: nil)
+            }
             .onReceive(NotificationCenter.default.publisher(for: .showBackupSheet)) { _ in
                 showBackupSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showNewFigure)) { _ in
+                showNewFigureSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showNewPlace)) { _ in
+                showNewPlaceSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showNewEvent)) { _ in
+                showNewEventSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .showNewThing)) { _ in
+                showNewThingSheet = true
             }
             .environment(\.navigationCoordinator, coordinator)
             .environment(\.userSession, userSession)

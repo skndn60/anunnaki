@@ -17,6 +17,11 @@ package final class Place {
     package var coverageExempt: Bool?
     package var coverageReviewedAt: Date?
 
+    /// True when the place has no known coordinates because its actual site has
+    /// not been identified (ancient places whose remnants are lost). Such places
+    /// are exempt from the "place without coordinates" check.
+    package var coordinatesUnknown: Bool?
+
     package var sortName: String?
 
     package var foundedDate: MythologicalDate?

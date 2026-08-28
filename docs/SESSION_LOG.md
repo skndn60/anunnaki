@@ -8,6 +8,140 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-08-27 — Source ↔ comparison-table cell linking (lenient match + display)
+
+**Context:** User reported that a cell reference to "An=Anum" in the "Agricultural and hydrological deities" table did not show up under the Source. Root cause was twofold: the `SourceDetailView` had no section listing citing table cells at all, and the cell name "An=Anum" did not exactly match the Source row "Lexical God List An = Anum (Tablet IV)", so no link was ever made.
+
+**Changes made:**
+- `Source.bestMatch(forCandidate:among:)` — shared lenient matcher. Exact normalized match (case/hyphen/space/punctuation-insensitive) wins; otherwise containment (sk.contains(candidateKey) || vice versa) with a ≥3-char candidate guard, shortest (most specific) name wins. So "An=Anum" → "Lexical God List An = Anum (Tablet IV)".
+- `PopupTableCell.addCellSource` — now uses `Source.bestMatch` instead of exact case-insensitive name equality.
+- `Migration.ensureCellSourceLinksExist` — additive/idempotent back-link of existing free-text `CellSource`s (sourceRef == nil) to matching Source rows via the annotated `Source.cellListSources` side. Registered in ContentView after `ensureAnAnumGodListSourceExists`.
+- `SourceListView.SourceDetailView` — new `TableCellsSection` listing citing comparison-table cells (from both legacy `popupTableCells` and multi-source `cellListSources`), showing table name, attribute, column/figure, and location, deduplicated by `persistentModelID`.
+
+**Verification:**
+- 3 new tests: `testCellSourceLenientMatchLinksVariantNameToSourceRow`, `testBestMatchPrefersExactThenShortestContaining`, `testEnsureCellSourceLinksMigrationBackLinksExistingFreeTextCells`.
+- Full suite: 424 tests, 1 pre-existing unrelated failure (`testGenderedNounRuleUsesWholeWords`). Build succeeds.
+
+**Files touched:** `Sources/MeCore/Models/Source.swift`, `Sources/MeCore/Models/PopupTableCell.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/SourceListView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-08-26 — Data Integrity overhaul: 13 new checks + redesigned results UI
+
+**Context:** User wanted the database in "mint condition." Added 13 new consistency/completeness checks across 5 categories, a dynamic bidirectional relationship fixer, and redesigned the scan results page.
+
+**Changes made:**
+
+*ConsistencyEngine — 13 new checks added:*
+- **Relationship consistency (3):** `bidirectionalMismatch` (Spouse/Consort/Sibling/Ally/Enemy one-directional), `selfReferentialEdge` (any from→to same figure), `duplicateEdge` (same from→to→type twice)
+- **Data completeness (4):** `figureWithoutType`, `figureWithoutDescription`, `eventWithNoLinks`, `placeWithoutCoordinates`
+- **Temporal logic (3):** `deathBeforeBirth`, `reignOutsideLifespan`, `childBornBeforeParent`
+- **Data integrity (3):** `orphanedAlternateName`, `orphanedImageAsset`, `sourceWithoutURL`
+- Added `places`, `imageAssets`, `sources` parameters to `runAll()` (backward-compatible defaults)
+
+*Migration.swift — `ensureBidirectionalRelationshipConsistency`:*
+- Scans all Spouse/Consort/Sibling/Ally/Enemy edges; if X→Y exists but Y→X does not, creates the reverse link preserving source/sourceRef/groupID. Wired into ContentView launch chain after `ensureCanonicalDeityFamilies`.
+
+*DataIntegrityView.swift — Redesigned results page:*
+- Title now shows "Data Integrity on <date>" with scan timestamp
+- Summary line: "N issues detected. See details below."
+- Results grouped into 6 collapsible sections by category: Structural, Relationship Consistency, Content Consistency, Data Completeness, Temporal Logic, Data Integrity
+- Each section has chevron toggle, count badge, and "No issues detected" for clean categories
+- Removed separate "Find Duplicates…" button — duplicate detection now runs inline with Scan
+- Duplicate name rows show Merge button that opens DuplicateMergeView sheet
+- "No duplicate names found" message when no duplicate issues exist
+- `@State collapsedSections: Set<String>` for collapsible state
+
+*TODO.md — All 13 items marked complete:*
+- Relationship consistency (3/3), Data completeness (4/4), Temporal logic (3/3), Data integrity (3/3)
+
+**Key decisions:**
+- Bidirectional check covers only inherently-mutual types (Spouse, Consort, Sibling, Ally, Enemy) — not Father/Mother which are directionally correct
+- Child-born-before-parent only flags when both child and parent have known birth years
+- Reign-outside-lifespan checks both start-before-birth and end-after-death independently
+- Orphaned images check all four entity arrays (figures/places/events/things), not just figures
+- Collapsible sections use a simple `Set<String>` toggle — no persistence across launches
+
+**Verification:** `swift build` clean, `swift test` — 411 tests, 1 pre-existing failure (`testGenderedNounRuleUsesWholeWords`).
+
+---
+
+### 2026-08-26 — Dynamic Spouse link detection + Data Integrity for missing spouses
+
+**Context:** User ran Data Integrity scan and saw 15+ missing Spouse relationship warnings. Previous approach hardcoded specific couples; user wanted a fully dynamic solution.
+
+**Changes made:**
+- **Sources/MeCore/Store/Migration.swift** — Rewrote `ensureCanonicalDeityFamilies`:
+  - Removed hardcoded `missingSpousePairs` list and manual Enki→children loop.
+  - New dynamic logic: builds parent maps (child→mothers, child→fathers) from all Mother/Father edges, detects every couple with a shared child but no Spouse link, and creates the missing link automatically. Covers seed data, deity imports, and runtime-created relationships.
+  - Added `StaticIdentifier` helper struct (order-insensitive pair hashing for set membership) — same pattern as in ConsistencyEngine.
+  - Kept Asarluhi mother-reassignment (Ninhursag→Damkina) as special case.
+- **Sources/MeCore/Store/ConsistencyEngine.swift** — Added `missingSpouseLink` case to `ConsistencyFinding.Kind` and `checkMissingSpouseLinks` check function: detects couples with shared children but no Spouse relationship at scan time. Wired into `runAll()`. Added `import SwiftData` and `StaticIdentifier` helper struct.
+- **Sources/Me/Views/DataIntegrityView.swift** — No changes needed (severity handled generically via `.info`).
+
+**Key decisions:** Fully dynamic approach means no future maintenance when new figures/relationships are added — the migration and the scan both auto-detect. The migration runs at launch; the scan runs on-demand from Data Integrity.
+
+**Verification:** `swift build` clean, `swift test` — 411 tests, 0 failures.
+
+---
+
+### 2026-08-26 — Missing Sumerian deities import + duplicate detection
+
+**Context:** User requested research on Sumerian/Mesopotamian deities not yet in the database. Cross-referenced 228 existing figures (seed_data + deities_import + Migration hardcoded) against known deity lists. Produced a new import file and handled duplicate detection.
+
+**Changes made:**
+- **Web research**: Searched Wikipedia, mifologia.com, and other sources for missing deities. Collected name, alternate names (Sumerian/Akkadian/Babylonian), title, domain, gender, description for 30+ candidates.
+- **Cross-reference**: Checked all 30 candidates against existing database (seed_data.json, deities_import.json, Migration.swift). Found 4 duplicates:
+  - Ki → already an alt name of Ninhursag in seed_data
+  - Erra → already an alt name of Nergal in seed_data
+  - Asarluhi → already an alt name of Marduk in seed_data
+  - Bau → same as Kug-Bau (existing seed figure)
+- **Sources/MeCore/Resources/missing_deities_import.json**: Created with **27 new figures** + 54 alternate names (Lahmu, Lahamu, Mummu, Damkina, Dagan, Nanshe, Ninkasi, Nuska, Namtar, Nungal, Gibil, Enbilulu, Geshtu-E, Uttu, Ninshar, Belili, Ninmug, Gula, Tashmetum, Tishpak, Ishum, Ninmalki, Sul-pa-e, Damu, Lisin, Mamitu, Bau).
+- **Sources/MeCore/Store/Migration.swift**: Added `markPreExistingSyncretisms(context:)` — adds sticky notes "FROM 26-08-2026 IMPORT" to existing figures that had duplicate deity names (Ninhursag/Ki, Nergal/Erra, Marduk/Asarluhi, Kug-Bau/Bau, Damkina). Idempotent, additive only.
+- **Sources/Me/Views/ContentView.swift**: Added migration call after `ensureOraccDeityImports`.
+
+**Key decisions:** User wants to review the import file before wiring it up to auto-import. Descriptions contain relationship hints (e.g., "herald of Nergal") but these are text only — actual Relationship entries must be added manually during vetting. No figures deleted from DB under any circumstances.
+
+**Verification:** `swift build` clean, `swift test` — 411 tests, 0 failures. JSON validated.
+
+---
+
+### 2026-08-26 — Tests for SKLDatePropagator and Migration (items 10 + 11)
+
+**Context:** SKLDatePropagator.swift had 0% test coverage; Migration.swift had ~15%. Wrote comprehensive tests for both as TODO items 10 and 11.
+
+**Changes made:**
+- **Tests/MeCoreTests/MeCoreTests.swift**: Added ~770 lines of new tests:
+  - **ReignLength parsing** (7 tests): `reigning for`, `reigned` without `for`, `ruled for`, `possibly reigning`, comma in numbers, empty description, no reign info
+  - **SKLDatePropagator** (18 tests): empty input, era grouping, explicit birth/death dates, BCE extraction from description, BCE without reign keyword ignored, `(short)` suffix, BCE at end of description, forward propagation from anchor, backward propagation from anchor, chain breaks on missing reign length, empty era → "Antediluvian", sort by era order, unknown era sorts last, `ComputedReign.display`, `DynastyTimeline.totalYears`, `DynastyTimeline.startBCE/endBCE`
+  - **Migration.ensureCoverageExemptFlags** (3 tests): sets exempt for eligible types, skips already-exempt, idempotent
+  - **Migration.ensureSKLDomain** (4 tests): backfills from title, does not overwrite existing, unknown title no-op, all dynasty titles
+  - **Migration.fixAllyIcon** (3 tests): updates handshake → person.2.fill, no-op for correct icon, does not touch other types
+  - **Migration.extractAlternateNamesFromDescriptions** (5 tests): creates alt names, cleans description, skips empty, skips no match, idempotent
+  - **Migration.ensureCommanderFigureTypeExists** (4 tests): creates if missing, reuses existing, reassigns Watcher chiefs, reverts non-commander names
+  - **Migration.ensureArchangelsExist** (3 tests): creates 7 archangels, skips existing, creates Archangel FigureType
+  - **Migration.ensureMissingCommanderFiguresExist** (3 tests): creates Hermani+Yehadiel, skips existing, creates Commander relationships from Samyaza
+  - **Migration.ensureDumuziFamilyExists** (4 tests): creates Duttur, creates parent relationships, idempotent, skips already-linked
+  - **Migration.removeAutoGeneratedStickies** (2 tests): removes "Missing " prefix stickies, idempotent
+
+**Verification:** `swift build` succeeds, `swift test` — 411 tests, 0 failures (10s)
+
+---
+
+### 2026-08-25 — About panel icon fix and File > New menu wiring
+
+**Context:** Two quick UI fixes: (1) the standard About panel showed a generic folder icon instead of the app icon; (2) the auto-generated File > New menu items (from multiple `WindowGroup` scenes) were broken/useless, user wanted them to actually open creation forms.
+
+**Changes made:**
+- **Custom About command** (`Sources/Me/AnunnakiApp.swift`): `CustomAboutCommand` replaces `.appInfo` with `orderFrontStandardAboutPanel(options:)` explicitly passing the `.applicationIcon` loaded from `Bundle.module` (icns or png fallback), app name, version, and credits string.
+- **File > New menu items** (`Sources/Me/AnunnakiApp.swift`): `CommandGroup(replacing: .newItem)` adds four items — New Figure (⌘N), New Place (⇧⌘N), New Event (⌥⌘N), New Thing (⌃⌘N) — each posting a typed `Notification.Name`.
+- **ContentView listeners** (`Sources/Me/Views/ContentView.swift`): four new `@State` bools + `.onReceive` handlers + `.sheet(isPresented:)` modifiers for the creation forms (`FigureFormView`, `PlaceFormView`, `EventFormView`, `ThingFormView`).
+- **Notification.Name extensions**: added `.showNewFigure`, `.showNewPlace`, `.showNewEvent`, `.showNewThing` alongside existing `.showBackupSheet`.
+
+**Verification:** `swift build` clean. About panel shows app icon; File menu shows four working "New ..." items with distinct keyboard shortcuts, each opening the corresponding creation sheet.
+
+---
+
 ### 2026-08-25 — Associations filter, table typography, and the comparison-table popover editor
 
 **Context:** Three threads in one session: (1) user spotted two suspicious "Ur" associations and had no way to filter the five association tabs; (2) readability bump requested for comparison tables ("over the full board: title, description, cell content"); (3) thread 2 surfaced a long-standing editing bug — bullet-point cell values can't be entered because the inline editor commits on Return — which escalated into a full redesign of how table cells are edited.

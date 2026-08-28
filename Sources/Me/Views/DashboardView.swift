@@ -60,7 +60,7 @@ struct DashboardView: View {
         for p in all {
             if p.placeDescription.isEmpty { c.missingDescription.append(p) }
             if p.modernLocation.isEmpty { c.missingModernLocation.append(p) }
-            if p.latitude == nil || p.longitude == nil { c.missingCoordinates.append(p) }
+            if p.latitude == nil || p.longitude == nil { if p.coordinatesUnknown != true { c.missingCoordinates.append(p) } }
             if p.placeType == nil { c.missingType.append(p) }
         }
         return c

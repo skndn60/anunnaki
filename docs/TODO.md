@@ -36,8 +36,25 @@
 - [x] Lineage source discriminator: Promote Relationship.source from free-text to @Relationship with Source model — done 2026-08-15 (`Relationship.sourceRef: Source?` + `Source.relationships` inverse + `Migration.ensureRelationshipSources`)
 - [x] Lineage source discriminator: Display contradictory traditions (e.g., Enuma Elish vs Atra-Hasis) — done 2026-08-15 (`SourceBadgeView` on relationship rows + alternatives popovers)
 - [ ] Lineage source discriminator: Add source discrimination to QueryEngine/natural language queries
-- [ ] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask
+- [x] App icon fix: Replace hard cutoff corner transparency with proper NSImage cornerRadius mask (completed 2026-08-26)
 - [ ] Migration safety: Ensure any new @Model entities get Migration.swift backfill helpers
+- [x] **Data Integrity: Relationship consistency checks** (completed 2026-08-26)
+  - [x] Bidirectional mismatch — If X is Father of Y, Y should have a reciprocal Child link back to X. (completed 2026-08-26)
+  - [x] Self-referential edges beyond parent — Creator→self, Spouse→self, Sibling→self etc. (completed 2026-08-26)
+  - [x] Duplicate edges — Same from→to→type relationship existing twice. (completed 2026-08-26)
+- [x] **Data Integrity: Data completeness checks** (completed 2026-08-26)
+  - [x] Figure without type — `figureType` is nil. (completed 2026-08-26)
+  - [x] Figure without description — Empty `figureDescription`. (completed 2026-08-26)
+  - [x] Event with no figures and no place. (completed 2026-08-26)
+  - [x] Place without coordinates — `latitude`/`longitude` both nil. (completed 2026-08-26)
+- [x] **Data Integrity: Temporal logic checks** (completed 2026-08-26)
+  - [x] Death before birth — `deathDate` earlier than `birthDate`. (completed 2026-08-26)
+  - [x] Reign outside lifespan — reign dates outside birth/death dates. (completed 2026-08-26)
+  - [x] Child born before parent — child's `birthDate` earlier than parent's. (completed 2026-08-26)
+- [x] **Data Integrity: Data integrity checks** (completed 2026-08-26)
+  - [x] Orphaned alternate names — `AlternateName` whose `figure` is nil. (completed 2026-08-26)
+  - [x] Orphaned figure images — `ImageAsset` not linked to any entity. (completed 2026-08-26)
+  - [x] Source without URL — `Source` with empty `url`. (completed 2026-08-26)
 - [ ] **Backfill descriptions for Buzi & Haziana:** Imported SKL-era figures from interrupted batch — Buzi (has Wikipedia page, father of Ezekiel) and Haziana (no Wikipedia page, needs manual description) have empty `figureDescription`. Low priority.
 - [ ] **Catch-all annotation slot for un-attributable snippets (deferred 2026-08-08):** A medium for parking factoids clipped from Wikipedia/websites — with source URL, searchable, distinct from descriptions. Framing (refined 2026-08-08): NOT a "commenting system" (threaded/dated/collaborative — overkill for a personal tool), and NOT "research notes" — rather a *catch-all slot for information that fits no existing attribute* (a fact that isn't a title, reign, relationship, domain, etc.). Currently the only way to store such a snippet is `figureDescription`, which pollutes the curated biography prose.
   - **The deciding question before building:** "does this snippet need an attribute or can [is it a] snippet?" — if a fact recurs across enough figures (e.g. "temple X built here", "ancestor of Y"), **promote it to a real field/association** instead of a loose snippet. The snippet slot should be structured enough (title, URL, optional topic tag) that a recurring cluster can later be migrated into a real attribute — it must NOT become a dump that prevents good attribution.

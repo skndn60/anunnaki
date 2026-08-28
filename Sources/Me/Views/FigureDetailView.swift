@@ -373,10 +373,9 @@ struct FigureDetailView: View {
                 // Alternate Names
                 AlternateNamesSection(figure: figure, filterText: filterText)
 
-                Divider()
-
                 // Relationships
                 if !filteredRelationships.isEmpty {
+                    Divider()
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Relationships")
                             .font(.caption)
@@ -420,7 +419,7 @@ struct FigureDetailView: View {
                     title: "Images",
                     images: figure.images,
                     onLinkImage: { asset in
-                        asset.figures.append(figure)
+                        figure.images.append(asset)
                     },
                     onSelectImage: onSelectImage
                 )

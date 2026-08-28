@@ -14,6 +14,8 @@ struct AppSettingsView: View {
     @AppStorage("dynastyMapHistoricalLanguage") private var historicalLanguageRaw = HistoricalMapLanguage.english.rawValue
     @AppStorage("dynastyMapLabelSize") private var labelSizeRaw = MapLabelSize.medium.rawValue
     @AppStorage("dynastyMapDateFilter") private var dateFilterEnabled = false
+    @AppStorage(ConsistencyCheckSettings.masterKey) private var allChecksEnabled = true
+    @State private var expandedCategories: Set<String> = []
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -67,6 +69,39 @@ struct AppSettingsView: View {
                     Text("Dynasty Map")
                 } footer: {
                     Text("Higher zoom numbers show a closer view. The date filter fades features that did not yet exist in the selected dynasty's era.")
+                }
+                Section {
+                    Text("Individual checks can be disabled if they don't apply to your workflow.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Toggle("All checks enabled", isOn: $allChecksEnabled)
+                        .help("Master toggle: when off, no consistency checks run during the Data Integrity scan.")
+                    if allChecksEnabled {
+                        ForEach(ConsistencyCheckSettings.findingCategories, id: \.category) { group in
+                            let isExpanded = Binding(
+                                get: { expandedCategories.contains(group.category) },
+                                set: { expanded in
+                                    if expanded { expandedCategories.insert(group.category) }
+                                    else { expandedCategories.remove(group.category) }
+                                }
+                            )
+                            DisclosureGroup(isExpanded: isExpanded) {
+                                ForEach(group.checks) { check in
+                                    CheckToggleRow(check: check)
+                                }
+                            } label: {
+                                HStack {
+                                    Text(group.category)
+                                    Spacer()
+                                    Text("\(group.checks.count)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Consistency Checks")
                 }
                 Section {
                     if let session = userSession, let current = session.currentUser {
@@ -277,5 +312,19 @@ struct AppSettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
+    }
+}
+
+private struct CheckToggleRow: View {
+    let check: ConsistencyCheckSetting
+    @AppStorage private var enabled: Bool
+
+    init(check: ConsistencyCheckSetting) {
+        self.check = check
+        _enabled = AppStorage(wrappedValue: true, check.key)
+    }
+
+    var body: some View {
+        Toggle(check.displayLabel, isOn: $enabled)
     }
 }

@@ -150,6 +150,11 @@ struct DuplicateMergeView: View {
                       let duplicate = modelContext.model(for: id) as? Thing else { continue }
                 try? DuplicateMerger.mergeThings(keeper, duplicate, in: modelContext)
                 merged += 1
+            case .source:
+                guard let keeper = modelContext.model(for: keeperID) as? Source,
+                      let duplicate = modelContext.model(for: id) as? Source else { continue }
+                try? DuplicateMerger.mergeSources(keeper, duplicate, in: modelContext)
+                merged += 1
             }
         }
         statusMessage = "Merged \(merged) duplicate\(merged == 1 ? "" : "s")"
@@ -186,6 +191,9 @@ struct DuplicateMergeView: View {
         case .thing:
             guard let thing = modelContext.model(for: id) as? Thing else { return nil }
             return (thing.name, "\(thing.thingType?.name ?? "Thing") · \(summary(for: thing))")
+        case .source:
+            guard let source = modelContext.model(for: id) as? Source else { return nil }
+            return (source.name, "\(source.sourceType.rawValue) · \(summary(for: source))")
         }
     }
 
@@ -229,12 +237,25 @@ struct DuplicateMergeView: View {
         return parts.isEmpty ? "No linked data" : parts.joined(separator: " · ")
     }
 
+    private func summary(for source: Source) -> String {
+        var parts: [String] = []
+        if !source.citations.isEmpty { parts.append("\(source.citations.count) citations") }
+        if !source.attachments.isEmpty { parts.append("\(source.attachments.count) attachments") }
+        if !source.relationships.isEmpty { parts.append("\(source.relationships.count) relationships") }
+        if !source.popupTables.isEmpty { parts.append("\(source.popupTables.count) tables") }
+        if !source.popupTableCells.isEmpty || !source.cellListSources.isEmpty {
+            parts.append("\(source.popupTableCells.count + source.cellListSources.count) cells")
+        }
+        return parts.isEmpty ? "No linked data" : parts.joined(separator: " · ")
+    }
+
     private func kindIcon(_ kind: DuplicateGroup.EntityKind) -> String {
         switch kind {
         case .figure: return "person.3"
         case .place: return "building.columns"
         case .event: return "bolt.fill"
         case .thing: return "cube.box"
+        case .source: return "books.vertical"
         }
     }
 }

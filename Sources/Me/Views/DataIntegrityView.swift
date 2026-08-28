@@ -5,9 +5,6 @@ final class DataIntegrityScanStore: ObservableObject {
     @Published var rows: [FindingRow] = []
     @Published var dismissalCount = 0
     static let shared = DataIntegrityScanStore()
-
-    var issueRows: [FindingRow] { rows.filter { $0.record.entityKind.isEmpty } }
-    var contentRows: [FindingRow] { rows.filter { !$0.record.entityKind.isEmpty } }
 }
 
 struct FindingRow: Identifiable {
@@ -23,73 +20,37 @@ struct DataIntegrityView: View {
     @Environment(\.modelContext) private var modelContext
     @ObservedObject private var store = DataIntegrityScanStore.shared
     @State private var isScanning = false
+    @State private var scanDate: Date?
     @State private var descriptionEditFigure: Figure?
     @State private var wizardFigure: Figure?
+    @State private var editPlace: Place?
+    @State private var editEvent: Event?
+    @State private var editThing: Thing?
     @State private var showDuplicateMergeSheet = false
+    @State private var collapsedSections: Set<String> = []
     var coordinator: NavigationCoordinator?
+
+    private var groupedRows: [(category: String, rows: [FindingRow])] {
+        let all = store.rows
+        guard !all.isEmpty else { return [] }
+        var buckets: [String: [FindingRow]] = [:]
+        for row in all {
+            let cat = Self.category(for: row)
+            buckets[cat, default: []].append(row)
+        }
+        return Self.categoryOrder.compactMap { cat in
+            guard let rows = buckets[cat], !rows.isEmpty else { return nil }
+            return (cat, rows)
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Data Integrity")
-                        .font(.title2)
-                        .fontWeight(.semibold)
-                    Text("Structural checks (orphaned associations, broken propagation, duplicate memberships), content-consistency checks (gender vs wording, role genders, parent cycles, date logic, era references, ambiguous aliases), and duplicate-name search with merge. Results persist until fixed or dismissed.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if store.dismissalCount > 0 {
-                    Button("Clear Dismissals (\(store.dismissalCount))") { clearDismissals() }
-                        .buttonStyle(.bordered)
-                }
-                Button {
-                    showDuplicateMergeSheet = true
-                } label: {
-                    Label("Find Duplicates…", systemImage: "person.crop.circle.badge.questionmark")
-                }
-                .buttonStyle(.bordered)
-                Button("Scan") { scan() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isScanning)
-            }
-            .padding()
-
+            header
             Divider()
-
-            if isScanning {
-                ProgressView("Scanning…")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if store.rows.isEmpty {
-                VStack(spacing: 8) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.largeTitle)
-                        .foregroundStyle(.green)
-                    Text("No outstanding findings")
-                        .font(.headline)
-                    Text("Run Scan to check the database.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                List {
-                    ForEach(store.issueRows) { row in
-                        issueRow(row)
-                    }
-
-                    if !store.contentRows.isEmpty {
-                        Section("Content Consistency (\(store.contentRows.count))") {
-                            ForEach(store.contentRows) { row in
-                                findingRow(row)
-                            }
-                        }
-                    }
-                }
-            }
+            content
         }
-        .frame(minWidth: 500, minHeight: 400)
+        .frame(minWidth: 540, minHeight: 440)
         .onAppear {
             refreshDismissalCount()
             if store.rows.isEmpty { restoreQueue() }
@@ -100,36 +61,131 @@ struct DataIntegrityView: View {
         .sheet(item: $wizardFigure) { figure in
             FigureFormView(figure: figure)
         }
+        .sheet(item: $editPlace) { place in
+            PlaceFormView(place: place)
+        }
+        .sheet(item: $editEvent) { event in
+            EventFormView(event: event)
+        }
+        .sheet(item: $editThing) { thing in
+            ThingFormView(thing: thing)
+        }
         .sheet(isPresented: $showDuplicateMergeSheet) {
             DuplicateMergeView()
         }
     }
 
-    private func issueRow(_ row: FindingRow) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: severityIcon(row))
-                .foregroundStyle(severityColor(row))
-                .frame(width: 16)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(row.record.entityKey)
-                    .font(.callout)
-                Text(row.record.detail)
+    // MARK: - Header
+
+    private var header: some View {
+        HStack(alignment: .top) {
+            VStack(alignment: .leading, spacing: 4) {
+                if let date = scanDate {
+                    Text("Data Integrity on \(date.formatted(date: .abbreviated, time: .shortened))")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                } else {
+                    Text("Data Integrity")
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                }
+                if !store.rows.isEmpty {
+                    Text("\(store.rows.count) issue\(store.rows.count == 1 ? "" : "s") detected. See details below.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if !isScanning {
+                    Text("Run Scan to check the database.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            Spacer()
+            if store.dismissalCount > 0 {
+                Button("Clear Dismissals (\(store.dismissalCount))") { clearDismissals() }
+                    .buttonStyle(.bordered)
+            }
+            Button("Scan") { scan() }
+                .buttonStyle(.borderedProminent)
+                .disabled(isScanning)
+        }
+        .padding()
+    }
+
+    // MARK: - Content
+
+    @ViewBuilder
+    private var content: some View {
+        if isScanning {
+            ProgressView("Scanning\u{2026}")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if store.rows.isEmpty {
+            VStack(spacing: 8) {
+                Image(systemName: "checkmark.circle.fill")
+                    .font(.largeTitle)
+                    .foregroundStyle(.green)
+                Text("No issues detected")
+                    .font(.headline)
+                Text("All checks passed.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
-            if let action = row.fixAction {
-                Button("Fix") { fix(row, action: action) }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(groupedRows, id: \.category) { section in
+                        collapsibleSection(section.category, rows: section.rows)
+                    }
+                }
             }
-            Button("Dismiss") { dismiss(row) }
-                .buttonStyle(.borderless)
-                .controlSize(.small)
-                .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
     }
+
+    // MARK: - Collapsible section
+
+    private func collapsibleSection(_ category: String, rows: [FindingRow]) -> some View {
+        let isCollapsed = collapsedSections.contains(category)
+        let count = rows.count
+        return VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    if isCollapsed { collapsedSections.remove(category) }
+                    else { collapsedSections.insert(category) }
+                }
+            } label: {
+                HStack {
+                    Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 12)
+                    Text(category)
+                        .font(.headline)
+                    Text("(\(count))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(Color(nsColor: .controlBackgroundColor))
+            }
+            .buttonStyle(.plain)
+
+            if !isCollapsed {
+                Divider().padding(.leading, 40)
+                ForEach(rows) { row in
+                    findingRow(row)
+                    if row.id != rows.last?.id {
+                        Divider().padding(.leading, 40)
+                    }
+                }
+            }
+
+            Divider()
+        }
+    }
+
+    // MARK: - Row rendering
 
     private func findingRow(_ row: FindingRow) -> some View {
         HStack(spacing: 12) {
@@ -137,19 +193,31 @@ struct DataIntegrityView: View {
                 .foregroundStyle(severityColor(row))
                 .frame(width: 16)
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(row.record.entityKind): \(row.record.entityKey)")
-                    .font(.callout)
+                if row.record.entityKind.isEmpty {
+                    Text(row.record.entityKey)
+                        .font(.callout)
+                } else {
+                    Text("\(row.record.entityKind): \(row.record.entityKey)")
+                        .font(.callout)
+                }
                 Text(row.record.detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
             Spacer()
+            if row.record.kindRaw == "issue.duplicateName" {
+                Button("Merge\u{2026}") { showDuplicateMergeSheet = true }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
+            if let action = row.fixAction {
+                Button("Fix") { fix(row, action: action) }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+            }
             Menu {
-                if row.record.entityKind == "Figure" {
-                    Button("Edit Description\u{2026}") { beginDescriptionEdit(row) }
-                    Button("Open Edit Wizard\u{2026}") { wizardFigure = figure(named: row.record.entityKey) }
-                    Divider()
-                }
+                entityMenuItems(for: row)
+                Divider()
                 Button("Copy Finding Text") { copyFinding(row.record.detail) }
             } label: {
                 Image(systemName: "ellipsis.circle")
@@ -157,22 +225,55 @@ struct DataIntegrityView: View {
             .menuStyle(.borderlessButton)
             .controlSize(.small)
             .fixedSize()
-            .help("Actions")
-            if row.record.entityKind == "Figure",
-               let figure = figure(named: row.record.entityKey) {
-                Button("Open") {
-                    coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
-                }
-                .buttonStyle(.borderless)
-                .controlSize(.small)
-            }
             Button("Dismiss") { dismiss(row) }
                 .buttonStyle(.borderless)
                 .controlSize(.small)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
     }
+
+    // MARK: - Category mapping
+
+    private static let categoryOrder = [
+        "Structural",
+        "Relationship Consistency",
+        "Content Consistency",
+        "Data Completeness",
+        "Temporal Logic",
+        "Data Integrity",
+    ]
+
+    private static func category(for row: FindingRow) -> String {
+        let raw = row.record.kindRaw
+        if raw.hasPrefix("issue.") {
+            let issueKind = raw.droppingPrefix("issue.")
+            switch issueKind {
+            case "emptyEntity", "orphaned", "brokenPropagation", "duplicate", "selfParentEdge", "duplicateName":
+                return "Structural"
+            default:
+                return "Structural"
+            }
+        }
+        guard let kind = ConsistencyFinding.Kind(rawValue: raw) else { return "Structural" }
+        switch kind {
+        case .pronounGender, .genderedNoun, .roleGender, .parentCycle,
+             .invertedDates, .unknownEra, .ambiguousAlias, .stubFigure,
+             .nameVariant, .aiDraftTable, .missingSpouseLink:
+            return "Content Consistency"
+        case .bidirectionalMismatch, .selfReferentialEdge, .duplicateEdge:
+            return "Relationship Consistency"
+        case .figureWithoutType, .figureWithoutDescription, .eventWithNoLinks, .placeWithoutCoordinates:
+            return "Data Completeness"
+        case .deathBeforeBirth, .reignOutsideLifespan, .childBornBeforeParent:
+            return "Temporal Logic"
+        case .orphanedAlternateName, .orphanedImageAsset, .sourceWithoutURL:
+            return "Data Integrity"
+        }
+    }
+
+    // MARK: - Helpers
 
     private func beginDescriptionEdit(_ row: FindingRow) {
         descriptionEditFigure = figure(named: row.record.entityKey)
@@ -186,6 +287,53 @@ struct DataIntegrityView: View {
     private func figure(named name: String) -> Figure? {
         let fetch = FetchDescriptor<Figure>(predicate: #Predicate { $0.name == name })
         return try? modelContext.fetch(fetch).first
+    }
+
+    private func place(named name: String) -> Place? {
+        let fetch = FetchDescriptor<Place>(predicate: #Predicate { $0.name == name })
+        return try? modelContext.fetch(fetch).first
+    }
+
+    private func event(named name: String) -> Event? {
+        let fetch = FetchDescriptor<Event>(predicate: #Predicate { $0.name == name })
+        return try? modelContext.fetch(fetch).first
+    }
+
+    private func thing(named name: String) -> Thing? {
+        let fetch = FetchDescriptor<Thing>(predicate: #Predicate { $0.name == name })
+        return try? modelContext.fetch(fetch).first
+    }
+
+    @ViewBuilder
+    private func entityMenuItems(for row: FindingRow) -> some View {
+        let kind = row.record.entityKind
+        let name = row.record.entityKey
+        if kind == "Figure", let figure = figure(named: name) {
+            Button("Edit Description\u{2026}") { beginDescriptionEdit(row) }
+            Button("Open Edit Wizard\u{2026}") { wizardFigure = figure }
+            Divider()
+            Button("Open in Figures") {
+                coordinator?.navigateToFigure(figure.persistentModelID, name: figure.name)
+            }
+        } else if kind == "Place", let place = place(named: name) {
+            Button("Edit\u{2026}") { editPlace = place }
+            Divider()
+            Button("Open in Places") {
+                coordinator?.navigateToPlace(place.persistentModelID, name: place.name)
+            }
+        } else if kind == "Event", let event = event(named: name) {
+            Button("Edit\u{2026}") { editEvent = event }
+            Divider()
+            Button("Open in Events") {
+                coordinator?.navigateToEvent(event.persistentModelID, name: event.name)
+            }
+        } else if kind == "Thing", let thing = thing(named: name) {
+            Button("Edit\u{2026}") { editThing = thing }
+            Divider()
+            Button("Open in Things") {
+                coordinator?.navigateToThing(thing.persistentModelID, name: thing.name)
+            }
+        }
     }
 
     private func severityIcon(_ row: FindingRow) -> String {
@@ -204,8 +352,11 @@ struct DataIntegrityView: View {
         return row.record.severityRaw == "warning" ? Color.orange : Color.blue
     }
 
+    // MARK: - Scan
+
     private func scan() {
         isScanning = true
+        scanDate = Date()
         Task { @MainActor in
             let freshIssues = computeIssues()
             let freshFindings = computeFindings()
@@ -357,7 +508,21 @@ struct DataIntegrityView: View {
             }
         }
 
-        return found
+        if let duplicateGroups = try? DuplicateMerger.findGroups(in: modelContext) {
+            for group in duplicateGroups {
+                let kindLabel = group.kind.rawValue
+                let count = group.ids.count
+                found.append(IntegrityIssue(
+                    kind: .duplicateName,
+                    title: "Duplicate \(kindLabel.lowercased()) name: \"\(group.name)\" (\(count) copies)",
+                    description: "Click Merge to combine \(count) \(kindLabel.lowercased())s named \"\(group.name)\" into one.",
+                    isFixable: false,
+                    fixAction: nil
+                ))
+            }
+        }
+
+        return found.filter { ConsistencyCheckSettings.isEnabled($0.kind) }
     }
 
     private func computeFindings() -> [ConsistencyFinding] {
@@ -366,6 +531,9 @@ struct DataIntegrityView: View {
         let allAlternateNames = (try? modelContext.fetch(FetchDescriptor<AlternateName>())) ?? []
         let allEvents = (try? modelContext.fetch(FetchDescriptor<Event>())) ?? []
         let allEras = (try? modelContext.fetch(FetchDescriptor<Era>())) ?? []
+        let allPlaces = (try? modelContext.fetch(FetchDescriptor<Place>())) ?? []
+        let allImageAssets = (try? modelContext.fetch(FetchDescriptor<ImageAsset>())) ?? []
+        let allSources = (try? modelContext.fetch(FetchDescriptor<Source>())) ?? []
         let allPopupTables = (try? modelContext.fetch(FetchDescriptor<PopupTable>())) ?? []
         return ConsistencyEngine.runAll(
             figures: allFigures,
@@ -373,9 +541,14 @@ struct DataIntegrityView: View {
             alternateNames: allAlternateNames,
             events: allEvents,
             eras: allEras,
+            places: allPlaces,
+            imageAssets: allImageAssets,
+            sources: allSources,
             popupTables: allPopupTables
         ).filter { finding in
             !(finding.kind == .parentCycle && !finding.entityName.contains("↔"))
+        }.filter { finding in
+            ConsistencyCheckSettings.isEnabled(finding.kind)
         }
     }
 
@@ -428,19 +601,33 @@ struct IntegrityIssue: Identifiable {
     let isFixable: Bool
     let fixAction: ((ModelContext) -> Void)?
 
-    enum IssueKind: String {
+    enum IssueKind: String, CaseIterable {
         case emptyEntity
         case orphaned
         case brokenPropagation
         case duplicate
         case selfParentEdge
+        case duplicateName
+
+        var displayLabel: String {
+            switch self {
+            case .emptyEntity: return "Empty association"
+            case .orphaned: return "Orphaned association"
+            case .brokenPropagation: return "Broken propagation link"
+            case .duplicate: return "Duplicate group membership"
+            case .selfParentEdge: return "Self-referential parent"
+            case .duplicateName: return "Duplicate name"
+            }
+        }
+
+        var userDefaultsKey: String { "integrityIssue_\(rawValue)" }
     }
 
     var severityIcon: String {
         switch kind {
         case .emptyEntity, .orphaned, .selfParentEdge: return "exclamationmark.triangle.fill"
         case .brokenPropagation: return "link.badge.xmark"
-        case .duplicate: return "doc.on.doc.fill"
+        case .duplicate, .duplicateName: return "doc.on.doc.fill"
         }
     }
 
@@ -448,7 +635,7 @@ struct IntegrityIssue: Identifiable {
         switch kind {
         case .emptyEntity, .orphaned, .selfParentEdge: return .orange
         case .brokenPropagation: return .red
-        case .duplicate: return .blue
+        case .duplicate, .duplicateName: return .blue
         }
     }
 }
@@ -485,4 +672,72 @@ private struct QueueDescriptionEditor: View {
             plainDescription = figure.figureDescription
         }
     }
+}
+
+// MARK: - Consistency Check Settings
+
+struct ConsistencyCheckSetting: Identifiable {
+    let id = UUID()
+    let key: String
+    let displayLabel: String
+    let category: String
+    var isEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: key) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: key) }
+    }
+}
+
+enum ConsistencyCheckSettings {
+    static let masterKey = "consistencyChecksAllEnabled"
+
+    static var masterEnabled: Bool {
+        get { UserDefaults.standard.object(forKey: masterKey) as? Bool ?? true }
+        set { UserDefaults.standard.set(newValue, forKey: masterKey) }
+    }
+
+    static func isEnabled(_ kind: ConsistencyFinding.Kind) -> Bool {
+        guard masterEnabled else { return false }
+        return UserDefaults.standard.object(forKey: kind.userDefaultsKey) as? Bool ?? true
+    }
+
+    static func isEnabled(_ kind: IntegrityIssue.IssueKind) -> Bool {
+        guard masterEnabled else { return false }
+        return UserDefaults.standard.object(forKey: kind.userDefaultsKey) as? Bool ?? true
+    }
+
+    static let findingCategories: [(category: String, checks: [ConsistencyCheckSetting])] = [
+        ("Content Consistency", ConsistencyFinding.Kind.allCases.filter { kind in
+            switch kind {
+            case .pronounGender, .genderedNoun, .roleGender, .parentCycle,
+                 .invertedDates, .unknownEra, .ambiguousAlias, .stubFigure,
+                 .nameVariant, .aiDraftTable, .missingSpouseLink:
+                return true
+            default: return false
+            }
+        }.map { ConsistencyCheckSetting(key: $0.userDefaultsKey, displayLabel: $0.displayLabel, category: "Content Consistency") }),
+        ("Relationship Consistency", [
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.bidirectionalMismatch.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.bidirectionalMismatch.displayLabel, category: "Relationship Consistency"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.selfReferentialEdge.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.selfReferentialEdge.displayLabel, category: "Relationship Consistency"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.duplicateEdge.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.duplicateEdge.displayLabel, category: "Relationship Consistency"),
+        ]),
+        ("Data Completeness", [
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.figureWithoutType.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.figureWithoutType.displayLabel, category: "Data Completeness"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.figureWithoutDescription.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.figureWithoutDescription.displayLabel, category: "Data Completeness"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.eventWithNoLinks.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.eventWithNoLinks.displayLabel, category: "Data Completeness"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.placeWithoutCoordinates.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.placeWithoutCoordinates.displayLabel, category: "Data Completeness"),
+        ]),
+        ("Temporal Logic", [
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.deathBeforeBirth.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.deathBeforeBirth.displayLabel, category: "Temporal Logic"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.reignOutsideLifespan.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.reignOutsideLifespan.displayLabel, category: "Temporal Logic"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.childBornBeforeParent.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.childBornBeforeParent.displayLabel, category: "Temporal Logic"),
+        ]),
+        ("Data Integrity", [
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.orphanedAlternateName.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.orphanedAlternateName.displayLabel, category: "Data Integrity"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.orphanedImageAsset.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.orphanedImageAsset.displayLabel, category: "Data Integrity"),
+            ConsistencyCheckSetting(key: ConsistencyFinding.Kind.sourceWithoutURL.userDefaultsKey, displayLabel: ConsistencyFinding.Kind.sourceWithoutURL.displayLabel, category: "Data Integrity"),
+        ]),
+        ("Structural", IntegrityIssue.IssueKind.allCases.map {
+            ConsistencyCheckSetting(key: $0.userDefaultsKey, displayLabel: $0.displayLabel, category: "Structural")
+        }),
+    ]
 }

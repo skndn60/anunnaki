@@ -75,7 +75,7 @@ struct FigureQuicklookView: View {
                         title: "Images (\(figure.images.count))",
                         images: figure.images,
                         onLinkImage: { asset in
-                            asset.figures.append(figure)
+                            figure.images.append(asset)
                         }
                     )
                 }

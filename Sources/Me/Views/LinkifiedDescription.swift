@@ -191,6 +191,8 @@ private struct ParagraphView: View {
     var body: some View {
         if paragraph.string.isEmpty {
             EmptyView()
+        } else if runs.isEmpty {
+            Text(AttributedString(paragraph))
         } else {
             WrappingTextFlow(spacing: 0) {
                 ForEach(Array(runs.enumerated()), id: \.offset) { _, run in

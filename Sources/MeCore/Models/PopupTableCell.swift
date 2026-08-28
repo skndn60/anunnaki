@@ -17,6 +17,11 @@ package final class PopupTableCell: Identifiable {
     package var source: String?
     package var sourceRef: Source?
 
+    /// Multiple per-cell source attributions. Set links via this annotated side
+    /// per the codebase convention. Backed by `CellSource` rows.
+    @Relationship(deleteRule: .cascade, inverse: \CellSource.cell)
+    package var cellSources: [CellSource] = []
+
     package init(
         table: PopupTable? = nil,
         attribute: PopupTableAttribute? = nil,
@@ -51,5 +56,47 @@ package final class PopupTableCell: Identifiable {
             match.popupTableCells.append(self)
             sourceRef = match
         }
+    }
+
+    /// The per-cell source attributions (`name` + optional `location`), falling
+    /// back to the legacy single `source` string when none are recorded yet.
+    package var effectiveCellSourceNames: [(name: String, location: String?)] {
+        if !cellSources.isEmpty {
+            return cellSources.map { (name: $0.source, location: $0.location) }
+        }
+        let legacy = (source ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return legacy.isEmpty ? [] : [(name: legacy, location: nil)]
+    }
+
+    /// Adds a single source attribution from a free-text work name and an
+    /// optional location within it, optionally linking a matching `Source` row
+    /// (case-insensitive, never auto-created). Returns the created `CellSource`,
+    /// or nil when the name is blank. The `CellSource` is inserted into the
+    /// supplied context so SwiftData can resolve the relationship.
+    @discardableResult
+    package func addCellSource(named name: String, location: String? = nil, context: ModelContext) -> CellSource? {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let cellSource = CellSource(source: trimmed, location: location)
+        context.insert(cellSource)
+        cellSources.append(cellSource)
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        if let match = Source.bestMatch(forCandidate: trimmed, among: sources) {
+            match.cellListSources.append(cellSource)
+            cellSource.sourceRef = match
+        }
+        return cellSource
+    }
+
+    /// Removes a per-cell source attribution and cleans up its link.
+    /// Per the codebase convention, links are set/detached via the annotated
+    /// side (`cellSources`).
+    package func removeCellSource(_ cellSource: CellSource) {
+        if let src = cellSource.sourceRef {
+            src.cellListSources.removeAll { $0 == cellSource }
+        }
+        cellSources.removeAll { $0 == cellSource }
     }
 }

@@ -21,8 +21,7 @@ struct EventFormView: View {
     @State private var richDescription: Data? = nil
     @State private var date: MythologicalDate = .unknown
     @State private var era = ""
-    @State private var source = ""
-    @State private var showCustomSourceField = false
+    @State private var selectedSource: Source?
     @State private var sortName = ""
     @State private var selectedFigureIDs: Set<PersistentIdentifier> = []
     @State private var figureSearchText = ""
@@ -143,22 +142,7 @@ struct EventFormView: View {
                         Text(eraItem.name).tag(eraItem.name)
                     }
                 }
-                Picker("Source", selection: $source) {
-                    Text("None").tag("")
-                    ForEach(sources) { s in
-                        Text(s.name).tag(s.name)
-                    }
-                    Divider()
-                    Text("Custom\u{2026}").tag("__custom__")
-                }
-                .onChange(of: source) { _, newValue in
-                    showCustomSourceField = newValue == "__custom__"
-                    if showCustomSourceField { source = "" }
-                }
-                if showCustomSourceField {
-                    TextField("Source name", text: $source, prompt: Text("e.g. Enuma Elish, Tablet IV"))
-                        .textFieldStyle(.roundedBorder)
-                }
+                SourcePickerView(selection: $selectedSource, sources: sources)
                 TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
                     .textFieldStyle(.roundedBorder)
             }
@@ -370,7 +354,7 @@ struct EventFormView: View {
         richDescription = event.richDescription
         date = event.date
         era = event.era
-        source = event.source
+        selectedSource = sources.first(where: { $0.name == event.source })
         sortName = event.sortName ?? ""
         selectedFigureIDs = Set(event.involvedFigures.map(\.persistentModelID))
         placeSelections = event.placeAssociations.compactMap { assoc in
@@ -389,7 +373,7 @@ struct EventFormView: View {
             event.richDescription = richDescription
             event.date = date
             event.era = era
-            event.source = source
+            event.source = selectedSource?.name ?? ""
             event.sortName = sortName.isEmpty ? nil : sortName
             event.isConcept = false
             event.involvedFigures = selectedFigs
@@ -406,7 +390,7 @@ struct EventFormView: View {
             let newEvent = Event(
                 name: name, eventType: eventType,
                 eventDescription: eventDescription,
-                date: date, era: era, source: source,
+                date: date, era: era, source: selectedSource?.name ?? "",
                 sortName: sortName.isEmpty ? nil : sortName,
                 involvedFigures: selectedFigs
             )

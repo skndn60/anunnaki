@@ -1,0 +1,1021 @@
+{
+  "figures": [
+    {
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d",
+      "name": "Lahmu",
+      "disambiguation": "",
+      "title": "Primordial God of Silt",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Primordial creation, silt",
+      "figureDescription": "One of the first gods born from the mingling of Apsu (freshwater) and Tiamat (saltwater). Depicted as a bearded figure with six curls on his head, he represents the primal silt of creation.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6e",
+      "name": "Lahamu",
+      "disambiguation": "",
+      "title": "Primordial Goddess",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Primordial creation",
+      "figureDescription": "Feminine counterpart and sister-consort of Lahmu. Born from the mingling of Apsu and Tiamat, she together with Lahmu gave birth to Anshar and Kishar in the Enuma Elish.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e7f",
+      "name": "Mummu",
+      "disambiguation": "",
+      "title": "God of Craftsmanship",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Craftsmanship, counsel, confusion",
+      "figureDescription": "Originally the craftsman-god and minister of Apsu. After Marduk's victory in the Enuma Elish, he became Marduk's minister, representing skilled craft and divine counsel.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f80",
+      "name": "Damkina",
+      "disambiguation": "",
+      "title": "Goddess of Wisdom and the Underworld",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wisdom, the underworld, motherhood",
+      "figureDescription": "Wife of Enki and mother of Marduk. Originally a goddess of the underworld, she was later syncretized with Ninhursag. A key figure in the mother-goddess tradition of Eridu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "Creation",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8091",
+      "name": "Dagan",
+      "disambiguation": "",
+      "title": "God of Grain and Fertility",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Grain, fertility, storms",
+      "figureDescription": "Major god of grain and fertility, worshipped across Mesopotamia and Syria. Father of the storm god Hadad (Baal) in Syrian tradition, and considered the father of Enlil in some Mesopotamian traditions.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910213",
+      "name": "Nanshe",
+      "disambiguation": "",
+      "title": "Goddess of Social Justice",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Social justice, prophecy, the sea, fish",
+      "figureDescription": "Daughter of Enki and Damkina. Goddess of social justice, prophecy, and the sea, known for weighing gold, silver, and lapis lazuli to determine justice. Patron of widows, orphans, and the poor.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8091021324",
+      "name": "Ninkasi",
+      "disambiguation": "",
+      "title": "Goddess of Beer and Brewing",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Beer, brewing, fermentation, agriculture",
+      "figureDescription": "Goddess of beer and brewing. The oldest known beer recipe is a hymn to Ninkasi, which served as both a devotional and practical brewing guide.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c9d0e1f2-a3b4-4c5d-6e7f-809102132435",
+      "name": "Nuska",
+      "disambiguation": "",
+      "title": "God of Fire and Light",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Fire, light, civilization, craftsmanship",
+      "figureDescription": "God of fire and light, divine standard-bearer of Enlil. Associated with fire as a purifying and civilizing force. Husband of Ningal in some traditions.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d0e1f2a3-b4c5-4d6e-7f80-910213243546",
+      "name": "Namtar",
+      "disambiguation": "",
+      "title": "Vizier of the Underworld",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Death, plague, fate, the underworld",
+      "figureDescription": "Minister and vizier of Ereshkigal in the underworld. Personification of death and fate, his name means 'fate-cutter.' Son of Ereshkigal and Nergal in some traditions.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e1f2a3b4-c5d6-4e7f-8091-021324354657",
+      "name": "Nungal",
+      "disambiguation": "",
+      "title": "Goddess of Prisons",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Prisons, justice, captivity",
+      "figureDescription": "Goddess of prisons and captives, associated with justice and the administration of law. Sometimes identified as a daughter of Ereshkigal.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f2a3b4c5-d6e7-4f80-9102-132435465768",
+      "name": "Gibil",
+      "disambiguation": "",
+      "title": "God of Fire and Purification",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Fire, purification, metalworking",
+      "figureDescription": "God of fire associated with purification and metalworking. Son of Anu. Invoked in incantations and rituals of purification as the divine fire that purifies offerings.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b4c5d6e7-f809-4102-1324-354657687980",
+      "name": "Enbilulu",
+      "disambiguation": "",
+      "title": "God of Irrigation",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Irrigation, canals, water management",
+      "figureDescription": "Son of Enlil. God responsible for the irrigation canals and waterways of Mesopotamia. Vital to the agricultural systems that sustained civilization.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c5d6e7f8-0910-4213-2435-465768798091",
+      "name": "Geshtu-E",
+      "disambiguation": "",
+      "title": "God of Wisdom and Planning",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Wisdom, intelligence, planning",
+      "figureDescription": "God of wisdom and intellectual planning. In some myths his head (wisdom) was removed by Enki to create humanity, representing the sacrifice of divine intelligence for mortal benefit.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d6e7f809-1021-4324-3546-576879809102",
+      "name": "Uttu",
+      "disambiguation": "",
+      "title": "Goddess of Weaving",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Weaving, textiles, vegetation",
+      "figureDescription": "Goddess of weaving and vegetation. Created by Enki and Ninhursag, she is associated with the invention of weaving and the loom, essential crafts in Mesopotamian society.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e7f80910-2132-4435-4657-687980910213",
+      "name": "Ninshar",
+      "disambiguation": "",
+      "title": "Goddess of Vegetation",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Grass, herbs, vegetation",
+      "figureDescription": "Goddess of grass and herbs. In some traditions, mother of Ninhursag by An. Represents the green vegetation that covers the earth.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f8091021-3243-4546-5768-798091021324",
+      "name": "Belili",
+      "disambiguation": "",
+      "title": "Goddess of Grief and Mourning",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Grief, mourning, the underworld",
+      "figureDescription": "Sister of Dumuzi. Goddess of grief and mourning who laments her brother's descent to the underworld. Associated with the silver lyre and the grief of lost loved ones.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "09102132-4354-4657-6879-809102132435",
+      "name": "Ninmug",
+      "disambiguation": "",
+      "title": "Goddess of Metalworking",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Metalworking, crafts, door pivots",
+      "figureDescription": "Goddess of metalworking and craftsmanship. Daughter of Anu. Associated with the making of door pivots and metal vessels, essential technologies of Mesopotamian civilization.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "21324354-6576-4879-8091-021324354657",
+      "name": "Gula",
+      "disambiguation": "",
+      "title": "Goddess of Medicine",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Medicine, healing, midwifery, dogs",
+      "figureDescription": "Major goddess of medicine and healing. Associated with dogs who were believed to assist in her healing arts. Depicted on kudurru stones with temples across Mesopotamia. Sometimes identified with Bau.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "32435465-7687-4980-9102-132435465768",
+      "name": "Tashmetum",
+      "disambiguation": "",
+      "title": "Goddess of Wisdom and Prayer",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wisdom, knowledge, writing, prayer",
+      "figureDescription": "Wife of Nabu, the god of writing and wisdom. Believed to hear and answer prayers for wisdom and understanding. Worshipped alongside Nabu in Borsippa.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "43546576-8798-4a91-0213-243546576879",
+      "name": "Tishpak",
+      "disambiguation": "",
+      "title": "Patron God of Eshnunna",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "War, serpents, protection, dragons",
+      "figureDescription": "Patron deity of the city of Eshnunna. Associated with the mushussu dragon. A warrior god who wields weapons of war and protects his city.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "54657687-9809-4b02-1324-354657687980",
+      "name": "Ishum",
+      "disambiguation": "",
+      "title": "Herald of Nergal",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Fire, war, herald of Nergal",
+      "figureDescription": "Herald and companion of Nergal. God of fire who appears as a fiery warrior in the Erra Epic, where he persuades Erra to go to war. Also a protective deity.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "65768798-0910-4c13-2435-465768798091",
+      "name": "Ninmalki",
+      "disambiguation": "",
+      "title": "God of Divine Pathways",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Underworld, divine pathways",
+      "figureDescription": "Minor deity associated with the underworld and divine pathways. Connected with the guidance of souls and the maintenance of cosmic order.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "76879809-1021-4d24-3546-576879809102",
+      "name": "Sul-pa-e",
+      "disambiguation": "",
+      "title": "God of Fire and Purification",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Fire, purification, dawn",
+      "figureDescription": "God associated with fire and purification. Connected with the protection of doorways and thresholds. Sometimes identified as the father of Marduk in alternative traditions.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "87980910-2132-4e35-4657-687980910213",
+      "name": "Damu",
+      "disambiguation": "",
+      "title": "God of Medicine and Vegetation",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Medicine, healing, vegetation, dying and rising",
+      "figureDescription": "God of medicine and healing, originally a dying god of vegetation similar to Dumuzi. Son of Ninisina or Gula. Associated with the scalpel and healing arts.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "98091021-3243-4f46-5768-798091021324",
+      "name": "Lisin",
+      "disambiguation": "",
+      "title": "Goddess of Healing and Midwifery",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Healing, midwifery, the underworld",
+      "figureDescription": "Goddess associated with healing and midwifery. Sister or companion of Ishara. Connected with the rites of purification and the care of women in labor.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "09102132-4354-5057-6879-809102132435",
+      "name": "Mamitu",
+      "disambiguation": "",
+      "title": "Goddess of Destinies",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Destinies, oaths, fate-binding",
+      "figureDescription": "Goddess of destinies and oath-keeper. Associated with the binding of fates and the enforcement of divine oaths. Connected with the underworld court of judgment.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8f0522c1-cbeb-40b3-8107-a96324002e19",
+      "name": "Bau",
+      "disambiguation": "",
+      "title": "Goddess of Healing",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Healing, life, water, dogs",
+      "figureDescription": "One of the most important healing goddesses in Mesopotamia. Wife of Ninurta. Associated with dogs who were sacred to her. Chief goddess of Lagash.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    }
+  ],
+  "relationships": [],
+  "places": [],
+  "placeFigureAssociations": [],
+  "events": [],
+  "eventFigureAssociations": [],
+  "alternateNames": [
+    {
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5e",
+      "figureName": "Lahmu",
+      "name": "Laxmu",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5f",
+      "figureName": "Lahmu",
+      "name": "Laḫmu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d6f",
+      "figureName": "Lahamu",
+      "name": "Laxamu",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "b2c3d4e5-f6a7-4b8c-9d0e-1f2a3b4c5d70",
+      "figureName": "Lahamu",
+      "name": "Laḫamu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "c3d4e5f6-a7b8-4c9d-0e1f-2a3b4c5d6e80",
+      "figureName": "Mummu",
+      "name": "Mummu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f81",
+      "figureName": "Damkina",
+      "name": "Damgalnuna",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f82",
+      "figureName": "Damkina",
+      "name": "Damkina",
+      "tradition": "babylonian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f83",
+      "figureName": "Damkina",
+      "name": "Damkina",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8092",
+      "figureName": "Dagan",
+      "name": "Dagon",
+      "tradition": "biblical",
+      "nameType": "variant"
+    },
+    {
+      "id": "e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8093",
+      "figureName": "Dagan",
+      "name": "Dagan",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910214",
+      "figureName": "Nanshe",
+      "name": "Nanshe",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "a7b8c9d0-e1f2-4a3b-4c5d-6e7f80910215",
+      "figureName": "Nanshe",
+      "name": "Nanshe",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8091021325",
+      "figureName": "Ninkasi",
+      "name": "Ninkasi",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "b8c9d0e1-f2a3-4b4c-5d6e-7f8091021326",
+      "figureName": "Ninkasi",
+      "name": "Ninkasi",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "c9d0e1f2-a3b4-4c5d-6e7f-809102132436",
+      "figureName": "Nuska",
+      "name": "Nuska",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "c9d0e1f2-a3b4-4c5d-6e7f-809102132437",
+      "figureName": "Nuska",
+      "name": "Nusku",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d0e1f2a3-b4c5-4d6e-7f80-910213243547",
+      "figureName": "Namtar",
+      "name": "Namtar",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d0e1f2a3-b4c5-4d6e-7f80-910213243548",
+      "figureName": "Namtar",
+      "name": "Namtaru",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "e1f2a3b4-c5d6-4e7f-8091-021324354658",
+      "figureName": "Nungal",
+      "name": "Manungal",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "e1f2a3b4-c5d6-4e7f-8091-021324354659",
+      "figureName": "Nungal",
+      "name": "Manungal",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "f2a3b4c5-d6e7-4f80-9102-132435465769",
+      "figureName": "Gibil",
+      "name": "Gibil",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "f2a3b4c5-d6e7-4f80-9102-13243546576a",
+      "figureName": "Gibil",
+      "name": "Gibil",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "b4c5d6e7-f809-4102-1324-354657687981",
+      "figureName": "Enbilulu",
+      "name": "Enbilulu",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "b4c5d6e7-f809-4102-1324-354657687982",
+      "figureName": "Enbilulu",
+      "name": "Enbilulu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "c5d6e7f8-0910-4213-2435-465768798092",
+      "figureName": "Geshtu-E",
+      "name": "Geshtu-E",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "c5d6e7f8-0910-4213-2435-465768798093",
+      "figureName": "Geshtu-E",
+      "name": "Geshtu-E",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d6e7f809-1021-4324-3546-576879809103",
+      "figureName": "Uttu",
+      "name": "Uttu",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "d6e7f809-1021-4324-3546-576879809104",
+      "figureName": "Uttu",
+      "name": "Uttu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "e7f80910-2132-4435-4657-687980910214",
+      "figureName": "Ninshar",
+      "name": "Ninšar",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "e7f80910-2132-4435-4657-687980910215",
+      "figureName": "Ninshar",
+      "name": "Ninšar",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "f8091021-3243-4546-5768-798091021325",
+      "figureName": "Belili",
+      "name": "Belili",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "f8091021-3243-4546-5768-798091021326",
+      "figureName": "Belili",
+      "name": "Belili",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "09102132-4354-4657-6879-809102132436",
+      "figureName": "Ninmug",
+      "name": "Ninmug",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "09102132-4354-4657-6879-809102132437",
+      "figureName": "Ninmug",
+      "name": "Ninmug",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "21324354-6576-4879-8091-021324354658",
+      "figureName": "Gula",
+      "name": "Gula",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "21324354-6576-4879-8091-021324354659",
+      "figureName": "Gula",
+      "name": "Gula",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "21324354-6576-4879-8091-02132435465a",
+      "figureName": "Gula",
+      "name": "Ninkarrak",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "32435465-7687-4980-9102-132435465769",
+      "figureName": "Tashmetum",
+      "name": "Tashmetum",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "32435465-7687-4980-9102-13243546576a",
+      "figureName": "Tashmetum",
+      "name": "Tashmetu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "43546576-8798-4a91-0213-24354657687a",
+      "figureName": "Tishpak",
+      "name": "Tišpak",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "43546576-8798-4a91-0213-24354657687b",
+      "figureName": "Tishpak",
+      "name": "Tišpak",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "54657687-9809-4b02-1324-354657687981",
+      "figureName": "Ishum",
+      "name": "Išum",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "54657687-9809-4b02-1324-354657687982",
+      "figureName": "Ishum",
+      "name": "Išum",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "65768798-0910-4c13-2435-465768798092",
+      "figureName": "Ninmalki",
+      "name": "Ninmalki",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "76879809-1021-4d24-3546-576879809103",
+      "figureName": "Sul-pa-e",
+      "name": "Sul-pa-e",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "76879809-1021-4d24-3546-576879809104",
+      "figureName": "Sul-pa-e",
+      "name": "Šulpae",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "87980910-2132-4e35-4657-687980910214",
+      "figureName": "Damu",
+      "name": "Damu",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "87980910-2132-4e35-4657-687980910215",
+      "figureName": "Damu",
+      "name": "Damu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "98091021-3243-4f46-5768-798091021325",
+      "figureName": "Lisin",
+      "name": "Lisin",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "98091021-3243-4f46-5768-798091021326",
+      "figureName": "Lisin",
+      "name": "Lisin",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "09102132-4354-5057-6879-809102132436",
+      "figureName": "Mamitu",
+      "name": "Mamitu",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "09102132-4354-5057-6879-809102132437",
+      "figureName": "Mamitu",
+      "name": "Mamitu",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    },
+    {
+      "id": "f986cccb-ab72-4d33-9424-7bcfea59ae02",
+      "figureName": "Bau",
+      "name": "Bau",
+      "tradition": "sumerian",
+      "nameType": "variant"
+    },
+    {
+      "id": "a664e418-137f-4260-8539-635010636fec",
+      "figureName": "Bau",
+      "name": "Baba",
+      "tradition": "akkadian",
+      "nameType": "variant"
+    }
+  ],
+  "citations": [],
+  "sources": [],
+  "attachments": [],
+  "figureTypes": [],
+  "placeTypes": [],
+  "eventTypes": [],
+  "placePlaceAssociations": [],
+  "eventPlaceAssociations": [],
+  "eventEventAssociations": [],
+  "imageAssets": [],
+  "tags": []
+}

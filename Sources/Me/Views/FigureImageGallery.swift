@@ -389,8 +389,7 @@ struct ImageDetailContent: View {
 
     @State private var previewImage: NSImage?
     @State private var caption: String = ""
-    @State private var source: String = ""
-    @State private var showCustomSource = false
+    @State private var selectedSource: Source?
     @State private var imageDescription: String = ""
     @State private var figureSearchText = ""
     @State private var placeSearchText = ""
@@ -414,11 +413,11 @@ struct ImageDetailContent: View {
         }
         .onAppear {
             caption = image.caption
-            source = image.source
+            selectedSource = sources.first(where: { $0.name == image.source })
             imageDescription = image.imageDescription
         }
         .onChange(of: caption) { _, newValue in image.caption = newValue }
-        .onChange(of: source) { _, newValue in image.source = newValue }
+        .onChange(of: selectedSource) { _, newValue in image.source = newValue?.name ?? "" }
         .onChange(of: imageDescription) { _, newValue in image.imageDescription = newValue }
     }
 
@@ -463,22 +462,7 @@ struct ImageDetailContent: View {
                     TextField("Description", text: $imageDescription, axis: .vertical)
                         .textFieldStyle(.roundedBorder)
                         .lineLimit(2...6)
-                    Picker("Source", selection: $source) {
-                        Text("None").tag("")
-                        ForEach(sources) { s in
-                            Text(s.name).tag(s.name)
-                        }
-                        Divider()
-                        Text("Custom\u{2026}").tag("__custom__")
-                    }
-                    .onChange(of: source) { _, newValue in
-                        showCustomSource = newValue == "__custom__"
-                        if showCustomSource { source = "" }
-                    }
-                    if showCustomSource {
-                        TextField("Source name", text: $source, prompt: Text("e.g. Wikipedia"))
-                            .textFieldStyle(.roundedBorder)
-                    }
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
 
                 Divider()
@@ -490,8 +474,8 @@ struct ImageDetailContent: View {
                     searchText: $figureSearchText,
                     allEntities: figures,
                     alreadyLinked: image.figures,
-                    onLink: { image.figures.append($0) },
-                    onRemove: { fig in image.figures.removeAll { $0.persistentModelID == fig.persistentModelID } }
+                    onLink: { $0.images.append(image) },
+                    onRemove: { fig in fig.images.removeAll { $0.persistentModelID == image.persistentModelID } }
                 )
 
                 searchableLinkedSection(
@@ -501,8 +485,8 @@ struct ImageDetailContent: View {
                     searchText: $placeSearchText,
                     allEntities: places,
                     alreadyLinked: image.places,
-                    onLink: { image.places.append($0) },
-                    onRemove: { place in image.places.removeAll { $0.persistentModelID == place.persistentModelID } }
+                    onLink: { $0.images.append(image) },
+                    onRemove: { place in place.images.removeAll { $0.persistentModelID == image.persistentModelID } }
                 )
 
                 searchableLinkedSection(
@@ -512,8 +496,8 @@ struct ImageDetailContent: View {
                     searchText: $eventSearchText,
                     allEntities: events,
                     alreadyLinked: image.events,
-                    onLink: { image.events.append($0) },
-                    onRemove: { evt in image.events.removeAll { $0.persistentModelID == evt.persistentModelID } }
+                    onLink: { $0.images.append(image) },
+                    onRemove: { evt in evt.images.removeAll { $0.persistentModelID == image.persistentModelID } }
                 )
 
                 searchableLinkedSection(
@@ -523,8 +507,8 @@ struct ImageDetailContent: View {
                     searchText: $thingSearchText,
                     allEntities: things,
                     alreadyLinked: image.things,
-                    onLink: { image.things.append($0) },
-                    onRemove: { thg in image.things.removeAll { $0.persistentModelID == thg.persistentModelID } }
+                    onLink: { $0.images.append(image) },
+                    onRemove: { thg in thg.images.removeAll { $0.persistentModelID == image.persistentModelID } }
                 )
 
                 TextField("Add tag\u{2026}", text: $tagInputText)

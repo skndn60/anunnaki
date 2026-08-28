@@ -14,8 +14,7 @@ struct ThingFormView: View {
     @State private var name = ""
     @State private var thingDescription = ""
     @State private var richDescription: Data? = nil
-    @State private var source = ""
-    @State private var showCustomSourceField = false
+    @State private var selectedSource: Source?
     @State private var selectedThingType: ThingType? = nil
     @State private var selectedTags: [Tag] = []
 
@@ -129,22 +128,7 @@ struct ThingFormView: View {
     private var sourceStep: some View {
         Form {
             Section("Source") {
-                Picker("Source", selection: $source) {
-                    Text("None").tag("")
-                    ForEach(sources) { s in
-                        Text(s.name).tag(s.name)
-                    }
-                    Divider()
-                    Text("Custom\u{2026}").tag("__custom__")
-                }
-                .onChange(of: source) { _, newValue in
-                    showCustomSourceField = newValue == "__custom__"
-                    if showCustomSourceField { source = "" }
-                }
-                if showCustomSourceField {
-                    TextField("Source name", text: $source, prompt: Text("e.g. Enuma Elish"))
-                        .textFieldStyle(.roundedBorder)
-                }
+                SourcePickerView(selection: $selectedSource, sources: sources)
             }
         }
         .formStyle(.grouped)
@@ -155,7 +139,7 @@ struct ThingFormView: View {
         name = thing.name
         thingDescription = thing.thingDescription
         richDescription = thing.richDescription
-        source = thing.source
+        selectedSource = sources.first(where: { $0.name == thing.source })
         selectedThingType = thing.thingType
         selectedTags = thing.tags
     }
@@ -165,13 +149,13 @@ struct ThingFormView: View {
             thing.name = name
             thing.thingDescription = thingDescription
             thing.richDescription = richDescription
-            thing.source = source
+            thing.source = selectedSource?.name ?? ""
             thing.thingType = selectedThingType
             thing.tags = selectedTags
             RecentEditStore.trackEdit(entityType: "Thing", entityName: thing.name)
             ActivityLogger.record(action: .updated, entityType: "Thing", entityName: thing.name, context: modelContext, session: userSession)
         } else {
-            let newThing = Thing(name: name, thingDescription: thingDescription, source: source)
+            let newThing = Thing(name: name, thingDescription: thingDescription, source: selectedSource?.name ?? "")
             newThing.richDescription = richDescription
             newThing.thingType = selectedThingType
             newThing.tags = selectedTags

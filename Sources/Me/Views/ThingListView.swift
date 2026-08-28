@@ -528,7 +528,7 @@ struct ThingDetailView: View {
                     title: "Images",
                     images: thing.images,
                     onLinkImage: { asset in
-                        asset.things.append(thing)
+                        thing.images.append(asset)
                     },
                     onSelectImage: onSelectImage
                 )
@@ -649,10 +649,11 @@ struct AddThingFigureAssociationForm: View {
     let thing: Thing
     @Query(sort: \Figure.name) private var figures: [Figure]
     @Query(sort: \ThingFigureRoleType.name) private var roleTypes: [ThingFigureRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var selectedFigure: FigureSearchResult?
     @State private var selectedRoleType: ThingFigureRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var searchText = ""
 
     var body: some View {
@@ -708,7 +709,7 @@ struct AddThingFigureAssociationForm: View {
                 }
 
                 Section("Source") {
-                    TextField("Source", text: $source, prompt: Text("e.g. Enuma Elish"))
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -732,7 +733,7 @@ struct AddThingFigureAssociationForm: View {
             thing: thing,
             figure: figure,
             roleType: selectedRoleType,
-            source: source,
+            source: selectedSource?.name ?? "",
             displayName: selectedFigure?.matchedAlternateName
         )
         modelContext.insert(assoc)
@@ -748,10 +749,11 @@ struct AddThingPlaceAssociationForm: View {
     let thing: Thing
     @Query(sort: \Place.name) private var places: [Place]
     @Query(sort: \ThingPlaceRoleType.name) private var roleTypes: [ThingPlaceRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var selectedPlace: Place?
     @State private var selectedRoleType: ThingPlaceRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var searchText = ""
 
     var body: some View {
@@ -809,7 +811,7 @@ struct AddThingPlaceAssociationForm: View {
                 }
 
                 Section("Source") {
-                    TextField("Source", text: $source, prompt: Text("e.g. Enuma Elish"))
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -833,7 +835,7 @@ struct AddThingPlaceAssociationForm: View {
             thing: thing,
             place: place,
             roleType: selectedRoleType,
-            source: source
+            source: selectedSource?.name ?? ""
         )
         modelContext.insert(assoc)
         dismiss()
@@ -848,10 +850,11 @@ struct AddThingEventAssociationForm: View {
     let thing: Thing
     @Query(sort: \Event.name) private var events: [Event]
     @Query(sort: \ThingEventRoleType.name) private var roleTypes: [ThingEventRoleType]
+    @Query(sort: \Source.name) private var sources: [Source]
 
     @State private var selectedEvent: Event?
     @State private var selectedRoleType: ThingEventRoleType?
-    @State private var source = ""
+    @State private var selectedSource: Source?
     @State private var searchText = ""
 
     var body: some View {
@@ -909,7 +912,7 @@ struct AddThingEventAssociationForm: View {
                 }
 
                 Section("Source") {
-                    TextField("Source", text: $source, prompt: Text("e.g. Enuma Elish"))
+                    SourcePickerView(selection: $selectedSource, sources: sources)
                 }
             }
             .formStyle(.grouped)
@@ -933,7 +936,7 @@ struct AddThingEventAssociationForm: View {
             thing: thing,
             event: event,
             roleType: selectedRoleType,
-            source: source
+            source: selectedSource?.name ?? ""
         )
         modelContext.insert(assoc)
         dismiss()

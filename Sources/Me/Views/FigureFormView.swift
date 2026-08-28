@@ -24,8 +24,7 @@ struct FigureFormView: View {
     @State private var richDescription: Data? = nil
     @State private var birthDate: MythologicalDate = .unknown
     @State private var deathDate: MythologicalDate = .unknown
-    @State private var source = ""
-    @State private var showCustomSourceField = false
+    @State private var selectedSource: Source?
     @State private var causeOfDeath = ""
     @State private var reignStartText = ""
     @State private var reignEndText = ""
@@ -266,23 +265,7 @@ struct FigureFormView: View {
     private var sourceTagsStep: some View {
         Form {
             Section("Source") {
-                Picker("Source", selection: $source) {
-                    Text("None").tag("")
-                    ForEach(sources) { s in
-                        Text(s.name).tag(s.name)
-                    }
-                    Divider()
-                    Text("Custom\u{2026}").tag("__custom__")
-                }
-                .onChange(of: source) { _, newValue in
-                    showCustomSourceField = newValue == "__custom__"
-                    if showCustomSourceField { source = "" }
-                }
-
-                if showCustomSourceField {
-                    TextField("Source name", text: $source, prompt: Text("e.g. Enuma Elish"))
-                        .textFieldStyle(.roundedBorder)
-                }
+                SourcePickerView(selection: $selectedSource, sources: sources)
             }
 
             Section("Tags") {
@@ -305,7 +288,7 @@ struct FigureFormView: View {
         richDescription = figure.richDescription
         birthDate = figure.birthDate
         deathDate = figure.deathDate
-        source = figure.source
+        selectedSource = sources.first(where: { $0.name == figure.source })
         causeOfDeath = figure.causeOfDeath ?? ""
         reignStartText = figure.reignStartYear.map(String.init) ?? ""
         reignEndText = figure.reignEndYear.map(String.init) ?? ""
@@ -328,7 +311,7 @@ struct FigureFormView: View {
             figure.birthDate = birthDate
             figure.deathDate = deathDate
             figure.era = Migration.era(named: birthDate.era, context: modelContext)
-            figure.source = source
+            figure.source = selectedSource?.name ?? ""
             figure.causeOfDeath = causeOfDeath.isEmpty ? nil : causeOfDeath
             figure.isConcept = false
             figure.reignStartYear = Int(reignStartText)
@@ -343,7 +326,7 @@ struct FigureFormView: View {
             let newFigure = Figure(
                 name: name, disambiguation: disambiguation.isEmpty ? nil : disambiguation, title: title, figureType: selectedFigureType,
                 gender: gender, domain: domain, figureDescription: figureDescription,
-                birthDate: birthDate, deathDate: deathDate, source: source,
+                birthDate: birthDate, deathDate: deathDate, source: selectedSource?.name ?? "",
                 causeOfDeath: causeOfDeath.isEmpty ? nil : causeOfDeath
             )
             newFigure.epithet = epithet.isEmpty ? nil : epithet

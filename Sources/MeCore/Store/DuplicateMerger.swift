@@ -9,6 +9,7 @@ package struct DuplicateGroup: Identifiable, Hashable {
         case place = "Place"
         case event = "Event"
         case thing = "Thing"
+        case source = "Source"
 
         package var id: String { rawValue }
     }
@@ -33,6 +34,7 @@ package enum DuplicateMerger {
         groups += find(Place.self, kind: .place, name: { $0.name }, in: context)
         groups += find(Event.self, kind: .event, name: { $0.name }, in: context)
         groups += find(Thing.self, kind: .thing, name: { $0.name }, in: context)
+        groups += find(Source.self, kind: .source, name: { $0.name }, in: context)
         return groups.sorted {
             if $0.kind.rawValue != $1.kind.rawValue { return $0.kind.rawValue < $1.kind.rawValue }
             return $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
@@ -49,7 +51,7 @@ package enum DuplicateMerger {
         var buckets: [String: (display: String, ids: [PersistentIdentifier])] = [:]
         for entity in all {
             let display = name(entity)
-            let key = display.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            let key = normalizationKey(display)
             guard !key.isEmpty else { continue }
             if buckets[key] == nil {
                 buckets[key] = (display, [])
@@ -60,6 +62,28 @@ package enum DuplicateMerger {
             guard bucket.ids.count > 1 else { return nil }
             return DuplicateGroup(kind: kind, name: bucket.display, ids: bucket.ids)
         }
+    }
+
+    /// Normalizes a display name into a grouping key for duplicate detection:
+    /// lowercase, whitespace collapsed, and punctuation (hyphens, en/em dashes,
+    /// apostrophes, dots) removed, so "Atra-Hasis" and "Atrahasis" group together.
+    private static func normalizationKey(_ display: String) -> String {
+        let lower = display.trimmingCharacters(in: .whitespacesAndNewlines).folding(
+            options: [.caseInsensitive, .diacriticInsensitive],
+            locale: .current
+        )
+        let punctuation = "-‐‑‒–—―'’."
+        var processed = ""
+        for ch in lower {
+            if ch.isWhitespace {
+                processed.append(" ")
+            } else if punctuation.contains(ch) {
+                continue
+            } else {
+                processed.append(ch)
+            }
+        }
+        return processed.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
     }
 
     // MARK: - Merges
@@ -370,10 +394,50 @@ package enum DuplicateMerger {
         try context.save()
     }
 
+    package static func mergeSources(_ keeper: Source, _ duplicate: Source, in context: ModelContext) throws {
+        try context.transaction {
+            for cit in duplicate.citations where cit.source === duplicate {
+                let exists = keeper.citations.contains { $0.safeEntityName == cit.safeEntityName && $0.safeEntityType == cit.safeEntityType && $0.safeLocation == cit.safeLocation }
+                if exists { context.delete(cit) } else { keeper.citations.append(cit) }
+            }
+            for att in duplicate.attachments where att.source === duplicate {
+                keeper.attachments.append(att)
+            }
+            for rel in duplicate.relationships where rel.sourceRef === duplicate {
+                keeper.relationships.append(rel)
+            }
+            for cell in duplicate.popupTableCells where cell.sourceRef === duplicate {
+                keeper.popupTableCells.append(cell)
+            }
+            for table in duplicate.popupTables where table.sourceRef === duplicate {
+                keeper.popupTables.append(table)
+            }
+            for cellSource in duplicate.cellListSources where cellSource.sourceRef === duplicate {
+                keeper.cellListSources.append(cellSource)
+            }
+
+            adoptString(&keeper.sourceDescription, duplicate.sourceDescription)
+            adoptString(&keeper.author, duplicate.author)
+            adoptString(&keeper.language, duplicate.language)
+            adoptString(&keeper.period, duplicate.period)
+            adoptString(&keeper.publicationInfo, duplicate.publicationInfo)
+            adoptString(&keeper.url, duplicate.url)
+
+            duplicate.citations = []
+            duplicate.attachments = []
+            duplicate.relationships = []
+            duplicate.popupTableCells = []
+            duplicate.popupTables = []
+            duplicate.cellListSources = []
+
+            context.delete(duplicate)
+        }
+        try context.save()
+    }
+
     // MARK: - Helpers
 
-    private static func adoptString(_ target: inout String, _ source: String) {
-        if target.isEmpty { target = source }
+    private static func adoptString(_ target: inout String, _ source: String) {        if target.isEmpty { target = source }
     }
 
     private static func adoptOptional<T: Equatable>(_ target: inout T?, _ source: T?) {

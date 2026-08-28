@@ -251,6 +251,9 @@ struct SourceDetailView: View {
                     }
                 }
 
+                // Comparison-table cells citing this source
+                TableCellsSection(source: source)
+
                 // Attachments / References
                 Divider()
                 AttachmentsSection(source: source)
@@ -258,6 +261,126 @@ struct SourceDetailView: View {
             .padding(20)
             .textSelection(.enabled)
         }
+    }
+}
+
+/// Section listing comparison-table cells that cite `source`, from both the
+/// legacy single-source link (`Source.popupTableCells`) and the newer multi-
+/// source `CellSource` attributions (`Source.cellListSources`).
+private struct TableCellsSection: View {
+    let source: Source
+    @State private var previewItem: TableCellPreviewItem?
+
+    private var cells: [(table: String, attribute: String, column: String, location: String?, value: String?)] {
+        var rows: [(table: String, attribute: String, column: String, location: String?, value: String?)] = []
+        var seen = Set<PersistentIdentifier>()
+        for cell in source.popupTableCells {
+            guard seen.insert(cell.persistentModelID).inserted else { continue }
+            rows.append((table: cell.table?.name ?? "Table", attribute: cell.attribute?.name ?? "", column: columnName(for: cell), location: nil, value: cell.value))
+        }
+        for cellSource in source.cellListSources {
+            guard let cell = cellSource.cell, seen.insert(cell.persistentModelID).inserted else { continue }
+            rows.append((table: cell.table?.name ?? "Table", attribute: cell.attribute?.name ?? "", column: columnName(for: cell), location: cellSource.location, value: cell.value))
+        }
+        return rows.sorted {
+            let tableComparison = $0.table.localizedCaseInsensitiveCompare($1.table)
+            if tableComparison != .orderedSame { return tableComparison == .orderedAscending }
+            return $0.attribute.localizedCaseInsensitiveCompare($1.attribute) == .orderedAscending
+        }
+    }
+
+    private func columnName(for cell: PopupTableCell) -> String {
+        if let figure = cell.figure { return figure.name }
+        if let column = cell.column { return column.name }
+        return ""
+    }
+
+    var body: some View {
+        let rows = cells
+        if !rows.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Table Cells (\(rows.count))")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "tablecells")
+                            .font(.caption)
+                            .foregroundStyle(Color.teal)
+                            .frame(width: 14)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(row.table)
+                                .font(.callout)
+                                .fontWeight(.medium)
+                            HStack(spacing: 4) {
+                                Text(row.attribute).font(.caption).foregroundStyle(.secondary)
+                                if !row.column.isEmpty {
+                                    Text("\u{00b7}").foregroundStyle(.tertiary)
+                                    Text(row.column).font(.caption).foregroundStyle(.secondary)
+                                }
+                                if let location = row.location, !location.isEmpty {
+                                    Text("\u{00b7}").foregroundStyle(.tertiary)
+                                    Text(location).font(.caption).foregroundStyle(.tertiary)
+                                }
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        if row.value != nil {
+                            Image(systemName: "text.alignleft")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        previewItem = TableCellPreviewItem(
+                            table: row.table,
+                            attribute: row.attribute,
+                            column: row.column,
+                            value: row.value ?? ""
+                        )
+                    }
+                }
+            }
+            .popover(item: $previewItem, arrowEdge: .trailing) { item in
+                TableCellPreviewPopover(item: item)
+            }
+        }
+    }
+}
+
+private struct TableCellPreviewItem: Identifiable {
+    let table: String
+    let attribute: String
+    let column: String
+    let value: String
+    var id: String { "\(table)-\(attribute)-\(column)" }
+}
+
+private struct TableCellPreviewPopover: View {
+    let item: TableCellPreviewItem
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(item.table)
+                .font(.headline)
+            HStack(spacing: 4) {
+                Text(item.attribute).font(.subheadline).foregroundStyle(.secondary)
+                if !item.column.isEmpty {
+                    Text("\u{00b7}").foregroundStyle(.tertiary)
+                    Text(item.column).font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            Divider()
+            Text(item.value.isEmpty ? "—" : item.value)
+                .font(.body)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(12)
+        .frame(minWidth: 260, maxWidth: 400)
     }
 }
 

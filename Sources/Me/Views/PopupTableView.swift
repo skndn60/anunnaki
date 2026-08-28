@@ -6,7 +6,7 @@ struct PopupTableView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var cellValues: [String: String] = [:]
-    @State private var cellSources: [String: String] = [:]
+    @State private var cellSourceNames: [String: [CellSourceEntry]] = [:]
     @State private var activeCell: ActiveCell?
 
     private var sortedAttributes: [PopupTableAttribute] {
@@ -90,14 +90,14 @@ struct PopupTableView: View {
                                     let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
                                     CellView(
                                         value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
-                                        hasOwnSource: !(cellSources[key] ?? "").isEmpty,
+                                        hasOwnSource: !(cellSourceNames[key] ?? []).isEmpty,
                                         onOpen: {
                                             activeCell = ActiveCell(
                                                 attributeID: attribute.persistentModelID,
                                                 columnID: column.id,
                                                 attributeName: attribute.name,
                                                 columnName: columnName(column),
-                                                source: cellSources[key] ?? ""
+                                                sources: cellSourceNames[key] ?? []
                                             )
                                         }
                                     )
@@ -127,8 +127,8 @@ struct PopupTableView: View {
                 cell: cell,
                 value: cellBinding(attributeID: cell.attributeID, columnID: cell.columnID),
                 tableSource: table.source ?? "",
-                onSaveSource: {
-                    saveSource(attributeID: cell.attributeID, columnID: cell.columnID, source: $0)
+                onUpdateSources: {
+                    saveSources(attributeID: cell.attributeID, columnID: cell.columnID, sources: $0)
                 },
                 onClose: { activeCell = nil }
             )
@@ -154,7 +154,7 @@ struct PopupTableView: View {
 
     private func loadCells() {
         cellValues = [:]
-        cellSources = [:]
+        cellSourceNames = [:]
         for cell in table.cells {
             if let attrID = cell.attribute?.persistentModelID {
                 if let figID = cell.figure?.persistentModelID {
@@ -168,7 +168,9 @@ struct PopupTableView: View {
 
     private func loadCell(_ cell: PopupTableCell, key: String) {
         cellValues[key] = cell.value ?? ""
-        cellSources[key] = cell.source ?? ""
+        cellSourceNames[key] = cell.effectiveCellSourceNames.map { name in
+            CellSourceEntry(name: name.name, location: name.location)
+        }
     }
 
     /// Finds or creates the cell for this attribute/column intersection.
@@ -195,9 +197,16 @@ struct PopupTableView: View {
         return cell
     }
 
-    private func saveSource(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, source: String?) {
+    private func saveSources(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, sources: [CellSourceEntry]) {
         guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
-        cell.setSourceText(source, context: modelContext)
+
+        for cellSource in cell.cellSources {
+            cell.removeCellSource(cellSource)
+            modelContext.delete(cellSource)
+        }
+        for entry in sources {
+            cell.addCellSource(named: entry.name, location: entry.location, context: modelContext)
+        }
         try? modelContext.save()
         loadCells()
     }
@@ -290,12 +299,22 @@ private struct AttributeRowHeader: View {
     }
 }
 
+private struct CellSourceEntry: Hashable {
+    var name: String
+    var location: String?
+
+    var displayName: String {
+        if let location, !location.isEmpty { return "\(name) \u{2014} \(location)" }
+        return name
+    }
+}
+
 private struct ActiveCell: Identifiable {
     let attributeID: PersistentIdentifier
     let columnID: PersistentIdentifier
     let attributeName: String
     let columnName: String
-    let source: String
+    let sources: [CellSourceEntry]
 
     var id: String { "\(attributeID.hashValue)-\(columnID.hashValue)" }
 }
@@ -304,15 +323,17 @@ private struct CellEditPopover: View {
     let cell: ActiveCell
     @Binding var value: String
     let tableSource: String
-    var onSaveSource: (String?) -> Void
+    var onUpdateSources: ([CellSourceEntry]) -> Void
     var onClose: () -> Void
-    @State private var sourceSelection: String = ""
+    @State private var sourceEntries: [CellSourceEntry] = []
+    @State private var newSource: String = ""
+    @State private var newLocation: String = ""
     @State private var loaded = false
     @Query private var allSources: [Source]
 
     private var availableSourceNames: [String] {
         var names = Set(allSources.map(\.name))
-        if !sourceSelection.isEmpty { names.insert(sourceSelection) }
+        names.formUnion(sourceEntries.map(\.name))
         return names.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
     }
 
@@ -330,33 +351,74 @@ private struct CellEditPopover: View {
                 .font(.title3)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             VStack(alignment: .leading, spacing: 4) {
-                Text("SOURCE")
+                Text("SOURCES")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                Picker("Source", selection: Binding(
-                    get: { sourceSelection },
-                    set: { sourceSelection = $0; onSaveSource($0.isEmpty ? nil : $0) }
-                )) {
-                    Text(tableSource.isEmpty ? "None" : "Inherit table (\(tableSource))").tag("")
-                    ForEach(availableSourceNames, id: \.self) { name in
-                        Text(name).tag(name)
+                if sourceEntries.isEmpty {
+                    Text(tableSource.isEmpty ? "Inheriting table source" : "Inheriting table (\(tableSource))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(sourceEntries, id: \.self) { entry in
+                        HStack(spacing: 6) {
+                            Image(systemName: "doc.text")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(entry.displayName)
+                                .font(.caption)
+                            Spacer()
+                            Button {
+                                sourceEntries.removeAll { $0 == entry }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 6) {
+                    TextField("Location (e.g. Tablet V, lines 120\u{2013}143)", text: $newLocation)
+                        .textFieldStyle(.roundedBorder)
+                }
+                HStack(spacing: 6) {
+                    Picker("", selection: $newSource) {
+                        Text("Add source\u{2026}").tag("")
+                        ForEach(availableSourceNames, id: \.self) { name in
+                            Text(name).tag(name)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                        let name = newSource.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !name.isEmpty && !sourceEntries.contains(where: { $0.name == name && $0.location == (newLocation.isEmpty ? nil : newLocation) }) {
+                            sourceEntries.append(CellSourceEntry(name: name, location: newLocation.isEmpty ? nil : newLocation))
+                        }
+                        newSource = ""
+                        newLocation = ""
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             HStack {
                 Spacer()
-                Button("Done") { onClose() }
-                    .buttonStyle(.borderedProminent)
+                Button("Done") {
+                    onUpdateSources(sourceEntries)
+                    onClose()
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
         .padding(14)
-        .frame(width: 440, height: 380)
+        .frame(width: 440, height: 460)
         .onAppear {
             guard !loaded else { return }
             loaded = true
-            sourceSelection = cell.source
+            sourceEntries = cell.sources
         }
     }
 }

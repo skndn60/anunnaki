@@ -37,10 +37,65 @@ package func storeURL() -> URL {
 
 extension Notification.Name {
     static let showBackupSheet = Notification.Name("MeShowBackupSheet")
+    static let showNewFigure = Notification.Name("MeShowNewFigure")
+    static let showNewPlace = Notification.Name("MeShowNewPlace")
+    static let showNewEvent = Notification.Name("MeShowNewEvent")
+    static let showNewThing = Notification.Name("MeShowNewThing")
+}
+
+struct CustomAboutCommand: Commands {
+    var body: some Commands {
+        CommandGroup(replacing: .appInfo) {
+            Button("About Me") {
+                var options: [NSApplication.AboutPanelOptionKey: Any] = [
+                    .applicationName: "Me",
+                    .applicationVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0",
+                    .version: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "1",
+                    .credits: NSAttributedString(
+                        string: "A knowledge management app for Sumerian mythology",
+                        attributes: [
+                            .font: NSFont.systemFont(ofSize: NSFont.smallSystemFontSize),
+                            .foregroundColor: NSColor.secondaryLabelColor
+                        ]
+                    )
+                ]
+                if let iconURL = Bundle.module.url(forResource: "AppIcon", withExtension: "icns"),
+                   let icon = NSImage(contentsOf: iconURL) {
+                    options[.applicationIcon] = icon
+                } else if let iconURL = Bundle.module.url(forResource: "AppIcon", withExtension: "png"),
+                          let icon = NSImage(contentsOf: iconURL) {
+                    options[.applicationIcon] = icon
+                }
+                NSApplication.shared.orderFrontStandardAboutPanel(options: options)
+            }
+        }
+    }
 }
 
 struct DatabaseMenuCommands: Commands {
     var body: some Commands {
+        CommandGroup(replacing: .newItem) {
+            Button("New Figure\u{2026}") {
+                NotificationCenter.default.post(name: .showNewFigure, object: nil)
+            }
+            .keyboardShortcut("n", modifiers: .command)
+
+            Button("New Place\u{2026}") {
+                NotificationCenter.default.post(name: .showNewPlace, object: nil)
+            }
+            .keyboardShortcut("n", modifiers: [.command, .shift])
+
+            Button("New Event\u{2026}") {
+                NotificationCenter.default.post(name: .showNewEvent, object: nil)
+            }
+            .keyboardShortcut("n", modifiers: [.command, .option])
+
+            Button("New Thing\u{2026}") {
+                NotificationCenter.default.post(name: .showNewThing, object: nil)
+            }
+            .keyboardShortcut("n", modifiers: [.command, .control])
+        }
+
         CommandMenu("Database") {
             Button("Back Up Database\u{2026}") {
                 NotificationCenter.default.post(name: .showBackupSheet, object: nil)
@@ -61,7 +116,7 @@ struct MeApp: App {
 
     package static let sharedContainer: ModelContainer = {
         let schema = Schema([Figure.self, FigureType.self, Relationship.self, RelationshipType.self, Era.self, Place.self, PlaceType.self, Event.self, EventType.self, Source.self, Citation.self, AlternateName.self, Attachment.self, ImageAsset.self, Tag.self, FigurePlaceAssociation.self, PlacePlaceAssociation.self, EventEventAssociation.self, EventPlaceAssociation.self, EventFigureAssociation.self, EventFigureRoleType.self, DataVersion.self, StickyNote.self, Thing.self, ThingType.self, ThingFigureAssociation.self, ThingFigureRoleType.self, ThingPlaceAssociation.self, ThingPlaceRoleType.self, ThingEventAssociation.self, ThingEventRoleType.self, Agent.self, CollectedDatum.self, BlindSpot.self, BlockedSource.self, DictionaryEntry.self, FigureGroup.self, FigureGroupAssociation.self, ContentAttribution.self, GroupTextBlock.self,             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self,
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self, CellSource.self,
             FindingDismissal.self, IntegrityFinding.self, User.self, ActivityLogEntry.self])
 
         let forceReseed = CommandLine.arguments.contains("--reseed")
@@ -115,6 +170,7 @@ struct MeApp: App {
         .modelContainer(container)
         .defaultSize(width: 1200, height: 800)
         .commands {
+            CustomAboutCommand()
             DatabaseMenuCommands()
         }
 

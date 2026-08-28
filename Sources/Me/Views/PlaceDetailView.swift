@@ -437,7 +437,7 @@ struct PlaceDetailView: View {
                     title: "Images",
                     images: place.images,
                     onLinkImage: { asset in
-                        asset.places.append(place)
+                        place.images.append(asset)
                     },
                     onSelectImage: onSelectImage
                 )
