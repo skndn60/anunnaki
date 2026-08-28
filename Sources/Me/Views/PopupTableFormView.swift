@@ -198,6 +198,7 @@ struct PopupTableFormView: View {
     }
 
     private func removeStringColumns(from tbl: PopupTable) {
+        tbl.removeStringColumnLayouts(context: modelContext)
         for column in tbl.columns {
             let doomed = tbl.cells.filter { $0.column?.persistentModelID == column.persistentModelID }
             for cell in doomed {
@@ -210,6 +211,7 @@ struct PopupTableFormView: View {
     }
 
     private func removeFigureColumns(from tbl: PopupTable) {
+        tbl.removeFigureColumnLayouts(context: modelContext)
         tbl.figures = []
         let figureCells = tbl.cells.filter { $0.figure != nil }
         for cell in figureCells {
@@ -220,6 +222,7 @@ struct PopupTableFormView: View {
 
     private func syncFigureColumns(in tbl: PopupTable) {
         let currentFigureIDs = selectedFigureIDs
+        tbl.removeFigureColumnLayouts(except: currentFigureIDs, context: modelContext)
         let currentFigures = allFigures.filter { currentFigureIDs.contains($0.persistentModelID) }
         tbl.figures = currentFigures
 

@@ -1,6 +1,18 @@
 import SwiftUI
 import SwiftData
 
+private let defaultTableColumnWidth: CGFloat = 180
+private let minTableColumnWidth: CGFloat = 60
+private let maxTableColumnWidth: CGFloat = 560
+
+/// Which dimension(s) the scale handle adjusts: uniform (both), width-only
+/// (⇧-held), or height-only (⌃-held).
+private enum GridScaleAxis {
+    case horizontal
+    case vertical
+    case both
+}
+
 struct PopupTableView: View {
     let table: PopupTable
     @Environment(\.modelContext) private var modelContext
@@ -8,6 +20,18 @@ struct PopupTableView: View {
     @State private var cellValues: [String: String] = [:]
     @State private var cellSourceNames: [String: [CellSourceEntry]] = [:]
     @State private var activeCell: ActiveCell?
+    @State private var liveColumnWidths: [PersistentIdentifier: CGFloat] = [:]
+    @State private var storedColumnWidthPoints: [PersistentIdentifier: CGFloat] = [:]
+    @State private var dragStartWidths: [PersistentIdentifier: CGFloat] = [:]
+    @State private var resizingColumnID: PersistentIdentifier?
+    @State private var hoveredColumnID: PersistentIdentifier?
+    @State private var columnScale: CGFloat = 1.0
+    @State private var rowScale: CGFloat = 1.0
+    @State private var scaleAxisAtStart: GridScaleAxis = .both
+    @State private var scaleStart: (column: CGFloat, row: CGFloat)?
+
+    private var rowHeaderWidth: CGFloat { 160 * columnScale }
+    private var rowHeight: CGFloat { 120 * rowScale }
 
     private var sortedAttributes: [PopupTableAttribute] {
         table.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
@@ -74,10 +98,27 @@ struct PopupTableView: View {
                     Grid(alignment: .leading, horizontalSpacing: 1, verticalSpacing: 1) {
                         GridRow {
                             Color.clear
-                                .frame(width: 160, height: 120)
+                                .frame(width: rowHeaderWidth, height: rowHeight)
                             ForEach(columns) { column in
-                                columnHeader(column)
-                                    .frame(width: 180, height: 120)
+                                let width = columnWidth(for: column)
+                                ZStack(alignment: .trailing) {
+                                    columnHeader(column)
+                                        .frame(width: width, height: rowHeight)
+                                    ColumnResizeHandle(
+                                        isActive: resizingColumnID == column.id,
+                                        isHovered: hoveredColumnID == column.id
+                                    )
+                                    .frame(width: 24, height: rowHeight)
+                                    .gesture(columnResizeGesture(for: column))
+                                    .onHover { hovering in
+                                        if hovering {
+                                            hoveredColumnID = column.id
+                                        } else if hoveredColumnID == column.id {
+                                            hoveredColumnID = nil
+                                        }
+                                    }
+                                }
+                                .frame(width: width, height: rowHeight)
                             }
                         }
                         .background(Color(nsColor: .controlBackgroundColor))
@@ -85,7 +126,7 @@ struct PopupTableView: View {
                         ForEach(sortedAttributes) { attribute in
                             GridRow {
                                 AttributeRowHeader(attribute: attribute)
-                                    .frame(width: 160, height: 120)
+                                    .frame(width: rowHeaderWidth, height: rowHeight)
                                 ForEach(columns) { column in
                                     let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
                                     CellView(
@@ -101,7 +142,7 @@ struct PopupTableView: View {
                                             )
                                         }
                                     )
-                                    .frame(width: 180, height: 120)
+                                    .frame(width: columnWidth(for: column), height: rowHeight)
                                 }
                             }
                         }
@@ -113,15 +154,35 @@ struct PopupTableView: View {
 
             Divider()
 
-            HStack {
+            HStack(spacing: 12) {
                 Spacer()
                 Button("Close") { dismiss() }
                     .keyboardShortcut(.cancelAction)
+                GridScaleHandle(columnScale: columnScale, rowScale: rowScale, isDragging: scaleStart != nil)
+                    .gesture(gridScaleGesture())
+                    .help("Drag to scale the whole grid. Hold ⇧ for width only, ⌃ for height only.")
+                Text("\(Int((columnScale * 100).rounded()))% × \(Int((rowScale * 100).rounded()))%")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .frame(minWidth: 76, alignment: .leading)
+                Button {
+                    resetGridScale()
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.caption)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .disabled(columnScale == 1.0 && rowScale == 1.0)
+                .help("Reset scale to 100%")
             }
             .padding()
         }
         .frame(minWidth: 700, minHeight: 400)
-        .onAppear { loadCells() }
+        .onAppear {
+            loadCells()
+            loadColumnLayouts()
+        }
         .popover(item: $activeCell, arrowEdge: .bottom) { cell in
             CellEditPopover(
                 cell: cell,
@@ -171,6 +232,137 @@ struct PopupTableView: View {
         cellSourceNames[key] = cell.effectiveCellSourceNames.map { name in
             CellSourceEntry(name: name.name, location: name.location)
         }
+    }
+
+    private func loadColumnLayouts() {
+        var widths: [PersistentIdentifier: CGFloat] = [:]
+        for layout in table.columnLayouts {
+            guard let width = layout.width else { continue }
+            if let figure = layout.figure, layout.column == nil {
+                widths[figure.persistentModelID] = CGFloat(width)
+            } else if let column = layout.column, layout.figure == nil {
+                widths[column.persistentModelID] = CGFloat(width)
+            }
+        }
+        storedColumnWidthPoints = widths
+        columnScale = table.columnScale
+        rowScale = table.rowScale
+    }
+
+    private func columnWidth(for column: ColumnItem) -> CGFloat {
+        if let live = liveColumnWidths[column.id] { return live }
+        return (storedColumnWidthPoints[column.id] ?? defaultTableColumnWidth) * columnScale
+    }
+
+    private func columnResizeGesture(for column: ColumnItem) -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
+            .onChanged { value in
+                if dragStartWidths[column.id] == nil {
+                    dragStartWidths[column.id] = effectiveColumnWidth(for: column)
+                }
+                guard let start = dragStartWidths[column.id] else { return }
+                liveColumnWidths[column.id] = clampColumnWidth(start + value.translation.width)
+                resizingColumnID = column.id
+            }
+            .onEnded { value in
+                let start = dragStartWidths[column.id] ?? effectiveColumnWidth(for: column)
+                let clamped = clampColumnWidth(start + value.translation.width)
+                storedColumnWidthPoints[column.id] = clamped / columnScale
+                persistColumnWidth(clamped / columnScale, for: column)
+                liveColumnWidths[column.id] = nil
+                dragStartWidths[column.id] = nil
+                resizingColumnID = nil
+            }
+    }
+
+    private func effectiveColumnWidth(for column: ColumnItem) -> CGFloat {
+        if let live = liveColumnWidths[column.id] { return live }
+        return (storedColumnWidthPoints[column.id] ?? defaultTableColumnWidth) * columnScale
+    }
+
+    private func clampColumnWidth(_ width: CGFloat) -> CGFloat {
+        min(max(width, minTableColumnWidth * columnScale), maxTableColumnWidth * columnScale)
+    }
+
+    private func persistColumnWidth(_ width: CGFloat, for column: ColumnItem) {
+        switch column {
+        case .figure(let figure):
+            table.setColumnLayoutWidth(width, forFigure: figure, context: modelContext)
+        case .column(let popupColumn):
+            table.setColumnLayoutWidth(width, forColumn: popupColumn, context: modelContext)
+        }
+        try? modelContext.save()
+    }
+
+    private func gridScaleGesture() -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
+            .onChanged { value in
+                if scaleStart == nil {
+                    scaleStart = (columnScale, rowScale)
+                    scaleAxisAtStart = currentScaleAxis()
+                    liveColumnWidths = [:]
+                }
+                guard let start = scaleStart else { return }
+                applyScale(start: start, translation: value.translation)
+            }
+            .onEnded { value in
+                defer {
+                    scaleStart = nil
+                    scaleAxisAtStart = .both
+                }
+                guard let start = scaleStart else { return }
+                applyScale(start: start, translation: value.translation)
+                liveColumnWidths = [:]
+                persistGridScale(columnScale, rowScale)
+            }
+    }
+
+    private func currentScaleAxis() -> GridScaleAxis {
+        let flags = NSEvent.modifierFlags
+        if flags.contains(.shift) { return .horizontal }
+        if flags.contains(.control) { return .vertical }
+        return .both
+    }
+
+    private func applyScale(start: (column: CGFloat, row: CGFloat), translation: CGSize) {
+        let delta: CGFloat
+        let factor: CGFloat
+        switch scaleAxisAtStart {
+        case .horizontal:
+            delta = translation.width
+            factor = 1 + delta / 300
+            columnScale = clampGridScale(start.column * factor)
+        case .vertical:
+            delta = translation.height
+            factor = 1 + delta / 300
+            rowScale = clampGridScale(start.row * factor)
+        case .both:
+            delta = (translation.width + translation.height) / 2
+            factor = 1 + delta / 300
+            columnScale = clampGridScale(start.column * factor)
+            rowScale = clampGridScale(start.row * factor)
+        }
+    }
+
+    private func clampGridScale(_ scale: CGFloat) -> CGFloat {
+        min(max(scale, 0.5), 2.5)
+    }
+
+    private func roundedGridScale(_ scale: CGFloat) -> CGFloat {
+        (scale * 100).rounded() / 100
+    }
+
+    private func persistGridScale(_ columnScale: CGFloat, _ rowScale: CGFloat) {
+        table.columnScale = roundedGridScale(columnScale)
+        table.rowScale = roundedGridScale(rowScale)
+        try? modelContext.save()
+    }
+
+    private func resetGridScale() {
+        columnScale = 1.0
+        rowScale = 1.0
+        liveColumnWidths = [:]
+        persistGridScale(1.0, 1.0)
     }
 
     /// Finds or creates the cell for this attribute/column intersection.
@@ -245,16 +437,16 @@ private enum ColumnItem: Identifiable {
 private struct FigureColumnHeader: View {
     let figure: Figure
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 4) {
             if let mugshot = figure.mugshotImage {
-                MugshotView(imageURL: mugshot.fileURL, cropRect: figure.mugshotCropRect.flatMap { ImageCropRect(encoded: $0) }, size: 32, fallbackColor: figure.figureType.map { Color(hex: $0.colorHex) } ?? .gray, fallbackIcon: figure.figureType?.icon ?? "person.circle", identification: figure.mugshotIdentification)
+                MugshotView(imageURL: mugshot.fileURL, cropRect: figure.mugshotCropRect.flatMap { ImageCropRect(encoded: $0) }, size: 18, fallbackColor: figure.figureType.map { Color(hex: $0.colorHex) } ?? .gray, fallbackIcon: figure.figureType?.icon ?? "person.circle", identification: figure.mugshotIdentification)
             } else {
                 Circle()
                     .fill(figure.figureType.map { Color(hex: $0.colorHex) } ?? .gray)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 18, height: 18)
                     .overlay(
                         Image(systemName: figure.figureType?.icon ?? "person.circle")
-                            .font(.caption)
+                            .font(.system(size: 9))
                             .foregroundStyle(.white)
                     )
             }
@@ -262,7 +454,7 @@ private struct FigureColumnHeader: View {
                 .font(.body.bold())
                 .lineLimit(1)
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 6)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(nsColor: .controlBackgroundColor))
     }
@@ -271,18 +463,13 @@ private struct FigureColumnHeader: View {
 private struct StringColumnHeader: View {
     let name: String
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "textformat")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(name)
-                .font(.body.bold())
-                .lineLimit(2)
-        }
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(maxHeight: .infinity)
-        .background(Color(nsColor: .controlBackgroundColor))
+        Text(name)
+            .font(.body.bold())
+            .lineLimit(2)
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxHeight: .infinity)
+            .background(Color(nsColor: .controlBackgroundColor))
     }
 }
 
@@ -420,6 +607,60 @@ private struct CellEditPopover: View {
             loaded = true
             sourceEntries = cell.sources
         }
+    }
+}
+
+/// The last 24pt of a column header, ending at the column's right edge. An
+/// unconditional empty anchor pins the rule to the strip's trailing edge (the
+/// column boundary) so the visible line and the grab zone always coincide. The
+/// zone fills with an accent highlight on hover or while resizing.
+private struct ColumnResizeHandle: View {
+    var isActive: Bool
+    var isHovered: Bool
+
+    var body: some View {
+        ZStack(alignment: .trailing) {
+            Color.clear
+                .frame(width: 24)
+            if isActive || isHovered {
+                Rectangle()
+                    .fill(Color.accentColor.opacity(isActive ? 0.18 : 0.12))
+                    .frame(width: 24)
+            }
+            Rectangle()
+                .fill(
+                    isActive
+                        ? Color.accentColor
+                        : (isHovered ? Color.accentColor.opacity(0.8) : Color(nsColor: .systemGray).opacity(0.65))
+                )
+                .frame(width: isActive || isHovered ? 3 : 2)
+        }
+        .frame(width: 24)
+        .contentShape(Rectangle())
+    }
+}
+
+/// Grip in the footer bar: drag to scale every column width and row height by a
+/// uniform factor; hold ⇧ for width only, ⌃ for height only.
+private struct GridScaleHandle: View {
+    var columnScale: CGFloat
+    var rowScale: CGFloat
+    var isDragging: Bool
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 5)
+                .fill(Color(nsColor: .windowBackgroundColor))
+                .frame(width: 24, height: 24)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5)
+                        .stroke(isDragging ? Color.accentColor : Color(nsColor: .separatorColor), lineWidth: 1)
+                )
+            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(isDragging ? Color.accentColor : Color.secondary)
+        }
+        .contentShape(Rectangle())
     }
 }
 

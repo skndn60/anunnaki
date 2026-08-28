@@ -32,6 +32,7 @@ final class MeCoreTests: XCTestCase {
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
             PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self,
+            PopupTableColumnLayout.self,
             User.self, ActivityLogEntry.self
         ])
         if isDisk {
@@ -1781,7 +1782,8 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self,
+            PopupTableColumnLayout.self
         ])
         let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -1837,7 +1839,8 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self,
+            PopupTableColumnLayout.self
         ])
         let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -1893,7 +1896,8 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
-            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self
+            PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self,
+            PopupTableColumnLayout.self
         ])
         let config = ModelConfiguration(schema: schema, url: url, allowsSave: true)
         guard let container = try? ModelContainer(for: schema, configurations: [config]) else {
@@ -6215,6 +6219,135 @@ func testRegnalKeyOrdersEventsByDate() {
         let cells = (try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []
         XCTAssertTrue(columns.isEmpty)
         XCTAssertTrue(cells.isEmpty)
+    }
+
+    func testPopupTableColumnLayoutFigureWidthRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        let figure = Figure(name: "Enki")
+        context.insert(table); context.insert(figure)
+        table.figures.append(figure)
+        table.setColumnLayoutWidth(240, forFigure: figure, context: context)
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        XCTAssertEqual(fetched?.columnLayoutWidth(forFigure: figure), 240)
+        XCTAssertEqual(fetched?.columnLayouts.count, 1)
+    }
+
+    func testPopupTableColumnLayoutColumnWidthRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Worship")
+        let col = PopupTableColumn(table: table, name: "Sacrifice")
+        context.insert(table); context.insert(col)
+        table.setColumnLayoutWidth(300, forColumn: col, context: context)
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        XCTAssertEqual(fetched?.columnLayoutWidth(forColumn: col), 300)
+        XCTAssertNil(fetched?.columnLayoutWidth(forFigure: Figure(name: "Enki")))
+    }
+
+    func testPopupTableColumnLayoutUnsetDefaultsNilAndOverwrites() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        let figure = Figure(name: "Enki")
+        context.insert(table); context.insert(figure)
+        table.figures.append(figure)
+        try? context.save()
+        XCTAssertNil(table.columnLayoutWidth(forFigure: figure))
+
+        table.setColumnLayoutWidth(200, forFigure: figure, context: context)
+        table.setColumnLayoutWidth(320, forFigure: figure, context: context)
+        try? context.save()
+        XCTAssertEqual(table.columnLayoutWidth(forFigure: figure), 320)
+        XCTAssertEqual(table.columnLayouts.count, 1)
+    }
+
+    func testPopupTableCascadeDeletesColumnLayouts() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        let figure = Figure(name: "Enki")
+        context.insert(table); context.insert(figure)
+        table.figures.append(figure)
+        table.setColumnLayoutWidth(240, forFigure: figure, context: context)
+        let col = PopupTableColumn(table: table, name: "Sacrifice")
+        context.insert(col)
+        table.setColumnLayoutWidth(300, forColumn: col, context: context)
+        try? context.save()
+
+        context.delete(table)
+        try? context.save()
+
+        let layouts = (try? context.fetch(FetchDescriptor<PopupTableColumnLayout>())) ?? []
+        XCTAssertTrue(layouts.isEmpty)
+    }
+
+    func testRemoveFigureColumnLayoutsExceptKeepsReferencedFigures() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        let kept = Figure(name: "Enki")
+        let dropped = Figure(name: "Enlil")
+        context.insert(table); context.insert(kept); context.insert(dropped)
+        table.figures = [kept, dropped]
+        table.setColumnLayoutWidth(240, forFigure: kept, context: context)
+        table.setColumnLayoutWidth(280, forFigure: dropped, context: context)
+        let col = PopupTableColumn(table: table, name: "Sacrifice")
+        context.insert(col)
+        table.setColumnLayoutWidth(300, forColumn: col, context: context)
+        try? context.save()
+
+        table.removeFigureColumnLayouts(except: [kept.persistentModelID], context: context)
+        try? context.save()
+
+        XCTAssertEqual(table.columnLayoutWidth(forFigure: kept), 240)
+        XCTAssertNil(table.columnLayoutWidth(forFigure: dropped))
+        XCTAssertEqual(table.columnLayoutWidth(forColumn: col), 300)
+        XCTAssertEqual((try? context.fetch(FetchDescriptor<PopupTableColumnLayout>()))?.count, 2)
+    }
+
+    func testPopupTableGridScaleDefaultsToOne() {
+        let table = PopupTable(name: "T1")
+        XCTAssertEqual(table.columnScale, 1.0)
+        XCTAssertEqual(table.rowScale, 1.0)
+        XCTAssertNil(table.gridScaleRaw)
+        XCTAssertNil(table.rowScaleRaw)
+    }
+
+    func testPopupTableGridScaleRoundTripStoresNilAtOne() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        context.insert(table)
+
+        table.columnScale = 1.4
+        try? context.save()
+        let scaled = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        XCTAssertEqual(scaled?.columnScale, 1.4)
+        XCTAssertEqual(scaled?.gridScaleRaw, 1.4)
+        XCTAssertEqual(scaled?.rowScale, 1.0)
+
+        scaled?.columnScale = 1.0
+        scaled?.rowScale = 0.8
+        try? context.save()
+        let mixed = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        XCTAssertEqual(mixed?.columnScale, 1.0)
+        XCTAssertNil(mixed?.gridScaleRaw)
+        XCTAssertEqual(mixed?.rowScale, 0.8)
+        XCTAssertEqual(mixed?.rowScaleRaw, 0.8)
+
+        mixed?.rowScale = 1.0
+        try? context.save()
+        let reset = ((try? context.fetch(FetchDescriptor<PopupTable>())) ?? []).first
+        XCTAssertEqual(reset?.columnScale, 1.0)
+        XCTAssertEqual(reset?.rowScale, 1.0)
+        XCTAssertNil(reset?.gridScaleRaw)
+        XCTAssertNil(reset?.rowScaleRaw)
     }
 
     // MARK: - SKLTimelineLayout
