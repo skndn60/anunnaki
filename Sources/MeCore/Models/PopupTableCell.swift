@@ -11,6 +11,15 @@ package final class PopupTableCell: Identifiable {
     package var column: PopupTableColumn?
     /// The cell's text value. Optional for migration safety.
     package var value: String?
+    /// Rich-text (RTF) form of the value, rendered with the app's
+    /// `RichTextEditor`. Optional for migration safety; nil = plain `value`.
+    package var richValue: Data?
+    /// A free-text comment/note on this cell's value ("cross-checked against
+    /// Tablet IV", "disputed reading", …). Optional for migration safety.
+    package var comment: String?
+    /// Rich-text (RTF) form of the comment, rendered with the app's
+    /// `RichTextEditor`. Optional for migration safety; nil = plain `comment`.
+    package var richComment: Data?
     /// Free-text source attribution for this cell's value ("Enuma Elish", "SKL", …).
     /// Optional for migration safety. Linked to `sourceRef` when a matching
     /// Source row exists (case-insensitive); never auto-creates one.
@@ -28,6 +37,9 @@ package final class PopupTableCell: Identifiable {
         figure: Figure? = nil,
         column: PopupTableColumn? = nil,
         value: String? = nil,
+        richValue: Data? = nil,
+        comment: String? = nil,
+        richComment: Data? = nil,
         source: String? = nil
     ) {
         self.table = table
@@ -35,6 +47,9 @@ package final class PopupTableCell: Identifiable {
         self.figure = figure
         self.column = column
         self.value = value
+        self.richValue = richValue
+        self.comment = comment
+        self.richComment = richComment
         self.source = source
     }
 

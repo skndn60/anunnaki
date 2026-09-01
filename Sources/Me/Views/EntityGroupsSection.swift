@@ -7,6 +7,7 @@ struct EntityGroupsSection: View {
     var event: Event?
     var onJoinWithPropagation: ((FigureGroup) -> Void)?
     var onRemoveWithDepropagation: ((FigureGroupAssociation) -> Void)?
+    var onRemove: ((FigureGroupAssociation) -> Void)?
 
     @Environment(\.modelContext) private var modelContext
     @State private var searchText = ""
@@ -76,6 +77,8 @@ struct EntityGroupsSection: View {
                         Button {
                             if let onRemoveWithDepropagation {
                                 onRemoveWithDepropagation(assoc)
+                            } else if let onRemove {
+                                onRemove(assoc)
                             } else {
                                 modelContext.delete(assoc)
                                 try? modelContext.save()

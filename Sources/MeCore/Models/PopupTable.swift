@@ -30,6 +30,9 @@ package final class PopupTable: Identifiable {
     /// Extra vertical scale over `gridScale` — independent row-height factor.
     /// Nil = 1.0. Optional for migration safety.
     package var rowScaleRaw: Double?
+    /// Height (points) of the header row where column names sit. Optional for
+    /// migration safety; nil = the table default. Draggable like column widths.
+    package var headerHeightRaw: Double?
     /// Default source attribution for the whole table ("all values from X").
     /// Cells may override with their own source. Optional for migration safety.
     package var source: String?
@@ -67,6 +70,13 @@ package final class PopupTable: Identifiable {
         get { CGFloat(rowScaleRaw ?? 1.0) }
         set { rowScaleRaw = newValue == 1.0 ? nil : Double(newValue) }
     }
+
+    /// Header-row height in points. Default 48; nil stored when exactly 48.
+    package var headerHeight: CGFloat {
+        get { CGFloat(headerHeightRaw ?? 48) }
+        set { headerHeightRaw = newValue == 48 ? nil : Double(newValue) }
+    }
+    package static let defaultHeaderHeight: CGFloat = 48
 
     package init(name: String = "", tableDescription: String = "") {
         self.name = name
@@ -132,6 +142,11 @@ package final class PopupTable: Identifiable {
     /// Removes every strings-mode layout row (used when switching to figures mode).
     package func removeStringColumnLayouts(context: ModelContext) {
         removeColumnLayouts(where: { $0.figure == nil && $0.column != nil }, context: context)
+    }
+
+    /// Removes every persisted width, restoring all columns to the table default.
+    package func removeAllColumnLayouts(context: ModelContext) {
+        removeColumnLayouts(where: { _ in true }, context: context)
     }
 
     private func removeColumnLayouts(where predicate: (PopupTableColumnLayout) -> Bool, context: ModelContext) {

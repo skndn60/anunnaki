@@ -15,6 +15,7 @@ struct AppSettingsView: View {
     @AppStorage("dynastyMapLabelSize") private var labelSizeRaw = MapLabelSize.medium.rawValue
     @AppStorage("dynastyMapDateFilter") private var dateFilterEnabled = false
     @AppStorage(ConsistencyCheckSettings.masterKey) private var allChecksEnabled = true
+    @AppStorage("skipLogin") private var skipLogin = false
     @State private var expandedCategories: Set<String> = []
 
     var body: some View {
@@ -115,6 +116,14 @@ struct AppSettingsView: View {
                     }
                 } header: {
                     Text("Account")
+                }
+                Section {
+                    Toggle("Skip sign-in", isOn: $skipLogin)
+                        .help("Development hack: when enabled, the app signs in as the first user automatically instead of showing the login screen.")
+                } header: {
+                    Text("Development")
+                } footer: {
+                    Text("When enabled, the login screen is bypassed and the first user account is used. Not meant for production.")
                 }
                 if isCurrentUserAdmin {
                     Section {

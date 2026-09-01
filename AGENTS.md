@@ -120,6 +120,8 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - **Search fields use `.textFieldStyle(.roundedBorder)`**; inline editing/comment fields may be `.plain` inside a visible background container.
 - **Unit tests can't reproduce SwiftUI + SwiftData coexistence crashes** (no live `@Query` observation in MeCoreTests) — crash reports in `~/Library/Logs/DiagnosticReports/*.ips` are ground truth for those.
 - **macOS 26 SDK rename**: `ModelConfiguration`'s autosave parameter is `allowsSave:` (was `isAutosaveEnabled:`).
+- **Snap any Grid/frame dimension from a live drag to whole points** (`.rounded()`) — feeding SwiftUI `Grid` raw fractional `translation.width` causes subpixel pixel-alignment flip between frames on retina (the classic "jittery/jerky" resize).
+- **A SwiftUI `.sheet` auto-tracks its content's ideal size**, fighting a manual `NSWindow.setFrame`. To resize the sheet to content (release-time fit or grow) without the window chasing the pointer mid-gesture: pin the content frame to a `@State` size that is **not** touched during the drag, then on release set **both** the SwiftUI content frame and the `NSWindow` frame from the **same clamped value** so the two can never disagree/undo each other (see `PopupTableView.fitHostWindowToTable`).
 
 ## Important Files
 
@@ -158,6 +160,15 @@ When investigating SwiftUI layout bugs (unexpected padding, misalignment, sizing
 3. Only after identifying the root view should you look at modifier chains or data flow.
 
 This is faster and more reliable than reading code to simulate the layout engine.
+
+## Debugging Data-Versus-View Mismatches
+
+When a user reports that on-screen content is in the wrong order or doesn't match another view (e.g. a sidebar list vs. a timeline):
+
+1. **Trace the exact view that displays the content** (which struct renders it, what sort/computed property it uses) *before* touching any data.
+2. **A symptom like "sorted alphabetically" is a view-layer signature** — alphabetical order can only come from a name-based sort in the view (e.g. `FigureGroup.sortMode == .alphabetical`), not from the data. If the user reports alphabetical order, look for the view's sort mode first.
+3. Verify the fix against the live store/app state (sqlite on the real `Me.store`, or the running app), and confirm the actual rendering path uses the corrected value — not just that the underlying data looks right.
+4. Only fix data (orderIndex, missing rows, migrations) after the view layer is ruled out.
 
 ## Hard Constraints
 

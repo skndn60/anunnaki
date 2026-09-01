@@ -2238,6 +2238,100 @@ final class MeCoreTests: XCTestCase {
         XCTAssertNil(plain.summaryRichText)
     }
 
+    func testGroupTextBlockAttributionRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter")
+        context.insert(group)
+        let block = GroupTextBlock(title: "Atrahasis Tablet I", text: "Prose body.")
+        context.insert(block)
+        group.textBlocks = [block]
+
+        let source = Source(name: "Atrahasis", sourceType: .ancientText, author: "", language: "Akkadian", period: "Old Babylonian", sourceDescription: "", publicationInfo: "", url: "")
+        context.insert(source)
+        let attribution = ContentAttribution(
+            groupTextBlock: block,
+            source: source,
+            propertyName: "text",
+            contentPreview: "The Anunnaki assign the Igigi their digging work.",
+            note: ""
+        )
+        context.insert(attribution)
+        block.contentAttributions = [attribution]
+        try? context.save()
+
+        let fetchedBlock = (try? context.fetch(FetchDescriptor<GroupTextBlock>()).first)
+        XCTAssertNotNil(fetchedBlock)
+        XCTAssertEqual(fetchedBlock?.contentAttributions?.count, 1)
+        XCTAssertEqual(fetchedBlock?.contentAttributions?.first?.source?.name, "Atrahasis")
+        XCTAssertEqual(fetchedBlock?.contentAttributions?.first?.groupTextBlock, fetchedBlock)
+        // The attribution is attached to the text block, not to any figure/place/event/thing.
+        XCTAssertNil(fetchedBlock?.contentAttributions?.first?.figure)
+        XCTAssertNil(fetchedBlock?.contentAttributions?.first?.place)
+        XCTAssertNil(fetchedBlock?.contentAttributions?.first?.event)
+        XCTAssertNil(fetchedBlock?.contentAttributions?.first?.thing)
+    }
+
+    func testGroupTextBlockAttributionFormSavePath() {
+        let container = makeDiskContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter")
+        context.insert(group)
+        let block = GroupTextBlock(title: "My notes", text: "My own words.")
+        context.insert(block)
+        group.textBlocks = [block]
+
+        // Mirror ContentAttributionFormView.save(): insert a fresh attribution,
+        // set the forward (unannotated) side, save, then reload from disk.
+        let attribution = ContentAttribution(
+            source: Source(name: "S", sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: ""),
+            propertyName: "text",
+            contentPreview: "Snippet"
+        )
+        context.insert(attribution)
+        attribution.groupTextBlock = block
+        try? context.save()
+
+        // Fetch through a SECOND context on the same store so every instance is
+        // guaranteed fresh: identity-based `==` on model objects would then fail,
+        // which is why the row's task compares by persistentModelID instead.
+        let otherContext = ModelContext(container)
+        let fetchedBlock = (try? otherContext.fetch(FetchDescriptor<GroupTextBlock>()).first)
+        XCTAssertNotNil(fetchedBlock)
+        XCTAssertEqual(fetchedBlock?.persistentModelID, block.persistentModelID)
+        let fetchedAttributions: [ContentAttribution] = (try? otherContext.fetch(FetchDescriptor<ContentAttribution>())) ?? []
+        XCTAssertEqual(fetchedAttributions.count, 1)
+        XCTAssertEqual(fetchedAttributions.first?.groupTextBlock?.persistentModelID, fetchedBlock?.persistentModelID)
+        XCTAssertEqual(fetchedBlock?.contentAttributions?.count, 1)
+    }
+
+    func testGroupTextBlockAttributionIsOptional() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "Chapter")
+        context.insert(group)
+        // A text block with no attributions is valid — the user's own prose.
+        let block = GroupTextBlock(title: "My notes", text: "My own words.")
+        context.insert(block)
+        group.textBlocks = [block]
+        try? context.save()
+
+        let fetched = (try? context.fetch(FetchDescriptor<GroupTextBlock>()).first)
+        XCTAssertEqual(fetched?.contentAttributions?.count ?? 0, 0)
+        XCTAssertNil(ContentAttribution().groupTextBlock)
+
+        // Deleting a text block nullifies (rather than cascades) its attributions.
+        let orphan = ContentAttribution(groupTextBlock: block, contentPreview: "Snippet")
+        context.insert(orphan)
+        block.contentAttributions = [orphan]
+        try? context.save()
+        context.delete(block)
+        try? context.save()
+        let remaining: [ContentAttribution] = context.fetchAll()
+        XCTAssertEqual(remaining.count, 1)
+        XCTAssertNil(remaining.first?.groupTextBlock)
+    }
+
     func testGroupMemberTextSpineMoveRenumbers() {
         let container = makeContainer()
         let context = container.mainContext
@@ -3912,6 +4006,204 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(igigi?.figureType?.persistentModelID, existingType.persistentModelID, "Igigi joins the reused type")
     }
 
+    // MARK: - Collectives
+
+    func testEnsureCollectivesCreatesGroupAndHumanCollectives() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureCollectives(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        XCTAssertEqual(Set(types.map(\.name)), Set(["Human Collective", "Mixed Collective"]), "collective types created")
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let top = groups.first(where: { $0.name == "Collectives" && $0.parentGroup == nil }) else {
+            return XCTFail("Collectives group missing")
+        }
+        XCTAssertEqual(top.kind, .standard)
+        XCTAssertEqual(top.entityType, .figure)
+        XCTAssertEqual(top.sortMode, .ordered)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(Set(figures.map(\.name)), Set(["Sumerians", "Akkadians", "Gutians", "Amorites", "Babylonians", "Assyrians", "Elamites", "Hurrians", "Kassites", "Hittites"]))
+        for figure in figures {
+            XCTAssertEqual(figure.figureType?.name, "Human Collective")
+            XCTAssertEqual(figure.gender, .unknown)
+        }
+
+        let memberNames = top.sortedAssociations.compactMap { $0.figure?.name }
+        XCTAssertEqual(memberNames, ["Sumerians", "Akkadians", "Gutians", "Amorites", "Babylonians", "Assyrians", "Elamites", "Hurrians", "Kassites", "Hittites"], "members in curated order")
+    }
+
+    func testEnsureCollectivesFoldsInExistingDivineCollectives() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensureDivineCollectives(context: context)
+        try? context.save()
+
+        Migration.ensureCollectives(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let top = groups.first(where: { $0.name == "Collectives" }) else {
+            return XCTFail("Collectives group missing")
+        }
+        let memberNames = Set(top.sortedAssociations.compactMap { $0.figure?.name })
+        XCTAssertTrue(memberNames.contains("Anunnaki"), "divine collective folded into group")
+        XCTAssertTrue(memberNames.contains("Igigi"), "divine collective folded into group")
+        XCTAssertTrue(memberNames.contains("Akkadians"), "human collectives added alongside")
+    }
+
+    func testEnsureCollectivesIsIdempotentAndPreservesUserData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let userType = FigureType(name: "Human Collective", icon: "star", colorHex: "000000")
+        context.insert(userType)
+        let userAkkadians = Figure(name: "Akkadians", figureType: userType, gender: .unknown, figureDescription: "User's own description")
+        context.insert(userAkkadians)
+        try? context.save()
+
+        Migration.ensureCollectives(context: context)
+        Migration.ensureCollectives(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        XCTAssertEqual(types.count, 2, "no duplicate types")
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let top = groups.first(where: { $0.name == "Collectives" }) else {
+            return XCTFail("Collectives group missing")
+        }
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let akkadians = figures.first { $0.name == "Akkadians" }
+        XCTAssertEqual(akkadians?.figureDescription, "User's own description", "existing figure untouched")
+        XCTAssertEqual(akkadians?.figureType?.persistentModelID, userType.persistentModelID, "user's type reused, not replaced")
+        XCTAssertEqual(top.sortedAssociations.filter { $0.figure?.name == "Akkadians" }.count, 1, "no duplicate membership across runs")
+    }
+
+    func testEnsureCollectiveMembersCreatesFiguresAndLinks() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Old Babylonian Period", orderIndex: 32))
+        context.insert(Era(name: "Old Assyrian Period", orderIndex: 31))
+        context.insert(Era(name: "Neo-Assyrian Period", orderIndex: 33))
+        Migration.ensureCollectives(context: context)
+        try? context.save()
+
+        Migration.ensureCollectiveMembers(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertTrue(figures.contains { $0.name == "Sennacherib" }, "Assyrian king created")
+        XCTAssertTrue(figures.contains { $0.name == "Samsu-iluna" }, "Babylonian king created")
+
+        guard let assyrians = figures.first(where: { $0.name == "Assyrians" }) else {
+            return XCTFail("Assyrians collective missing")
+        }
+        let memberRels = assyrians.incomingRelationships.filter { $0.relationshipType?.name == "Member of" }
+        let memberNames = Set(memberRels.compactMap { $0.fromFigure?.name })
+        XCTAssertEqual(memberNames, Set(["Shamshi-Adad I", "Shalmaneser III", "Tiglath-Pileser III", "Sennacherib", "Esarhaddon", "Ashurbanipal"]), "Assyrian members linked")
+
+        let relTypes = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
+        XCTAssertTrue(relTypes.contains { $0.name == "Member of" }, "Member of relationship type created")
+
+        let sennacherib = figures.first { $0.name == "Sennacherib" }
+        XCTAssertEqual(sennacherib?.figureType?.name, "Human Collective")
+        XCTAssertEqual(sennacherib?.era?.name, "Neo-Assyrian Period", "era linked")
+        XCTAssertEqual(sennacherib?.gender, .unknown)
+    }
+
+    func testEnsureCollectiveMembersIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensureCollectives(context: context)
+        try? context.save()
+
+        Migration.ensureCollectiveMembers(context: context)
+        Migration.ensureCollectiveMembers(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let sennacherib = figures.first { $0.name == "Sennacherib" }
+        XCTAssertEqual(sennacherib?.outgoingRelationships.count, 1, "no duplicate member relationship across runs")
+
+        let relTypes = (try? context.fetch(FetchDescriptor<RelationshipType>())) ?? []
+        XCTAssertEqual(relTypes.filter { $0.name == "Member of" }.count, 1, "no duplicate relationship type")
+    }
+
+    func testEnsureCollectiveMembersLinksExistingKings() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensureCollectives(context: context)
+        let sargon = Figure(name: "Sargon of Akkad", gender: .unknown, figureDescription: "")
+        context.insert(sargon)
+        let hammurabi = Figure(name: "Hammurabi", gender: .unknown, figureDescription: "")
+        context.insert(hammurabi)
+        try? context.save()
+
+        Migration.ensureCollectiveMembers(context: context)
+        Migration.ensureCollectiveMembers(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let sargonFig = figures.first { $0.name == "Sargon of Akkad" }
+        let akkadians = figures.first { $0.name == "Akkadians" }
+        let hammurabiFig = figures.first { $0.name == "Hammurabi" }
+        let babylonians = figures.first { $0.name == "Babylonians" }
+        XCTAssertEqual(sargonFig?.outgoingRelationships.filter { $0.relationshipType?.name == "Member of" && $0.toFigure?.persistentModelID == akkadians?.persistentModelID }.count, 1, "Sargon linked to Akkadians exactly once")
+        XCTAssertEqual(hammurabiFig?.outgoingRelationships.filter { $0.relationshipType?.name == "Member of" && $0.toFigure?.persistentModelID == babylonians?.persistentModelID }.count, 1, "Hammurabi linked to Babylonians exactly once")
+    }
+
+    func testEnsureCollectiveAlternateNamesAddsAliases() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensureDivineCollectives(context: context)
+        Migration.ensureCollectives(context: context)
+        try? context.save()
+
+        Migration.ensureCollectiveAlternateNames(context: context)
+        Migration.ensureCollectiveAlternateNames(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let akkadians = figures.first { $0.name == "Akkadians" }
+        XCTAssertEqual(Set(akkadians?.alternateNames.map(\.name) ?? []), Set(["Akkadeans", "Agadeans"]), "Akkadian aliases added once")
+
+        let amorites = figures.first { $0.name == "Amorites" }
+        XCTAssertEqual(Set(amorites?.alternateNames.map(\.name) ?? []), Set(["Amurru", "Martu", "Westerners"]), "Amorite aliases added")
+
+        let hittites = figures.first { $0.name == "Hittites" }
+        XCTAssertEqual(Set(hittites?.alternateNames.map(\.name) ?? []), Set(["Hatti", "Nesites"]), "Hittite aliases added")
+
+        let anunnaki = figures.first { $0.name == "Anunnaki" }
+        XCTAssertTrue((anunnaki?.alternateNames ?? []).contains { $0.name == "Anunnaku" }, "divine collective alias added")
+    }
+
+    func testEnsureCollectiveTerritoryCreatesRolesPlacesAndLinks() {
+        let container = makeContainer()
+        let context = container.mainContext
+        Migration.ensureCollectives(context: context)
+        context.insert(Place(name: "Assur", placeType: nil, modernLocation: "Qal'at Sherqat"))
+        context.insert(Place(name: "Nineveh", placeType: nil, modernLocation: "Mosul"))
+        try? context.save()
+
+        Migration.ensureCollectiveTerritory(context: context)
+        Migration.ensureCollectiveTerritory(context: context)
+
+        let roles = (try? context.fetch(FetchDescriptor<FigurePlaceRoleType>())) ?? []
+        XCTAssertTrue(Set(roles.map(\.name)).isSuperset(of: ["Homeland", "Capital", "Territory"]), "territory roles created once")
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let assyrians = figures.first { $0.name == "Assyrians" }
+        let assyrianLinks = assyrians?.placeAssociations ?? []
+        XCTAssertEqual(assyrianLinks.filter { $0.place?.name == "Assur" && $0.roleType?.name == "Homeland" }.count, 1, "Assur homeland linked once")
+        XCTAssertEqual(assyrianLinks.filter { $0.place?.name == "Nineveh" && $0.roleType?.name == "Capital" }.count, 1, "Nineveh capital linked once")
+        XCTAssertEqual(assyrianLinks.count, 3, "no duplicate links across runs")
+
+        let hattusa = places.first { $0.name == "Hattusa" }
+        XCTAssertNotNil(hattusa, "missing Hittite capital created")
+        XCTAssertEqual(hattusa?.placeType?.name, "City")
+        let hittites = figures.first { $0.name == "Hittites" }
+        XCTAssertEqual(hittites?.placeAssociations.filter { $0.place?.name == "Hattusa" && $0.roleType?.name == "Capital" }.count, 1, "Hattusa capital linked")
+    }
+
     // MARK: - ORACC deity import
 
     func testEnsureOraccDeityImportsCreatesAllSevenWithStickies() {
@@ -4192,9 +4484,43 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(findings.count, 1, "\"god\" inside 'goddess' must not leak into the masculine set")
         XCTAssertEqual(findings.first?.entityName, "MaleGoddessWording")
 
-        let consistent = runConsistency(context).filter { $0.entityName == "FemaleGodWording" }
+        let consistent = runConsistency(context).filter { $0.entityName == "FemaleGodWording" && $0.kind == .genderedNoun }
         XCTAssertTrue(consistent.isEmpty,
                       "goddess + king is mixed wording — skipped, and 'kingdom' never counts as 'king'")
+    }
+
+    func testGenderedNounIgnoresRelationalKinshipNouns() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Daughters of Men", gender: .female, figureDescription: "She mourned her husband and brother — an undefined number of females."))
+        try? context.save()
+        let findings = runConsistency(context).filter { $0.entityName == "Daughters of Men" && $0.kind == .genderedNoun }
+        XCTAssertTrue(findings.isEmpty,
+                      "kinship nouns (husband/brother) describe others, not the figure's own gender: \(findings.map { $0.message })")
+    }
+
+    func testGenderWordingExemptsKubaba() {
+        let container = makeContainer()
+        let context = container.mainContext
+        // Kubaba is recorded on the SKL as the only female "king" of Kish — the
+        // masculine wording is historically correct, so it must not flag.
+        context.insert(Figure(name: "Kug-Bau", title: "King of Third dynasty of Kish", gender: .female,
+                              figureDescription: "Kubaba became king of Kish, the only woman to do so."))
+        try? context.save()
+
+        let kubaba = runConsistency(context).filter {
+            $0.entityName == "Kug-Bau" && ($0.kind == .genderedNoun || $0.kind == .pronounGender)
+        }
+        XCTAssertTrue(kubaba.isEmpty, "Kubaba's authentic 'king' wording must not flag: \(kubaba.map { $0.message })")
+
+        // A different female figure described as a king is still caught.
+        context.insert(Figure(name: "Unrelated", gender: .female,
+                              figureDescription: "She was made king of the city."))
+        try? context.save()
+        let other = runConsistency(context).filter {
+            $0.entityName == "Unrelated" && ($0.kind == .genderedNoun || $0.kind == .pronounGender)
+        }
+        XCTAssertEqual(other.count, 1, "a non-exempt female figure described as 'king' should still flag")
     }
 
     func testRoleGenderRuleFlagsContradictingEndpoints() {
@@ -4307,6 +4633,27 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(findings.count, 1)
         XCTAssertEqual(findings.first?.entityName, "Ninsianna")
         XCTAssertEqual(findings.first?.message, "The name \"Ninsianna\" is attached to multiple figures: First, Second, Third.")
+    }
+
+    func testAmbiguousAliasRuleSkipsSyncretismNames() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let asalluhi = Figure(name: "Asalluhi")
+        let marduk = Figure(name: "Marduk")
+        context.insert(asalluhi); context.insert(marduk)
+        context.insert(AlternateName(figure: asalluhi, name: "Asarluhi", nameType: .syncretism))
+        context.insert(AlternateName(figure: marduk, name: "Asarluhi", nameType: .syncretism))
+
+        let a = Figure(name: "A")
+        let b = Figure(name: "B")
+        context.insert(a); context.insert(b)
+        context.insert(AlternateName(figure: a, name: "Dup"))
+        context.insert(AlternateName(figure: b, name: "Dup"))
+        try? context.save()
+
+        let findings = runConsistency(context).filter { $0.kind == .ambiguousAlias }
+        XCTAssertEqual(findings.count, 1, "syncretism-typed shared aliases are exempt; real duplicates still flag")
+        XCTAssertEqual(findings.first?.entityName, "Dup")
     }
 
     func testStubFigureRule() {
@@ -5427,6 +5774,47 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertEqual(subs.first?.era?.persistentModelID, akkadEra.persistentModelID, "existing subgroup linked to its era")
     }
 
+    func testEnsureDynastyGroupsIncludesFullSKLRulingBlock() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let eras: [(String, Int)] = [
+            ("First dynasty of Kish", 11),
+            ("First rulers of Uruk", 12),
+            ("First dynasty of Ur", 13),
+            ("Dynasty of Awan", 14),
+            ("Second dynasty of Kish", 15),
+            ("Dynasty of Hamazi", 16),
+            ("Second dynasty of Uruk", 17),
+            ("Second dynasty of Ur", 18),
+            ("Dynasty of Adab", 19),
+            ("Dynasty of Mari", 20),
+            ("Third dynasty of Kish", 21),
+            ("Dynasty of Akshak", 22),
+            ("Fourth dynasty of Kish", 23),
+            ("Third dynasty of Uruk", 24),
+            ("Dynasty of Akkad", 25),
+            ("Fourth dynasty of Uruk", 26),
+            ("Gutian rule", 27),
+            ("Fifth dynasty of Uruk", 28),
+            ("Third dynasty of Ur", 29),
+            ("Dynasty of Isin", 30),
+        ]
+        for (name, order) in eras {
+            context.insert(Era(name: name, orderIndex: order))
+        }
+        try? context.save()
+
+        Migration.ensureDynastyGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        guard let top = groups.first(where: { $0.name == "Dynasties" }) else {
+            return XCTFail("Dynasties top group missing")
+        }
+        XCTAssertEqual(top.sortedSubgroups.map(\.name), eras.map(\.0), "dynasties follow SKL ruling order, not alphabetical")
+        XCTAssertEqual(top.sortedSubgroups.map(\.orderIndex), eras.map(\.1), "subgroup orderIndex matches era ruling order")
+        XCTAssertEqual(top.sortMode, .ordered, "Dynasties group page shows dynasties in ruling order")
+    }
+
     func testEnsureDynastyGroupsLinksErasAcrossOtherTrees() {
         let container = makeContainer()
         let context = container.mainContext
@@ -5450,13 +5838,60 @@ func testRegnalKeyOrdersEventsByDate() {
 
         let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
         let kish = groups.first { $0.name == "First dynasty of Kish" && $0.parentGroup === legacyTop }
-        let akkad = groups.first { $0.name == "The dynasty of Akkad" }
+        let akkad = groups.first { $0.name == "Dynasty of Akkad" && $0.parentGroup === legacyTop }
         let typo = groups.first { $0.name == "Fouth dynasty of Uruk" }
         XCTAssertEqual(kish?.era?.persistentModelID, kishEra.persistentModelID, "legacy subgroup linked by exact normalized name")
-        XCTAssertEqual(akkad?.era?.persistentModelID, akkadEra.persistentModelID, "leading 'the' stripped before matching")
-        XCTAssertNil(typo?.era, "typo'd name left untouched")
+        XCTAssertEqual(akkad?.era?.persistentModelID, akkadEra.persistentModelID, "legacy subgroup renamed to canonical name and linked")
+        XCTAssertNil(typo?.era, "typo'd name with no matching era left untouched")
         XCTAssertEqual(kishEra.groups?.contains { $0 === kish }, true, "inverse era.groups includes legacy subgroup")
         XCTAssertEqual(kish?.figureAssociations.isEmpty, true, "no members auto-added to legacy tree")
+    }
+
+    func testEnsureDynastyGroupsRepairsLegacyTreeToRulingOrder() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let eras: [(String, Int)] = [
+            ("First dynasty of Kish", 11),
+            ("First rulers of Uruk", 12),
+            ("First dynasty of Ur", 13),
+            ("Dynasty of Awan", 14),
+            ("Second dynasty of Kish", 15),
+            ("Dynasty of Hamazi", 16),
+            ("Second dynasty of Uruk", 17),
+            ("Second dynasty of Ur", 18),
+            ("Dynasty of Adab", 19),
+            ("Dynasty of Mari", 20),
+            ("Third dynasty of Kish", 21),
+            ("Dynasty of Akshak", 22),
+            ("Fourth dynasty of Kish", 23),
+            ("Third dynasty of Uruk", 24),
+            ("Dynasty of Akkad", 25),
+            ("Fourth dynasty of Uruk", 26),
+            ("Gutian rule", 27),
+            ("Fifth dynasty of Uruk", 28),
+            ("Third dynasty of Ur", 29),
+            ("Dynasty of Isin", 30),
+        ]
+        for (name, order) in eras {
+            context.insert(Era(name: name, orderIndex: order))
+        }
+
+        let legacyTop = FigureGroup(name: "Sumerian King List", icon: "building.columns", colorHex: "8E8E93", kind: .skl)
+        context.insert(legacyTop)
+        let typoSub = FigureGroup(name: "Fouth dynasty of Uruk", icon: "crown", colorHex: "8E8E93", orderIndex: 2, kind: .skl)
+        context.insert(typoSub)
+        legacyTop.subgroups = [typoSub]
+        try? context.save()
+
+        Migration.ensureDynastyGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        let legacy = groups.first { $0.name == "Sumerian King List" }
+        XCTAssertEqual(legacy?.sortedSubgroups.map(\.name), eras.map(\.0), "legacy tree matches timeline ruling order")
+        XCTAssertEqual(legacy?.sortedSubgroups.map(\.orderIndex), eras.map(\.1), "legacy subgroup order synced to era order")
+        XCTAssertEqual(legacy?.sortedSubgroups.count, 20, "missing dynasties added")
+        XCTAssertNotNil(legacy?.sortedSubgroups.first { $0.name == "Fourth dynasty of Uruk" }?.era, "typo renamed and era linked")
+        XCTAssertEqual(legacy?.sortedSubgroups.first { $0.name == "Fourth dynasty of Uruk" }?.era?.orderIndex, 26)
     }
 
     // MARK: - Event Propagation
@@ -6147,6 +6582,68 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertNil(fetched?.value)
     }
 
+    func testEnsureComparisonStateEmoji() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Mesopotamian City Matrix")
+        context.insert(table)
+
+        func add(_ value: String?) -> PopupTableCell {
+            let cell = PopupTableCell(value: value)
+            table.cells.append(cell)
+            context.insert(cell)
+            return cell
+        }
+
+        let friendly = add("Friendly")
+        let neutral = add("neutral")
+        let hostile = add("HOSTILE")
+        let allied = add("Allied")
+        let empty = add("")
+        let nilCell = add(nil)
+
+        let otherTable = PopupTable(name: "Water Deities")
+        let untouched = PopupTableCell(value: "neutral")
+        otherTable.cells.append(untouched)
+        context.insert(otherTable); context.insert(untouched)
+        try? context.save()
+
+        Migration.ensureComparisonStateEmoji(context: context)
+        try? context.save()
+
+        XCTAssertEqual(friendly.value, "\u{1F91D}")
+        XCTAssertEqual(neutral.value, "\u{1F610}")
+        XCTAssertEqual(hostile.value, "\u{2694}\u{FE0F}")
+        XCTAssertEqual(allied.value, "Allied")
+        XCTAssertEqual(empty.value ?? "", "")
+        XCTAssertNil(nilCell.value)
+        XCTAssertEqual(untouched.value, "neutral")
+
+        Migration.ensureComparisonStateEmoji(context: context)
+        try? context.save()
+        XCTAssertEqual(friendly.value, "\u{1F91D}")
+        XCTAssertEqual(untouched.value, "neutral")
+    }
+
+    func testPopupTableCellCommentRoundTrip() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "T1")
+        let figure = Figure(name: "Enki")
+        let attr = PopupTableAttribute(name: "Status")
+        table.attributes.append(attr)
+        table.figures.append(figure)
+        context.insert(table); context.insert(figure); context.insert(attr)
+        let cell = PopupTableCell(attribute: attr, figure: figure, value: "Friendly", comment: "Considered blessed by Enki")
+        table.cells.append(cell)
+        context.insert(cell)
+        try? context.save()
+
+        let fetched = ((try? context.fetch(FetchDescriptor<PopupTableCell>())) ?? []).first
+        XCTAssertEqual(fetched?.value, "Friendly")
+        XCTAssertEqual(fetched?.comment, "Considered blessed by Enki")
+    }
+
     func testPopupTableColumnModeDefaultsToFigures() {
         let table = PopupTable(name: "T1")
         XCTAssertEqual(table.columnMode, .figures)
@@ -6309,6 +6806,27 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertNil(table.columnLayoutWidth(forFigure: dropped))
         XCTAssertEqual(table.columnLayoutWidth(forColumn: col), 300)
         XCTAssertEqual((try? context.fetch(FetchDescriptor<PopupTableColumnLayout>()))?.count, 2)
+    }
+
+    func testRemoveAllColumnLayoutsRestoresDefaults() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let table = PopupTable(name: "Water Deities")
+        let figure = Figure(name: "Enki")
+        context.insert(table); context.insert(figure)
+        table.figures = [figure]
+        let col = PopupTableColumn(table: table, name: "Sacrifice")
+        context.insert(col)
+        table.setColumnLayoutWidth(240, forFigure: figure, context: context)
+        table.setColumnLayoutWidth(300, forColumn: col, context: context)
+        try? context.save()
+
+        table.removeAllColumnLayouts(context: context)
+        try? context.save()
+
+        XCTAssertNil(table.columnLayoutWidth(forFigure: figure))
+        XCTAssertNil(table.columnLayoutWidth(forColumn: col))
+        XCTAssertEqual((try? context.fetch(FetchDescriptor<PopupTableColumnLayout>()))?.count, 0)
     }
 
     func testPopupTableGridScaleDefaultsToOne() {

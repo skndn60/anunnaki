@@ -52,7 +52,10 @@ struct PlacesSection: View {
                 }
                 ForEach(filteredPlaces) { assoc in
                     VStack(alignment: .leading, spacing: 2) {
-                        FigurePlaceAssociationRow(association: assoc, onSelectPlace: onSelectPlace)
+                        FigurePlaceAssociationRow(association: assoc, onSelectPlace: onSelectPlace, onDelete: {
+                            assocToDelete = assoc
+                            showDeleteConfirm = true
+                        })
                         if editingCommentsID == assoc.persistentModelID {
                             HStack(spacing: 4) {
                                 TextField("Comments", text: $editingCommentsText)
@@ -120,6 +123,15 @@ struct PlacesSection: View {
                 }
             }
         }
+        .alert("Delete Place Association?", isPresented: $showDeleteConfirm, presenting: assocToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete the association between \(figure.name) and \(assoc.place?.name ?? "?")?")
+        }
     }
 
     @State private var showPlaceLinkPopover = false
@@ -128,6 +140,8 @@ struct PlacesSection: View {
     @State private var selectedPlaceRole: FigurePlaceRoleType?
     @State private var editingCommentsID: PersistentIdentifier?
     @State private var editingCommentsText: String = ""
+    @State private var assocToDelete: FigurePlaceAssociation?
+    @State private var showDeleteConfirm = false
 }
 
 private struct PlaceLinkPopover: View {

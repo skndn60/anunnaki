@@ -88,11 +88,6 @@ struct PopupTableListView: View {
                     .frame(width: 320)
                     .frame(maxHeight: .infinity)
                     .background(.thinMaterial)
-                } else {
-                    Text("Select a table")
-                        .font(.title2)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
             .transition(.move(edge: .trailing).combined(with: .opacity))

@@ -12,6 +12,8 @@ struct PlaceDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var altToDelete: AlternateName?
     @State private var showDeleteAltConfirm = false
+    @State private var assocToDelete: PlacePlaceAssociation?
+    @State private var showDeleteAssocConfirm = false
     @State private var showAddAltSheet = false
     @State private var showFigureLinkPopover = false
     @State private var figureSearchText = ""
@@ -26,6 +28,18 @@ struct PlaceDetailView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var eventAssocToDelete: EventPlaceAssociation?
+    @State private var showDeleteEventAssocConfirm = false
+    @State private var figureAssocToDelete: FigurePlaceAssociation?
+    @State private var showDeleteFigureAssocConfirm = false
+    @State private var citationToDelete: Citation?
+    @State private var showDeleteCitationConfirm = false
+    @State private var tagToRemove: Tag?
+    @State private var showRemoveTagConfirm = false
+    @State private var groupAssocToRemove: FigureGroupAssociation?
+    @State private var showRemoveGroupConfirm = false
+    @State private var attributionToDelete: ContentAttribution?
+    @State private var showDeleteAttributionConfirm = false
 
     private var relatedEvents: [Event] {
         place.eventAssociations.compactMap { $0.event }
@@ -180,8 +194,8 @@ struct PlaceDetailView: View {
                     onAdd: { showAddAttribution = true },
                     onEdit: { editingAttribution = $0 },
                     onDelete: { attribution in
-                        modelContext.delete(attribution)
-                        try? modelContext.save()
+                        attributionToDelete = attribution
+                        showDeleteAttributionConfirm = true
                     }
                 )
 
@@ -290,6 +304,16 @@ struct PlaceDetailView: View {
                                     .font(.caption2)
                                     .foregroundStyle(.tertiary)
                                     .lineLimit(1)
+                                Button(action: {
+                                    assocToDelete = assoc
+                                    showDeleteAssocConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete association")
                             }
                         }
                     }
@@ -349,6 +373,16 @@ struct PlaceDetailView: View {
                                         .foregroundStyle(.secondary)
                                 }
                                 Spacer()
+                                Button(action: {
+                                    eventAssocToDelete = place.eventAssociations.first { $0.event?.persistentModelID == event.persistentModelID }
+                                    showDeleteEventAssocConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete association")
                             }
                             .padding(.vertical, 2)
                         }
@@ -410,22 +444,36 @@ struct PlaceDetailView: View {
                     } else {
                         FlowLayout(spacing: 6) {
                             ForEach(allFigures) { figure in
-                                Button(action: { onSelectFigure?(figure) }) {
-                                    HStack(spacing: 3) {
-                                        Text(figure.gender.symbol)
-                                            .font(.system(size: 9))
-                                        Text(figureDisplayNames[figure.persistentModelID].map { "\(figure.name) as \($0)" } ?? figure.name)
-                                            .font(.caption)
+                                HStack(spacing: 3) {
+                                    Button(action: { onSelectFigure?(figure) }) {
+                                        HStack(spacing: 3) {
+                                            Text(figure.gender.symbol)
+                                                .font(.system(size: 9))
+                                            Text(figureDisplayNames[figure.persistentModelID].map { "\(figure.name) as \($0)" } ?? figure.name)
+                                                .font(.caption)
+                                        }
                                     }
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 3)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .fill(figure.figureType?.color.opacity(0.1) ?? .gray.opacity(0.1))
-                                    )
+                                    .buttonStyle(.plain)
+                                    .pointingHand()
+                                    if let assoc = place.figureAssociations.first(where: { $0.figure?.persistentModelID == figure.persistentModelID }) {
+                                        Button(action: {
+                                            figureAssocToDelete = assoc
+                                            showDeleteFigureAssocConfirm = true
+                                        }) {
+                                            Image(systemName: "xmark.circle.fill")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help("Delete association")
+                                    }
                                 }
-                                .buttonStyle(.plain)
-                                .pointingHand()
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(figure.figureType?.color.opacity(0.1) ?? .gray.opacity(0.1))
+                                )
                             }
                         }
                     }
@@ -453,7 +501,10 @@ struct PlaceDetailView: View {
 
                         FlowLayout(spacing: 4) {
                             ForEach(place.tags) { tag in
-                                TagTokenView(tag: tag)
+                                TagTokenView(tag: tag, onRemove: {
+                                    tagToRemove = tag
+                                    showRemoveTagConfirm = true
+                                })
                             }
                         }
                     }
@@ -468,6 +519,10 @@ struct PlaceDetailView: View {
                         place.groupAssociations.append(assoc)
                         group.figureAssociations.append(assoc)
                         try? modelContext.save()
+                    },
+                    onRemove: { assoc in
+                        groupAssocToRemove = assoc
+                        showRemoveGroupConfirm = true
                     }
                 )
 
@@ -495,6 +550,17 @@ struct PlaceDetailView: View {
                                         .foregroundStyle(.secondary)
                                         .lineLimit(3)
                                 }
+                                Spacer()
+                                Button(action: {
+                                    citationToDelete = citation
+                                    showDeleteCitationConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete citation")
                             }
                         }
                     }
@@ -511,6 +577,69 @@ struct PlaceDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: { altName in
             Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(altName.place?.name ?? "?")?")
+        }
+        .alert("Delete Place ↔ Place Association?", isPresented: $showDeleteAssocConfirm, presenting: assocToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete association between \(assoc.fromPlace?.name ?? "?") and \(assoc.toPlace?.name ?? "?")?")
+        }
+        .alert("Delete Place ↔ Event Association?", isPresented: $showDeleteEventAssocConfirm, presenting: eventAssocToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete association between \(assoc.event?.name ?? "?") and \(assoc.place?.name ?? "?")?")
+        }
+        .alert("Delete Figure Association?", isPresented: $showDeleteFigureAssocConfirm, presenting: figureAssocToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete association between \(assoc.figure?.name ?? "?") and \(assoc.place?.name ?? "?")?")
+        }
+        .alert("Delete Citation?", isPresented: $showDeleteCitationConfirm, presenting: citationToDelete) { citation in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(citation)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { citation in
+            Text("Delete the citation from \(citation.source?.name ?? "Unknown")?")
+        }
+        .alert("Remove Tag?", isPresented: $showRemoveTagConfirm, presenting: tagToRemove) { tag in
+            Button("Remove", role: .destructive) {
+                place.tags.removeAll { $0.persistentModelID == tag.persistentModelID }
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { tag in
+            Text("Remove the tag \"\(tag.name)\" from \(place.name)?")
+        }
+        .alert("Remove from Group?", isPresented: $showRemoveGroupConfirm, presenting: groupAssocToRemove) { assoc in
+            Button("Remove", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Remove \(place.name) from group \(assoc.group?.name ?? "?")?")
+        }
+        .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(attribution)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { attribution in
+            Text("Delete the attribution from \(attribution.source?.name ?? "Unknown")?")
         }
         .sheet(isPresented: $showAddAltSheet) {
             AlternateNameFormView(alternateName: nil, preSelectedPlace: place)

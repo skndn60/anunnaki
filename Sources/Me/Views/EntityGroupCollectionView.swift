@@ -108,6 +108,7 @@ struct EntityGroupCollectionView: View {
     @State private var editingThing: Thing?
     @State private var editingTextBlock: GroupTextBlock?
     @State private var deletingTextBlock: GroupTextBlock?
+    @State private var textBlockRevision = 0
     @State private var showDeleteConfirm = false
     @State private var showDeleteTextBlockConfirm = false
     @State private var deleteWarningMessage: String?
@@ -203,6 +204,7 @@ struct EntityGroupCollectionView: View {
                                         group: subgroup,
                                         expanded: $expandedGroups,
                                         showTextBlockControls: showTextBlockControls,
+                                        attributionRevision: textBlockRevision,
                                         onSelectMember: { detailItem = memberItem(from: $0) },
                                         onOpenInSidebar: { openInSidebar($0) },
                                         onOpenInWindow: { openInWindow($0) },
@@ -216,6 +218,7 @@ struct EntityGroupCollectionView: View {
                                     TextBlockRow(
                                         block: block,
                                         showEditControls: showTextBlockControls,
+                                        attributionRevision: textBlockRevision,
                                         onEdit: { editingTextBlock = block },
                                         onDelete: { deletingTextBlock = block }
                                     )
@@ -298,6 +301,11 @@ struct EntityGroupCollectionView: View {
             if let image = newValue {
                 openWindow(id: "image-detail", value: image.persistentModelID)
                 imageDetailImage = nil
+            }
+        }
+        .onChange(of: editingTextBlock) { _, newValue in
+            if newValue == nil {
+                textBlockRevision += 1
             }
         }
     }
@@ -939,6 +947,7 @@ private struct EntityGroupTreeNode: View {
     @Environment(\.modelContext) private var modelContext
     @Binding var expanded: Set<PersistentIdentifier>
     var showTextBlockControls: Bool = false
+    var attributionRevision: Int = 0
     var onSelectMember: (MixedItem) -> Void
     var onOpenInSidebar: (MixedItem) -> Void
     var onOpenInWindow: (MixedItem) -> Void
@@ -1053,6 +1062,7 @@ private struct EntityGroupTreeNode: View {
                                 group: child,
                                 expanded: $expanded,
                                 showTextBlockControls: showTextBlockControls,
+                                attributionRevision: attributionRevision,
                                 onSelectMember: onSelectMember,
                                 onOpenInSidebar: onOpenInSidebar,
                                 onOpenInWindow: onOpenInWindow,
@@ -1064,6 +1074,7 @@ private struct EntityGroupTreeNode: View {
                             TextBlockRow(
                                 block: block,
                                 showEditControls: showTextBlockControls,
+                                attributionRevision: attributionRevision,
                                 onEdit: { onEditMember(item) },
                                 onDelete: { onDeleteMember(item) }
                             )
@@ -1086,14 +1097,23 @@ private struct EntityGroupTreeNode: View {
     }
 }
 
+private struct TextBlockAttributionFootnote: Identifiable {
+    let id = UUID()
+    let sourceName: String
+    let url: URL?
+}
+
 private struct TextBlockRow: View {
     let block: GroupTextBlock
     var showEditControls: Bool = false
+    var attributionRevision: Int = 0
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @Environment(\.modelContext) private var modelContext
     @State private var isHovered = false
     @State private var showFullText = false
+    @State private var attributionFootnotes: [TextBlockAttributionFootnote] = []
 
     private var hasSummary: Bool {
         !(block.summary?.isEmpty ?? true)
@@ -1178,6 +1198,26 @@ private struct TextBlockRow: View {
                     .multilineTextAlignment(textAlignment)
                     .frame(maxWidth: .infinity, alignment: frameAlignment)
             }
+            if !attributionFootnotes.isEmpty {
+                VStack(alignment: .trailing, spacing: 2) {
+                    ForEach(attributionFootnotes) { footnote in
+                        HStack(spacing: 4) {
+                            Image(systemName: "book.and.wrench")
+                                .font(.caption2)
+                                .foregroundStyle(.teal)
+                            Text("Source: \(footnote.sourceName)")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                            if let url = footnote.url {
+                                Link("(click to see, note: may open browser window)", destination: url)
+                                    .font(.caption2)
+                            }
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.top, 6)
+            }
         }
         .padding(10)
         .frame(minHeight: 32)
@@ -1193,6 +1233,22 @@ private struct TextBlockRow: View {
         .frame(maxWidth: .infinity, alignment: block.maxWidth == nil ? .leading : frameAlignment)
         .onHover { hovering in
             isHovered = hovering
+        }
+        .task(id: "\(block.persistentModelID)-\(attributionRevision)") {
+            let targetID = block.persistentModelID
+            let all: [ContentAttribution] = modelContext.fetchAll()
+            attributionFootnotes = all.filter { $0.groupTextBlock?.persistentModelID == targetID }
+                .map { attribution in
+                    let sourceName = attribution.source?.name ?? "Unknown source"
+                    var url: URL?
+                    if let urlString = attribution.url, !urlString.isEmpty {
+                        url = URL(string: urlString)
+                    }
+                    if url == nil, let sourceURL = attribution.source?.url, !sourceURL.isEmpty {
+                        url = URL(string: sourceURL)
+                    }
+                    return TextBlockAttributionFootnote(sourceName: sourceName, url: url)
+                }
         }
         .animation(.easeInOut(duration: 0.15), value: controlsVisible)
         .contextMenu {
@@ -1217,6 +1273,8 @@ struct GroupTextBlockSheet: View {
     @State private var maxWidth: Double?
     @State private var alignment: GroupTextBlock.TextBlockAlignment
     @State private var titleSize: GroupTextBlock.TextBlockTitleSize
+    @State private var showingAttributionForm = false
+    @State private var editingAttribution: ContentAttribution?
 
     init(group: FigureGroup, block: GroupTextBlock) {
         self.group = group
@@ -1231,61 +1289,85 @@ struct GroupTextBlockSheet: View {
         _titleSize = State(initialValue: block.titleSize)
     }
 
+    private var blockAttributions: [ContentAttribution] {
+        let all: [ContentAttribution] = modelContext.fetchAll()
+        return all.filter { $0.groupTextBlock == block }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Text Block")
                 .font(.headline)
-            TextField("Title (optional)", text: $title)
-                .textFieldStyle(.roundedBorder)
-            Text("Summary")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.secondary)
-            RichTextEditorSection(richData: $summaryRichText, plainText: $summary)
-                .frame(minHeight: 90)
-            Text("Full text")
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.secondary)
-            RichTextEditorSection(richData: $richText, plainText: $text)
-                .frame(minHeight: 140)
-            HStack(spacing: 8) {
-                Text("Title size:")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Picker("Title size", selection: $titleSize) {
-                    ForEach(GroupTextBlock.TextBlockTitleSize.allCases, id: \.self) { size in
-                        Text(size.displayName).tag(size)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    TextField("Title (optional)", text: $title)
+                        .textFieldStyle(.roundedBorder)
+                    Text("Summary")
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    RichTextEditorSection(richData: $summaryRichText, plainText: $summary)
+                        .frame(minHeight: 90)
+                    Text("Full text")
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    RichTextEditorSection(richData: $richText, plainText: $text)
+                        .frame(minHeight: 140)
+                    HStack(spacing: 8) {
+                        Text("Title size:")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Picker("Title size", selection: $titleSize) {
+                            ForEach(GroupTextBlock.TextBlockTitleSize.allCases, id: \.self) { size in
+                                Text(size.displayName).tag(size)
+                            }
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
                     }
+                    HStack(spacing: 8) {
+                        Text("Max width:")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Picker("Max width", selection: $maxWidth) {
+                            Text("Full").tag(Double?.none)
+                            Text("420").tag(Double?.some(420))
+                            Text("560").tag(Double?.some(560))
+                            Text("700").tag(Double?.some(700))
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                    HStack(spacing: 8) {
+                        Text("Align:")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Picker("Align", selection: $alignment) {
+                            Text("Left").tag(GroupTextBlock.TextBlockAlignment.left)
+                            Text("Center").tag(GroupTextBlock.TextBlockAlignment.center)
+                            Text("Right").tag(GroupTextBlock.TextBlockAlignment.right)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
+                        .fixedSize()
+                    }
+                    ContentAttributionSection(
+                        attributions: blockAttributions,
+                        onAdd: {
+                            editingAttribution = nil
+                            showingAttributionForm = true
+                        },
+                        onEdit: { attribution in
+                            editingAttribution = attribution
+                            showingAttributionForm = true
+                        },
+                        onDelete: { attribution in
+                            modelContext.delete(attribution)
+                            try? modelContext.save()
+                        }
+                    )
                 }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-            }
-            HStack(spacing: 8) {
-                Text("Max width:")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Picker("Max width", selection: $maxWidth) {
-                    Text("Full").tag(Double?.none)
-                    Text("420").tag(Double?.some(420))
-                    Text("560").tag(Double?.some(560))
-                    Text("700").tag(Double?.some(700))
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
-            }
-            HStack(spacing: 8) {
-                Text("Align:")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                Picker("Align", selection: $alignment) {
-                    Text("Left").tag(GroupTextBlock.TextBlockAlignment.left)
-                    Text("Center").tag(GroupTextBlock.TextBlockAlignment.center)
-                    Text("Right").tag(GroupTextBlock.TextBlockAlignment.right)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
             }
             HStack {
                 Spacer()
@@ -1309,7 +1391,10 @@ struct GroupTextBlockSheet: View {
             }
         }
         .padding(20)
-        .frame(width: 560, height: 620)
+        .frame(width: 560, height: 760)
+        .sheet(isPresented: $showingAttributionForm) {
+            ContentAttributionFormView(attribution: editingAttribution, groupTextBlock: block)
+        }
     }
 }
 

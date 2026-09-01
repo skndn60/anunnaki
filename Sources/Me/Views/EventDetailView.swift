@@ -31,6 +31,20 @@ struct EventDetailView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var figureToRemove: (figure: Figure, displayName: String?, association: EventFigureAssociation?)?
+    @State private var showRemoveFigureConfirm = false
+    @State private var placeAssocToDelete: EventPlaceAssociation?
+    @State private var showDeletePlaceAssocConfirm = false
+    @State private var thingAssocToDelete: ThingEventAssociation?
+    @State private var showDeleteThingAssocConfirm = false
+    @State private var citationToDelete: Citation?
+    @State private var showDeleteCitationConfirm = false
+    @State private var tagToRemove: Tag?
+    @State private var showRemoveTagConfirm = false
+    @State private var groupAssocToRemove: FigureGroupAssociation?
+    @State private var showRemoveGroupConfirm = false
+    @State private var attributionToDelete: ContentAttribution?
+    @State private var showDeleteAttributionConfirm = false
 
     private var figureDisplayList: [(figure: Figure, displayName: String?, association: EventFigureAssociation?)] {
         var result: [(figure: Figure, displayName: String?, association: EventFigureAssociation?)] = event.involvedFigures.map { (figure: $0, displayName: nil, association: nil) }
@@ -155,8 +169,8 @@ struct EventDetailView: View {
                     onAdd: { showAddAttribution = true },
                     onEdit: { editingAttribution = $0 },
                     onDelete: { attribution in
-                        modelContext.delete(attribution)
-                        try? modelContext.save()
+                        attributionToDelete = attribution
+                        showDeleteAttributionConfirm = true
                     }
                 )
 
@@ -235,7 +249,10 @@ struct EventDetailView: View {
                                     .help("Edit display name")
                                 }
 
-                                Button(role: .destructive, action: { removeFigure(item) }) {
+                                Button(role: .destructive, action: {
+                                    figureToRemove = item
+                                    showRemoveFigureConfirm = true
+                                }) {
                                     Image(systemName: "xmark")
                                         .font(.system(size: 9, weight: .bold))
                                         .foregroundStyle(.secondary)
@@ -272,6 +289,17 @@ struct EventDetailView: View {
                                         .foregroundStyle(.secondary)
                                         .lineLimit(3)
                                 }
+                                Spacer()
+                                Button(action: {
+                                    citationToDelete = citation
+                                    showDeleteCitationConfirm = true
+                                }) {
+                                    Image(systemName: "trash")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete citation")
                             }
                         }
                     }
@@ -340,6 +368,17 @@ struct EventDetailView: View {
                                             }
                                         }
                                     }
+                                    Spacer()
+                                    Button(action: {
+                                        placeAssocToDelete = assoc
+                                        showDeletePlaceAssocConfirm = true
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.red.opacity(0.7))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Delete association")
                                 }
                             }
                         }
@@ -398,6 +437,17 @@ struct EventDetailView: View {
                                                 .background(RoundedRectangle(cornerRadius: 3).fill(Color.brown.opacity(0.12)))
                                         }
                                     }
+                                    Spacer()
+                                    Button(action: {
+                                        thingAssocToDelete = assoc
+                                        showDeleteThingAssocConfirm = true
+                                    }) {
+                                        Image(systemName: "trash")
+                                            .font(.system(size: 10))
+                                            .foregroundStyle(.red.opacity(0.7))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Delete association")
                                 }
                             }
                         }
@@ -426,7 +476,10 @@ struct EventDetailView: View {
 
                         FlowLayout(spacing: 4) {
                             ForEach(event.tags) { tag in
-                                TagTokenView(tag: tag)
+                                TagTokenView(tag: tag, onRemove: {
+                                    tagToRemove = tag
+                                    showRemoveTagConfirm = true
+                                })
                             }
                         }
                     }
@@ -441,13 +494,8 @@ struct EventDetailView: View {
                         try? modelContext.save()
                     },
                     onRemoveWithDepropagation: { assoc in
-                        if let eventToRemove = assoc.event, let group = assoc.group {
-                            let removedNames = group.removeEventWithDepropagation(event: eventToRemove, in: modelContext)
-                            try? modelContext.save()
-                        } else {
-                            modelContext.delete(assoc)
-                            try? modelContext.save()
-                        }
+                        groupAssocToRemove = assoc
+                        showRemoveGroupConfirm = true
                     }
                 )
 
@@ -484,6 +532,73 @@ struct EventDetailView: View {
         }
         .sheet(item: $editingAttribution) { attribution in
             ContentAttributionFormView(attribution: attribution)
+        }
+        .alert("Remove Figure?", isPresented: $showRemoveFigureConfirm, presenting: figureToRemove) { item in
+            Button("Remove", role: .destructive) {
+                removeFigure(item)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { item in
+            Text("Remove \(item.displayName ?? item.figure.name) from the event \(event.name)?")
+        }
+        .alert("Delete Place Association?", isPresented: $showDeletePlaceAssocConfirm, presenting: placeAssocToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete association between \(assoc.event?.name ?? "?") and \(assoc.place?.name ?? "?")?")
+        }
+        .alert("Delete Thing Association?", isPresented: $showDeleteThingAssocConfirm, presenting: thingAssocToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete association between \(assoc.event?.name ?? "?") and \(assoc.thing?.name ?? "?")?")
+        }
+        .alert("Delete Citation?", isPresented: $showDeleteCitationConfirm, presenting: citationToDelete) { citation in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(citation)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { citation in
+            Text("Delete the citation from \(citation.source?.name ?? "Unknown")?")
+        }
+        .alert("Remove Tag?", isPresented: $showRemoveTagConfirm, presenting: tagToRemove) { tag in
+            Button("Remove", role: .destructive) {
+                event.tags.removeAll { $0.persistentModelID == tag.persistentModelID }
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { tag in
+            Text("Remove the tag \"\(tag.name)\" from \(event.name)?")
+        }
+        .alert("Remove from Group?", isPresented: $showRemoveGroupConfirm, presenting: groupAssocToRemove) { assoc in
+            Button("Remove", role: .destructive) {
+                if let eventToRemove = assoc.event, let group = assoc.group {
+                    let removedNames = group.removeEventWithDepropagation(event: eventToRemove, in: modelContext)
+                    try? modelContext.save()
+                } else {
+                    modelContext.delete(assoc)
+                    try? modelContext.save()
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Remove \(event.name) from group \(assoc.group?.name ?? "?")?")
+        }
+        .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(attribution)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { attribution in
+            Text("Delete the attribution from \(attribution.source?.name ?? "Unknown")?")
         }
     }
 

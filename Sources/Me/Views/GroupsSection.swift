@@ -4,6 +4,7 @@ import SwiftData
 /// Section showing figure groups a figure belongs to.
 struct GroupsSection: View {
     let figure: Figure
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         Divider()
@@ -54,16 +55,37 @@ struct GroupsSection: View {
                                 .foregroundStyle(.tertiary)
                         }
                         Spacer()
+                        Button(action: {
+                            assocToDelete = assoc
+                            showDeleteConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Remove from group")
                     }
                     .padding(.vertical, 2)
                 }
             }
+        }
+        .alert("Remove from Group?", isPresented: $showDeleteConfirm, presenting: assocToDelete) { assoc in
+            Button("Remove", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Remove \(figure.name) from group \(assoc.group?.name ?? "?")?")
         }
     }
 
     @State private var showGroupLinkPopover = false
     @State private var groupSearchText = ""
     @State private var selectedGroupForLink: FigureGroup?
+    @State private var assocToDelete: FigureGroupAssociation?
+    @State private var showDeleteConfirm = false
 }
 
 private struct GroupLinkPopover: View {

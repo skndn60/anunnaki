@@ -21,7 +21,8 @@ struct PantheonsSection: View {
                         let isMember = figure.pantheons.contains { $0.persistentModelID == pantheon.persistentModelID }
                         Button {
                             if isMember {
-                                removePantheonMembership(pantheon)
+                                pantheonToRemove = pantheon
+                                showRemoveConfirm = true
                             } else {
                                 figure.pantheons.append(pantheon)
                                 try? modelContext.save()
@@ -62,12 +63,33 @@ struct PantheonsSection: View {
                         TextField("\(figure.name)", text: pantheonAliasBinding(for: pantheon))
                             .textFieldStyle(.roundedBorder)
                             .frame(maxWidth: 160)
+                        Button(action: {
+                            pantheonToRemove = pantheon
+                            showRemoveConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Remove from pantheon")
                     }
                     .padding(.vertical, 2)
                 }
             }
         }
+        .alert("Remove from Pantheon?", isPresented: $showRemoveConfirm, presenting: pantheonToRemove) { pantheon in
+            Button("Remove", role: .destructive) {
+                removePantheonMembership(pantheon)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { pantheon in
+            Text("Remove \(figure.name) from the pantheon \(pantheon.name)?")
+        }
     }
+
+    @State private var pantheonToRemove: Pantheon?
+    @State private var showRemoveConfirm = false
 
     private func removePantheonMembership(_ pantheon: Pantheon) {
         figure.pantheons.removeAll { $0.persistentModelID == pantheon.persistentModelID }

@@ -24,6 +24,8 @@ struct AssociationsView: View {
     @State private var editingRelationship: Relationship?
     @State private var showDeleteRelConfirm = false
     @State private var relToDelete: Relationship?
+    @State private var showDeletePlacePlaceConfirm = false
+    @State private var placePlaceToDelete: PlacePlaceAssociation?
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -117,6 +119,15 @@ struct AssociationsView: View {
             Button("Cancel", role: .cancel) {}
         } message: { rel in
             Text("Delete relationship between \(rel.fromFigure?.name ?? "?") and \(rel.toFigure?.name ?? "?")?")
+        }
+        .alert("Delete Place ↔ Place Association?", isPresented: $showDeletePlacePlaceConfirm, presenting: placePlaceToDelete) { assoc in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Delete association between \(assoc.fromPlace?.name ?? "?") and \(assoc.toPlace?.name ?? "?")?")
         }
     }
 
@@ -264,7 +275,10 @@ struct AssociationsView: View {
                                 Spacer()
                                 Text(assoc.source).font(.caption2).foregroundStyle(.tertiary).lineLimit(1)
                                 IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: { editingPlacePlaceAssoc = assoc })
-                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: { Task { @MainActor in modelContext.delete(assoc) } })
+                                IconActionButton(icon: "trash", color: .red, help: "Delete", action: {
+                                    placePlaceToDelete = assoc
+                                    showDeletePlacePlaceConfirm = true
+                                })
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 6)

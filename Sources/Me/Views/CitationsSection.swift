@@ -46,11 +46,34 @@ struct CitationsSection: View {
                         .foregroundStyle(.tertiary)
                 } else {
                     ForEach(filteredCitations) { citation in
-                        FigureCitationsRow(citation: citation)
+                        HStack(alignment: .center, spacing: 4) {
+                            FigureCitationsRow(citation: citation)
+                            Button(action: {
+                                citationToDelete = citation
+                                showDeleteConfirm = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Delete citation")
+                        }
                     }
             }
+        }
+        .alert("Delete Citation?", isPresented: $showDeleteConfirm, presenting: citationToDelete) { citation in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(citation)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { citation in
+            Text("Delete the citation from \(citation.source?.name ?? "Unknown")?")
         }
     }
 
     @Environment(\.modelContext) private var modelContext
+    @State private var citationToDelete: Citation?
+    @State private var showDeleteConfirm = false
 }

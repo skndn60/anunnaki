@@ -8,6 +8,12 @@ package final class GroupTextBlock: Identifiable {
     /// The group this prose block belongs to.
     package var group: FigureGroup?
 
+    /// Source attributions for this prose block. Set links via this side
+    /// (the annotated inverse) per the codebase convention. May be empty —
+    /// attribution is optional for the user's own prose.
+    @Relationship(deleteRule: .nullify, inverse: \ContentAttribution.groupTextBlock)
+    package var contentAttributions: [ContentAttribution]?
+
     /// Optional heading shown above the prose.
     package var title: String
 
@@ -75,7 +81,8 @@ package final class GroupTextBlock: Identifiable {
         orderIndex: Int? = nil,
         maxWidth: Double? = nil,
         alignment: TextBlockAlignment = .left,
-        titleSize: TextBlockTitleSize = .medium
+        titleSize: TextBlockTitleSize = .medium,
+        contentAttributions: [ContentAttribution]? = nil
     ) {
         self.group = group
         self.title = title
@@ -87,5 +94,6 @@ package final class GroupTextBlock: Identifiable {
         self.maxWidth = maxWidth
         self.alignmentRawValue = alignment.rawValue
         self.titleSizeRawValue = titleSize.rawValue
+        self.contentAttributions = contentAttributions
     }
 }

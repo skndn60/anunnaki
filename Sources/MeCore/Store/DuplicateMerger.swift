@@ -422,6 +422,7 @@ package enum DuplicateMerger {
             adoptString(&keeper.period, duplicate.period)
             adoptString(&keeper.publicationInfo, duplicate.publicationInfo)
             adoptString(&keeper.url, duplicate.url)
+            adoptOptional(&keeper.sortName, duplicate.sortName)
 
             duplicate.citations = []
             duplicate.attachments = []

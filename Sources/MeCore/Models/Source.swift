@@ -10,8 +10,14 @@ package final class Source {
     package var language: String // e.g. "Sumerian", "Akkadian", "English translation"
     package var period: String // e.g. "Old Babylonian", "Neo-Assyrian", "Modern"
     package var sourceDescription: String
+    /// Rich-text (RTF) form of the description, rendered with the app's
+    /// `RichTextEditor`. Optional for migration safety; nil = plain
+    /// `sourceDescription`.
+    package var richDescription: Data?
     package var publicationInfo: String // e.g. "British Museum tablet BM 36322" or "Oxford University Press, 1989"
     package var url: String // link to online resource if available
+    /// Optional override for alphabetical sorting. Falls back to `sortName(for: name)`.
+    package var sortName: String?
 
     @Relationship(deleteRule: .cascade, inverse: \Citation.source)
     package var citations: [Citation] = []
@@ -58,8 +64,10 @@ package final class Source {
         language: String = "",
         period: String = "",
         sourceDescription: String = "",
+        richDescription: Data? = nil,
         publicationInfo: String = "",
-        url: String = ""
+        url: String = "",
+        sortName: String? = nil
     ) {
         self.name = name
         self.sourceType = sourceType
@@ -67,8 +75,10 @@ package final class Source {
         self.language = language
         self.period = period
         self.sourceDescription = sourceDescription
+        self.richDescription = richDescription
         self.publicationInfo = publicationInfo
         self.url = url
+        self.sortName = sortName
     }
 
     /// Finds the `Source` row that best matches a free-text citation name.

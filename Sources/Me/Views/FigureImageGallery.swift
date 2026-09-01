@@ -90,6 +90,8 @@ struct ImageGallery: View {
     @State private var showingFilePicker = false
     @State private var showingAll = false
     @State private var isDropTargeted = false
+    @State private var imageToDelete: ImageAsset?
+    @State private var showDeleteConfirm = false
 
     private var displayImages: [ImageAsset] {
         Array(images.prefix(maxDisplayCount))
@@ -139,7 +141,8 @@ struct ImageGallery: View {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 100))], spacing: 8) {
                         ForEach(displayImages) { image in
                             ImageThumbnail(image: image, onDelete: {
-                                deleteImage(image)
+                                imageToDelete = image
+                                showDeleteConfirm = true
                             }, onTap: {
                                 onSelectImage?(image)
                             })
@@ -164,6 +167,14 @@ struct ImageGallery: View {
             allowsMultipleSelection: true
         ) { result in
             handleImport(result)
+        }
+        .alert("Delete Image?", isPresented: $showDeleteConfirm, presenting: imageToDelete) { image in
+            Button("Delete", role: .destructive) {
+                deleteImage(image)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { image in
+            Text("Delete \"\(image.caption)\"? The image file will be removed.")
         }
     }
 
@@ -222,6 +233,8 @@ private struct AllImagesGallery: View {
     var onLinkImage: ((ImageAsset) -> Void)?
     var onSelectImage: ((ImageAsset) -> Void)?
     @State private var showingFilePicker = false
+    @State private var imageToDelete: ImageAsset?
+    @State private var showDeleteConfirm = false
 
     private let columns = [GridItem(.adaptive(minimum: 120), spacing: 12)]
 
@@ -231,7 +244,8 @@ private struct AllImagesGallery: View {
                 LazyVGrid(columns: columns, spacing: 12) {
                     ForEach(images) { image in
                         ImageThumbnail(image: image, onDelete: {
-                            deleteImage(image)
+                            imageToDelete = image
+                            showDeleteConfirm = true
                         }, onTap: {
                             onSelectImage?(image)
                         })
@@ -259,6 +273,14 @@ private struct AllImagesGallery: View {
             allowsMultipleSelection: true
         ) { result in
             handleImport(result)
+        }
+        .alert("Delete Image?", isPresented: $showDeleteConfirm, presenting: imageToDelete) { image in
+            Button("Delete", role: .destructive) {
+                deleteImage(image)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { image in
+            Text("Delete \"\(image.caption)\"? The image file will be removed.")
         }
     }
 

@@ -354,6 +354,10 @@ struct ThingDetailView: View {
     @State private var editPlainDescription = ""
     @State private var showAddAttribution = false
     @State private var editingAttribution: ContentAttribution?
+    @State private var attributionToDelete: ContentAttribution?
+    @State private var showDeleteAttributionConfirm = false
+    @State private var groupAssocToRemove: FigureGroupAssociation?
+    @State private var showRemoveGroupConfirm = false
 
     private var thingAttributions: [ContentAttribution] {
         let all: [ContentAttribution] = modelContext.fetchAll()
@@ -419,8 +423,8 @@ struct ThingDetailView: View {
                     onAdd: { showAddAttribution = true },
                     onEdit: { editingAttribution = $0 },
                     onDelete: { attribution in
-                        modelContext.delete(attribution)
-                        try? modelContext.save()
+                        attributionToDelete = attribution
+                        showDeleteAttributionConfirm = true
                     }
                 )
 
@@ -542,6 +546,10 @@ struct ThingDetailView: View {
                         thing.groupAssociations.append(assoc)
                         group.figureAssociations.append(assoc)
                         try? modelContext.save()
+                    },
+                    onRemove: { assoc in
+                        groupAssocToRemove = assoc
+                        showRemoveGroupConfirm = true
                     }
                 )
 
@@ -556,6 +564,24 @@ struct ThingDetailView: View {
         }
         .sheet(item: $editingAttribution) { attribution in
             ContentAttributionFormView(attribution: attribution)
+        }
+        .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(attribution)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { attribution in
+            Text("Delete the attribution from \(attribution.source?.name ?? "Unknown")?")
+        }
+        .alert("Remove from Group?", isPresented: $showRemoveGroupConfirm, presenting: groupAssocToRemove) { assoc in
+            Button("Remove", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Remove \(thing.name) from group \(assoc.group?.name ?? "?")?")
         }
     }
 }

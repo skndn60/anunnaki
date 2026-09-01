@@ -64,8 +64,8 @@ struct ThingsSection: View {
                             }
                             Spacer()
                             Button(action: {
-                                modelContext.delete(assoc)
-                                try? modelContext.save()
+                                assocToDelete = assoc
+                                showDeleteConfirm = true
                             }) {
                                 Image(systemName: "trash")
                                     .font(.system(size: 10))
@@ -79,12 +79,23 @@ struct ThingsSection: View {
                 }
             }
         }
+        .alert("Remove Thing?", isPresented: $showDeleteConfirm, presenting: assocToDelete) { assoc in
+            Button("Remove", role: .destructive) {
+                modelContext.delete(assoc)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { assoc in
+            Text("Remove the association between \(figure.name) and \(assoc.thing?.name ?? "?")?")
+        }
     }
 
     @State private var showThingLinkPopover = false
     @State private var thingSearchText = ""
     @State private var selectedThingForLink: Thing?
     @State private var selectedThingRole: ThingFigureRoleType?
+    @State private var assocToDelete: ThingFigureAssociation?
+    @State private var showDeleteConfirm = false
 }
 
 private struct ThingLinkPopover: View {

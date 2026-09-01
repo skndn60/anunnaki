@@ -116,6 +116,7 @@ struct TagEditorView: View {
 
 struct TagTokenView: View {
     let tag: Tag
+    var onRemove: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 2) {
@@ -128,6 +129,14 @@ struct TagTokenView: View {
             Text(tag.name)
                 .font(.system(size: 8))
                 .lineLimit(1)
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 6, weight: .bold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 1)

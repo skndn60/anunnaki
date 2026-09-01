@@ -7,12 +7,23 @@ struct SourceListView: View {
     @Query private var sources: [Source]
 
     private var sortedSources: [Source] {
-        sources.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        sources.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }
+    }
+
+    /// Sources grouped by the first letter of their effective sort key, for
+    /// alphabetical letter dividers in the list.
+    private var groupedSources: [(key: String, sources: [Source])] {
+        Dictionary(grouping: sortedSources) { source in
+            String((source.sortName ?? sortName(for: source.name)).uppercased().prefix(1))
+        }
+        .sorted { $0.key < $1.key }
+        .map { (key: $0.key, sources: $0.value.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }) }
     }
     @AppStorage("sourceDetailWidth") private var detailWidth: Double = 320
     @State private var showingAddSheet = false
     @State private var editingSource: Source?
     @State private var selectedSourceID: PersistentIdentifier?
+    @State private var showDeleteConfirm = false
 
     private var selectedSource: Source? {
         guard let id = selectedSourceID else { return nil }
@@ -53,17 +64,23 @@ struct SourceListView: View {
                     }
                     .frame(maxWidth: .infinity)
                 } else {
-                    List(sortedSources, selection: $selectedSourceID) { source in
-                        SourceRow(source: source)
-                            .tag(source.persistentModelID)
-                            .contextMenu {
-                                Button("Edit") { editingSource = source }
-                                Divider()
-                                Button("Delete", role: .destructive) {
-                                    selectedSourceID = nil
-                                    modelContext.delete(source)
+                    List(selection: $selectedSourceID) {
+                        ForEach(groupedSources, id: \.key) { group in
+                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+                                ForEach(group.sources) { source in
+                                    SourceRow(source: source)
+                                        .tag(source.persistentModelID)
+                                        .contextMenu {
+                                            Button("Edit") { editingSource = source }
+                                            Divider()
+                                            Button("Delete", role: .destructive) {
+                                                selectedSourceID = source.persistentModelID
+                                                showDeleteConfirm = true
+                                            }
+                                        }
                                 }
                             }
+                        }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
                 }
@@ -76,10 +93,7 @@ struct SourceListView: View {
                     VStack(spacing: 0) {
                         DetailToolbar(
                             onEdit: { editingSource = source },
-                            onDelete: {
-                                selectedSourceID = nil
-                                modelContext.delete(source)
-                            },
+                            onDelete: { showDeleteConfirm = true },
                             onClose: { selectedSourceID = nil }
                         )
                     SourceDetailView(source: source)
@@ -97,6 +111,15 @@ struct SourceListView: View {
         }
         .sheet(item: $editingSource) { source in
             SourceFormView(source: source)
+        }
+        .alert("Delete Source?", isPresented: $showDeleteConfirm, presenting: selectedSource) { source in
+            Button("Delete", role: .destructive) {
+                selectedSourceID = nil
+                modelContext.delete(source)
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { source in
+            Text("Delete \"\(source.name)\"? This cannot be undone.")
         }
     }
 
@@ -181,13 +204,13 @@ struct SourceDetailView: View {
                 }
                 .font(.callout)
 
-                if !source.sourceDescription.isEmpty {
+                if !source.sourceDescription.isEmpty || source.richDescription != nil {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Description")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .textCase(.uppercase)
-                        Text(source.sourceDescription)
+                        LinkedDescription(text: source.sourceDescription, richData: source.richDescription)
                             .font(.body)
                     }
                 }
@@ -542,8 +565,10 @@ struct SourceFormView: View {
     @State private var language = ""
     @State private var period = ""
     @State private var sourceDescription = ""
+    @State private var richDescription: Data? = nil
     @State private var publicationInfo = ""
     @State private var url = ""
+    @State private var sortName = ""
 
     private var isEditing: Bool { source != nil }
 
@@ -569,11 +594,12 @@ struct SourceFormView: View {
                 Section("Publication") {
                     TextField("Publication Info", text: $publicationInfo, prompt: Text("e.g. British Museum, BM 36322"))
                     TextField("URL", text: $url, prompt: Text("e.g. https://etcsl.orinst.ox.ac.uk/..."))
+                    TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
                 }
 
                 Section("Description") {
-                    TextEditor(text: $sourceDescription)
-                        .frame(minHeight: 80)
+                    RichTextEditorSection(richData: $richDescription, plainText: $sourceDescription)
+                        .frame(minHeight: 220)
                 }
             }
             .formStyle(.grouped)
@@ -588,7 +614,7 @@ struct SourceFormView: View {
             }
             .padding()
         }
-        .frame(width: 540, height: 580)
+        .frame(width: 540, height: 720)
         .onAppear { loadIfEditing() }
     }
 
@@ -600,8 +626,10 @@ struct SourceFormView: View {
         language = source.language
         period = source.period
         sourceDescription = source.sourceDescription
+        richDescription = source.richDescription
         publicationInfo = source.publicationInfo
         url = source.url
+        sortName = source.sortName ?? ""
     }
 
     private func save() {
@@ -612,14 +640,18 @@ struct SourceFormView: View {
             source.language = language
             source.period = period
             source.sourceDescription = sourceDescription
+            source.richDescription = richDescription
             source.publicationInfo = publicationInfo
             source.url = url
+            source.sortName = sortName.isEmpty ? nil : sortName
         } else {
             let newSource = Source(
                 name: name, sourceType: sourceType,
                 author: author, language: language, period: period,
                 sourceDescription: sourceDescription,
-                publicationInfo: publicationInfo, url: url
+                richDescription: richDescription,
+                publicationInfo: publicationInfo, url: url,
+                sortName: sortName.isEmpty ? nil : sortName
             )
             modelContext.insert(newSource)
         }

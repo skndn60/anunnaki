@@ -37,6 +37,10 @@ struct FigureDetailView: View {
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
     @State private var copiedName = false
+    @State private var tagToRemove: Tag?
+    @State private var showRemoveTagConfirm = false
+    @State private var attributionToDelete: ContentAttribution?
+    @State private var showDeleteAttributionConfirm = false
     init(figure: Figure, onSelectFigure: ((Figure) -> Void)? = nil, onSelectPlace: ((Place) -> Void)? = nil, onSelectEvent: ((Event) -> Void)? = nil, onSelectImage: ((ImageAsset) -> Void)? = nil, backLabel: String? = nil, onBack: (() -> Void)? = nil) {
         self.figure = figure
         self.onSelectFigure = onSelectFigure
@@ -365,8 +369,8 @@ struct FigureDetailView: View {
                     onAdd: { showAddAttribution = true },
                     onEdit: { editingAttribution = $0 },
                     onDelete: { attribution in
-                        modelContext.delete(attribution)
-                        try? modelContext.save()
+                        attributionToDelete = attribution
+                        showDeleteAttributionConfirm = true
                     }
                 )
 
@@ -435,7 +439,10 @@ struct FigureDetailView: View {
 
                         FlowLayout(spacing: 4) {
                             ForEach(figure.tags) { tag in
-                                TagTokenView(tag: tag)
+                                TagTokenView(tag: tag, onRemove: {
+                                    tagToRemove = tag
+                                    showRemoveTagConfirm = true
+                                })
                             }
                         }
                     }
@@ -548,6 +555,24 @@ struct FigureDetailView: View {
         }
         .sheet(item: $showingPopupTableGrid) { table in
             PopupTableView(table: table)
+        }
+        .alert("Remove Tag?", isPresented: $showRemoveTagConfirm, presenting: tagToRemove) { tag in
+            Button("Remove", role: .destructive) {
+                figure.tags.removeAll { $0.persistentModelID == tag.persistentModelID }
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { tag in
+            Text("Remove the tag \"\(tag.name)\" from \(figure.name)?")
+        }
+        .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
+            Button("Delete", role: .destructive) {
+                modelContext.delete(attribution)
+                try? modelContext.save()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { attribution in
+            Text("Delete the attribution from \(attribution.source?.name ?? "Unknown")?")
         }
     }
 

@@ -143,6 +143,7 @@ struct ContentView: View {
         sort: \FigureGroup.orderIndex
     ) private var topLevelFigureGroups: [FigureGroup]
     @AppStorage("sidebarExpandedGroupPaths") private var expandedGroupPathsRaw = ""
+    @AppStorage("skipLogin") private var skipLogin = false
 
     private var expandedGroupPaths: Set<String> {
         get { Set(expandedGroupPathsRaw.split(separator: ";").map(String.init)) }
@@ -228,6 +229,10 @@ struct ContentView: View {
                     Migration.ensureReignYears(context: modelContext)
                     Migration.ensureEpithets(context: modelContext)
                     Migration.ensureDivineCollectives(context: modelContext)
+                    Migration.ensureCollectives(context: modelContext)
+                    Migration.ensureCollectiveMembers(context: modelContext)
+                    Migration.ensureCollectiveAlternateNames(context: modelContext)
+                    Migration.ensureCollectiveTerritory(context: modelContext)
                     Migration.ensureMesopotamianPantheons(context: modelContext)
                     Migration.ensureOraccDeityImports(context: modelContext)
                     Migration.markPreExistingSyncretisms(context: modelContext)
@@ -253,6 +258,7 @@ struct ContentView: View {
                     Migration.removeOrphanedGroupAssociations(context: modelContext)
                     Migration.ensureAnAnumGodListSourceExists(context: modelContext)
                     Migration.ensureCellSourceLinksExist(context: modelContext)
+                    Migration.ensureComparisonStateEmoji(context: modelContext)
                     Migration.ensureJunkSourceStringsCleaned(context: modelContext)
                     Migration.ensureRelationshipSources(context: modelContext)
                     Migration.ensureRoleReverseNames(context: modelContext)
@@ -260,6 +266,10 @@ struct ContentView: View {
                     Migration.ensureRefinedDomainTags(context: modelContext)
 
                     try? modelContext.save()
+                }
+                if skipLogin && userSession.currentUser == nil {
+                    let users = (try? modelContext.fetch(FetchDescriptor<User>(sortBy: [SortDescriptor(\.createdAt)]))) ?? []
+                    userSession.currentUser = users.first
                 }
                 isSeeding = false
             }

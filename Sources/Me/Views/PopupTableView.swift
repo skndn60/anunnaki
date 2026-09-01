@@ -5,6 +5,25 @@ private let defaultTableColumnWidth: CGFloat = 180
 private let minTableColumnWidth: CGFloat = 60
 private let maxTableColumnWidth: CGFloat = 560
 
+/// Layout reserves of the app window that the table sheet must not cover. The
+/// left reserve is the navigation sidebar (ideal width 260); the right reserve
+/// is the list detail bar (320). The sheet's max width is the window content
+/// area between them.
+private let windowSidebarWidth: CGFloat = 260
+private let windowDetailBarWidth: CGFloat = 320
+private let windowEdgeMargin: CGFloat = 16
+
+/// Per-attribute row heights measured from the data cells, so the frozen
+/// row-label column aligns with its (content-sized) data rows.
+private struct RowHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: [PersistentIdentifier: CGFloat] = [:]
+    static func reduce(value: inout [PersistentIdentifier: CGFloat], nextValue: () -> [PersistentIdentifier: CGFloat]) {
+        value.merge(nextValue()) { _, new in new }
+    }
+}
+
+
+
 /// Which dimension(s) the scale handle adjusts: uniform (both), width-only
 /// (⇧-held), or height-only (⌃-held).
 private enum GridScaleAxis {
@@ -18,8 +37,12 @@ struct PopupTableView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var cellValues: [String: String] = [:]
+    @State private var cellRichValues: [String: Data] = [:]
+    @State private var cellComments: [String: String] = [:]
+    @State private var cellRichComments: [String: Data] = [:]
     @State private var cellSourceNames: [String: [CellSourceEntry]] = [:]
     @State private var activeCell: ActiveCell?
+    @State private var commentTarget: ActiveCell?
     @State private var liveColumnWidths: [PersistentIdentifier: CGFloat] = [:]
     @State private var storedColumnWidthPoints: [PersistentIdentifier: CGFloat] = [:]
     @State private var dragStartWidths: [PersistentIdentifier: CGFloat] = [:]
@@ -29,9 +52,15 @@ struct PopupTableView: View {
     @State private var rowScale: CGFloat = 1.0
     @State private var scaleAxisAtStart: GridScaleAxis = .both
     @State private var scaleStart: (column: CGFloat, row: CGFloat)?
+    @State private var headerHeight: CGFloat = PopupTable.defaultHeaderHeight
+    @State private var headerHeightStart: CGFloat?
+    @State private var headerHovered = false
+    @State private var rowHeights: [PersistentIdentifier: CGFloat] = [:]
+    @State private var hostWindow: NSWindow?
+    @State private var tableSize: CGSize = CGSize(width: 700, height: 400)
 
-    private var rowHeaderWidth: CGFloat { 160 * columnScale }
-    private var rowHeight: CGFloat { 120 * rowScale }
+    private var rowHeaderWidth: CGFloat { (160 * columnScale).rounded() }
+    private var rowHeight: CGFloat { (120 * rowScale).rounded() }
 
     private var sortedAttributes: [PopupTableAttribute] {
         table.attributes.sorted { ($0.orderIndex ?? Int.max) < ($1.orderIndex ?? Int.max) }
@@ -52,6 +81,58 @@ struct PopupTableView: View {
         "\(attributeID.hashValue)-\(columnID.hashValue)"
     }
 
+    /// A single table footnote: a unique `name — location` cell source plus its
+    /// URL (resolved from the linked `Source` row when available).
+    private struct TableFootnote: Identifiable {
+        let id: Int
+        let sourceName: String
+        let url: URL?
+    }
+
+    /// The table's footnote list, built in row-major order (rows of attributes,
+    /// columns left to right), each unique `name — location` source numbered
+    /// once at first appearance. The table-wide source is not numbered — it is
+    /// already stated in the header.
+    private var tableFootnotes: [TableFootnote] {
+        var seen: [String: Int] = [:]
+        var result: [TableFootnote] = []
+        var next = 1
+        for attribute in sortedAttributes {
+            for column in columns {
+                let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
+                for entry in cellSourceNames[key] ?? [] {
+                    let identity = entry.displayName
+                    if seen[identity] == nil {
+                        seen[identity] = next
+                        result.append(TableFootnote(
+                            id: next,
+                            sourceName: identity,
+                            url: entry.url.flatMap { $0.isEmpty ? nil : URL(string: $0) }
+                        ))
+                        next += 1
+                    }
+                }
+            }
+        }
+        return result
+    }
+
+    /// Footnote numbers for a single cell key, in source order.
+    private func footnoteNumbers(for key: String) -> [Int] {
+        guard let entries = cellSourceNames[key], !entries.isEmpty else { return [] }
+        let footnotes = tableFootnotes
+        return entries.compactMap { entry in
+            footnotes.first { $0.sourceName == entry.displayName }?.id
+        }
+    }
+
+    /// Height (points) of the footnote block, if any, so the window can enclose
+    /// it when the table is short enough to show it.
+    private var footnoteBlockHeight: CGFloat {
+        guard !tableFootnotes.isEmpty else { return 0 }
+        return CGFloat(tableFootnotes.count) * 18 + 30
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 2) {
@@ -62,19 +143,15 @@ struct PopupTableView: View {
                         .font(.title3)
                         .foregroundStyle(.secondary)
                 }
-                if !table.tableDescription.isEmpty,
-                   let tableSource = table.source, !tableSource.isEmpty {
-                    Divider()
-                        .padding(.top, 5)
-                }
                 if let tableSource = table.source, !tableSource.isEmpty {
-                    Label(tableSource, systemImage: "doc.text")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .padding(.vertical, 3)
+                    SourceFootnoteView(
+                        sourceName: tableSource,
+                        url: table.sourceRef.flatMap { $0.url.isEmpty ? nil : URL(string: $0.url) }
+                    )
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.vertical, 3)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
             .padding()
 
             Divider()
@@ -94,62 +171,133 @@ struct PopupTableView: View {
                     Spacer()
                 }
             } else {
-                ScrollView([.horizontal, .vertical]) {
-                    Grid(alignment: .leading, horizontalSpacing: 1, verticalSpacing: 1) {
-                        GridRow {
-                            Color.clear
-                                .frame(width: rowHeaderWidth, height: rowHeight)
-                            ForEach(columns) { column in
-                                let width = columnWidth(for: column)
-                                ZStack(alignment: .trailing) {
-                                    columnHeader(column)
-                                        .frame(width: width, height: rowHeight)
-                                    ColumnResizeHandle(
-                                        isActive: resizingColumnID == column.id,
-                                        isHovered: hoveredColumnID == column.id
-                                    )
-                                    .frame(width: 24, height: rowHeight)
-                                    .gesture(columnResizeGesture(for: column))
-                                    .onHover { hovering in
-                                        if hovering {
-                                            hoveredColumnID = column.id
-                                        } else if hoveredColumnID == column.id {
-                                            hoveredColumnID = nil
+                ScrollView(.vertical) {
+                    HStack(alignment: .top, spacing: 0) {
+                        // Frozen row-label column: scrolls vertically with the rows
+                        // but never horizontally, so the attribute names stay visible.
+                        VStack(spacing: 1) {
+                            Rectangle()
+                                .fill(Color(nsColor: .controlBackgroundColor))
+                                .frame(width: rowHeaderWidth, height: headerHeight + 5)
+                            ForEach(sortedAttributes) { attribute in
+                                AttributeRowHeader(attribute: attribute)
+                                    .frame(width: rowHeaderWidth)
+                                    .frame(height: rowHeights[attribute.persistentModelID] ?? rowHeight)
+                            }
+                        }
+                        .padding(1)
+                        .background(Color(nsColor: .separatorColor))
+
+                        // Data area: header row + cells, scrolls horizontally. The
+                        // header row shares this scroll so it always lines up with
+                        // the columns (the blank corner cell is its first slot).
+                        ScrollView(.horizontal) {
+                            VStack(spacing: 1) {
+                                HStack(spacing: 1) {
+                                    ForEach(columns) { column in
+                                        let width = columnWidth(for: column)
+                                        ZStack(alignment: .trailing) {
+                                            columnHeader(column)
+                                                .frame(width: width, height: headerHeight)
+                                            ColumnResizeHandle(
+                                                isActive: resizingColumnID == column.id,
+                                                isHovered: hoveredColumnID == column.id
+                                            )
+                                            .frame(width: 24, height: headerHeight)
+                                            .gesture(columnResizeGesture(for: column))
+                                            .onHover { hovering in
+                                                if hovering {
+                                                    hoveredColumnID = column.id
+                                                    NSCursor.resizeLeftRight.set()
+                                                } else if hoveredColumnID == column.id {
+                                                    hoveredColumnID = nil
+                                                    NSCursor.arrow.set()
+                                                }
+                                            }
                                         }
+                                        .frame(width: width, height: headerHeight)
                                     }
                                 }
-                                .frame(width: width, height: rowHeight)
-                            }
-                        }
-                        .background(Color(nsColor: .controlBackgroundColor))
+                                .background(Color(nsColor: .controlBackgroundColor))
 
-                        ForEach(sortedAttributes) { attribute in
-                            GridRow {
-                                AttributeRowHeader(attribute: attribute)
-                                    .frame(width: rowHeaderWidth, height: rowHeight)
-                                ForEach(columns) { column in
-                                    let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
-                                    CellView(
-                                        value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
-                                        hasOwnSource: !(cellSourceNames[key] ?? []).isEmpty,
-                                        onOpen: {
-                                            activeCell = ActiveCell(
-                                                attributeID: attribute.persistentModelID,
-                                                columnID: column.id,
-                                                attributeName: attribute.name,
-                                                columnName: columnName(column),
-                                                sources: cellSourceNames[key] ?? []
+                                Rectangle()
+                                    .fill(headerHovered || headerHeightStart != nil ? Color.accentColor.opacity(0.1) : Color(nsColor: .windowBackgroundColor))
+                                    .frame(height: 5)
+                                    .contentShape(Rectangle())
+                                    .gesture(headerHeightGesture())
+                                    .onHover { hovering in
+                                        headerHovered = hovering
+                                        if hovering || headerHeightStart != nil { NSCursor.resizeUpDown.set() }
+                                        else { NSCursor.arrow.set() }
+                                    }
+                                    .help("Drag to resize the header row height")
+
+                                ForEach(sortedAttributes) { attribute in
+                                    HStack(spacing: 1) {
+                                        ForEach(columns) { column in
+                                            let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
+                                            CellView(
+                                                value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
+                                                sourceNumbers: footnoteNumbers(for: key),
+                                                comment: cellComments[key] ?? "",
+                                                onOpen: {
+                                                    activeCell = ActiveCell(
+                                                        attributeID: attribute.persistentModelID,
+                                                        columnID: column.id,
+                                                        attributeName: attribute.name,
+                                                        columnName: columnName(column),
+                                                        sources: cellSourceNames[key] ?? []
+                                                    )
+                                                },
+                                                onEditComment: {
+                                                    commentTarget = ActiveCell(
+                                                        attributeID: attribute.persistentModelID,
+                                                        columnID: column.id,
+                                                        attributeName: attribute.name,
+                                                        columnName: columnName(column),
+                                                        sources: cellSourceNames[key] ?? []
+                                                    )
+                                                }
                                             )
+                                            .frame(width: columnWidth(for: column))
+                                            .frame(minHeight: rowHeight)
                                         }
-                                    )
-                                    .frame(width: columnWidth(for: column), height: rowHeight)
+                                    }
+                                    .background(GeometryReader { proxy in
+                                        Color.clear.preference(
+                                            key: RowHeightPreferenceKey.self,
+                                            value: [attribute.persistentModelID: proxy.size.height]
+                                        )
+                                    })
+                                }
+                            }
+                            .padding(1)
+                            .background(Color(nsColor: .separatorColor))
+                        }
+                    }
+
+                    // Footnote block: numbered source references, under the grid.
+                    // Stays inside the vertical scroll so it scrolls with content.
+                    if !tableFootnotes.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Divider()
+                                .padding(.top, 6)
+                            ForEach(tableFootnotes) { footnote in
+                                HStack(spacing: 6) {
+                                    Text("\(footnote.id)")
+                                        .font(.caption2.monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 16, alignment: .trailing)
+                                    SourceFootnoteView(sourceName: footnote.sourceName, url: footnote.url)
                                 }
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 8)
                     }
-                    .padding(1)
-                    .background(Color(nsColor: .separatorColor))
                 }
+                .onPreferenceChange(RowHeightPreferenceKey.self) { rowHeights = $0 }
             }
 
             Divider()
@@ -173,25 +321,41 @@ struct PopupTableView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .disabled(columnScale == 1.0 && rowScale == 1.0)
-                .help("Reset scale to 100%")
+                .disabled(columnScale == 1.0 && rowScale == 1.0 && storedColumnWidthPoints.isEmpty)
+                .help("Reset table to default width, scale, and size")
             }
             .padding()
         }
-        .frame(minWidth: 700, minHeight: 400)
+        .frame(width: tableSize.width, height: tableSize.height)
+        .background(WindowAccessor { window in
+            hostWindow = window
+        })
         .onAppear {
             loadCells()
             loadColumnLayouts()
+            DispatchQueue.main.async { fitHostWindowToTable() }
         }
         .popover(item: $activeCell, arrowEdge: .bottom) { cell in
             CellEditPopover(
                 cell: cell,
                 value: cellBinding(attributeID: cell.attributeID, columnID: cell.columnID),
+                richValue: richValueBinding(attributeID: cell.attributeID, columnID: cell.columnID),
+                comment: commentBinding(attributeID: cell.attributeID, columnID: cell.columnID),
                 tableSource: table.source ?? "",
+                tableSourceURL: table.sourceRef.flatMap { $0.url.isEmpty ? nil : URL(string: $0.url) },
+                onEditComment: { commentTarget = cell },
                 onUpdateSources: {
                     saveSources(attributeID: cell.attributeID, columnID: cell.columnID, sources: $0)
                 },
                 onClose: { activeCell = nil }
+            )
+        }
+        .sheet(item: $commentTarget) { cell in
+            CommentEditorSheet(
+                cell: cell,
+                comment: commentBinding(attributeID: cell.attributeID, columnID: cell.columnID),
+                richComment: richCommentBinding(attributeID: cell.attributeID, columnID: cell.columnID),
+                onClose: { commentTarget = nil }
             )
         }
     }
@@ -215,6 +379,9 @@ struct PopupTableView: View {
 
     private func loadCells() {
         cellValues = [:]
+        cellRichValues = [:]
+        cellComments = [:]
+        cellRichComments = [:]
         cellSourceNames = [:]
         for cell in table.cells {
             if let attrID = cell.attribute?.persistentModelID {
@@ -229,8 +396,25 @@ struct PopupTableView: View {
 
     private func loadCell(_ cell: PopupTableCell, key: String) {
         cellValues[key] = cell.value ?? ""
-        cellSourceNames[key] = cell.effectiveCellSourceNames.map { name in
-            CellSourceEntry(name: name.name, location: name.location)
+        if let rich = cell.richValue { cellRichValues[key] = rich }
+        cellComments[key] = cell.comment ?? ""
+        if let rich = cell.richComment { cellRichComments[key] = rich }
+        if !cell.cellSources.isEmpty {
+            cellSourceNames[key] = cell.cellSources.map { source in
+                CellSourceEntry(
+                    name: source.source,
+                    location: source.location,
+                    url: source.sourceRef.flatMap { $0.url.isEmpty ? nil : $0.url }
+                )
+            }
+        } else {
+            cellSourceNames[key] = cell.effectiveCellSourceNames.map { name in
+                CellSourceEntry(
+                    name: name.name,
+                    location: name.location,
+                    url: cell.sourceRef.flatMap { $0.url.isEmpty ? nil : $0.url }
+                )
+            }
         }
     }
 
@@ -247,11 +431,12 @@ struct PopupTableView: View {
         storedColumnWidthPoints = widths
         columnScale = table.columnScale
         rowScale = table.rowScale
+        headerHeight = table.headerHeight
     }
 
     private func columnWidth(for column: ColumnItem) -> CGFloat {
-        if let live = liveColumnWidths[column.id] { return live }
-        return (storedColumnWidthPoints[column.id] ?? defaultTableColumnWidth) * columnScale
+        if let live = liveColumnWidths[column.id] { return live.rounded() }
+        return ((storedColumnWidthPoints[column.id] ?? defaultTableColumnWidth) * columnScale).rounded()
     }
 
     private func columnResizeGesture(for column: ColumnItem) -> some Gesture {
@@ -261,27 +446,121 @@ struct PopupTableView: View {
                     dragStartWidths[column.id] = effectiveColumnWidth(for: column)
                 }
                 guard let start = dragStartWidths[column.id] else { return }
-                liveColumnWidths[column.id] = clampColumnWidth(start + value.translation.width)
+                liveColumnWidths[column.id] = quantizedColumnWidth(start, delta: value.translation.width)
                 resizingColumnID = column.id
+                NSCursor.resizeLeftRight.set()
             }
             .onEnded { value in
+                defer {
+                    liveColumnWidths[column.id] = nil
+                    dragStartWidths[column.id] = nil
+                    resizingColumnID = nil
+                    NSCursor.arrow.set()
+                }
                 let start = dragStartWidths[column.id] ?? effectiveColumnWidth(for: column)
-                let clamped = clampColumnWidth(start + value.translation.width)
-                storedColumnWidthPoints[column.id] = clamped / columnScale
-                persistColumnWidth(clamped / columnScale, for: column)
-                liveColumnWidths[column.id] = nil
-                dragStartWidths[column.id] = nil
-                resizingColumnID = nil
+                let clamped = quantizedColumnWidth(start, delta: value.translation.width)
+                storedColumnWidthPoints[column.id] = (clamped / columnScale).rounded()
+                persistColumnWidth((clamped / columnScale).rounded(), for: column)
+                fitHostWindowToTable()
             }
     }
 
     private func effectiveColumnWidth(for column: ColumnItem) -> CGFloat {
         if let live = liveColumnWidths[column.id] { return live }
-        return (storedColumnWidthPoints[column.id] ?? defaultTableColumnWidth) * columnScale
+        return ((storedColumnWidthPoints[column.id] ?? defaultTableColumnWidth) * columnScale).rounded()
+    }
+
+    /// Snap a dragged column width to a whole point so the Grid never renders at
+    /// subpixel positions (the source of the jittery/jerky resize on retina).
+    private func quantizedColumnWidth(_ start: CGFloat, delta: CGFloat) -> CGFloat {
+        clampColumnWidth((start + delta).rounded())
     }
 
     private func clampColumnWidth(_ width: CGFloat) -> CGFloat {
         min(max(width, minTableColumnWidth * columnScale), maxTableColumnWidth * columnScale)
+    }
+
+    private func headerHeightGesture() -> some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .global)
+            .onChanged { value in
+                if headerHeightStart == nil {
+                    headerHeightStart = headerHeight
+                }
+                guard let start = headerHeightStart else { return }
+                headerHeight = clampHeaderHeight(start + value.translation.height)
+                NSCursor.resizeUpDown.set()
+            }
+            .onEnded { value in
+                defer {
+                    headerHeightStart = nil
+                    NSCursor.arrow.set()
+                }
+                let start = headerHeightStart ?? headerHeight
+                let clamped = clampHeaderHeight(start + value.translation.height)
+                headerHeight = clamped
+                table.headerHeight = clamped
+                try? modelContext.save()
+                fitHostWindowToTable()
+            }
+    }
+
+    private func clampHeaderHeight(_ height: CGFloat) -> CGFloat {
+        min(max((height).rounded(), 28), 200)
+    }
+
+    /// The grid's natural content extent in points (header column + all columns,
+    /// all rows + the window chrome around the grid). Drives both the SwiftUI
+    /// `tableSize` frame and the sheet's window frame.
+    private var tableNaturalContentSize: CGSize {
+        let spacing: CGFloat = 1
+        let gridWidth = rowHeaderWidth
+            + columns.reduce(CGFloat(0)) { $0 + columnWidth(for: $1) }
+            + spacing * CGFloat(columns.count)
+            + 2
+        let rows = CGFloat(sortedAttributes.count + 1)
+        let gridHeight = headerHeight + rowHeight * CGFloat(sortedAttributes.count) + (rows - 1) * spacing + 2
+        return CGSize(width: gridWidth + 4, height: gridHeight + footnoteBlockHeight + verticalChrome)
+    }
+
+    private var verticalChrome: CGFloat {
+        var chromeHeight: CGFloat = 32
+        chromeHeight += 24
+        if !table.tableDescription.isEmpty { chromeHeight += 22 }
+        if let source = table.source, !source.isEmpty { chromeHeight += 28 }
+        chromeHeight += 2
+        chromeHeight += 56
+        chromeHeight += 1
+        return chromeHeight
+    }
+
+    /// Encloses the sheet to the table's natural content size. Called on open and
+    /// on drag release (never during a drag, so the window stays put mid-gesture).
+    /// `tableSize` is set from the SAME clamped size used for the window frame, so
+    /// SwiftUI's content frame and the NSWindow frame can never disagree — which is
+    /// what stopped the window from fighting back and snapping.
+    private func fitHostWindowToTable() {
+        let natural = tableNaturalContentSize
+        let parent: NSWindow? = hostWindow?.sheetParent
+        let maxSize: CGSize
+        if let parent {
+            // Stay within the content region: don't grow over the left sidebar or
+            // the right detail bar. Floored at the table's 700pt min so narrow
+            // windows still give the grid enough room (it scrolls past that).
+            let contentMaxWidth = max(
+                700,
+                parent.frame.width - windowSidebarWidth - windowDetailBarWidth - windowEdgeMargin
+            )
+            maxSize = CGSize(width: contentMaxWidth, height: parent.frame.height - 36)
+        } else {
+            maxSize = CGSize(width: 2400, height: 1600)
+        }
+        let width = min(max(natural.width, 700), maxSize.width)
+        let height = min(max(natural.height, 400), maxSize.height)
+        tableSize = CGSize(width: width, height: height)
+        guard let window = hostWindow, parent != nil else { return }
+        let target = window.frameRect(forContentRect: NSRect(origin: .zero, size: tableSize))
+        if abs(target.width - window.frame.width) < 1 && abs(target.height - window.frame.height) < 1 { return }
+        window.setFrame(NSRect(origin: window.frame.origin, size: target.size), display: false)
     }
 
     private func persistColumnWidth(_ width: CGFloat, for column: ColumnItem) {
@@ -300,6 +579,7 @@ struct PopupTableView: View {
                 if scaleStart == nil {
                     scaleStart = (columnScale, rowScale)
                     scaleAxisAtStart = currentScaleAxis()
+                    updateDragCursor(for: scaleAxisAtStart)
                     liveColumnWidths = [:]
                 }
                 guard let start = scaleStart else { return }
@@ -309,12 +589,22 @@ struct PopupTableView: View {
                 defer {
                     scaleStart = nil
                     scaleAxisAtStart = .both
+                    NSCursor.arrow.set()
                 }
                 guard let start = scaleStart else { return }
                 applyScale(start: start, translation: value.translation)
                 liveColumnWidths = [:]
                 persistGridScale(columnScale, rowScale)
+                fitHostWindowToTable()
             }
+    }
+
+    private func updateDragCursor(for axis: GridScaleAxis) {
+        switch axis {
+        case .horizontal: NSCursor.resizeLeftRight.set()
+        case .vertical: NSCursor.resizeUpDown.set()
+        case .both: break
+        }
     }
 
     private func currentScaleAxis() -> GridScaleAxis {
@@ -362,7 +652,10 @@ struct PopupTableView: View {
         columnScale = 1.0
         rowScale = 1.0
         liveColumnWidths = [:]
+        storedColumnWidthPoints = [:]
+        table.removeAllColumnLayouts(context: modelContext)
         persistGridScale(1.0, 1.0)
+        fitHostWindowToTable()
     }
 
     /// Finds or creates the cell for this attribute/column intersection.
@@ -417,6 +710,65 @@ struct PopupTableView: View {
     private func saveCell(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, value: String) {
         guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
         cell.value = value.isEmpty ? nil : value
+        try? modelContext.save()
+    }
+
+    private func richValueBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<Data?> {
+        let key = cellKey(attributeID: attributeID, columnID: columnID)
+        return Binding(
+            get: { cellRichValues[key] },
+            set: { newValue in
+                if let newValue {
+                    cellRichValues[key] = newValue
+                } else {
+                    cellRichValues[key] = nil
+                }
+                saveRichValue(attributeID: attributeID, columnID: columnID, rich: newValue)
+            }
+        )
+    }
+
+    private func saveRichValue(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, rich: Data?) {
+        guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
+        cell.richValue = rich
+        try? modelContext.save()
+    }
+
+    private func commentBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<String> {
+        let key = cellKey(attributeID: attributeID, columnID: columnID)
+        return Binding(
+            get: { cellComments[key] ?? "" },
+            set: { newValue in
+                cellComments[key] = newValue
+                saveComment(attributeID: attributeID, columnID: columnID, comment: newValue)
+            }
+        )
+    }
+
+    private func saveComment(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, comment: String) {
+        guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
+        cell.comment = comment.isEmpty ? nil : comment
+        try? modelContext.save()
+    }
+
+    private func richCommentBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<Data?> {
+        let key = cellKey(attributeID: attributeID, columnID: columnID)
+        return Binding(
+            get: { cellRichComments[key] },
+            set: { newValue in
+                if let newValue {
+                    cellRichComments[key] = newValue
+                } else {
+                    cellRichComments[key] = nil
+                }
+                saveRichComment(attributeID: attributeID, columnID: columnID, rich: newValue)
+            }
+        )
+    }
+
+    private func saveRichComment(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, rich: Data?) {
+        guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
+        cell.richComment = rich
         try? modelContext.save()
     }
 }
@@ -489,10 +841,34 @@ private struct AttributeRowHeader: View {
 private struct CellSourceEntry: Hashable {
     var name: String
     var location: String?
+    var url: String?
 
     var displayName: String {
         if let location, !location.isEmpty { return "\(name) \u{2014} \(location)" }
         return name
+    }
+}
+
+/// The canonical source-reference footnote used by the free-text prose blocks:
+/// `[book.and.wrench] Source: <name> (click to see…)`. The table-wide source
+/// reference and in-cell source references reuse this same layout.
+private struct SourceFootnoteView: View {
+    let sourceName: String
+    let url: URL?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "book.and.wrench")
+                .font(.caption2)
+                .foregroundStyle(.teal)
+            Text("Source: \(sourceName)")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            if let url {
+                Link("(click to see, note: may open browser window)", destination: url)
+                    .font(.caption2)
+            }
+        }
     }
 }
 
@@ -509,7 +885,11 @@ private struct ActiveCell: Identifiable {
 private struct CellEditPopover: View {
     let cell: ActiveCell
     @Binding var value: String
+    @Binding var richValue: Data?
+    @Binding var comment: String
     let tableSource: String
+    let tableSourceURL: URL?
+    var onEditComment: (() -> Void)? = nil
     var onUpdateSources: ([CellSourceEntry]) -> Void
     var onClose: () -> Void
     @State private var sourceEntries: [CellSourceEntry] = []
@@ -517,6 +897,9 @@ private struct CellEditPopover: View {
     @State private var newLocation: String = ""
     @State private var loaded = false
     @Query private var allSources: [Source]
+
+    private var hasComment: Bool { !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var commentPreview: String { let t = comment.trimmingCharacters(in: .whitespacesAndNewlines); return t.isEmpty ? "" : (t.count > 60 ? String(t.prefix(60)) + "…" : t) }
 
     private var availableSourceNames: [String] {
         var names = Set(allSources.map(\.name))
@@ -534,17 +917,49 @@ private struct CellEditPopover: View {
                     .foregroundStyle(.secondary)
             }
             Divider()
-            TextEditor(text: $value)
-                .font(.title3)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("VALUE")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                RichTextEditorSection(richData: $richValue, plainText: $value)
+                    .frame(maxHeight: .infinity)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("COMMENT")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Button {
+                    onEditComment?()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "note.text")
+                            .foregroundStyle(hasComment ? Color.accentColor : .secondary)
+                        Text(hasComment ? (commentPreview.isEmpty ? "Edit comment\u{2026}" : commentPreview) : "Add comment\u{2026}")
+                            .foregroundStyle(hasComment ? Color.primary : .accentColor)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(6)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color(nsColor: .quaternaryLabelColor).opacity(0.35)))
+                }
+                .buttonStyle(.plain)
+                .help(hasComment ? "Edit this cell's comment" : "Add a comment to this cell")
+            }
             VStack(alignment: .leading, spacing: 4) {
                 Text("SOURCES")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 if sourceEntries.isEmpty {
-                    Text(tableSource.isEmpty ? "Inheriting table source" : "Inheriting table (\(tableSource))")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                    if tableSource.isEmpty {
+                        Text("No source recorded")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        SourceFootnoteView(sourceName: tableSource, url: tableSourceURL)
+                    }
                 } else {
                     ForEach(sourceEntries, id: \.self) { entry in
                         HStack(spacing: 6) {
@@ -564,10 +979,6 @@ private struct CellEditPopover: View {
                             .buttonStyle(.plain)
                         }
                     }
-                }
-                HStack(spacing: 6) {
-                    TextField("Location (e.g. Tablet V, lines 120\u{2013}143)", text: $newLocation)
-                        .textFieldStyle(.roundedBorder)
                 }
                 HStack(spacing: 6) {
                     Picker("", selection: $newSource) {
@@ -590,6 +1001,10 @@ private struct CellEditPopover: View {
                     }
                     .buttonStyle(.plain)
                 }
+                HStack(spacing: 6) {
+                    TextField("Location (e.g. Tablet V, lines 120\u{2013}143)", text: $newLocation)
+                        .textFieldStyle(.roundedBorder)
+                }
             }
             HStack {
                 Spacer()
@@ -601,12 +1016,51 @@ private struct CellEditPopover: View {
             }
         }
         .padding(14)
-        .frame(width: 440, height: 460)
+        .frame(width: 460, height: 560)
         .onAppear {
             guard !loaded else { return }
             loaded = true
             sourceEntries = cell.sources
         }
+    }
+}
+
+/// A dedicated sheet for editing a comparison-table cell's long-form comment.
+/// Kept separate from the value/source `CellEditPopover` so notes get a roomy,
+/// multiline editor. The comment binding saves live as you type.
+private struct CommentEditorSheet: View {
+    let cell: ActiveCell
+    @Binding var comment: String
+    @Binding var richComment: Data?
+    var onClose: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: "note.text")
+                    .font(.title2)
+                    .foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Comment: \(cell.attributeName)")
+                        .font(.headline)
+                    Text(cell.columnName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+            Divider()
+            RichTextEditorSection(richData: $richComment, plainText: $comment)
+                .frame(maxHeight: .infinity)
+            HStack {
+                Spacer()
+                Button("Done") { onClose() }
+                    .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.cancelAction)
+            }
+        }
+        .padding(16)
+        .frame(width: 640, height: 460)
     }
 }
 
@@ -618,22 +1072,18 @@ private struct ColumnResizeHandle: View {
     var isActive: Bool
     var isHovered: Bool
 
+    /// macOS-friendly grab zone: no on-drawn rule (the grid's own thin column
+    /// separator stays visible); it only glows faintly on hover/active, and the
+    /// ↔ resize cursor (set by the caller's onHover/gesture) signals draggability.
     var body: some View {
         ZStack(alignment: .trailing) {
             Color.clear
                 .frame(width: 24)
             if isActive || isHovered {
                 Rectangle()
-                    .fill(Color.accentColor.opacity(isActive ? 0.18 : 0.12))
+                    .fill(Color.accentColor.opacity(isActive ? 0.12 : 0.08))
                     .frame(width: 24)
             }
-            Rectangle()
-                .fill(
-                    isActive
-                        ? Color.accentColor
-                        : (isHovered ? Color.accentColor.opacity(0.8) : Color(nsColor: .systemGray).opacity(0.65))
-                )
-                .frame(width: isActive || isHovered ? 3 : 2)
         }
         .frame(width: 24)
         .contentShape(Rectangle())
@@ -666,28 +1116,96 @@ private struct GridScaleHandle: View {
 
 private struct CellView: View {
     @Binding var value: String
-    var hasOwnSource: Bool = false
+    var sourceNumbers: [Int] = []
+    var comment: String = ""
     var onOpen: (() -> Void)? = nil
+    var onEditComment: (() -> Void)? = nil
 
-    var body: some View {
-        HStack(alignment: .top, spacing: 1) {
-            Text(value.isEmpty ? "—" : value)
+    /// A cell value that is a genuine emoji/status icon (a short run containing
+    /// emoji scalars) renders large and centered. Plain non-ASCII text — e.g.
+    /// cuneiform in a description, or any word — stays regular title3 size, so
+    /// it never gets blown up.
+    private var isEmojiValue: Bool {
+        guard !value.isEmpty, value != "\u{2014}" else { return false }
+        let scalars = value.unicodeScalars
+        guard scalars.count <= 4 else { return false }
+        return scalars.contains { $0.properties.isEmoji }
+    }
+
+    private var hasOwnSource: Bool { !sourceNumbers.isEmpty }
+
+    @ViewBuilder
+    private var valueText: some View {
+        if isEmojiValue {
+            Text(value)
+                .font(.system(size: 40))
+                .lineLimit(1)
+        } else {
+            Text(value.isEmpty ? "\u{2014}" : value)
                 .font(.title3)
                 .foregroundStyle(value.isEmpty ? .tertiary : .primary)
-                .lineLimit(4)
-            if hasOwnSource && !value.isEmpty {
-                Text("*")
-                    .font(.subheadline.bold())
-                    .foregroundStyle(.secondary)
+        }
+    }
+
+    private var trimComment: String { comment.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var helpText: String {
+        var parts: [String] = []
+        if hasOwnSource { parts.append("Source footnote(s): \(sourceNumbers.map(String.init).joined(separator: ", "))") }
+        if !trimComment.isEmpty { parts.append("Comment: \(trimComment)") }
+        return parts.isEmpty ? "" : "\(parts.joined(separator: " · ")). Click to open editor."
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: isEmojiValue ? .center : .top, spacing: 1) {
+                valueText
+                if !sourceNumbers.isEmpty && !value.isEmpty {
+                    Text(sourceNumbers.map { "\($0)" }.joined(separator: ","))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .baselineOffset(4)
+                }
+                if !trimComment.isEmpty {
+                    Button {
+                        onEditComment?()
+                    } label: {
+                        Image(systemName: "note.text")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit comment")
+                }
+                if !isEmojiValue {
+                    Spacer(minLength: 0)
+                }
             }
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isEmojiValue ? .center : .topLeading)
         .contentShape(Rectangle())
         .background(Color(nsColor: .windowBackgroundColor))
-        .help(hasOwnSource ? "Has its own source (*). Click to open editor." : "")
+        .help(helpText)
         .onTapGesture { onOpen?() }
     }
 }
+
+/// Reports the hosting `NSWindow` so the sheet can be re-fitted to enclose the
+/// table on drag release.
+private struct WindowAccessor: NSViewRepresentable {
+    var onWindow: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { onWindow(view.window) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { onWindow(nsView.window) }
+    }
+}
+
+
 

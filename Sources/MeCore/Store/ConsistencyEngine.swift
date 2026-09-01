@@ -130,12 +130,29 @@ package enum ConsistencyEngine {
         return (female, male)
     }
 
+    /// Self-descriptive gender nouns — words that label the FIGURE's own identity
+    /// or title (a goddess, a king, a priest). Relational/kinship nouns (mother,
+    /// father, son, daughter, sister, brother, wife, husband, widow) deliberately
+    /// do NOT appear: they describe OTHER people in the figure's story, so merely
+    /// mentioning them ("sons of the gods", "mother of the people") never counts
+    /// as misgendering the figure herself.
     private static let feminineNouns: Set<String> = [
-        "goddess", "queen", "priestess", "wife", "mother", "daughter", "sister", "widow",
+        "goddess", "queen", "priestess",
     ]
     private static let masculineNouns: Set<String> = [
-        "god", "king", "priest", "husband", "father", "son", "brother", "prince",
+        "god", "king", "priest", "prince",
     ]
+
+    /// Figures whose records LEGITIMATELY use gender wording that contradicts the
+    /// recorded gender — attested historical anomalies. Kubaba (Kug-Bau) was the
+    /// only woman on the Sumerian King List, recorded as a "king" of Kish: the
+    /// masculine-wording reading is correct, not an error. For these figures the
+    /// gender-wording check is skipped entirely. Keys are normalized via
+    /// `NameDuplicateCheck.normalizedKey`.
+    private static let genderWordingExemptNames: Set<String> = ["Kug-Bau", "Kubaba", "Kugbau"]
+    private static var genderWordingExemptKeys: Set<String> {
+        Set(genderWordingExemptNames.map { NameDuplicateCheck.normalizedKey($0) })
+    }
 
     /// Gendered nouns appearing in the text, as exact whole words.
     package static func genderedNounSignals(in text: String) -> (feminine: Set<String>, masculine: Set<String>) {
@@ -171,6 +188,7 @@ package enum ConsistencyEngine {
         case .nonBinary, .unknown:
             return nil
         }
+        if !ownKeys.isDisjoint(with: genderWordingExemptKeys) { return nil }
         let expectedFemale = gender == .female
         let text = title + " " + figureDescription
         let competing = mentionedOtherGenders(
@@ -359,6 +377,10 @@ package enum ConsistencyEngine {
         var byKey: [String: [(name: String, figureName: String)]] = [:]
         for alt in alternateNames {
             guard let figureName = alt.figure?.name else { continue }
+            // A name typed as a Syncretism is deliberately shared across the
+            // syncretized deities (e.g. "Asarluhi" on both Asalluhi and Marduk),
+            // so it never counts as an ambiguous/duplicate alias.
+            if alt.nameType == .syncretism { continue }
             let key = NameDuplicateCheck.normalizedKey(alt.name)
             byKey[key, default: []].append((alt.name, figureName))
         }

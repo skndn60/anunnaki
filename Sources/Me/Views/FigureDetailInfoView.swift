@@ -162,6 +162,7 @@ struct FigureDescriptionView: View {
 struct FigurePlaceAssociationRow: View {
     let association: FigurePlaceAssociation
     var onSelectPlace: ((Place) -> Void)?
+    var onDelete: (() -> Void)?
 
     var body: some View {
         HStack(spacing: 8) {
@@ -204,6 +205,15 @@ struct FigurePlaceAssociationRow: View {
                 Text(association.source)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+            }
+            if let onDelete {
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+                .help("Delete association")
             }
         }
     }

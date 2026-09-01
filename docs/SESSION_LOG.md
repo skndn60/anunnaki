@@ -8,6 +8,252 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-01 — Dynasty sidebar ordering: root cause was the view, not the data
+
+**Context:** User reported the "Dynasties" sidebar entry not matching the post-flood timeline sequence (first appeared alphabetical, then out-of-order). Three data-layer fixes were applied and each was declared "fixed" — but the user kept seeing the wrong order. Lesson: the cause was never the data; it was the **view**.
+
+**Root cause (finally):** Clicking "Dynasties" opens `EntityGroupCollectionView`, whose `mixedItems` sorts members+subgroups **alphabetically by name** unless `group.sortMode == .ordered`. The "Dynasties" group had `sortMode == .alphabetical` (the model default), so its 20 dynasty subgroups rendered as "Dynasty of Adab, Dynasty of Akkad, …" regardless of correct `orderIndex` values. The sidebar *disclosure* row (`SidebarGroupRow`) sorts by `(orderIndex, name)` and was already correct — the mismatch was the group *page*.
+
+**Changes:**
+- `Migration.ensureDynastyGroups`: (1) syncs each subgroup's `FigureGroup.orderIndex` to its linked `Era.orderIndex` (subgroups were created with a sequential counter, not the era's ruling order); (2) broadened the era filter to the full SKL ruling block (`First dynasty of Kish` → `Dynasty of Isin`) so the two non-"dynasty"-named eras ("First rulers of Uruk", "Gutian rule") get subgroups too; (3) reconciles the legacy "Sumerian King List" tree (adds missing dynasties, renames typos like "Fouth…"/"rhird…", syncs order); (4) sets the "Dynasties" group's `sortMode = .ordered` so its page lists dynasties chronologically.
+- `ContentView` + `AppSettingsView`: `@AppStorage("skipLogin")` dev hack — when on, launch auto-signs-in as the first user, bypassing `LoginView`. Default off.
+- Tests: added `testEnsureDynastyGroupsIncludesFullSKLRulingBlock` (20 eras in ruling order + `sortMode == .ordered`) and `testEnsureDynastyGroupsRepairsLegacyTreeToRulingOrder`; updated `testEnsureDynastyGroupsLinksErasAcrossOtherTrees` for rename behavior. 442 pass.
+
+**Lesson promoted to AGENTS.md:** new "Debugging Data-Versus-View Mismatches" section — a "sorted alphabetically" symptom is a view-layer signature (name-based sort, e.g. `sortMode`); trace the exact view before touching data.
+
+**Files touched:** `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/AppSettingsView.swift`, `Sources/Me/Views/LoginView.swift` (env key, read-only), `Tests/MeCoreTests/MeCoreTests.swift`, `AGENTS.md`.
+
+### 2026-08-30 — Source description field upgraded to rich text
+
+**Context:** `Source` had no `richDescription`, so its description field was edited with a plain `TextEditor` and displayed as plain text.
+
+**Change:**
+- Model: `Source` gained `richDescription: Data?` (optional, migration-safe) + init param defaulting to nil.
+- `SourceFormView`: the Description `TextEditor` is now `RichTextEditorSection(richData: $richDescription, plainText: $sourceDescription)` (same toolbar-equipped editor used by Figure/Place/Event/Thing forms); load/save round-trips `richDescription`.
+- `SourceDetailView`: description renders via `LinkedDescription(text:richData:)` so RTF and inline entity links display when present.
+
+**Files touched:** `Sources/MeCore/Models/Source.swift`, `Sources/Me/Views/SourceListView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 440 tests, 0 failures.
+
+---
+
+### 2026-08-30 — Comparison-table source references: numbered footnote keys
+
+**Context:** The in-cell source references rendered as full `Source: <name>` footnotes under every cell value, which got messy and unreadable in the grid. User chose the "numbered footnote key" option: cells show a small superscript number, the full references live once in a footnote block under the table.
+
+**Change:**
+- `CellView` now takes `sourceNumbers: [Int]` instead of `[CellSourceEntry]`; renders a superscript `¹`-style marker (comma-joined, `.caption2`, `baselineOffset(4)`) after the value. Tooltip lists the footnote numbers.
+- `PopupTableView` computes `tableFootnotes` in row-major order (attributes × columns, first appearance wins), each unique `name — location` source numbered once; `footnoteNumbers(for:)` maps a cell's sources to their numbers. The table-wide header source is not numbered (already stated in the header).
+- Footnote block added *inside* the vertical `ScrollView`, right under the grid (Divider + `N` `Source: <name>` rows reusing `SourceFootnoteView`), so it scrolls with content. `tableNaturalContentSize` includes `footnoteBlockHeight` so the window can enclose it when the table is short.
+- Removed the now-unused `CellSourceFootnote`/`sourceFootnotes` from `CellView`.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 440 tests, 0 failures.
+
+---
+
+### 2026-08-30 — All detail-view associations deletable with confirmation
+
+**Context:** Place↔Place got delete-with-confirm in the place detail view, but many other association types shown in the right-side detail panels either had no delete button at all or deleted without confirmation. User asked for every association shown in the Figure/Place/Event (and Thing) detail views to be removable from there, with confirmation.
+
+**Change:**
+- **Figure detail:** `PlacesSection` gained an optional `onDelete` on `FigurePlaceAssociationRow` + confirmation alert; `ThingsSection` existing trash now goes through a confirm alert; `GroupsSection` (figure↔group) added trash + confirm (needed a new `@Environment(\.modelContext)`); `EventsSection` added a trash button per event removing the figure from the event (deletes `EventFigureAssociation`, removes from `involvedFigures`) + confirm; `PantheonsSection` menu-toggle removal now routes through a confirm alert; tags (`TagTokenView` gained optional `onRemove`) + citations + attributions all confirm before deleting.
+- **Place detail:** Events Here rows (delete `EventPlaceAssociation`), Associated Figures chips (delete `FigurePlaceAssociation`), groups, tags, citations, attributions — all with confirmation alerts.
+- **Event detail:** figure removal now confirms; Associated Places (`EventPlaceAssociation`), Things (`ThingEventAssociation`), tags, citations, attributions, groups (confirmation before depropagation) — all with confirmation.
+- **Thing detail (`ThingListView`):** attributions and groups now confirm (figure/place/event association rows already had confirm via `onDeleteAssociation`).
+- **Shared:** `ImageGallery` and `AllImagesGallery` image deletion now confirm (the file is deleted too). `EntityGroupsSection` gained a plain `onRemove` hook (for confirmation) alongside `onRemoveWithDepropagation`.
+
+**Files touched:** `Sources/Me/Views/FigureDetailView.swift`, `PlacesSection.swift`, `ThingsSection.swift`, `GroupsSection.swift`, `EventsSection.swift`, `PantheonsSection.swift`, `FigureDetailInfoView.swift`, `PlaceDetailView.swift`, `EventDetailView.swift`, `ThingListView.swift`, `EntityGroupsSection.swift`, `FigureImageGallery.swift`, `TagEditorView.swift`, `CitationsSection.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 440 tests, 0 failures.
+
+---
+
+### 2026-08-30 — Source references aligned with the free-text footnote layout
+
+**Context:** The canonical source-reference footnote in free-text blocks (`TextBlockRow`) is `[book.and.wrench teal] Source: <name> (click to see, note: may open browser window)`. The table-wide source reference (header + "Inheriting table" line in the cell editor) and the in-cell source marker (bare `*`) didn't share that layout.
+
+**Change:**
+- Added shared `SourceFootnoteView` (icon + "Source: <name>" + optional URL link) in `PopupTableView.swift`; the table header now renders the table's source through it (URL from `table.sourceRef?.url`), and the cell editor's empty-source state shows "No source recorded" (tertiary) or `SourceFootnoteView` with the table source's URL instead of "Inheriting table (X)".
+- Replaced the in-cell `*` marker in `CellView` with the same footnote layout: the cell now stacks a trailing-aligned `SourceFootnoteView` (one per source, `name — location`) under the value. `CellView` takes `sources: [CellSourceEntry]` instead of a `hasOwnSource` bool; tooltip help lists the source names. `CellSourceEntry` gained a `url` field, populated in `loadCell` from the linked `Source` row (`cell.cellSources[i].sourceRef?.url`, legacy `cell.sourceRef?.url`); `saveSources` already re-runs `loadCells()` so saved entries pick up URLs.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 440 tests, 0 failures.
+
+---
+
+### 2026-08-30 — Popup table cell editor: dropdown/field order + inheritance label
+
+**Context:** In `CellEditPopover`, the source-picker dropdown sat *below* the location entry field; and after removing a table-wide source, a cell with no own sources still claimed "Inheriting table source" — misleading when the table has no source at all.
+
+**Change:**
+- Swapped the SOURCES input order in `CellEditPopover`: the source **dropdown + add button now come first**, followed by the Location entry field (pick the source, then optionally note the location).
+- Fixed the inheritance label: when the cell has no sources and the table source is empty, it now shows "No source recorded" (tertiary) instead of "Inheriting table source"; "Inheriting table (X)" only shows when a table source actually exists. Verified against the live store — the affected table had an empty `ZSOURCE`, so the model was fine; it was purely a display claim.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 440 tests, 0 failures.
+
+---
+
+### 2026-08-30 — Content attribution on text blocks (TODO item 8)
+
+**Context:** `GroupTextBlock` prose had no way to carry provenance — `ContentAttribution` only linked to Figure/Place/Event/Thing. User explicitly wanted attribution to stay **optional** (own prose, no source).
+
+**Change:**
+- Model: `ContentAttribution` gained `groupTextBlock: GroupTextBlock?` (migration-safe optional, forward unannotated side); `GroupTextBlock` gained annotated inverse `@Relationship(deleteRule: .nullify, inverse: \ContentAttribution.groupTextBlock) contentAttributions: [ContentAttribution]?` — matches the Figure/Place/Event/Thing pattern. No `Migration.swift` backfill needed (optional attribute, no existing rows need values).
+- `ContentAttributionFormView`: optional `groupTextBlock:` param. When non-nil it runs in text-block mode — no Entity section at all (the parent is already the text block), the Property dropdown offers only "Summary" / "Full text", and `canSave` requires only a non-empty content preview. Save/load set `attribution.groupTextBlock`.
+- `GroupTextBlockSheet`: new Attributions section (reuses `ContentAttributionSection`) with add/edit/delete driving the form as a nested sheet; content wrapped in a ScrollView, sheet height 620 → 760. Attributions remain fully optional — Save never requires one.
+- `TextBlockRow`: right-aligned attribution footnote under the prose — `book.and.wrench` icon + "Source: <name>" + (when the attribution or its source has a URL) a `Link("(click to see, note: may open browser window)")`; the link is omitted when no URL exists. The footnote data is a plain value struct (`TextBlockAttributionFootnote`) loaded off the render path into `@State`, so no `@Model` relationship is faulted in `body`. **Reactivity fix (two rounds):** the footer initially didn't update after adding an attribution — a `.task(id: block.persistentModelID)` runs once per row appearance and never re-fires (the id doesn't change). The collection view now bumps `textBlockRevision` via `.onChange(of: editingTextBlock)` (fires when the sheet closes) and the row keys its task on `"\(block.persistentModelID)-\(attributionRevision)"`. **Round 2 bug:** the SKL "Sumerian King List" group renders via `EntityGroupCollectionView` (it has subgroups), and the target text block lived inside a subgroup ("First dynasty of Kish"), rendered by `EntityGroupTreeNode`. The main-body `EntityGroupTreeNode` call site did NOT forward `attributionRevision` (only the recursive call did), so subgroup text blocks never re-ran their task — verified against the live store via sqlite (`ZGROUPTEXTBLOCK` pk 6 → group 18 → parent group 3, attribution pk 419 linked to block 6). Fixed by forwarding `attributionRevision: textBlockRevision` at the main call site. The filter compares by `persistentModelID` rather than model-object `==`, because a second context returns a different instance for the same row (`PersistentIdentifier` is stable across contexts — verified by test; model identity is not).
+- `ContentAttributionFormView` text-block mode refinement: Entity section removed entirely (the parent is the text block; no entity to pick); Property dropdown offers only "Summary" / "Full text".
+- Tests: `testGroupTextBlockAttributionRoundTrip` (block↔attribution link, source round-trip, no figure/place/event/thing) + `testGroupTextBlockAttributionIsOptional` (zero-attribution block valid, `.nullify` on block delete leaves the attribution detached) + `testGroupTextBlockAttributionFormSavePath` (disk container, second-context fetch proving `persistentModelID` survives a save/reload round trip).
+
+**Files touched:** `Sources/MeCore/Models/ContentAttribution.swift`, `Sources/MeCore/Models/GroupTextBlock.swift`, `Sources/Me/Views/ContentAttributionFormView.swift`, `Sources/Me/Views/EntityGroupCollectionView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/TODO.md`.
+
+**Verification:** `swift build` clean (only pre-existing warnings). `swift test`: 439 tests, 0 failures.
+
+---
+
+### 2026-08-29 — Rich-text cell value editor (like the comment editor)
+
+**Context:** Cell value in `CellEditPopover` was a plain `TextEditor`; user wanted the same rich-text (toolbar) editing as the comment sheet.
+
+**Change:**
+- Model: `PopupTableCell` gained optional `richValue: Data?` (RTF) alongside `value`; `RichTextEditor` keeps the two in sync. Optional for migration safety.
+- `PopupTableView`: `cellRichValues` state + `richValueBinding`/`saveRichValue` mirror the comment path; loaded/cleared in `loadCell`/`loadCells`. `CellEditPopover` now uses `RichTextEditorSection(richData: $richValue, plainText: $value)` (B/I/U, font panel, strip); popover frame bumped to 460×560 to fit the toolbar. Cell display and all value logic still read the plain `value`.
+
+**Files touched:** `Sources/MeCore/Models/PopupTableCell.swift`, `Sources/Me/Views/PopupTableView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 437 tests, 0 failures.
+
+---
+
+### 2026-08-29 — Draggable header-row height on comparison tables
+
+**Context:** Column headers were locked to the content row height (120pt), so a table like "Enki vs. Enlil" had a comically tall header. User wanted the first-row (header) height adjustable "like column widths".
+
+**Change:**
+- Model: `PopupTable` gained optional `headerHeightRaw: Double?` (+ `headerHeight` accessor defaulting to `PopupTable.defaultHeaderHeight` = 48; nil stored when exactly 48). Optional for lightweight-migration safety, so existing tables immediately get the compact default.
+- View (`PopupTableView`): header `GridRow` now uses `headerHeight` instead of `rowHeight`; added a full-width horizontal resize bar (`Rectangle` with `gridCellColumns(columns.count + 1)`) just under the header row with a vertical `DragGesture` (`headerHeightGesture`) that clamps 28...200 and persists via `table.headerHeight` on release. Bar shows a faint divider, accent on hover/drag, with `.help` tooltip. `tableNaturalContentSize` accounts for `headerHeight`.
+
+**Files touched:** `Sources/MeCore/Models/PopupTable.swift`, `Sources/Me/Views/PopupTableView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 437 tests, 0 failures.
+
+---
+
+### 2026-08-29 — Gender-wording exemption for Kubaba (female "king")
+
+**Context:** Integrity check flagged Kubaba/Kug-Bau as wrong gender because she is recorded as a "king" of Kish. This is historically correct — she was the only woman on the Sumerian King List, and "king" is her genuine title. User: "The woman was a king... Room for an exception."
+
+**Change:** `ConsistencyEngine.genderConflict` now returns nil (skips the gender-wording check) for figures whose normalized own-name keys match a documented exemption set `genderWordingExemptNames` (["Kug-Bau", "Kubaba", "Kugbau"]). Because the check is keyed off `ownKeys` (already passed by both the engine and the `FigureFormView` live hint), the exemption suppresses both the integrity finding and the editing-time hint. Any non-exempt female figure described as "king" is still flagged. Added `testGenderWordingExemptsKubaba`.
+
+**Files touched:** `Sources/MeCore/Store/ConsistencyEngine.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 437 tests, 0 failures.
+
+---
+
+### 2026-08-29 — Ambiguous-alias check suppressing syncretism names
+
+**Context:** Integrity check flagged the alternate name "ASARLUHI" as attached to multiple figures ("ASALLUHI" and "MARDUK"). This is a known syncretism: the seed marks `Asarluhi` with `nameType: "Syncretism"` ("Sumerian deity absorbed into Marduk"). A syncretism name is INTENDED to span the syncretized deities, so flagging it as an ambiguous/duplicate alias is a false positive (it's a `.warning`, not an error).
+
+**Change:** `checkAmbiguousAliases` in `ConsistencyEngine` now skips alternate names whose `nameType == .syncretism`, since those exist precisely to link multiple syncretized gods. Real duplicate aliases (non-syncretism) are still flagged. Added `testAmbiguousAliasRuleSkipsSyncretismNames`.
+
+**Files touched:** `Sources/MeCore/Store/ConsistencyEngine.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 436 tests, 0 failures.
+
+---
+
+### 2026-08-29 — Gendered-noun false positive on relational/collective mentions
+
+**Context:** Data-integrity checks flagged a female collective ("Daughters of Men") because its text mentions masculine words ("gods", "sons"). User: "The fact that males are mentioned does not make it incorrect. It underlines that the parser is not very strong."
+
+**Change:** `ConsistencyEngine`'s gendered-noun rule was too eager — it counted ANY gendered noun, including kinship/relational terms (`mother`, `father`, `son`, `daughter`, `brother`, `sister`, `wife`, `husband`, `widow`), which describe OTHER people in a figure's story. Restricted `feminineNouns`/`masculineNouns` to **self-descriptive** nouns only (`goddess`, `queen`, `priestess` / `god`, `king`, `priest`, `prince`). Relational terms no longer trigger on their own; the existing mixed-wording skip (both genders present → ambiguous → silent) is preserved, so "goddess + king" still isn't flagged. Whole-word tokenization already excluded plurals.
+
+**Also:** `testGenderedNounRuleUsesWholeWords` was failing not from the rule but from a too-broad test filter — `consistent` matched an unrelated `figureWithoutType` info finding; it now filters `.kind == .genderedNoun`. Added `testGenderedNounIgnoresRelationalKinshipNouns`.
+
+**Files touched:** `Sources/MeCore/Store/ConsistencyEngine.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+**Verification:** `swift build` clean. `swift test`: **435 tests, 0 failures** (the previously pre-existing failure is resolved).
+
+---
+
+### 2026-08-29 — Per-cell comments on comparison tables
+
+**Context:** User collects notes on individual comparison-table cell contents and wanted to (1) enter/store them and (2) view them in the table.
+
+**Change (final design — dedicated comment sheet):**
+- Model: added optional `comment: String?` to `PopupTableCell` (+ init param). Optional for lightweight-migration safety per convention.
+- Storage: `commentBinding`/`saveComment` in `PopupTableView` mirror the existing value pattern (get from `cellComments` dict, set → `ensureCell` + save). Loaded in `loadCells`/`loadCell`.
+- Viewing: `CellView` shows a tappable `note.text` glyph as a Button when a comment exists, plus a `.help` tooltip with the comment text; the glyph opens a dedicated `CommentEditorSheet`. Clicking the rest of the cell still opens the value/source `CellEditPopover`.
+- Editor: `CommentEditorSheet` is a separate, roomy sheet (640×460) that reuses the app's `RichTextEditorSection` (NSTextView + AppKit toolbar: B/I/U, font panel, strip) so comments support rich text like other editors. To store it, `PopupTableCell` gained a `richComment: Data?` (RTF, optional for migration safety) alongside `comment`; `richCommentBinding`/`saveRichComment` mirror the plain-text path. The comment is NOT crammed into `CellEditPopover` (which stays value + sources only, 440×480).
+- Tests: `testPopupTableCellCommentRoundTrip` (persist round-trip).
+
+**Files touched:** `Sources/MeCore/Models/PopupTableCell.swift`, `Sources/Me/Views/PopupTableView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+**Note:** the emoji state cells (from the prior entry) also got a feedback pass — removed the accent pill/background and padding, shrank the emoji to 40pt, and centered it.
+
+**Verification:** `swift build` clean. `swift test`: 434 tests, 1 pre-existing unrelated failure (`testGenderedNounRuleUsesWholeWords`); new tests `testPopupTableCellCommentRoundTrip` and `testEnsureComparisonStateEmoji` pass.
+
+---
+
+### 2026-08-29 — Comparison-table state emoji (rendering + data migration)
+
+**Context:** User maintains a "Mesopotamian City Matrix" comparison table where city states are "friendly"/"neutral"/"hostile". Wanted big emoji icons for these states.
+
+**Change — rendering:** `CellView` in `PopupTableView.swift` detects a standalone emoji value (non-ASCII, not the `—` placeholder) and renders it large (56pt) and centered with a soft accent pill: 🤝 green, 😐/😑 yellow, ⚔️/😠/🔥 red, default accent otherwise. Non-emoji text stays the normal smaller layout. Render-only — no data touched.
+
+**Change — data:** Real state text lives in cell `value`s, so a rendering change alone showed nothing. Added idempotent launch migration `Migration.ensureComparisonStateEmoji(context:)` (check-by-name on "Mesopotamian City Matrix"; converts a cell whose ENTIRE trimmed value equals a state word, case-insensitive, to 🤝/😐/⚔️; leaves emoji, non-state text, empty/nil cells and other tables untouched; never double-applies). Wired into `ContentView`'s migration chain after `ensureCellSourceLinksExist`. Applies automatically on next app launch.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift` (+`testEnsureComparisonStateEmoji`).
+
+**Verification:** `swift build` clean. `swift test`: 433 tests, 1 pre-existing unrelated failure (`testGenderedNounRuleUsesWholeWords`); new test `testEnsureComparisonStateEmoji` passes (covers convert, case-insensitivity, leave-untouched, unaffected-table, idempotency).
+
+---
+
+### 2026-08-29 — Comparison-table resize de-jittered (subpixel widths + sheet-fit fight)
+
+**Context:** Follow-up to the sheet re-sizing work above. User reported the column resize was "jittery and jerky", then, after rounding, that a small nudge "auto resizes back to a previous size, like the size is cached", then that pressing the handle (click-to-drag) "snaps back". Final request: keep drag smooth, but on release the sheet must resize to enclose the table.
+
+**Root causes found (two, independent):**
+1. **Subpixel widths** — `liveColumnWidths`/`columnWidth(for:)` fed the `Grid` raw fractional `translation.width`, so columns/rows flipped between pixel alignments every drag frame on retina (the jitter). Fixed by snapping every grid dimension (`columnWidth`, `rowHeaderWidth`, `rowHeight`) to whole points via `.rounded()`.
+2. **Sheet tracking the grid content size** — the window was being re-fitted to the (changing) grid extent on every drag frame, so it chased the pointer (jitter) and snapped on release. Grow-only fit in the first fix round didn't help because the per-frame re-fit was SwiftUI re-sizing the sheet from the content's ideal size, and the manual `fitHostWindowToTable` was fighting/undoing it.
+
+**Kept solution:**
+- During the drag the content frame is pinned to a `@State tableSize` (never updated mid-gesture), so the window is rock-steady; the grid scrolls inside the fixed frame.
+- On release (`columnResizeGesture.onEnded`, `gridScaleGesture.onEnded`, `resetGridScale`, and `.onAppear`) `fitHostWindowToTable()` recomputes `tableNaturalContentSize` and sets **both** `tableSize` (the SwiftUI frame) and the sheet `NSWindow` frame (`setFrame`) from the **same clamped value**, so SwiftUI content-frame and AppKit window-frame can never disagree — that remove the fight/snap. Width and height both grow and shrink, floored at 700×400, capped at `parent.frame.width - 36` / `- 36`.
+- Kept `WindowAccessor` + `hostWindow`; removed the transient intermediate design that had dropped the fit entirely (a fixed `idealWidth/maxWidth` frame) because that never re-fit on release.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift`.
+
+**Verification:** `swift build` clean. `swift test`: 432 tests, 1 pre-existing unrelated failure (`testGenderedNounRuleUsesWholeWords`). User-tested: smooth drag, no mid-drag movement, sheet re-fits to enclose the table on release. "YES!!"
+
+---
+
+### 2026-08-29 — Comparison-table grows within the app window (sheet re-sizing)
+
+**Context:** After column resize + grid scale shipped, user noted the table is "horizontally limited to its fixed size" — dragging a column wider could never grow the frame. Discussed the cause: the table presents as a macOS `.sheet`, and a sheet is capped at the width of its parent (the main app window). User clarified: growth within the app window is fine; it need not exceed it. Also asked not to move the table to a separate window ("I like the looks of the sheet").
+
+**Change taken (and reverted):** Prototyped moving `PopupTableView` out of the `.sheet` into a dedicated `WindowGroup(id: "table-grid", ...)` with a `TableGridViewWindow` loader (mirroring the quicklook-window pattern) and `.windowResizability(.contentSize)` so the window auto-grows with content. Updated all three presentation sites (`PopupTableListView`, `FigureListView`, `FigureDetailView`) to `openWindow(...)` and `PopupTableView` to `dismissWindow`. Build/tests green — but **reverted wholesale** when the user confirmed the sheet should stay and only grow intra-window.
+
+**Change kept — sheet re-sizes itself to the table:**
+- Root cause: SwiftUI sizes a sheet once at presentation from the content's ideal size; a `ScrollView([.horizontal,.vertical])` fills its proposal, so ideal size never changes as columns widen → the sheet looked fixed. Also the header's `.frame(maxWidth: .infinity)` pinned the sheet full-width anyway; removed it so width is content-driven.
+- Added `WindowAccessor` (`NSViewRepresentable`) that reports the hosting `NSWindow`; `PopupTableView` keeps it in `@State hostWindow`.
+- `fitHostWindowToTable()` resizes the sheet window (`setContentSize`) to the table's natural size, called from `columnResizeGesture` and `gridScaleGesture` (change + end) and once in `.onAppear` after layout. Natural size is computed from current state: `rowHeaderWidth + Σ columnWidth(for:) + spacing*columns + 2` wide, `rows*rowHeight + spacing*(rows-1) + 2 + verticalChrome` tall. Width capped at `parent.frame.width - 36` (scrollbar inside the sheet takes over past that); floors at the sheet's 700×400 minimum. Height only grows (never shrinks below current height); width freely grows *and* shrinks.
+- **Try 2 (reverted):** measured the grid with a `GridMeasuredSizeKey` `PreferenceKey` + `.background(GeometryReader)` inside the ScrollView to drive the fit — the measured size reported a constant viewport width (never tracked the drag), so neither grow nor shrink worked. Reverted to the deterministic formula, which tracks correctly.
+- **Known rough edges (deferred per user):** re-sizing is a little jittery during fast drags — polish later.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift` (fit logic, `WindowAccessor`, header `maxWidth` removal, gesture hooks). Presentation reverts touched `AnunnakiApp.swift`, `PopupTableListView.swift`, `FigureListView.swift`, `FigureDetailView.swift` — all back to `.sheet`, net no change.
+
+**Verification:** `swift build` clean. `swift test`: 431 tests, 1 pre-existing unrelated failure (`testGenderedNounRuleUsesWholeWords`). User-tested: growth works, shrink works at "an acceptable level", jitter deferred.
+
+---
+
 ### 2026-08-28 — Comparison-table layout control: drag-to-resize columns + whole-grid scale
 
 **Context:** User asked for more layout flexibility in comparison tables (column widths, cell alignment), then chose to go straight for drag-to-resize columns. After testing, asked for whole-grid proportional resizing ("change table width, and also height") — a corner handle that scales every column and row uniformly. The core structural problem: figures-mode tables have no column entity — columns are shared `Figure`s — so per-column widths must live per-table.

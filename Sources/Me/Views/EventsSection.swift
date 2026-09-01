@@ -78,10 +78,40 @@ struct EventsSection: View {
                             }
                             .padding(.leading, 22)
                         }
+                        Button(action: {
+                            eventToRemove = event
+                            showRemoveConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Remove \(figure.name) from this event")
                     }
                     .padding(.vertical, 4)
                 }
             }
+            .alert("Remove from Event?", isPresented: $showRemoveConfirm, presenting: eventToRemove) { event in
+                Button("Remove", role: .destructive) {
+                    removeFigureFromEvent(event)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { event in
+                Text("Remove \(figure.name) from the event \(event.name)?")
+            }
         }
     }
+
+    private func removeFigureFromEvent(_ event: Event) {
+        if let assoc = event.figureAssociations?.first(where: { $0.figure?.persistentModelID == figure.persistentModelID }) {
+            event.figureAssociations?.removeAll { $0.persistentModelID == assoc.persistentModelID }
+            modelContext.delete(assoc)
+        }
+        event.involvedFigures.removeAll { $0.persistentModelID == figure.persistentModelID }
+        try? modelContext.save()
+    }
+
+    @State private var eventToRemove: Event?
+    @State private var showRemoveConfirm = false
 }

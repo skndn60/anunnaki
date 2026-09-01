@@ -6,6 +6,9 @@ struct ContentAttributionFormView: View {
     @Environment(\.dismiss) var dismiss
 
     let attribution: ContentAttribution?
+    /// When non-nil, the attribution is attached to this text block instead of
+    /// a figure/place/event/thing, and the entity selector is hidden.
+    var groupTextBlock: GroupTextBlock? = nil
 
     @State private var entityKind = "Figure"
     @State private var selectedFigure: FigureSearchResult?
@@ -22,8 +25,10 @@ struct ContentAttributionFormView: View {
     @Query(sort: \Source.name) private var sources: [Source]
 
     private var isEditing: Bool { attribution != nil }
+    private var isTextBlockAttribution: Bool { groupTextBlock != nil }
     private var canSave: Bool {
-        selectedFigure != nil || selectedPlace != nil || selectedEvent != nil || selectedThing != nil
+        if isTextBlockAttribution { return true }
+        return selectedFigure != nil || selectedPlace != nil || selectedEvent != nil || selectedThing != nil
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -32,18 +37,20 @@ struct ContentAttributionFormView: View {
                 .padding()
 
             Form {
-                Section("Entity") {
-                    Picker("Type", selection: $entityKind) {
-                        Text("Figure").tag("Figure")
-                        Text("Place").tag("Place")
-                        Text("Event").tag("Event")
-                        Text("Thing").tag("Thing")
-                    }
-                    .onChange(of: entityKind) { _, _ in
-                        searchText = ""
-                    }
+                if !isTextBlockAttribution {
+                    Section("Entity") {
+                        Picker("Type", selection: $entityKind) {
+                            Text("Figure").tag("Figure")
+                            Text("Place").tag("Place")
+                            Text("Event").tag("Event")
+                            Text("Thing").tag("Thing")
+                        }
+                        .onChange(of: entityKind) { _, _ in
+                            searchText = ""
+                        }
 
-                    entitySelector
+                        entitySelector
+                    }
                 }
 
                 Section("Property") {
@@ -267,6 +274,7 @@ struct ContentAttributionFormView: View {
             attribution.place = selectedPlace
             attribution.event = selectedEvent
             attribution.thing = selectedThing
+            attribution.groupTextBlock = groupTextBlock
             attribution.source = selectedSource
             attribution.propertyName = propertyName
             attribution.url = url.isEmpty ? nil : url
@@ -278,6 +286,7 @@ struct ContentAttributionFormView: View {
                 place: selectedPlace,
                 event: selectedEvent,
                 thing: selectedThing,
+                groupTextBlock: groupTextBlock,
                 source: selectedSource,
                 propertyName: propertyName,
                 url: url.isEmpty ? nil : url,
@@ -292,6 +301,7 @@ struct ContentAttributionFormView: View {
     }
 
     private var availableProperties: [String] {
+        if isTextBlockAttribution { return ["summary", "text"] }
         switch entityKind {
         case "Figure": return ["figureDescription", "title", "domain", "source", "causeOfDeath", "disambiguation"]
         case "Place": return ["placeDescription", "modernLocation", "source"]
@@ -302,6 +312,13 @@ struct ContentAttributionFormView: View {
     }
 
     private func propertyLabel(_ prop: String) -> String {
+        if isTextBlockAttribution {
+            switch prop {
+            case "summary": return "Summary"
+            case "text": return "Full text"
+            default: return prop
+            }
+        }
         switch prop {
         case "figureDescription", "placeDescription", "eventDescription", "thingDescription": return "Description"
         case "modernLocation": return "Modern Location"
@@ -329,13 +346,15 @@ struct ContentAttributionFormView: View {
     }
 }
 
-private func propertyDisplayLabel(_ prop: String) -> String {
+func propertyDisplayLabel(_ prop: String) -> String {
     switch prop {
     case "figureDescription", "placeDescription", "eventDescription", "thingDescription": return "Description"
     case "modernLocation": return "Modern Location"
     case "causeOfDeath": return "Cause of Death"
     case "sortName": return "Sort Name"
     case "disambiguation": return "Disambiguation"
+    case "summary": return "Summary"
+    case "text": return "Full text"
     default: return prop.prefix(1).uppercased() + prop.dropFirst()
     }
 }
