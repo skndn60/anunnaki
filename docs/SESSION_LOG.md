@@ -8,6 +8,21 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-04 — Historical events tranche + missing-description blurbs
+
+**State:** `swift build` clean, **499/499** tests (2 new). Additive, idempotent imports; applies on next app launch via ContentView migration list. No reseed, no data destroyed.
+
+**Changes:**
+1. **Historical events tranche (69 events + 40 kings):** `Sources/MeCore/Resources/historical_events_{a,b,c}.json` — documented events Early Dynastic → fall of Nineveh (612 BCE): battles, destructions, foundations, political upheavals, the 763 BCE Bur-Sagale eclipse; each with approximate BCE date, description, source string, involved figures by name, optional city. Kings (Sargon of Akkad, Rimush, Naram-Sin, Ashurnasirpal II, Sargon II, Esarhaddon, Nabopolassar, …) auto-created only when absent, era-linked where a matching dynasty exists. `Migration.ensureHistoricalEventsImportExist` (Sources/MeCore/Store/HistoricalEventsImport.swift) fetches by name, links to existing EventTypes/figures/places, and sticks an "IMPORTED — needs review" note on every new row. **Caveat recorded:** items whose dynasty eras don't exist (Larsa, Kassite, Middle-Assyrian ~1300–1076 BCE) import dated but era-less — they won't pin to a timeline lane until those era rows are added (possible follow-up).
+2. **Empty-description backfill (20 figures):** `figure_blurbs.json` + `Migration.ensureMissingFigureDescriptions` fill only blank `figureDescription`s, keyed by exact name, idempotent. 12 got substantive blurbs (Muati verified via Wikipedia: spouse of Nanaya, later conflated with Nabu); 8 obscure An = Anum/minor entries got honest attestation-style one-liners rather than invented detail. Meshka flagged as near-unknown.
+3. Timeline-event UX follow-up from prior commit: added chip-like hover feedback to event markers then **reverted on request** (didn't look good) — no code left.
+
+**Verification:** new tests `testHistoricalEventsImportIsAdditiveAndIdempotent` (≥60 events, ≥30 kings, no dup on second run) and `testEnsureMissingFigureDescriptionsFillsOnlyBlanks`; full suite 499 pass.
+
+**Files touched:** `Sources/MeCore/Resources/{historical_events_a,b,c.json, figure_blurbs.json}`, `Sources/MeCore/Store/{HistoricalEventsImport.swift, FigureBlurbsImport.swift}`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
 ### 2026-09-04 — Timeline: pre-flood linear axis, BCE tick labels, event placement pass
 
 **State:** `swift build` clean. View-layer only; no schema/data impact. Timeline header fix from earlier this session is in `583a8c5`.

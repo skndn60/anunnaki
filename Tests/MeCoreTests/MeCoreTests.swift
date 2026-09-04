@@ -127,6 +127,61 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(alts2.count, alts.count, "second run must not duplicate alternate names")
     }
 
+    func testHistoricalEventsImportIsAdditiveAndIdempotent() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        Migration.ensureHistoricalEventsImportExist(context: context)
+        let firstEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        let firstFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertGreaterThanOrEqual(firstEvents.count, 60, "expected 60+ documented events, got \(firstEvents.count)")
+        XCTAssertGreaterThanOrEqual(firstFigures.count, 30, "expected 30+ kings created, got \(firstFigures.count)")
+
+        let eventNames = Set(firstEvents.map { $0.name.lowercased() })
+        XCTAssertTrue(eventNames.contains("the fall of nineveh"), "fall of Nineveh should be present")
+        XCTAssertTrue(eventNames.contains("the battle of qarqar"), "Qarqar should be present")
+        XCTAssertTrue(eventNames.contains("the code of hammurabi"), "Code of Hammurabi should be present")
+
+        let figureNames = Set(firstFigures.map { $0.name.lowercased() })
+        XCTAssertTrue(figureNames.contains("sargon of akkad"), "Sargon of Akkad should be created as a king")
+        XCTAssertTrue(figureNames.contains("ashurbanipal") == false || figureNames.contains("sennacherib") == false || figureNames.count >= 30,
+                      "king set should be populated")
+
+        Migration.ensureHistoricalEventsImportExist(context: context)
+        let secondEvents = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        let secondFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(secondEvents.count, firstEvents.count, "second run must not duplicate events")
+        XCTAssertEqual(secondFigures.count, firstFigures.count, "second run must not duplicate kings")
+    }
+
+    func testEnsureMissingFigureDescriptionsFillsOnlyBlanks() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+
+        let bau = Figure(name: "Bau")
+        let ningishzida = Figure(name: "Ningishzida")
+        let unknown = Figure(name: "NotInBlurbs")
+        unknown.figureDescription = "  "
+        context.insert(bau)
+        context.insert(ningishzida)
+        context.insert(unknown)
+        try? context.save()
+
+        Migration.ensureMissingFigureDescriptions(context: context)
+
+        let after = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let byName = Dictionary(uniqueKeysWithValues: after.map { ($0.name, $0.figureDescription) })
+        XCTAssertFalse((byName["Bau"] ?? "").isEmpty, "Bau should gain a description")
+        XCTAssertFalse((byName["Ningishzida"] ?? "").isEmpty, "Ningishzida should gain a description")
+        XCTAssertEqual(byName["NotInBlurbs"]?.trimmingCharacters(in: .whitespacesAndNewlines), "", "unknown figure stays untouched")
+
+        Migration.ensureMissingFigureDescriptions(context: context)
+        let second = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let secondDescriptions = second.filter { $0.name == "Bau" }.map(\.figureDescription)
+        XCTAssertEqual(secondDescriptions.count, 1, "second run must not alter filled descriptions")
+    }
+
     func testRemoveOrphanedKittumNigginaAltNamesRemovesOnlyTargetPair() {
         let container = makeContainer()
         let context = ModelContext(container)

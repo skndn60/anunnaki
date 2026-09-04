@@ -250,6 +250,8 @@ struct ContentView: View {
                 Migration.ensureDemonFigureTypeExists(context: modelContext)
                 Migration.ensureDemonsImportExist(context: modelContext)
                 Migration.ensureCuratedNamesImportExist(context: modelContext)
+                Migration.ensureHistoricalEventsImportExist(context: modelContext)
+                Migration.ensureMissingFigureDescriptions(context: modelContext)
                 Migration.ensureAlternateNamesImportExist(context: modelContext)
                 Migration.removeOrphanedKittumNigginaAltNames(context: modelContext)
                 Migration.ensureCanonicalDeityFamilies(context: modelContext)

@@ -1,0 +1,24 @@
+{
+  "figures": [
+    { "name": "Asalluhi", "description": "Eridu's god of incantation and exorcism, son of Enki; later identified with Marduk as the great magician among the gods." },
+    { "name": "Atrahasis", "description": "The 'exceedingly wise' king of Shuruppak whom Enki warned of the coming Flood; hero of the Atrahasis epic, remembered in later tradition as Ziusudra and as Utnapishtim." },
+    { "name": "Bau", "description": "Goddess of healing and of the city of Lagash, consort of Ningirsu (Ninurta) and daughter of An; her animal symbol was the dog." },
+    { "name": "Birtum", "description": "God of the underworld, consort of the prison goddess Nungal." },
+    { "name": "Ennanatum I", "description": "Ruler (ensi) of Lagash of the First Dynasty of Lagash; son of Akurgal, brother of Eannatum and father of Entemena." },
+    { "name": "Haya", "description": "God of grain stores and husband of the scribal goddess Nisaba; patron of scribes and stewards, and in some traditions father of Ninlil." },
+    { "name": "Meshka", "description": "Figure recorded from a name-list source; almost nothing is known beyond the name." },
+    { "name": "Muati", "description": "Old Babylonian god regarded as the spouse of Nanaya; later equated with Nabu, whose name Muati effectively became in the first millennium BCE." },
+    { "name": "Mār-bīti", "description": "Babylonian deity whose name means 'son of the temple'; chief god of the city of Der." },
+    { "name": "Nindub", "description": "Minor deity attested in the An = Anum god list; little beyond the name is preserved." },
+    { "name": "Nineigara", "description": "Minor deity attested in Mesopotamian god lists; surviving references are sparse." },
+    { "name": "Ningishzida", "description": "The 'lord of the good tree', god of vegetation, snakes and the underworld; son of Ninazu, whose emblem was the horned serpent-dragon." },
+    { "name": "Ninirigal", "description": "Minor deity attested in the An = Anum god list." },
+    { "name": "Ninkarnunna", "description": "Minor deity attested in Mesopotamian god lists; details are sparse." },
+    { "name": "Ninmeurur", "description": "Minor deity attested in the An = Anum god list." },
+    { "name": "Nisaba", "description": "Goddess of grain and of writing and accounting; wife of Haya and patroness of scribes." },
+    { "name": "Sutītu", "description": "Deified form of the Sutean nomads, attested in god lists and personal names." },
+    { "name": "Ukulla", "description": "Minor deity attested in Mesopotamian god lists." },
+    { "name": "Urnunta-ea", "description": "Minor deity attested in Mesopotamian god lists; the name joins 'Urnunta' with the god Ea." },
+    { "name": "Zagar", "description": "God of dreams, attendant of the moon god Nanna/Sin, who carried dream messages to humankind." }
+  ]
+}
