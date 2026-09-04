@@ -1,0 +1,300 @@
+{
+  "note": "Spill-over bucket: researched but NOT imported (no name-only rows). Reasons: alias-of-existing / hypostasis-epithet / monster-demon-no-FigureType / group / spurious-biblical / non-deity / insufficient-gender-or-domain. Reviewed from Wikipedia category crawl 2026-09-03.",
+  "entries": [
+    {
+      "name": "Abzu",
+      "wiki": "Abzu",
+      "reason": "alias: Apsu already in database"
+    },
+    {
+      "name": "Amurru (god)",
+      "wiki": "Amurru",
+      "reason": "alias: Martu already in database"
+    },
+    {
+      "name": "Annunitum",
+      "wiki": "Annunitum",
+      "reason": "alias: Anunitu already in database"
+    },
+    {
+      "name": "Ašratum",
+      "wiki": "Ashratum",
+      "reason": "alias: Ashratum already in database"
+    },
+    {
+      "name": "Damgalnuna",
+      "wiki": "Damgalnuna",
+      "reason": "alias: Damkina already in database"
+    },
+    {
+      "name": "Dumuzid",
+      "wiki": "Dumuzid",
+      "reason": "alias: Dumuzi the Shepherd already in database"
+    },
+    {
+      "name": "Hadad",
+      "wiki": "Hadad",
+      "reason": "alias: Ishkur already in database"
+    },
+    {
+      "name": "Ningirsu",
+      "wiki": "Ningirsu",
+      "reason": "alias: Ninurta (Lagash manifestation) already in database"
+    },
+    {
+      "name": "Sin (mythology)",
+      "wiki": "Sin",
+      "reason": "alias: Nanna already in database"
+    },
+    {
+      "name": "Shamash",
+      "wiki": "Shamash",
+      "reason": "alias: Utu already in database"
+    },
+    {
+      "name": "Urash (god)",
+      "wiki": "Urash",
+      "reason": "alias: Uras already in database"
+    },
+    {
+      "name": "Šauška",
+      "wiki": "Shaushka",
+      "reason": "alias: Shaushka already in database"
+    },
+    {
+      "name": "Alalu",
+      "wiki": "Alalu",
+      "reason": "alias: Alala already in database"
+    },
+    {
+      "name": "Anu",
+      "wiki": "Anu",
+      "reason": "alias: An already in database"
+    },
+    {
+      "name": "Dagon",
+      "wiki": "Dagon",
+      "reason": "alias: Dagan already in database"
+    },
+    {
+      "name": "Mullissu",
+      "wiki": "Mullissu",
+      "reason": "alias: Ninlil (Assyrian name), being added as Ninlil"
+    },
+    {
+      "name": "Belit Ilani",
+      "wiki": "Belit Ilani",
+      "reason": "epithet/title of Ishtar and mother goddess"
+    },
+    {
+      "name": "Inanna of Zabalam",
+      "wiki": "Inanna of Zabalam",
+      "reason": "hypostasis of Inanna; cult-localized"
+    },
+    {
+      "name": "Ulmašītum",
+      "wiki": "Ulmasitum",
+      "reason": "hypostasis of Ishtar (Ulmas temple)"
+    },
+    {
+      "name": "Urkayītu",
+      "wiki": "Urkayitu",
+      "reason": "hypostasis of Ishtar of Uruk"
+    },
+    {
+      "name": "Hayyashum",
+      "wiki": "Hayyashum",
+      "reason": "part of pair already imported (Hahharnum and Hayyashum)"
+    },
+    {
+      "name": "Mami (goddess)",
+      "wiki": "Mami",
+      "reason": "already in database"
+    },
+    {
+      "name": "Anzû",
+      "wiki": "Anzû",
+      "reason": "mythic monster/demon; no FigureType"
+    },
+    {
+      "name": "Lamashtu",
+      "wiki": "Lamashtu",
+      "reason": "demoness; no FigureType"
+    },
+    {
+      "name": "Lamassu",
+      "wiki": "Lamassu",
+      "reason": "protective spirit; no FigureType"
+    },
+    {
+      "name": "Pazuzu",
+      "wiki": "Pazuzu",
+      "reason": "demon; no FigureType"
+    },
+    {
+      "name": "Qingu",
+      "wiki": "Qingu",
+      "reason": "dragon/demon of Tiamat; no FigureType"
+    },
+    {
+      "name": "Hanbi",
+      "wiki": "Hanbi",
+      "reason": "evil lord/demon; no FigureType"
+    },
+    {
+      "name": "Kūbu",
+      "wiki": "Kubu",
+      "reason": "ghosts of stillborn; no FigureType"
+    },
+    {
+      "name": "Kilili",
+      "wiki": "Kilili",
+      "reason": "demon/owl goddess; no FigureType"
+    },
+    {
+      "name": "Dimmeku",
+      "wiki": "Dimmeku",
+      "reason": "underworld demoness; no FigureType"
+    },
+    {
+      "name": "Latarak",
+      "wiki": "Latarak",
+      "reason": "lion protective deity/monster; no FigureType"
+    },
+    {
+      "name": "Sebitti",
+      "wiki": "Sebitti",
+      "reason": "group of seven war gods; collective, no FigureType"
+    },
+    {
+      "name": "The Four Winds (Mesopotamian)",
+      "wiki": "Four Winds",
+      "reason": "wind demons; no FigureType"
+    },
+    {
+      "name": "Šeri and Ḫurri",
+      "wiki": "Seri and Hurri",
+      "reason": "bull servants of the storm god; no FigureType"
+    },
+    {
+      "name": "Ugur (god)",
+      "wiki": "Ugur",
+      "reason": "divine weapon/snake-dragon; no FigureType"
+    },
+    {
+      "name": "Sisig (mythology)",
+      "wiki": "Sisig",
+      "reason": "apotropaic spirit/demon; no FigureType"
+    },
+    {
+      "name": "Kotharat",
+      "wiki": "Kotharat",
+      "reason": "Ugaritic group of seven birth goddesses; not Mesopotamian, group"
+    },
+    {
+      "name": "Šassūrātu",
+      "wiki": "Shassuratu",
+      "reason": "group of birth goddesses; collective"
+    },
+    {
+      "name": "Earth and Heaven (Hurrian religion)",
+      "wiki": "Earth and Heaven",
+      "reason": "non-personified Hurrian pair; not individual deities"
+    },
+    {
+      "name": "Adrammelech",
+      "wiki": "Adrammelech",
+      "reason": "biblical mention of Sepharvite god; spurious/uncertain"
+    },
+    {
+      "name": "Nisroch",
+      "wiki": "Nisroch",
+      "reason": "biblical 'god of Assyria'; likely textual corruption"
+    },
+    {
+      "name": "Ur-Nammu",
+      "wiki": "Ur-Nammu",
+      "reason": "historical king (Ur III), not a deity"
+    },
+    {
+      "name": "Manu the Great",
+      "wiki": "Manu the Great",
+      "reason": "unidentified/uncertain figure"
+    },
+    {
+      "name": "NIN (cuneiform)",
+      "wiki": "NIN (cuneiform)",
+      "reason": "scribal title, not a deity"
+    },
+    {
+      "name": "Ma (Sumerian mythology)",
+      "wiki": "Ma",
+      "reason": "concept of primordial land, not a personified deity"
+    },
+    {
+      "name": "Mes-sanga-Unug",
+      "wiki": "Mes-sanga-Unug",
+      "reason": "cultic official/singer of Uruk; not a deity"
+    },
+    {
+      "name": "Nindub",
+      "wiki": "Nindub",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Nineigara",
+      "wiki": "Nineigara",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Ninirigal",
+      "wiki": "Ninirigal",
+      "reason": "insufficient info; likely underworld epithet"
+    },
+    {
+      "name": "Ninkarnunna",
+      "wiki": "Ninkarnunna",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Ninmeurur",
+      "wiki": "Ninmeurur",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Ukulla",
+      "wiki": "Ukulla",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Urnunta-ea",
+      "wiki": "Urnunta-ea",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Zagar (god)",
+      "wiki": "Zagar",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Manungal",
+      "wiki": "Manungal",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Muati",
+      "wiki": "Muati",
+      "reason": "insufficient info; possibly connected to Nabu"
+    },
+    {
+      "name": "Mār-bīti",
+      "wiki": "Mar-biti",
+      "reason": "insufficient info for gender/domain"
+    },
+    {
+      "name": "Sutītu",
+      "wiki": "Sutitu",
+      "reason": "insufficient info for gender/domain"
+    }
+  ]
+}

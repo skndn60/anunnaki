@@ -4,6 +4,7 @@ struct ToolbarButton {
     let icon: String
     let color: Color
     let help: String
+    var isEnabled: Bool = true
     let action: () -> Void
 }
 
@@ -25,6 +26,7 @@ struct DetailToolbar: View {
             ForEach(leadingButtons.indices, id: \.self) { index in
                 let btn = leadingButtons[index]
                 IconActionButton(icon: btn.icon, color: btn.color, help: btn.help, action: btn.action)
+                    .disabled(!btn.isEnabled)
             }
 
             Spacer()

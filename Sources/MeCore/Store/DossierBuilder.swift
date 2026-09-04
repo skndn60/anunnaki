@@ -15,6 +15,7 @@ package struct FigureDossier {
     package let placeAssociations: [FigurePlaceAssociation]
     package let citations: [Citation]
     package let matchedAliasName: String?
+    package let figureTypeName: String
 }
 
 package struct PlaceDossier {
@@ -69,7 +70,8 @@ extension ModelContext {
             events: figureEvents, places: figurePlaces,
             placeAssociations: figure.placeAssociations,
             citations: figureCitations,
-            matchedAliasName: matchedAlias
+            matchedAliasName: matchedAlias,
+            figureTypeName: figure.figureType?.name ?? ""
         )
     }
 

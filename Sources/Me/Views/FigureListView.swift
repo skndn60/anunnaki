@@ -45,7 +45,7 @@ struct FigureListView: View {
     @State private var selectedDynastyGroup: FigureGroup?
     @State private var rows: [FigureRowDisplay] = []
     @State private var openTable: PopupTable?
-    @AppStorage("figureDetailWidth") private var detailWidth: Double = 390
+    @DetailWidth(.figure) private var detailWidth
 
     enum FigureSortOrder: String, CaseIterable {
         case name = "Name"
@@ -98,147 +98,8 @@ struct FigureListView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // Left: list
-            VStack(spacing: 0) {
-                HStack {
-                    Text("Figures")
-                        .font(.title2.bold())
-                    Spacer()
-                    Picker("Highlight dynasty", selection: $selectedDynastyGroup) {
-                        Text("None").tag(FigureGroup?.none)
-                        ForEach(dynasties) { dynasty in
-                            Text(dynasty.name).tag(dynasty as FigureGroup?)
-                        }
-                    }
-                    .frame(width: 180)
-                    .help("Select a dynasty to draw its rulers red in this list.")
-                    Picker("Sort", selection: $sortOrder) {
-                        ForEach(FigureSortOrder.allCases, id: \.self) { order in
-                            Text(order.rawValue).tag(order)
-                        }
-                    }
-                    .frame(width: 130)
-                    Button(action: { showingAddSheet = true }) {
-                        Label("Add Figure", systemImage: "plus")
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-                .padding()
-
-                // Breadcrumbs
-                let coordinatorHistory = coordinator?.history ?? []
-                if !coordinatorHistory.isEmpty {
-                    BreadcrumbBar(
-                        breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
-                        onNavigate: { index in coordinator?.navigateToHistory(at: index) },
-                        onClear: { coordinator?.history.removeAll() }
-                    )
-                }
-                if !figureTypes.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(figureTypes) { type in
-                                typeFilterButton(type)
-                            }
-                            if !selectedTypeFilters.isEmpty {
-                                Button("Clear") { selectedTypeFilters.removeAll() }
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                                    .padding(.leading, 4)
-                            }
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 4)
-                    }
-                }
-
-                Divider()
-
-                if filteredRows.isEmpty {
-                    VStack(spacing: 12) {
-                        Spacer()
-                        if figures.isEmpty {
-                            Image(systemName: "person.3")
-                                .font(.system(size: 48))
-                                .foregroundStyle(.secondary)
-                            Text("No figures yet")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Image(systemName: "magnifyingglass")
-                                .font(.system(size: 36))
-                                .foregroundStyle(.tertiary)
-                            Text("No figures to display")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                } else {
-                    ScrollViewReader { proxy in
-                        List(selection: $selectedFigureID) {
-                            ForEach(groupedRows, id: \.key) { group in
-                                figureGroupSection(group)
-                            }
-                        }
-                        .listStyle(.inset(alternatesRowBackgrounds: true))
-                        .onChange(of: selectedFigureID) { _, newValue in
-                            if let id = newValue {
-                                DispatchQueue.main.async {
-                                    proxy.scrollTo(id, anchor: .center)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            .frame(minWidth: 450, maxWidth: .infinity)
-
-            // Right: detail panel
-            Group {
-                if let figure = selectedFigure {
-                    // ResizableDivider(width: $detailWidth, range: 200...800)
-                    VStack(spacing: 0) {
-                        DetailToolbar(
-                            onEdit: { editingFigure = figure },
-                            onDelete: { showDeleteConfirm = true },
-                            onClose: { selectedFigureID = nil },
-                            onEditDescription: {
-                                editRichDescription = figure.richDescription
-                                editPlainDescription = figure.figureDescription
-                                showDescriptionEditor = true
-                            },
-                            leadingButtons: [
-                                ToolbarButton(icon: "tree", color: .green, help: "Show in inline lineage tree") {
-                                    coordinator?.navigateToLineageFigure(figure.persistentModelID)
-                                }
-                            ]
-                        )
-                        FigureDetailView(
-                            figure: figure,
-                            onSelectFigure: { selected in
-                                coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
-                                coordinator?.navigateToFigure(selected.persistentModelID, name: selected.name, recordHistory: false)
-                            },
-                            onSelectPlace: { place in
-                                coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
-                                coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
-                            },
-                            onSelectEvent: { event in
-                                coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
-                                coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
-                            },
-                            onSelectImage: { imageDetailImage = $0 }
-                        )
-                    }
-                    .frame(width: detailWidth)
-                    .frame(maxHeight: .infinity)
-                    .background(.thinMaterial)
-                }
-            }
-            .transition(.move(edge: .trailing).combined(with: .opacity))
-            .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
+            leftPane
+            detailPane
         }
         .sheet(isPresented: $showingAddSheet) {
             FigureFormView(figure: nil)
@@ -303,6 +164,151 @@ struct FigureListView: View {
         .onChange(of: showDescriptionEditor) { _, _ in
             rebuildRows()
         }
+    }
+
+    private var leftPane: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Figures")
+                    .font(.title2.bold())
+                Spacer()
+                Picker("Highlight dynasty", selection: $selectedDynastyGroup) {
+                    Text("None").tag(FigureGroup?.none)
+                    ForEach(dynasties) { dynasty in
+                        Text(dynasty.name).tag(dynasty as FigureGroup?)
+                    }
+                }
+                .frame(width: 180)
+                .help("Select a dynasty to draw its rulers red in this list.")
+                Picker("Sort", selection: $sortOrder) {
+                    ForEach(FigureSortOrder.allCases, id: \.self) { order in
+                        Text(order.rawValue).tag(order)
+                    }
+                }
+                .frame(width: 130)
+                Button(action: { showingAddSheet = true }) {
+                    Label("Add Figure", systemImage: "plus")
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding()
+
+            // Breadcrumbs
+            let coordinatorHistory = coordinator?.history ?? []
+            if !coordinatorHistory.isEmpty {
+                BreadcrumbBar(
+                    breadcrumbs: coordinatorHistory.map { Breadcrumb(id: $0.id, name: $0.name, icon: $0.item.icon) },
+                    onNavigate: { index in coordinator?.navigateToHistory(at: index) },
+                    onClear: { coordinator?.history.removeAll() }
+                )
+            }
+            if !figureTypes.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(figureTypes) { type in
+                            typeFilterButton(type)
+                        }
+                        if !selectedTypeFilters.isEmpty {
+                            Button("Clear") { selectedTypeFilters.removeAll() }
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .padding(.leading, 4)
+                        }
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 4)
+                }
+            }
+
+            Divider()
+
+            if filteredRows.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    if figures.isEmpty {
+                        Image(systemName: "person.3")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No figures yet")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 36))
+                            .foregroundStyle(.tertiary)
+                        Text("No figures to display")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
+                ScrollViewReader { proxy in
+                    List(selection: $selectedFigureID) {
+                        ForEach(groupedRows, id: \.key) { group in
+                            figureGroupSection(group)
+                        }
+                    }
+                    .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .onChange(of: selectedFigureID) { _, newValue in
+                        if let id = newValue {
+                            DispatchQueue.main.async {
+                                proxy.scrollTo(id, anchor: .center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .frame(minWidth: 450, maxWidth: .infinity)
+    }
+
+    private var detailPane: some View {
+        Group {
+            if let figure = selectedFigure {
+                let isCollectiveFigure = figure.figureType?.name.localizedCaseInsensitiveContains("Collective") ?? false
+                // ResizableDivider(width: $detailWidth, range: 200...800)
+                VStack(spacing: 0) {
+                    DetailToolbar(
+                        onEdit: { editingFigure = figure },
+                        onDelete: { showDeleteConfirm = true },
+                        onClose: { selectedFigureID = nil },
+                        onEditDescription: {
+                            editRichDescription = figure.richDescription
+                            editPlainDescription = figure.figureDescription
+                            showDescriptionEditor = true
+                        },
+                        leadingButtons: [
+                            ToolbarButton(icon: "tree", color: .green, help: "Show in inline lineage tree", isEnabled: !isCollectiveFigure) {
+                                coordinator?.navigateToLineageFigure(figure.persistentModelID)
+                            }
+                        ]
+                    )
+                    FigureDetailView(
+                        figure: figure,
+                        onSelectFigure: { selected in
+                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                            coordinator?.navigateToFigure(selected.persistentModelID, name: selected.name, recordHistory: false)
+                        },
+                        onSelectPlace: { place in
+                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                            coordinator?.navigateToPlace(place.persistentModelID, name: place.name, recordHistory: false)
+                        },
+                        onSelectEvent: { event in
+                            coordinator?.pushHistory(id: figure.persistentModelID, name: figure.name, item: .figures)
+                            coordinator?.navigateToEvent(event.persistentModelID, name: event.name, recordHistory: false)
+                        },
+                        onSelectImage: { imageDetailImage = $0 }
+                    )
+                }
+                .frame(width: detailWidth)
+                .frame(maxHeight: .infinity)
+                .background(.thinMaterial)
+            }
+        }
+        .transition(.move(edge: .trailing).combined(with: .opacity))
+        .animation(.easeInOut(duration: 0.25), value: selectedFigureID)
     }
 
     private func consumePendingNavigation() {
@@ -407,6 +413,7 @@ struct FigureListView: View {
                         Button("Show in Lineage Tree") {
                             coordinator?.navigateToLineageFigure(row.id)
                         }
+                        .disabled(row.typeName.localizedCaseInsensitiveContains("Collective"))
                         Divider()
                         Button("Delete", role: .destructive) {
                             selectedFigureID = row.id

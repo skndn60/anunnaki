@@ -284,177 +284,7 @@ struct FigureDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                headerView
-
-                // Filter
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                    TextField("Filter relationships, places, events, names\u{2026}", text: $filterText)
-                        .textFieldStyle(.roundedBorder)
-                        .font(.caption)
-                    if !filterText.isEmpty {
-                        Button(action: { filterText = "" }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(8)
-                .background(Color(.textBackgroundColor))
-                .cornerRadius(8)
-
-                // Stickies
-                StickyNoteSection(stickies: figure.stickies) { text in
-                    let note = StickyNote(text: text, figure: figure)
-                    modelContext.insert(note)
-                }
-
-                Divider()
-
-                // Properties grid
-                LazyVGrid(columns: [GridItem(.fixed(100), alignment: .trailing), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 10) {
-                    PropertyRow(label: "Domain", value: figure.domain)
-                    PropertyRow(label: "Birth", value: figure.birthDate.displayLabel)
-                    PropertyRow(label: "Death", value: figure.deathDate.displayLabel)
-                    PropertyRow(label: "Cause of Death", value: figure.causeOfDeath ?? "Unknown")
-                    PropertyRow(label: "Source", value: figure.source)
-                    if figure.reignStartYear != nil || figure.reignEndYear != nil {
-                        let reignStr: String = {
-                            switch (figure.reignStartYear, figure.reignEndYear) {
-                            case let (s?, e?): return "\(abs(s))\u{2013}\(abs(e)) BC"
-                            case let (s?, nil): return "From \(abs(s)) BC"
-                            case let (nil, e?): return "To \(abs(e)) BC"
-                            default: return ""
-                            }
-                        }()
-                        PropertyRow(label: "Reign", value: reignStr)
-                    }
-                }
-
-                // Mini Lineage Tree
-                MiniLineageView(figure: figure, relationships: matchingRelationships, isParentGap: { [weak figure] typeName in
-                    guard figure != nil else { return false }
-                    return isParentGap(typeName: typeName)
-                }, onSelectFigure: onSelectFigure, onTapUnknownParent: { typeName in
-                    parentSearchTypeName = typeName
-                    showParentSearch = true
-                }, onMarkKnownUnavailable: { typeName in
-                    markParentKnownUnavailable(typeName)
-                }, onRevertKnownUnavailable: { typeName in
-                    revertParentKnownUnavailable(typeName)
-                })
-
-                // Description
-                if !figure.figureDescription.isEmpty || figure.richDescription != nil {
-                    AttributedPropertyView(attributions: figureAttributions, propertyName: "figureDescription") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Description")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
-                            LinkedDescription(text: figure.figureDescription, richData: figure.richDescription)
-                                .font(.body)
-                        }
-                    }
-                }
-
-                // Attributions
-                ContentAttributionSection(
-                    attributions: figureAttributions,
-                    onAdd: { showAddAttribution = true },
-                    onEdit: { editingAttribution = $0 },
-                    onDelete: { attribution in
-                        attributionToDelete = attribution
-                        showDeleteAttributionConfirm = true
-                    }
-                )
-
-                // Alternate Names
-                AlternateNamesSection(figure: figure, filterText: filterText)
-
-                // Relationships
-                if !filteredRelationships.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Relationships")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        ForEach(filteredRelationships, id: \.persistentModelID) { rel in
-                            RelationshipGroupRow(
-                                relationship: rel,
-                                alternatives: [],
-                                perspective: figure,
-                                onSelectFigure: onSelectFigure
-                            )
-                        }
-                    }
-                }
-
-                // Place Associations
-                PlacesSection(figure: figure, filterText: filterText, onSelectPlace: onSelectPlace)
-
-                // Associated Things
-                ThingsSection(figure: figure)
-
-                // Figure Groups
-                GroupsSection(figure: figure)
-
-                // Pantheons
-                if isDivineFigure {
-                    PantheonsSection(figure: figure)
-                }
-
-                // Comparison Tables
-                ComparisonTablesSection(figure: figure, showingPopupTableGrid: $showingPopupTableGrid)
-
-                // Associated Events
-                EventsSection(figure: figure, filterText: filterText, onSelectEvent: onSelectEvent, onSelectPlace: onSelectPlace)
-
-                // Images
-                Divider()
-                ImageGallery(
-                    title: "Images",
-                    images: figure.images,
-                    onLinkImage: { asset in
-                        figure.images.append(asset)
-                    },
-                    onSelectImage: onSelectImage
-                )
-
-                // Tags
-                if !figure.tags.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Tags")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        FlowLayout(spacing: 4) {
-                            ForEach(figure.tags) { tag in
-                                TagTokenView(tag: tag, onRemove: {
-                                    tagToRemove = tag
-                                    showRemoveTagConfirm = true
-                                })
-                            }
-                        }
-                    }
-                }
-
-                // Citations
-                CitationsSection(figure: figure, filterText: filterText, showAddCitation: $showAddCitation)
-
-                Spacer()
-            }
-            .padding(20)
-            .textSelection(.enabled)
+            contentStack
         }
         .onDrop(of: [.text], isTargeted: $isDropTargeted) { providers in
             guard let provider = providers.first else { return false }
@@ -511,17 +341,15 @@ struct FigureDetailView: View {
                     Button("OK") {
                         let allFigures: [Figure] = modelContext.fetchAll()
                         if let sourceFigure = allFigures.first(where: { $0.name == sourceName }) {
-                    let rel = Relationship(
-                        fromFigure: sourceFigure,
-                        toFigure: self.figure,
-                        source: dropSource?.name ?? ""
-                    )
-                            modelContext.insert(rel)
                             if let type = allRelationTypes.first(where: { $0.name == selectedRelationTypeName }) {
-                                type.relationships.append(rel)
-                            }
-                            if let source = dropSource {
-                                source.relationships.append(rel)
+                                RelationshipManager(context: modelContext).addRelationship(
+                                    from: sourceFigure,
+                                    to: self.figure,
+                                    relationshipType: type,
+                                    source: dropSource?.name ?? "",
+                                    sourceRef: dropSource,
+                                    dedupe: false
+                                )
                             }
                             try? modelContext.save()
                         }
@@ -574,6 +402,179 @@ struct FigureDetailView: View {
         } message: { attribution in
             Text("Delete the attribution from \(attribution.source?.name ?? "Unknown")?")
         }
+    }
+
+    private var contentStack: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            headerView
+
+            // Filter
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                TextField("Filter relationships, places, events, names\u{2026}", text: $filterText)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.caption)
+                if !filterText.isEmpty {
+                    Button(action: { filterText = "" }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(8)
+            .background(Color(.textBackgroundColor))
+            .cornerRadius(8)
+
+            // Stickies
+            StickyNoteSection(stickies: figure.stickies) { text in
+                RelationshipManager(context: modelContext).addStickyNote(to: figure, text: text)
+            }
+
+            Divider()
+
+            // Properties grid
+            LazyVGrid(columns: [GridItem(.fixed(100), alignment: .trailing), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 10) {
+                PropertyRow(label: "Domain", value: figure.domain)
+                PropertyRow(label: "Birth", value: figure.birthDate.displayLabel)
+                PropertyRow(label: "Death", value: figure.deathDate.displayLabel)
+                PropertyRow(label: "Cause of Death", value: figure.causeOfDeath ?? "Unknown")
+                PropertyRow(label: "Source", value: figure.source)
+                if figure.reignStartYear != nil || figure.reignEndYear != nil {
+                    let reignStr: String = {
+                        switch (figure.reignStartYear, figure.reignEndYear) {
+                        case let (s?, e?): return "\(abs(s))\u{2013}\(abs(e)) BCE"
+                        case let (s?, nil): return "From \(abs(s)) BCE"
+                        case let (nil, e?): return "To \(abs(e)) BCE"
+                        default: return ""
+                        }
+                    }()
+                    PropertyRow(label: "Reign", value: reignStr)
+                }
+            }
+
+            // Mini Lineage Tree
+            MiniLineageView(figure: figure, relationships: matchingRelationships, isParentGap: { [weak figure] typeName in
+                guard figure != nil else { return false }
+                return isParentGap(typeName: typeName)
+            }, onSelectFigure: onSelectFigure, onTapUnknownParent: { typeName in
+                parentSearchTypeName = typeName
+                showParentSearch = true
+            }, onMarkKnownUnavailable: { typeName in
+                markParentKnownUnavailable(typeName)
+            }, onRevertKnownUnavailable: { typeName in
+                revertParentKnownUnavailable(typeName)
+            })
+
+            // Description
+            if !figure.figureDescription.isEmpty || figure.richDescription != nil {
+                AttributedPropertyView(attributions: figureAttributions, propertyName: "figureDescription") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Description")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        LinkedDescription(text: figure.figureDescription, richData: figure.richDescription)
+                            .font(.body)
+                    }
+                }
+            }
+
+            // Attributions
+            ContentAttributionSection(
+                attributions: figureAttributions,
+                onAdd: { showAddAttribution = true },
+                onEdit: { editingAttribution = $0 },
+                onDelete: { attribution in
+                    attributionToDelete = attribution
+                    showDeleteAttributionConfirm = true
+                }
+            )
+
+            // Alternate Names
+            AlternateNamesSection(figure: figure, filterText: filterText)
+
+            // Relationships
+            if !filteredRelationships.isEmpty {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Relationships")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    ForEach(filteredRelationships, id: \.persistentModelID) { rel in
+                        RelationshipGroupRow(
+                            relationship: rel,
+                            alternatives: [],
+                            perspective: figure,
+                            onSelectFigure: onSelectFigure
+                        )
+                    }
+                }
+            }
+
+            // Place Associations
+            PlacesSection(figure: figure, filterText: filterText, onSelectPlace: onSelectPlace)
+
+            // Associated Things
+            ThingsSection(figure: figure)
+
+            // Figure Groups
+            GroupsSection(figure: figure)
+
+            // Pantheons
+            if isDivineFigure {
+                PantheonsSection(figure: figure)
+            }
+
+            // Comparison Tables
+            ComparisonTablesSection(figure: figure, showingPopupTableGrid: $showingPopupTableGrid)
+
+            // Associated Events
+            EventsSection(figure: figure, filterText: filterText, onSelectEvent: onSelectEvent, onSelectPlace: onSelectPlace)
+
+            // Images
+            Divider()
+            ImageGallery(
+                title: "Images",
+                images: figure.images,
+                onLinkImage: { asset in
+                    figure.images.append(asset)
+                },
+                onSelectImage: onSelectImage
+            )
+
+            // Tags
+            if !figure.tags.isEmpty {
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Tags")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    FlowLayout(spacing: 4) {
+                        ForEach(figure.tags) { tag in
+                            TagTokenView(tag: tag, onRemove: {
+                                tagToRemove = tag
+                                showRemoveTagConfirm = true
+                            })
+                        }
+                    }
+                }
+            }
+
+            // Citations
+            CitationsSection(figure: figure, filterText: filterText, showAddCitation: $showAddCitation)
+
+            Spacer()
+        }
+        .padding(20)
+        .textSelection(.enabled)
     }
 
     private func inferredType(from source: Figure, to target: Figure) -> String {
@@ -954,7 +955,6 @@ private struct ParentCoupleSheet: View {
 
     private func upsertParent(parent: Figure, typeName: String, groupID: String) {
         let type = fetchOrCreateType(name: typeName)
-        guard let type else { return }
 
         let existingRels = childFigure.incomingRelationships.filter {
             $0.relationshipType?.name == typeName
@@ -964,20 +964,19 @@ private struct ParentCoupleSheet: View {
             existingRel.groupID = groupID
             existingRel.fromFigure = parent
         } else {
-            let rel = Relationship(fromFigure: parent, toFigure: childFigure, groupID: groupID)
-            modelContext.insert(rel)
-            type.relationships.append(rel)
+            RelationshipManager(context: modelContext).addRelationship(
+                from: parent, to: childFigure, relationshipType: type, groupID: groupID, dedupe: false
+            )
         }
     }
 
-    private func fetchOrCreateType(name: String) -> RelationshipType? {
-        let types: [RelationshipType] = (try? modelContext.fetch(FetchDescriptor<RelationshipType>())) ?? []
-        if let existing = types.first(where: { $0.name == name }) {
-            return existing
-        }
-        let newType = RelationshipType(name: name, icon: "person.fill", colorHex: "808080", category: name == "Father" || name == "Mother" ? "parent" : "other")
-        modelContext.insert(newType)
-        return newType
+    private func fetchOrCreateType(name: String) -> RelationshipType {
+        RelationshipManager(context: modelContext).relationshipType(
+            named: name,
+            icon: "person.fill",
+            colorHex: "808080",
+            category: name == "Father" || name == "Mother" ? "parent" : "other"
+        )
     }
 }
 
@@ -1007,7 +1006,7 @@ private struct AddCitationSheet: View {
                     }
                 }
 
-                TextField("Location", text: $location, prompt: Text("e.g. Tablet I, line 15"))
+                TextField("Location", text: $location, prompt: Text("Tablet I, line 15"))
 
                 TextField("Note", text: $note, prompt: Text("Optional note"))
             }
@@ -1019,15 +1018,17 @@ private struct AddCitationSheet: View {
                     .keyboardShortcut(.cancelAction)
                 Spacer()
                 Button("Add") {
-                    let citation = Citation(
-                        source: selectedSource,
-                        location: location,
-                        note: note,
-                        entityType: .figure,
-                        linkedEntityName: figure.name
-                    )
-                    modelContext.insert(citation)
-                    try? modelContext.save()
+                    if let source = selectedSource {
+                        RelationshipManager(context: modelContext).addCitation(
+                            to: source,
+                            location: location,
+                            note: note,
+                            entityType: .figure,
+                            linkedEntityName: figure.name,
+                            dedupe: false
+                        )
+                        try? modelContext.save()
+                    }
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

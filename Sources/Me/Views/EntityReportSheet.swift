@@ -44,7 +44,7 @@ struct EntityReportWindow: View {
         NavigationStack {
             Group {
                 if !loaded {
-                    ProgressView("Looking up \(name)...")
+                    ProgressView("Looking up \(name)")
                 } else if let figure {
                     ScrollView {
                         FigureDossierView(dossier: buildFigureDossier(figure))

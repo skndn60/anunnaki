@@ -24,7 +24,7 @@ struct PantheonsSection: View {
                                 pantheonToRemove = pantheon
                                 showRemoveConfirm = true
                             } else {
-                                figure.pantheons.append(pantheon)
+                                RelationshipManager(context: modelContext).addPantheonMembership(figure: figure, pantheon: pantheon, dedupe: false)
                                 try? modelContext.save()
                             }
                         } label: {
@@ -121,12 +121,9 @@ struct PantheonsSection: View {
                 if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
                     assoc.displayName = trimmed
                 } else {
-                    let assoc = FigurePantheonAssociation(figure: figure, pantheon: pantheon, displayName: trimmed)
-                    modelContext.insert(assoc)
-                    if figure.pantheonAssociations == nil {
-                        figure.pantheonAssociations = []
-                    }
-                    figure.pantheonAssociations?.append(assoc)
+                    RelationshipManager(context: modelContext).addPantheonMembership(
+                        figure: figure, pantheon: pantheon, displayName: trimmed, dedupe: false
+                    )
                 }
                 try? modelContext.save()
             }

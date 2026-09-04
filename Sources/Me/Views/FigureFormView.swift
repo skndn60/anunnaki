@@ -110,14 +110,14 @@ struct FigureFormView: View {
                         .font(.callout.bold())
                         .foregroundStyle(.orange)
                 }
-                TextField("Disambiguation", text: $disambiguation, prompt: Text("e.g. Fourth dynasty of Kish"))
+                TextField("Disambiguation", text: $disambiguation, prompt: Text("Fourth dynasty of Kish"))
                     .textFieldStyle(.roundedBorder)
                     .help("Optional context to distinguish from other figures with the same name")
-                TextField("Title", text: $title, prompt: Text("e.g. King of the Gods"))
+                TextField("Title", text: $title, prompt: Text("King of the Gods"))
                     .textFieldStyle(.roundedBorder)
-                TextField("Epithet", text: $epithet, prompt: Text("e.g. the shepherd who ascended to heaven"))
+                TextField("Epithet", text: $epithet, prompt: Text("the shepherd who ascended to heaven"))
                     .textFieldStyle(.roundedBorder)
-                    .help("A title or praise-phrase, e.g. Etana's 'the shepherd who ascended to heaven'. Not an alternate name.")
+                    .help("A title or praise phrase, such as Etana\u{2019}s \u{201C}the shepherd who ascended to heaven\u{201D}. Not an alternate name.")
                 Picker("Type", selection: $selectedFigureType) {
                     Text("None").tag(nil as FigureType?)
                     ForEach(figureTypes) { type in
@@ -129,7 +129,7 @@ struct FigureFormView: View {
                         Text("\(g.symbol) \(g.rawValue)").tag(g)
                     }
                 }
-                TextField("Domain", text: $domain, prompt: Text("e.g. Sky, Wisdom, War"))
+                TextField("Domain", text: $domain, prompt: Text("Sky, Wisdom, War"))
                     .textFieldStyle(.roundedBorder)
                     .help("Comma-separated list of domains this figure governs")
                 VStack(alignment: .leading, spacing: 4) {
@@ -137,7 +137,7 @@ struct FigureFormView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     if pantheons.isEmpty {
-                        Text("No pantheons yet — create them in Type Settings")
+                        Text("No pantheons yet. Create them in Type Settings.")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                     } else {
@@ -172,16 +172,16 @@ struct FigureFormView: View {
         Form {
             Section("Reign") {
                 HStack {
-                    TextField("Start Year", text: $reignStartText, prompt: Text("e.g. -2047"))
+                    TextField("Start Year", text: $reignStartText, prompt: Text("-2047"))
                         .textFieldStyle(.roundedBorder)
                         .help("Negative = BCE, positive = CE")
-                    TextField("End Year", text: $reignEndText, prompt: Text("e.g. -2030"))
+                    TextField("End Year", text: $reignEndText, prompt: Text("-2030"))
                         .textFieldStyle(.roundedBorder)
                         .help("Negative = BCE, positive = CE")
                 }
-                TextField("Duration (years)", text: $reignYearsText, prompt: Text("e.g. 35"))
+                TextField("Duration (years)", text: $reignYearsText, prompt: Text("35"))
                     .textFieldStyle(.roundedBorder)
-                    .help("Listed reign length in years (e.g. the SKL's own figure). Leave empty if unknown.")
+                    .help("Listed reign length in years (such as the SKL\u{2019}s own figure). Leave empty if unknown.")
             }
         }
         .formStyle(.grouped)
@@ -218,7 +218,7 @@ struct FigureFormView: View {
             MythologicalDateEditor(label: "Death / End", date: $deathDate)
 
             Section("Cause of Death") {
-                TextField("Cause of Death", text: $causeOfDeath, prompt: Text("e.g. Slain in battle"))
+                TextField("Cause of Death", text: $causeOfDeath, prompt: Text("Slain in battle"))
                     .textFieldStyle(.roundedBorder)
             }
         }

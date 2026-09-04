@@ -41,7 +41,7 @@ struct CitationsSection: View {
             }
 
             if filteredCitations.isEmpty {
-                    Text("No matching citations found.")
+                    Text("No matching citations found")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 } else {

@@ -21,6 +21,7 @@ package final class FigurePlaceAssociation {
     package var place: Place?
     package var roleType: FigurePlaceRoleType?
     package var source: String
+    package var sourceRef: Source?
     package var comments: String?
     /// Override the display name for this figure in this place's context (e.g. "Noah" for Ziusudra)
     package var displayName: String?
@@ -33,6 +34,7 @@ package final class FigurePlaceAssociation {
         place: Place? = nil,
         roleType: FigurePlaceRoleType? = nil,
         source: String = "",
+        sourceRef: Source? = nil,
         comments: String? = nil,
         displayName: String? = nil,
         confidence: Confidence? = nil
@@ -41,6 +43,7 @@ package final class FigurePlaceAssociation {
         self.place = place
         self.roleType = roleType
         self.source = source
+        self.sourceRef = sourceRef
         self.comments = comments
         self.displayName = displayName
         self.confidence = confidence

@@ -45,6 +45,41 @@ package final class Source {
     @Relationship(deleteRule: .nullify, inverse: \PopupTable.sourceRef)
     package var popupTables: [PopupTable] = []
 
+    /// Figure↔place associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \FigurePlaceAssociation.sourceRef)
+    package var figurePlaceAssociations: [FigurePlaceAssociation] = []
+
+    /// Place↔place associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \PlacePlaceAssociation.sourceRef)
+    package var placePlaceAssociations: [PlacePlaceAssociation] = []
+
+    /// Event↔place associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \EventPlaceAssociation.sourceRef)
+    package var eventPlaceAssociations: [EventPlaceAssociation] = []
+
+    /// Event↔event associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \EventEventAssociation.sourceRef)
+    package var eventEventAssociations: [EventEventAssociation] = []
+
+    /// Thing↔figure associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \ThingFigureAssociation.sourceRef)
+    package var thingFigureAssociations: [ThingFigureAssociation] = []
+
+    /// Thing↔place associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \ThingPlaceAssociation.sourceRef)
+    package var thingPlaceAssociations: [ThingPlaceAssociation] = []
+
+    /// Thing↔event associations attested by this source. Set links via this
+    /// side (the annotated inverse) per the codebase convention.
+    @Relationship(deleteRule: .nullify, inverse: \ThingEventAssociation.sourceRef)
+    package var thingEventAssociations: [ThingEventAssociation] = []
+
     package enum SourceType: String, Codable, CaseIterable, Hashable {
         case ancientText = "Ancient Text"
         case tablet = "Tablet"

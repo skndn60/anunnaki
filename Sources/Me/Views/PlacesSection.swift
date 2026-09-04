@@ -231,7 +231,7 @@ private struct PlaceLinkPopover: View {
                     Text("Comments:")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("e.g. first antediluvian king", text: $comments)
+                    TextField("such as first antediluvian king", text: $comments)
                         .textFieldStyle(.plain)
                         .padding(8)
                         .background(Color(.textBackgroundColor))
@@ -259,11 +259,11 @@ private struct PlaceLinkPopover: View {
 
     private func createAssociation() {
         guard let place = selectedPlace, let role = selectedRole else { return }
-        let assoc = FigurePlaceAssociation(comments: comments.isEmpty ? nil : comments)
-        modelContext.insert(assoc)
-        figure.placeAssociations.append(assoc)
-        place.figureAssociations.append(assoc)
-        role.associations.append(assoc)
+        RelationshipManager(context: modelContext).addFigurePlaceAssociation(
+            figure: figure, place: place, roleType: role,
+            comments: comments.isEmpty ? nil : comments,
+            dedupe: false
+        )
         try? modelContext.save()
     }
 }

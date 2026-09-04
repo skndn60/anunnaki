@@ -13,7 +13,7 @@ struct PlaceListView: View {
     @State private var selectedPlaceID: PersistentIdentifier?
     @State private var sortOrder: PlaceSortOrder = .name
     @State private var imageDetailImage: ImageAsset?
-    @AppStorage("placeDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.place) private var detailWidth
     @State private var showDeleteConfirm = false
     @State private var selectedTypeFilters: Set<String> = []
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]

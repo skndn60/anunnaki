@@ -507,7 +507,7 @@ struct EntityGroupCollectionView: View {
         }
     }
 
-    private static func formattedNumber(_ value: Int) -> String {
+    fileprivate static func formattedNumber(_ value: Int) -> String {
         let fmt = NumberFormatter()
         fmt.numberStyle = .decimal
         fmt.locale = Locale(identifier: "en_US")
@@ -572,47 +572,17 @@ struct EntityGroupCollectionView: View {
                     .foregroundStyle(.secondary)
                 VStack(spacing: 6) {
                     ForEach(Array(entries.enumerated()), id: \.element.id) { index, entry in
-                        let isLinked = hoveredFigureID == entry.id
-                        HStack(spacing: 10) {
-                            Text(entry.name)
-                                .font(.callout)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                .frame(width: 170, alignment: .leading)
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule()
-                                        .fill(Color.gray.opacity(0.12))
-                                    Capsule()
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [color, color.opacity(0.5)],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        .frame(width: max(8, geo.size.width * CGFloat(entry.years) / CGFloat(maxYears) * (revealedBars.contains(index) ? 1 : 0.001)))
-                                        .shadow(color: color.opacity(isLinked ? 0.5 : 0), radius: isLinked ? 4 : 0)
-                                        .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.08), value: revealedBars.contains(index))
-                                }
+                        ReignBarRow(
+                            entry: entry,
+                            index: index,
+                            color: color,
+                            maxYears: maxYears,
+                            isLinked: hoveredFigureID == entry.id,
+                            isRevealed: revealedBars.contains(index),
+                            onHover: { hovering in
+                                hoveredFigureID = hovering ? entry.id : nil
                             }
-                            .frame(height: 10)
-                            Text(Self.formattedNumber(entry.years) + " yrs")
-                                .font(.caption.monospacedDigit())
-                                .foregroundStyle(.secondary)
-                                .frame(width: 90, alignment: .trailing)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(isLinked ? color.opacity(0.10) : Color.clear)
                         )
-                        .contentShape(Rectangle())
-                        .onHover { hovering in
-                            hoveredFigureID = hovering ? entry.id : nil
-                        }
-                        .animation(.easeInOut(duration: 0.15), value: hoveredFigureID)
                     }
                 }
             }
@@ -779,6 +749,59 @@ struct EntityGroupCollectionView: View {
         }
         detailItem = nil
         try? modelContext.save()
+    }
+}
+
+private struct ReignBarRow: View {
+    let entry: (name: String, years: Int, id: PersistentIdentifier)
+    let index: Int
+    let color: Color
+    let maxYears: Int
+    let isLinked: Bool
+    let isRevealed: Bool
+    let onHover: (Bool) -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(entry.name)
+                .font(.callout)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(width: 170, alignment: .leading)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.gray.opacity(0.12))
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [color, color.opacity(0.5)],
+                                startPoint: .leading,
+                                endPoint: .trailing
+                            )
+                        )
+                        .frame(width: max(8, geo.size.width * CGFloat(entry.years) / CGFloat(maxYears) * (isRevealed ? 1 : 0.001)))
+                        .shadow(color: color.opacity(isLinked ? 0.5 : 0), radius: isLinked ? 4 : 0)
+                        .animation(.easeInOut(duration: 0.6).delay(Double(index) * 0.08), value: isRevealed)
+                }
+            }
+            .frame(height: 10)
+            Text(EntityGroupCollectionView.formattedNumber(entry.years) + " yrs")
+                .font(.caption.monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(width: 90, alignment: .trailing)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(isLinked ? color.opacity(0.10) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onHover { hovering in
+            onHover(hovering)
+        }
+        .animation(.easeInOut(duration: 0.15), value: isLinked)
     }
 }
 
@@ -1119,105 +1142,21 @@ private struct TextBlockRow: View {
         !(block.summary?.isEmpty ?? true)
     }
 
+    private var controlsVisible: Bool { showEditControls || isHovered }
+
+    private var textAlignment: TextAlignment {
+        block.alignment == .center ? .center : (block.alignment == .right ? .trailing : .leading)
+    }
+
+    private var frameAlignment: Alignment {
+        block.alignment == .center ? .center : (block.alignment == .right ? .trailing : .leading)
+    }
+
     var body: some View {
-        let alignment = block.alignment
-        let textAlignment: TextAlignment = alignment == .center ? .center : (alignment == .right ? .trailing : .leading)
-        let frameAlignment: Alignment = alignment == .center ? .center : (alignment == .right ? .trailing : .leading)
-        let controlsVisible = showEditControls || isHovered
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Image(systemName: "text.quote")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-                if !block.title.isEmpty {
-                    Text(block.title)
-                        .font(block.titleSize.font)
-                        .foregroundStyle(.primary)
-                } else {
-                    Text("Untitled text block")
-                        .font(.callout.weight(.medium))
-                        .foregroundStyle(.tertiary)
-                }
-                Spacer(minLength: 0)
-                if controlsVisible {
-                    Button(action: onEdit) {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 20, height: 20)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Edit text block")
-                    Button(action: onDelete) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.red.opacity(0.7))
-                            .frame(width: 20, height: 20)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Delete text block")
-                }
-            }
-            if hasSummary {
-                RichTextDisplay(richData: block.summaryRichText, fallback: block.summary ?? "", stripForegroundColor: true)
-                    .font(.callout)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .multilineTextAlignment(textAlignment)
-                    .frame(maxWidth: .infinity, alignment: frameAlignment)
-                if showFullText {
-                    RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
-                        .multilineTextAlignment(textAlignment)
-                        .frame(maxWidth: .infinity, alignment: frameAlignment)
-                }
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showFullText.toggle()
-                    }
-                } label: {
-                    Text(showFullText ? "Hide full text" : "Show full text\u{2026}")
-                        .font(.caption)
-                        .foregroundStyle(Color.accentColor)
-                }
-                .buttonStyle(.plain)
-                .pointingHand()
-                .frame(maxWidth: .infinity, alignment: frameAlignment)
-            } else {
-                RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .multilineTextAlignment(textAlignment)
-                    .frame(maxWidth: .infinity, alignment: frameAlignment)
-            }
-            if !attributionFootnotes.isEmpty {
-                VStack(alignment: .trailing, spacing: 2) {
-                    ForEach(attributionFootnotes) { footnote in
-                        HStack(spacing: 4) {
-                            Image(systemName: "book.and.wrench")
-                                .font(.caption2)
-                                .foregroundStyle(.teal)
-                            Text("Source: \(footnote.sourceName)")
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
-                            if let url = footnote.url {
-                                Link("(click to see, note: may open browser window)", destination: url)
-                                    .font(.caption2)
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(.top, 6)
-            }
+        VStack(alignment: .leading, spacing: 4) {
+            titleBar
+            contentBlock
+            footnotesBlock
         }
         .padding(10)
         .frame(minHeight: 32)
@@ -1254,6 +1193,110 @@ private struct TextBlockRow: View {
         .contextMenu {
             Button("Edit Text Block") { onEdit() }
             Button("Delete", role: .destructive) { onDelete() }
+        }
+    }
+
+    private var titleBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "text.quote")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+            if !block.title.isEmpty {
+                Text(block.title)
+                    .font(block.titleSize.font)
+                    .foregroundStyle(.primary)
+            } else {
+                Text("Untitled text block")
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.tertiary)
+            }
+            Spacer(minLength: 0)
+            if controlsVisible {
+                Button(action: onEdit) {
+                    Image(systemName: "pencil")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Edit text block")
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.red.opacity(0.7))
+                        .frame(width: 20, height: 20)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Delete text block")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var contentBlock: some View {
+        if hasSummary {
+            RichTextDisplay(richData: block.summaryRichText, fallback: block.summary ?? "", stripForegroundColor: true)
+                .font(.callout)
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .multilineTextAlignment(textAlignment)
+                .frame(maxWidth: .infinity, alignment: frameAlignment)
+            if showFullText {
+                RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .multilineTextAlignment(textAlignment)
+                    .frame(maxWidth: .infinity, alignment: frameAlignment)
+            }
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showFullText.toggle()
+                }
+            } label: {
+                Text(showFullText ? "Hide full text" : "Show full text\u{2026}")
+                    .font(.caption)
+                    .foregroundStyle(Color.accentColor)
+            }
+            .buttonStyle(.plain)
+            .pointingHand()
+            .frame(maxWidth: .infinity, alignment: frameAlignment)
+        } else {
+            RichTextDisplay(richData: block.richText, fallback: block.text, stripForegroundColor: true)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .multilineTextAlignment(textAlignment)
+                .frame(maxWidth: .infinity, alignment: frameAlignment)
+        }
+    }
+
+    @ViewBuilder
+    private var footnotesBlock: some View {
+        if !attributionFootnotes.isEmpty {
+            VStack(alignment: .trailing, spacing: 2) {
+                ForEach(attributionFootnotes) { footnote in
+                    HStack(spacing: 4) {
+                        Image(systemName: "book.and.wrench")
+                            .font(.caption2)
+                            .foregroundStyle(.teal)
+                        Text("Source: \(footnote.sourceName)")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                        if let url = footnote.url {
+                            Link("(click to see, note: may open browser window)", destination: url)
+                                .font(.caption2)
+                        }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.top, 6)
         }
     }
 }

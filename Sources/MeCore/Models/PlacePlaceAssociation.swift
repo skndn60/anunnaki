@@ -9,16 +9,19 @@ package final class PlacePlaceAssociation {
     package var toPlace: Place?
     package var roleType: PlacePlaceRoleType?
     package var source: String
+    package var sourceRef: Source?
 
     package init(
         fromPlace: Place? = nil,
         toPlace: Place? = nil,
         roleType: PlacePlaceRoleType? = nil,
-        source: String = ""
+        source: String = "",
+        sourceRef: Source? = nil
     ) {
         self.fromPlace = fromPlace
         self.toPlace = toPlace
         self.roleType = roleType
         self.source = source
+        self.sourceRef = sourceRef
     }
 }

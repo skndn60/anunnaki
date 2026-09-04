@@ -28,7 +28,7 @@ struct ImportView: View {
             HStack(spacing: 8) {
                 Image(systemName: "globe")
                     .foregroundStyle(.secondary)
-                TextField("Search Wikipedia...", text: $searchText)
+                TextField("Search Wikipedia", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { runSearch() }
                 Button("Search") { runSearch() }
@@ -55,11 +55,11 @@ struct ImportView: View {
                 .foregroundStyle(.green)
             } else if isSearching {
                 Spacer()
-                ProgressView("Searching Wikipedia...")
+                ProgressView("Searching Wikipedia")
                 Spacer()
             } else if isFetching || isImporting {
                 Spacer()
-                ProgressView(isImporting ? "Parsing structured data..." : "Loading article...")
+                ProgressView(isImporting ? "Parsing structured data" : "Loading article")
                 Spacer()
             } else if let result = selectedResult, !extract.isEmpty {
                 extractView(result)

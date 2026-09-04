@@ -85,7 +85,7 @@ struct ThingFormView: View {
     private var identityStep: some View {
         Form {
             Section("Identity") {
-                TextField("Name", text: $name, prompt: Text("e.g. Tablet of Destinies"))
+                TextField("Name", text: $name, prompt: Text("Tablet of Destinies"))
                     .textFieldStyle(.roundedBorder)
                     .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                     .help("The name of this artifact, object, or item")

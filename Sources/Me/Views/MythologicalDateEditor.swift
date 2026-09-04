@@ -16,7 +16,7 @@ struct MythologicalDateEditor: View {
 
     var body: some View {
         Section(label) {
-            TextField("Year", text: $startYearString, prompt: Text("e.g. 5500"))
+            TextField("Year", text: $startYearString, prompt: Text("5500"))
                 .textFieldStyle(.roundedBorder)
                 .onChange(of: startYearString) { _, _ in applyYears() }
 

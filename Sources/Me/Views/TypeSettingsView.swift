@@ -363,8 +363,8 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                TextField("Name", text: $name, prompt: Text("e.g. Deity, City, Battle"))
-                TextField("SF Symbol", text: $icon, prompt: Text("e.g. star, building.2, bolt"))
+                TextField("Name", text: $name, prompt: Text("Deity, City, Battle"))
+                TextField("SF Symbol", text: $icon, prompt: Text("star, building.2, bolt"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
             }
             .formStyle(.grouped)
@@ -464,10 +464,10 @@ private struct RelationshipTypeEditSheetView: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                TextField("Name", text: $name, prompt: Text("e.g. Father, Ally, Commander"))
-                TextField("Reverse Name", text: $reverseName, prompt: Text("e.g. Son, Commanded by, Alliances with"))
-                TextField("SF Symbol", text: $icon, prompt: Text("e.g. heart, person.2.fill"))
-                TextField("Category", text: $category, prompt: Text("e.g. parent, social, military"))
+                TextField("Name", text: $name, prompt: Text("Father, Ally, Commander"))
+                TextField("Reverse Name", text: $reverseName, prompt: Text("Son, Commanded by, Alliances with"))
+                TextField("SF Symbol", text: $icon, prompt: Text("heart, person.2.fill"))
+                TextField("Category", text: $category, prompt: Text("parent, social, military"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
             }
             .formStyle(.grouped)
@@ -531,10 +531,10 @@ private struct RoleTypeEditSheetView<T: RoleTypeProtocol>: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                TextField("Name", text: $name, prompt: Text("e.g. Located Within, Caused"))
-                TextField("Reverse Name", text: $reverseName, prompt: Text("e.g. Contains (read from the other side)"))
+                TextField("Name", text: $name, prompt: Text("Located Within, Caused"))
+                TextField("Reverse Name", text: $reverseName, prompt: Text("Contains (read from the other side)"))
                     .help("How this role reads from the other entity's perspective. Leave empty to reuse the name.")
-                TextField("SF Symbol", text: $icon, prompt: Text("e.g. arrow.right.circle"))
+                TextField("SF Symbol", text: $icon, prompt: Text("arrow.right.circle"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
             }
             .formStyle(.grouped)
@@ -774,9 +774,9 @@ private struct PantheonEditSheetView: View {
                 .font(.title3.bold())
                 .padding()
             Form {
-                TextField("Name", text: $name, prompt: Text("e.g. Mesopotamian, Greek"))
-                TextField("Description", text: $pantheonDescription, prompt: Text("e.g. Gods of ancient Sumer and Akkad"))
-                TextField("SF Symbol", text: $icon, prompt: Text("e.g. building.columns.circle.fill"))
+                TextField("Name", text: $name, prompt: Text("Mesopotamian, Greek"))
+                TextField("Description", text: $pantheonDescription, prompt: Text("Gods of ancient Sumer and Akkad"))
+                TextField("SF Symbol", text: $icon, prompt: Text("building.columns.circle.fill"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
             }
             .formStyle(.grouped)

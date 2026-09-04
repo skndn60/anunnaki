@@ -28,7 +28,10 @@ struct DataIntegrityView: View {
     @State private var editThing: Thing?
     @State private var showDuplicateMergeSheet = false
     @State private var collapsedSections: Set<String> = []
+    @State private var selectedRowID: PersistentIdentifier?
     var coordinator: NavigationCoordinator?
+
+    private static let collapsedKey = "dataIntegrityCollapsedCategories"
 
     private var groupedRows: [(category: String, rows: [FindingRow])] {
         let all = store.rows
@@ -53,6 +56,7 @@ struct DataIntegrityView: View {
         .frame(minWidth: 540, minHeight: 440)
         .onAppear {
             refreshDismissalCount()
+            collapsedSections = Set(UserDefaults.standard.stringArray(forKey: Self.collapsedKey) ?? [])
             if store.rows.isEmpty { restoreQueue() }
         }
         .sheet(item: $descriptionEditFigure) { figure in
@@ -100,6 +104,11 @@ struct DataIntegrityView: View {
                 }
             }
             Spacer()
+            if !groupedRows.isEmpty {
+                let allCollapsed = groupedRows.allSatisfy { collapsedSections.contains($0.category) }
+                Button(allCollapsed ? "Expand All" : "Collapse All") { toggleAllSections() }
+                    .buttonStyle(.bordered)
+            }
             if store.dismissalCount > 0 {
                 Button("Clear Dismissals (\(store.dismissalCount))") { clearDismissals() }
                     .buttonStyle(.bordered)
@@ -151,6 +160,7 @@ struct DataIntegrityView: View {
                 withAnimation(.easeInOut(duration: 0.2)) {
                     if isCollapsed { collapsedSections.remove(category) }
                     else { collapsedSections.insert(category) }
+                    persistCollapsed()
                 }
             } label: {
                 HStack {
@@ -232,6 +242,14 @@ struct DataIntegrityView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(selectedRowID == row.id ? Color.accentColor.opacity(0.16) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.15)) { selectedRowID = row.id }
+        }
     }
 
     // MARK: - Category mapping
@@ -353,6 +371,23 @@ struct DataIntegrityView: View {
     }
 
     // MARK: - Scan
+
+    private func persistCollapsed() {
+        UserDefaults.standard.set(Array(collapsedSections), forKey: Self.collapsedKey)
+    }
+
+    private func toggleAllSections() {
+        let visible = Set(groupedRows.map(\.category))
+        let allCollapsed = groupedRows.allSatisfy { collapsedSections.contains($0.category) }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            if allCollapsed {
+                collapsedSections.subtract(visible)
+            } else {
+                collapsedSections.formUnion(visible)
+            }
+            persistCollapsed()
+        }
+    }
 
     private func scan() {
         isScanning = true

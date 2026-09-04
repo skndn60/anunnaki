@@ -123,14 +123,15 @@ package struct ImportService {
         )
         modelContext.insert(source)
 
-        let citation = Citation(
-            source: source,
+        let citation = RelationshipManager(context: modelContext).addCitation(
+            to: source,
             location: "Lead section",
             note: extract,
             entityType: entityType,
-            linkedEntityName: entityName
+            linkedEntityName: entityName,
+            dedupe: false
         )
-        modelContext.insert(citation)
+        return citation
         return citation
     }
 

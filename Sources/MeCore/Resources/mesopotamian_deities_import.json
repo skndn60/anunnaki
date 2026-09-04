@@ -1,0 +1,4300 @@
+{
+  "alternateNames": [],
+  "attachments": [],
+  "citations": [],
+  "eras": [],
+  "eventEventAssociations": [],
+  "eventPlaceAssociations": [],
+  "eventTypes": [],
+  "events": [],
+  "figurePlaceAssociations": [],
+  "figureTypes": [],
+  "figures": [
+    {
+      "id": "19689b05-bd38-501e-8f37-348227ff9c2e",
+      "name": "Ashur",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "National god of Assyria; kingship, war",
+      "figureDescription": "Ashur was the national god of the Assyrians. It has been proposed that originally he was the deification of the city of Assur, or perhaps the hill atop which it was built. He initially lacked any connections to other deities, having no parents, spouse or children.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "17c40231-a8ed-5d5c-8163-e664b556f766",
+      "name": "Istaran",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine judge; tutelary god of Der",
+      "figureDescription": "Ištaran was a prominent god, who served as the tutelary deity of the Sumerian city-state of Der, which was located east of the Tigris river on the border between Mesopotamia and Elam. His wife was the goddess Šarrat-Dēri, whose name means \"Queen of Der\", or alternatively Manzat (goddess of the rainbow), and his sukkal was the snake-god Nirah.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "96b21c93-d50f-5321-8bed-cdad070306cb",
+      "name": "Nanaya",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Love, beauty, erotic attraction, war",
+      "figureDescription": "Nanaya was a goddess of love (including erotic love and lust). She was commonly invoked in spells connected to this sphere. Her worship was widespread, and she appears frequently in the textual record.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b6191027-fa0d-56af-8cf0-e3043501af06",
+      "name": "Alala",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "Male",
+      "domain": "Primordial personification; twin of Belili",
+      "figureDescription": "Alala and Belili were ancestors of Anu, usually appearing as the final pair in god lists accepting this tradition of his ancestry. Alala was also adopted into Hurro-Hittite mythology under the name Alalu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f7773e89-771e-58d2-a723-106292e85c23",
+      "name": "Duri and Dari",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Primordial pair; prison wardens of the god Enmesharra",
+      "figureDescription": "Dūri and Dāri (derived from an Akkadian phrase meaning \"forever and ever\") were ancestors of Anu according to the so-called \"Anu theogony.\" They represented \"eternal time as a prime force in creation,\" and it is likely they developed as a personified form of a preexisting cosmological belief. A single text identifies them as ancestors of Enlil instead.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "49200510-eb04-5c9d-ab16-e7248351d6ca",
+      "name": "Enki and Ninki",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "",
+      "domain": "Primordial pair of the Abzu; ancestors of Enlil",
+      "figureDescription": "Enki and Ninki were two primordial beings who were regarded as the first generation among the ancestors of Enlil. Enki and Ninki followed by a varying number of pairs of deities whose names start with \"En\" and \"Nin\" appear as Enlil's ancestors in various sources: god lists, incantations, liturgical texts, and the Sumerian composition \"Death of Gilgamesh,\" where the eponymous hero encounters these divine ancestors in the underworld.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8f94b05d-1988-5724-8c36-801f2f97f28c",
+      "name": "Enmesharra",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "Male",
+      "domain": "Primordial lord of the underworld; ancestor of gods",
+      "figureDescription": "Enmesharra was a minor deity of the underworld. Seven, eight or fifteen other minor deities were said to be his offspring. His symbol was the suššuru (a kind of pigeon).",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "9f451327-aded-53ab-82dc-045b297d6cd9",
+      "name": "Lugaldukuga",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "Male",
+      "domain": "Primordial god; ancestor of Enlil",
+      "figureDescription": "Lugaldukuga was the father of Enlil in some traditions, though sometimes he was instead referred to as his grandfather. Like Enmesharra he was regarded as a vanquished theogonic figure, and sometimes the two were equated.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "caa781cb-7e49-56a7-9b32-4097e3bb06d4",
+      "name": "Alammus",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Sukkal (attendant) of the moon god Nanna",
+      "figureDescription": "Alammush was the sukkal of Nanna. He appears very rarely in known literary texts, though in one case, possibly a fragment of a myth about Nanna going on a journey, he is described as \"suitable for justice like Utu.\"",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f967364e-35c8-5311-ae1b-4c12f5f7b6a1",
+      "name": "Ama-arhus",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Compassionate mother goddess; healing (title of Gula)",
+      "figureDescription": "Ama-arhus (Nin-amaʾarḫuššu; \"(lady) compassionate mother\") was a sparsely attested Mesopotamian divinity, explained as a title of the medicine goddess Gula in one text. It has been proposed that the presence of Ama-Arhus in late theophoric names from Uruk explains why Gula appears to not be attested in them, despite being worshiped in the city.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "57bebacf-747e-5723-9338-4be20f08582a",
+      "name": "Amasagnudi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Sukkal of Anu; wife of Papsukkal",
+      "figureDescription": "Amasagnudi was the wife of Papsukkal in the god list An = Anum and in Seleucid Uruk. According to one Old Babylonian text she was the sukkal of Anu, and it has been proposed that she was originally an epithet of Ninshubur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fba35252-2826-569e-b764-f3a4d9277376",
+      "name": "Amashilama",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Underworld goddess; daughter of Ninazu, sister of Ningishzida",
+      "figureDescription": "Amashilama was the daughter of Ninazu and his wife Ningirida, and one of the two sisters of Ningishzida. She is known from the god list An = Anum and a single mythical composition.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f7af5a70-7d8b-5251-b029-270cea5921f4",
+      "name": "Anunitu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "War goddess; manifestation of Ishtar at Agade and Sippar",
+      "figureDescription": "Annunitum (\"the martial one\") was initially an epithet of Ishtar, but later a separate goddess. She is first attested in documents from the Ur III period. She was a warrior goddess who shared a number of epithets with Ishtar.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "3ff7b518-503d-53b9-ad5c-f400b44ab90a",
+      "name": "Asarluhi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of magic; son of Enki, later equated with Marduk",
+      "figureDescription": "Asarluhi was originally a local god of the village of Kuara, which was located near the city of Eridu. He eventually became regarded as a god of magical knowledge and was thought to be the son of Enki and Ninhursag.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2b62f313-0b9a-5324-8832-64a0f1c94706",
+      "name": "Ashgi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Tutelary god of Adab; son of Ninhursag and Shulpa'e",
+      "figureDescription": "Ashgi was one of the main gods of Adab in the Early Dynastic and Sargonic periods. It is unclear if he was initially the spouse or the son of the goddess Nintu, analogous to Ninhursag.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0fc1c93f-e604-5999-92d5-8c5494f197db",
+      "name": "Aruru",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Vegetation and creation goddess; later conflated with Ninhursag",
+      "figureDescription": "Aruru was initially a distinct minor goddess, regarded as violent and connected to vegetation; however, despite lack of a connection to birth or creation she was later conflated with Ninhursag. Sometimes she was syncretized with Nisaba instead, in which case the conflation was meant to highlight the latter's authority.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b5124912-4afe-595c-bd4c-535607610b50",
+      "name": "Aya",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of dawn; wife of the sun god Utu/Shamash",
+      "figureDescription": "Sherida (Sumerian) or Aya (Akkadian) was the wife of the sun god Utu/Shamash and the goddess of dawn. Her most common epithet was kallatum, which could be understood both as \"bride\" and \"daughter in law\".",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8556a805-cff4-576c-bd8b-be6c9d5dbea0",
+      "name": "Bel-sarbi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Lord of the poplar tree; underworld god",
+      "figureDescription": "The name Bēl-ṣarbi means \"lord of the poplar\" (the tree meant is assumed to be Populus euphratica) in Akkadian. He could also function as one of the gods connected with underworld.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fb8a0aa1-0892-59cb-ad73-362f04506fbf",
+      "name": "Belet-Seri",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Scribe of the underworld; identified with Geshtinanna",
+      "figureDescription": "Belet-Seri (\"mistress of the steppe\") was a goddess who acted as the scribe of the underworld. She could be identified with Geshtinanna or with Gubarra, the Sumerian name of the spouse of Amurru, Ashratum.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d65879a1-dda3-598e-836d-37e2fce06ce2",
+      "name": "Bitu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Minor deity; child of the god An (god list tradition)",
+      "figureDescription": "Bitu's primary function is that of a gatekeeper (ì-du8) of the underworld. In older publications his name was read as Neti. In Inanna's Descent into the Underworld, he leads Inanna through the seven gates of the underworld, removing one of her garments at each gate so that when she comes before Ereshkigal she is naked and symbolically powerless.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ea980370-53c8-5207-b44a-1826414ae507",
+      "name": "Bizilla",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Sukkal of the moon god Nanna",
+      "figureDescription": "Bizilla was a goddess closely associated with Nanaya. It is assumed that like her she was a love goddess. She was also most likely regarded as the sukkal of Enlil's wife Ninlil in Ḫursaĝkalama, her cult center located near Kish.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c0ee6d83-373a-5d09-a908-2cf8a74cc21b",
+      "name": "Bunene",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Charioteer and sukkal of the sun god Utu/Shamash",
+      "figureDescription": "Bunene was the sukkal and charioteer of the sun-god Utu. He was worshipped at Sippar and Uruk during the Old Babylonian Period and later worshipped at Assur. According to some accounts, he may have been Utu's son.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a2515612-f9ef-516d-9e5d-4dfcadd555c8",
+      "name": "Dingirma",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Mother goddess; form of Ninhursag",
+      "figureDescription": "Dingirma was a goddess from Kesh regarded as analogous to Ninhursag. Her name means \"exalted deity.\" While in literary texts the names Dingirma and Ninhursag can alternate, administrative texts from Kesh exclusively use the former.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4581d34a-e901-52c4-88c9-e7113cb29dbc",
+      "name": "Dumuzi-abzu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Local tutelary goddess of Kinunir (Lagash region)",
+      "figureDescription": "Dumuzi-abzu is a local goddess who was the tutelary goddess of Kinunir, a settlement in the territory of the state of Lagash. Her name, which probably means \"good child of the Abzu\", was sometimes abbreviated to Dumuzi, but she has no obvious connection to the god Dumuzi.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a7ea0d35-7ec6-56c6-b510-978f6ddf3a70",
+      "name": "Emesh",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Personified summer; god of farmers and harvest",
+      "figureDescription": "Emesh is a farmer deity in the Sumerian poem Enlil Chooses the Farmer-God (ETCSL [http://etcsl.orinst.ox.ac.uk/section5/tr533.htm 5.3.3] ), which describes how Enlil, hoping \"to establish abundance and prosperity\", creates two gods: Emesh and Enten, a farmer and a shepherd respectively. The two gods argue and Emesh lays claim to Enten's position.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "702e5c33-bb2e-5bde-a026-912f1dec2855",
+      "name": "Enlilazi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Minor god; messenger and doorkeeper of the god list",
+      "figureDescription": "Enlilazi was a minor god regarded as the \"superintendent of Ekur.\"",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0b8981d1-bf91-5fe3-aa45-ef4048d3506e",
+      "name": "Ennugi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Canal inspector of the gods; attendant of Enlil",
+      "figureDescription": "Ennugi was a god regarded as \"lord of ditch and canal\" and \"chamberlain of Enlil.\" Based on similar meaning of the name Gugalanna to the former title, it has been proposed that they might have been analogous.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7ecab5d0-6351-5e13-b099-2a110b5c5761",
+      "name": "Enten",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Personified winter; god of farmers and herders",
+      "figureDescription": "Enten is a shepherd deity in the Sumerian poem Enlil Chooses the Farmer-God (ETCSL [http://etcsl.orinst.ox.ac.uk/section5/tr533.htm 5.3.3] ), which describes how Enlil, hoping \"to establish abundance and prosperity\", creates two gods: Emesh and Enten, a farmer and a shepherd respectively. The two gods argue and Emesh lays claim to Enten's position.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "6ef323f9-5061-594b-9339-22e6c044ccb0",
+      "name": "Erra",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "War and plague god; closely associated with Nergal",
+      "figureDescription": "Erra is a warlike god who is associated with pestilence and violence. He is the son of the sky-god An and his wife is an obscure, minor goddess named Mami, who is different from the mother goddess with the same name.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "af082529-7fc8-57af-8a7a-fe68e45e2772",
+      "name": "Erragal",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Storm and destruction god; form of Erra equated with Nergal",
+      "figureDescription": "Erragal, also known as Errakal, is a relatively rarely-attested deity who was usually regarded as a form of Erra, but the two gods are probably of separate origin. He is connected with storms and the destruction caused by them.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "827ef6ca-bdaf-56a2-b9ba-8f180ad6c53c",
+      "name": "Ashnan",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Grain goddess; created with her brother Lahar",
+      "figureDescription": "Ezina, or Ashnan in Akkadian, was a goddess of grain. She was commonly associated with Kusu, a goddess of purification. In the Sumerian poem The Dispute between Cattle and Grain, she and Lahar are created by the Anunnaki to provide them with food.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d24bcc92-ef44-5efd-96cf-39417b6429ba",
+      "name": "Gareus",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Obscure deity known from a Babylonian incantation",
+      "figureDescription": "Gareus was a god introduced to Uruk during late antiquity by the Parthians, who built a small temple to him there in around 100 AD. He was a syncretic deity, combining elements of Greco-Roman and Babylonian cults.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "adbcd1f0-e475-5624-994e-ca0a861bd648",
+      "name": "Gazbaba",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of love associated with Ishtar",
+      "figureDescription": "Gazbaba was a goddess closely associated with Nanaya, like her connected with erotic love. Šurpu describes her as ṣayyaḫatu, \"the smiling one,\" which is likely a reference to the frequent mention of smiles in Akkadian erotic literature.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0c327bc3-1dcd-5e1d-82d6-dc21949ef1d3",
+      "name": "Gunura",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Daughter of the healing goddess Ninisina; sister of Damu",
+      "figureDescription": "Gunura was the daughter of Ninisina and thus sister of Damu. She was not associated with other healing goddesses, such as Ninkarrak.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "44a115fb-ec64-5b55-8792-d28a333e6621",
+      "name": "Gatumdug",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Tutelary goddess of Lagash; mother goddess",
+      "figureDescription": "Ĝatumdug was a goddess from the early pantheon of Lagash. While the meaning of her name is unknown, she was described as the city's mother, or its founder. According to inscriptions of Gudea she assigned a lamma (tutelary deity) to him.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "13057dd4-65f3-55f9-8aad-5b3e56f6785f",
+      "name": "Hegir",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Minor goddess; consort of the god Ishum",
+      "figureDescription": "Ḫegir, later known as Ḫegirnunna, was one of the seven deities referred to as \"septuplets of Bau\" or \"seven lukur priestesses of Ningirsu.\" Her name can be translated as \"the maid of the (lofty) way\" and refers to a route of processions in Girsu in the state of Lagash.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ac3222c0-0903-55be-8698-5db13ef03690",
+      "name": "Humhum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Minor deity; son of the god An in god-list tradition",
+      "figureDescription": "Humhum was a minor god worshiped in Dūr-Šarruku (also known as Sippar-Aruru) in northern Babylonia. Esarhaddon returned his statue to a temple located there.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e01997a9-b2c4-5037-b3f3-d90aa8e386ee",
+      "name": "Idlurugu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of the river ordeal",
+      "figureDescription": "Idlurugu was a god who represent the concept of trial by ordeal, specifically river ordeal. The term i7-lú-ru-gú, \"the river that receives man\" or \"the river which confronts man,\" could refer both to him and to the procedure.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f70bcdf7-8d55-59a1-a472-7b2cbab6cd92",
+      "name": "Igalima",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine warrior; son of Ningirsu (Shulpa'e) and Bau",
+      "figureDescription": "Igalima was a son of Bau and Ninĝirsu. In offering lists he appears next to Shulshaga.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "9fd3d48d-f11b-56d7-beb5-55bc00461501",
+      "name": "Ilaba",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "War god; herald of the gods, associated with Zababa",
+      "figureDescription": "Ilaba was briefly a major deity during the Sargonic period, but seems to have been completely obscure during all other periods of Mesopotamian history. He was closely associated with the kings of the Akkadian Empire.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "98878319-bf11-54de-a757-ca0e6702a0d7",
+      "name": "Ilabrat",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Sukkal (attendant) of the sky god Anu",
+      "figureDescription": "Ilabrat was the sukkal, or personal attendant, of Anu. He appears in the myth of Adapa in which he tells Anu that the reason why the south wind does not blow is because Adapa, the priest of Ea in Eridu, has broken its wing.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "deef351c-2278-587b-bd4e-82e2dc3ff0a4",
+      "name": "Ishmekarab",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of justice; sukkal of Inshushinak",
+      "figureDescription": "One of the 11 \"standing gods of Ebabbar,\" divine judges assisting Shamash, as well as a member of various Assyrian groups of judge deities. While Akkadian in origin (the name means \"he (or she) heard the payer), Ishmekarab also appears in Elamite sources as an assistant of judge god Inshushinak, both in legal documents and in texts about the underworld.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "9b001abe-d7eb-50c0-90d3-e6c5ebefe257",
+      "name": "Irnina",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of victory; manifestation of Ishtar",
+      "figureDescription": "Irnina was the goddess of victory. She could function as an independent deity from the court of Ningishzida, but also as a title of major goddesses.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "557f25a4-3204-5a95-a43c-dab0790e54e5",
+      "name": "Kabta",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of brickmaking and pickaxes; son of Enlil",
+      "figureDescription": "Kabta was a deity commonly paired with Ninsianna.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "9e5c5b4f-1d6e-51c3-b5a5-be8bfaa9d8d6",
+      "name": "Kakka",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Divine messenger (sukkal)",
+      "figureDescription": "Kakka was the sukkal of both Anu (in Nergal and Ereshkigal) and Anshar (in the god list An = Anum and in Enuma Elish). Kakka is not to be confused with a different unrelated deity named Kakka, known from Mari, who was a healing goddess associated with Ninkarrak and Ninshubur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d3769768-4a9f-559a-9b98-e23ef177c04b",
+      "name": "Kanisurra",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of beer and taverns; consort of the fire god",
+      "figureDescription": "Kanisurra (also Gansurra, Ganisurra) was a goddess from the entourage of Nanaya. She was known as bēlet kaššāpāti, \"lady of the sorceresses.\" However, her character and functions remain unclear.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "beee3517-47c6-57a7-8730-e891c4543e5c",
+      "name": "Ki",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Earth goddess; consort of the sky god An",
+      "figureDescription": "Ki was a Sumerian goddess who was the personification of the earth. In some Sumerian accounts, she is a primordial being who copulates with An to produce a variety of plants. An and Ki collectively were an object of worship in Umma and Lagash in the Ur III period, but the evidence for worship of her is scarce and her name was sometimes written without the dingir sign denoting divinity.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fe397ad3-804c-53ac-8112-a2be325a5a0d",
+      "name": "Kittum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of truth and justice; daughter of the sun god",
+      "figureDescription": "Kittum was a daughter of Utu and Sherida. Her name means \"Truth\".",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "15ad371c-e18a-5992-af00-c0faa9f8ed98",
+      "name": "Kus",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Minor deity of the god An's court",
+      "figureDescription": "Kus is a god of herdsmen referenced in the Theogony of Dunnu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e1c1d99d-8963-57db-8f6c-6b61ded462f3",
+      "name": "Kusu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of purification and ritual cleansing",
+      "figureDescription": "Kusu was a goddess of purification, commonly invoked in Akkadian šuillakku, a type of prayers asking for help with an individual's problems. She was regarded as the personification of a type of ritual censer.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "67a7cba1-9396-5435-86f3-22e01c6b3f2e",
+      "name": "Lagamar",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Underworld god; sukkal of Inshushinak",
+      "figureDescription": "Lagamar, whose name means \"no mercy\" in Akkadian was a minor god worshiped in Dilbat as the son of the city's tutelary god, Urash (not to be confused with the earth goddess). He was associated with the underworld.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e3d8c3a6-19f4-5d9f-9ff2-9922b1430173",
+      "name": "Laguda",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Sea god; appears in Marduk's Address to the Demons",
+      "figureDescription": "Laguda was a god associated with the Persian Gulf. He appears in the text Marduk's Address to the Demons, according to which he exalted the eponymous god in the \"lower sea.\" He could be associated with other deities with marine associations, such as Sirsir and Lugal'abba.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4d09aceb-5bef-53fd-a149-d1a85714e09a",
+      "name": "Lahar",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of sheep and cattle; brother of Ashnan",
+      "figureDescription": "Lahar was a god associated with sheep. Research shows that he was usually regarded as a male deity, though he was initially interpreted as a goddess in Samuel Noah Kramer's translations.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "db213055-e2d7-582d-aa9f-ec27d2e893ed",
+      "name": "Las",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of protection against evil; consort of Papsukkal",
+      "figureDescription": "Laṣ was one of the goddesses who could be regarded as the wife of Nergal. In Babylonia, she became the goddess most commonly identified as such starting with the reign of Kurigalzu II.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "1dfb853e-3e0e-5243-ba90-bef970f407c6",
+      "name": "Lugala'abba",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "'King of the sea'; minor god in the circle of Enki",
+      "figureDescription": "Lugala'abba (\"Lord of the Sea\") was a god associated both with the sea and with the underworld.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7666d7aa-f720-5e0f-bcc2-89782a745b53",
+      "name": "Lugal-irra and Meslamta-ea",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Twin underworld gods guarding doorways; the constellation Gemini",
+      "figureDescription": "Lugal-irra and Meslamta-ea are a set of twin gods who were worshipped in the village of Kisiga, located in northern Babylonia. They were regarded as guardians of doorways and they may have originally been envisioned as a set of twins guarding the gates of the Underworld, who chopped the dead into pieces as they passed through the gates.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2d951908-fcc8-5fb6-af9e-3ff34cbc7f0b",
+      "name": "Lumma",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Minor deity; herald (sukkal) of the sun god Utu",
+      "figureDescription": "Reading of the theonym LUM-ma is unclear. The god bearing it was regarded as a guardian (udug) of Ekur, Enlil's temple in Nippur, or as an underworld demon (gallû). Gianni Marchesi describes him as \"gendarme demon par excellence.\" He was regarded as a figure of low rank, serving under other deities, but nonetheless capable of rewarding righteousness.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5703d000-13ce-5827-ba79-cd06607166e5",
+      "name": "Mami",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Mother goddess; creator of mankind in Atrahasis",
+      "figureDescription": "Mami or Mama is a mother goddess whose name means \"mother\". She may be the same goddess as Ninhursag.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8f1d39f9-a4d2-58bd-a3f9-259d163ae51b",
+      "name": "Mamu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Dream goddess; daughter of the sun god",
+      "figureDescription": "Mamu or Mamud was the daughter of Aya and Shamash, worshiped in Sippar. She was the goddess of dreams. Her husband was Bunene.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "bfa05ee5-8ea8-557c-90d7-68f9a73d05c7",
+      "name": "Mandanu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of justice; divine judge of the underworld",
+      "figureDescription": "Mandanu was a divine judge, attested after the Old Babylonian period, but absent from older god lists such as the so-called Weidner and Nippur lists. According to assyriologist Manfred Krebernik he can be considered a personification of places of judgment.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "97b34d81-995b-5185-b972-b9e877128208",
+      "name": "Manzat",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Rainbow goddess; Elamite origin, adopted into Mesopotamian pantheon",
+      "figureDescription": "Manzat (\"Rainbow\") was the Akkadian goddess of the rainbow. She was worshiped in Der, and was sometimes viewed as the wife of the city's tutelary god, Ishtaran. Her titles, such as \"Lady of regulations of heaven\" and \"Companion of heaven\" highlighted her astral character, though she was also associated with prosperity of cities.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b289d93f-0a80-56d2-83af-60769a740dec",
+      "name": "Martu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of the Amorites; wild steppe and nomads",
+      "figureDescription": "Martu, in Akkadian known as Amurru, was the divine personification of the nomads who began to appear on the edges of the Mesopotamian world in the middle of the third millennium BC, initially from the west, but later from the east as well. He was described as a deity who \"rages over the land like a storm\".",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "07ea9982-b16d-5b9a-b033-c14a5fa3fa06",
+      "name": "Misharu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of justice; son of the sun god",
+      "figureDescription": "Misharu (\"justice\") was a son of Adad and Shala. His wife was Ishartu (\"righteousness\").",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4505932b-f7a7-58f9-af88-59efd51a9467",
+      "name": "Nimintabba",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Minor goddess; attendant of the moon god Nanna in Ur",
+      "figureDescription": "Nimintabba was a minor goddess who belonged to the entourage of Nanna, the tutelary god of Ur. She had a temple in Ur during the reign of king Shulgi. It is possible she was initially a deity of greater theological importance, but declined with time.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2a795a4b-2946-5a75-b6ff-660eb9416eab",
+      "name": "Nindara",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Husband of the goddess Nanshe",
+      "figureDescription": "Nindara was the husband of Nanshe.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "54231095-0900-51d1-aeb8-a31a278325b7",
+      "name": "Ninegal",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Lady of the palace'; tutelary goddess of the royal residence",
+      "figureDescription": "Ninegal or Ninegalla, known in Akkadian as Belet Ekallim (both meaning \"lady of the palace\") was a minor goddess regarded as a tutelary deity of palaces of kings and other high-ranking officials. She was the wife of Urash, the city god of Dilbat, and was worshiped alongside him and their son Lagamar in some locations.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "cc5c66ae-f1b0-506c-af30-86ec617790bd",
+      "name": "Ningirida",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wife of the underworld god Ninazu; mother of Ningishzida",
+      "figureDescription": "Ningirida was the wife of Ninazu and mother of Ningishzida and his two sisters. A passage describing Ningirida taking care of baby Ningishzida is regarded as one of the only references to deities in their infancy and to goddesses breastfeeding in Mesopotamian literature.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "49752497-7815-5996-b950-6a0e8df8f3be",
+      "name": "Ninhegal",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of abundance; wife of the moon god Nanna",
+      "figureDescription": "Ninhegal was a goddess of abundance worshiped in Sippar. It is possible she can be identified as the goddess depicted with streams of water on seals from that city.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c53d0dc4-0115-5d7a-bb08-34fa0df6ecfa",
+      "name": "Ninimma",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Scribe goddess of the god Enlil; mother goddess",
+      "figureDescription": "Ninimma was a courtier of Enlil regarded as his scribe and sometimes as the nurse of his children. Like other goddesses from Enlil's circle she had a temple in Nippur. In the myth Enki and Ninmah she's one of the seven birth goddesses, the other 6 being Shuzianna, Ninmada, Ninshar, Ninmug, Mumudu and Ninniginna.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b95a1b90-a319-5d8e-b337-70bf9cf6729e",
+      "name": "Ninkilim",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Goddess of field rodents and vermin; later of the mongoose",
+      "figureDescription": "Ninkilim was a deity who was associated with mongooses, which are common throughout southern Mesopotamia. According to a Babylonian popular saying, when a mouse fled from a mongoose into a serpent's hole, it announced, \"I bring you greetings from the snake-charmer!\" A creature resembling a mongoose also appears in Old Babylonian glyptic art, but its significance is not known.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a546da3e-d74a-5d79-a549-b773e9026bc4",
+      "name": "Ningirima",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of incantations and snakes",
+      "figureDescription": "Ningirama was a goddess associated with incantations, water, and fish, and who was invoked for protection against snakes. It has been argued that she was conflated with Ningilin, the deity of mongooses, at an early date, but she is a distinct deity as late as during the reign of Esarhaddon.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "cf7cae38-65f4-5b42-897c-a0f9857aea34",
+      "name": "Ningublaga",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of herding; son of the moon god Nanna",
+      "figureDescription": "Ningublaga was associated with cattle. He was believed to oversee the herds belonging to the moon god Nanna. Consumption of beef was regarded as taboo to him.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fa892433-a811-5702-880c-41f2be7e5abf",
+      "name": "Ninigizibara",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of justice; manifestation of Ishtar at Uruk",
+      "figureDescription": "Ninigizibara was a deified harp who could be regarded as an advisor of Inanna.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "3c878bb2-2841-5f30-a1c8-09db9b5fe7ef",
+      "name": "Ninkurra",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Mother goddess of the Enki genealogies",
+      "figureDescription": "Ninkurra is the daughter of Enki and Ninsar. After having sex with her father Enki, Ninkurra gave birth to Uttu, the goddess of weaving and vegetation.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ef2d89bb-d11d-51a6-82b2-8bedb8909e11",
+      "name": "Ninmada",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Divine potter; maker of the gods",
+      "figureDescription": "Ninmada was a god regarded as a brother of Ninazu, who was described as a snake charmer in the service of An or Enlil. A goddess bearing the same name appears among the assistants of Ninmah in the myth Enki and Ninmah.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0dc85e9d-42d1-58a3-bf0e-064f550e9358",
+      "name": "Nin-MAR.KI",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Tutelary goddess of Guabba (Lagash region); mother goddess",
+      "figureDescription": "Nin-MAR.KI (reading uncertain) was the daughter of Nanshe.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7b5f40ca-87d8-5b68-8f7f-427a96ae69bd",
+      "name": "Ninmena",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Lady of the crown'; mother goddess",
+      "figureDescription": "Ninmena was a Sumerian goddess of birth whose name means \"Lady of the Crown\". Although syncretised with more prominent similar goddesses (like Ninhursag) in literary texts, she never fully merged with them in Sumerian tradition.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "44ff95b7-3e76-5ddb-ab77-bed627b92c7b",
+      "name": "Ninpumuna",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Minor god of the god An's court",
+      "figureDescription": "Ninpumuna was the goddess of salt springs. She is only attested in texts from Ur and Puzrish-Dagan from the Ur III period, though it is also possible that she was worshiped in Gishbanda.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "44b48da2-7d69-5f97-9f4b-17f9c80e1732",
+      "name": "Ninsar",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Lady Herbs'; daughter of Enki and Ninhursag",
+      "figureDescription": "The reading of the name of this goddess, NIN.SAR (possibly to be understood as \"Lady Herbs\"), is uncertain, with Ninšar being favored by authors such as Andrew R. George and Wilfred G.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2666e670-29b0-593b-b4bf-bbe65f5c06df",
+      "name": "Ninsianna",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of the planet Venus; astral aspect of Inanna/Ishtar",
+      "figureDescription": "Ninsianna was the deity of the planet Venus. Ninsiana's gender varied depending on location. She is described in one text as the \"holy torch who fills the heavens\" and was frequently associated with haruspicy.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a78a00eb-3caa-5835-8e26-e3bbfbf02551",
+      "name": "Ninsikila",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Pure lady'; goddess of Dilmun, wife of the god Inzak",
+      "figureDescription": "Ninsikila was the husband of the goddess Lisin. Later their genders were switched around, possibly due to confusion between the male Mesopotamian Ninsikila and a similarly named goddess from Dilmun.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "62326ab5-67f5-587c-a56a-0eb2cec98cee",
+      "name": "Nintu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Mother goddess of birth; epithet and form of Ninhursag",
+      "figureDescription": "Nintu is a Sumerian mother goddess associated with childbirth. Her name literally means \"Lady of Birth\". She may just be an aspect of Ninhursag.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "aad41128-c503-56e3-878c-f3493b20768c",
+      "name": "Nirah",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Serpent god; messenger of the underworld deity Ishtaran",
+      "figureDescription": "Nirah was the messenger of the god Ištaran. He was identified with snakes and may appear in the form of a snake on kudurrus.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f152a024-8079-5289-9179-510c86528476",
+      "name": "Nunusdug",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Minor goddess; mother of the healing goddess Ninisina",
+      "figureDescription": "Nunusdug was a minor goddess from the city of Kisiga, attested only in the Early Dynastic period. Her name means \"good woman.\"",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "18866f1f-18d9-5e09-9170-075239f031c5",
+      "name": "Panigingarra",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Tutelary deity of Dilmun; son of Enki and Damgalnuna",
+      "figureDescription": "Panigingarra was a god worshiped in Adab who was the son of Ninhursag and Shulpa'e. One inscription calls him the \"lord of kudurru.\" In late sources he was syncretised with Ninurta.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7f3dd18e-c051-5817-8cff-7a9a0e30f911",
+      "name": "Sadarnunna",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wife of the grain goddess Nisaba's attendant; scribal goddess",
+      "figureDescription": "Sadarnunna was the wife of Nuska.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fb76278d-7776-5f6a-83d5-bfe7ae82bbd7",
+      "name": "Sarrahitu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'The glorified one'; manifestation of Ishtar at Babylon",
+      "figureDescription": "Šarrāḫītu (\"The glorified one\") was a goddess worshiped in Babylon during the reign of Esarhaddon and later in Uruk. She was identified with Ashratum, the wife of Amurru, and a late esoteric text explains her name asAšrat aḫītu, \"Ashratum, the foreigner.\" In Uruk she was associated with Belet-Seri.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b7a810af-1b58-5c5a-a147-c53851381426",
+      "name": "Sarrat-Deri",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Queen of Der'; wife of the god Ishtaran",
+      "figureDescription": "Šarrat-Dēri was the wife of Ištaran, the local god of the Sumerian city-state of Der. Her name means \"Queen of Der\".",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d5d89ccc-616f-5365-8bbd-640598ece87a",
+      "name": "Serua",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Assyrian dawn goddess; daughter of Ashur",
+      "figureDescription": "Šerua was an Assyrian goddess associated with Ashur. She was the only deity regarded as related to him for reasons other than syncretism with Enlil, but Assyrian theological treatises disputed if she was his wife or daughter.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2393600f-ae90-574d-851f-3d2aeda3dcbf",
+      "name": "Shala",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Grain goddess; wife of the storm god Ishkur/Adad",
+      "figureDescription": "Shala, also known as Medimsha (\"having beautiful limbs\") was the wife of the weather god Adad. She was a goddess of rain, and was often depicted naked on cylinder seals.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c1faad32-be60-576a-99a9-8dcdbe7071b9",
+      "name": "Subula",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Underworld god; son of Nergal, husband of Tadmushtum",
+      "figureDescription": "Šubula was a minor god most likely associated with the underworld. It is assumed that the name is etymologically connected with the Akkadian word ābalu(m), \"to dry\" or \"to be dry.\" A less likely proposal instead derives it from wābalu(m), \"to carry.\" It is sometimes assumed he was Nergal's son.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "bb7ee05b-fe3f-5cfa-bbc6-67ebfff0a7d3",
+      "name": "Shulshaga",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Minor goddess; attendant of the goddess Inanna",
+      "figureDescription": "Šulšagana is the son of Bau and Ninĝirsu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "447f42b2-5611-5eab-8836-e090b13f9d91",
+      "name": "Shul-utula",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Tutelary god of the dynasty of Ur III kings",
+      "figureDescription": "Shul-utul was the tutelary god of the dynasty started by Ur-Nanshe.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7ae28252-d1d5-5c20-a8a7-43b0907596e9",
+      "name": "Shuzianna",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of birth; second wife of the god Enlil",
+      "figureDescription": "Shuzianna was a goddess regarded as the second wife of Enlil. She also appears in the myth Enki and Ninmah, where she is one of the seven assistants of the eponymous goddess, alongside Ninimma, Ninmada, Ninšar, Ninmug, Mumudu and Ninnigina.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "783a3ad9-74ce-5e46-ae0e-f45973e8e074",
+      "name": "Sirsir",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of sailors; servant of Enki",
+      "figureDescription": "Sirsir was the god of sailors. In the text Marduk's Address to the Demons he appears alongside Laguda, also argued to be a god associated with the sea.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "71892f5d-3f9f-5807-8331-479a6319abae",
+      "name": "Siduri",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Divine alewife at the edge of the world (Epic of Gilgamesh)",
+      "figureDescription": "Siduri (or more accurately Šiduri) was a goddess who according to the Epic of Gilgamesh was believed to keep an alehouse at the edge of the world. In the Old Babylonian versions, she attempts to dissuade Gilgamesh from his quest for immortality, instead urging him to be content with the simple pleasures in life.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "9f512aa2-8f5c-5d60-856e-d3103830dce7",
+      "name": "Silili",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Divine mare; mother of horses",
+      "figureDescription": "Silili is an obscure goddess who was apparently the mother of all horses. She is only attested once in the Epic of Gilgamesh.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b300e014-ce46-5c71-9182-142f6811c810",
+      "name": "Sumugan",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of the steppe, cattle and wild animals",
+      "figureDescription": "Sumugan (also spelled Sumuqan) or Šakkan was a god associated with quadrupeds, especially donkeys or alternatively wild sheep. In literary texts (such as hymns) he was also tasked with caring for their habitat and plants growing there.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "6231ab50-8606-5a5b-8a28-b4dc8e25fe16",
+      "name": "Tadmustum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Daughter of Nergal; underworld goddess, wife of Shubula",
+      "figureDescription": "Tadmuštum was the daughter of Nergal. She could be regarded as the wife of Šubula, and like him appears among underworld deities in known sources.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f6c68b16-e696-5314-ae13-3b7eaf45d1a4",
+      "name": "Tutu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of healing and magic; form of Marduk (Enuma Elish)",
+      "figureDescription": "Tutu was the tutelary god of Borsippa at least between Ur III and Old Babylonian periods. Later he was syncretised with Marduk, and in Enuma Elish \"Tutu\" is simply one of the names of the latter god.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "96c0c944-747c-5f18-8e6b-1fb04f2ad7b5",
+      "name": "Urkitum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Manifestation of the goddess Ishtar at the city of Uruk",
+      "figureDescription": "Urkitum was in origin an epithet of Ishtar meaning \"the Urukean,\" who eventually developed into a separate goddess. It is possible she was a theos eponymos, a divine representation of the city of Uruk itself.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "edc4a159-0842-5570-bf9a-1abb0ed73515",
+      "name": "Usur-amassu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Guard her command'; protective goddess, attendant of Ishtar",
+      "figureDescription": "Uṣur-amāssu was one of the deities regarded as children of Adad and Shala. While initially viewed as male, she came to be regarded as a goddess and achieved a degree of prominence in Neo-Babylonian Uruk, where she belonged to the entourage of Ishtar.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "376ddcc5-3d5c-51d0-bbb3-a01acf0f53ff",
+      "name": "Wer",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Storm and rain god of the Diyala region; form of Adad",
+      "figureDescription": "Wer was a weather god worshiped chiefly in northern Babylonia and in Assyria. He appears in an Old Babylonian version of the Epic of Gilgamesh, which states that the cedar mountain belonged to him, and that he appointed Humbaba as its guardian.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0c516405-8742-58f4-8be1-d73a3deaf3c6",
+      "name": "Allani",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Hurrian goddess of the underworld; equated with Ereshkigal",
+      "figureDescription": "Allani, in Mesopotamia known as Allatum, was the Hurrian goddess of the underworld. She was introduced in Mesopotamia in the Ur III period as an independent deity. She had at least one temple, likely located in Ur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ab576161-a5d4-594b-96f5-3fc7572a620b",
+      "name": "Ashratum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Amorite goddess of the steppe; wife of the god Amurru/Martu",
+      "figureDescription": "Ashratum (or Ashiratum in documents from Larsa) was an Amorite goddess who in Mesopotamia came to be associated with Amurru. In addition to being envisioned as a couple, they shared an association with mountains and steppes.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "95d277fb-318c-5f78-a927-2b21ab8858da",
+      "name": "Atargatis",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Syrian goddess of fertility; equated with Ishtar/Aphrodite",
+      "figureDescription": "Worship of the goddess Atargatis is attested from Edessa, Hatra and Dura-Europos in Upper Mesopotamia in Seleucid and Roman times. In the syncretic environment of the Upper Euphrates in the early centuries CE, Atargatis was associated with Artemis, Athena, and Allat.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "6d2f5625-7087-5588-9fb4-fb63efb7e92d",
+      "name": "Belet Nagar",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "'Lady of Nagar'; Hurrian goddess of the city of Nagar",
+      "figureDescription": "Belet Nagar was the tutelary goddess of the Syrian city of Nagar. She was introduced in Mesopotamia in the Ur III period, likely due to her connection to kingship and due to her role as a divine witness to commercial treaties.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "79a74d51-654c-55ee-8cac-9ace46f77e6e",
+      "name": "Belet-Suhnir and Belet-Terraban",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Pair of Hurrian goddesses; servants of Shaushka",
+      "figureDescription": "Belet-Šuḫnir and Belet-Terraban were a pair of goddesses venerated in the Ur III period. They were most likely introduced from the area north of Eshnunna, beyond the borders of sphere of direct Mesopotamian influence, where the corresponding cities were located.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ac3d4950-f804-55dd-bdec-bfa6035f7063",
+      "name": "Hahharnum and Hayyashum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Hurrian primordial pair of divinities",
+      "figureDescription": "Hahharnum and Hayyashum were the Mesopotamian adaptation of Hurrian words for heaven and earth, eše hawurni. While Hurrians did not worship this pair as personified deities, in Mesopotamia they appear as primordial gods in a handful of texts.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f3250631-16b7-55ef-a351-4f7062787742",
+      "name": "Humban",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Elamite supreme god of the sky; protector of kings",
+      "figureDescription": "Humban was an Elamite god associated with the concept of kingship and divine protection (kiten). In Mesopotamian sources he appeared only sporadically in the Neo-Assyrian period, and in a commentary on the incantation series Šurpu he is equated with Enlil, most likely based on their shared role as gods who grant authority to human rulers.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2c1f3353-9f08-535b-85ae-69fa018899f5",
+      "name": "Haburitum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of the river Habur; equated with Ishtar",
+      "figureDescription": "Ḫabūrītum was a goddess understood as either \"she of Ḫabur\" (either the river or the area surrounding it) or \"she of the city Ḫabura.\" The former option is considered more plausible, as her cult center was apparently Sikani, located near the head of the river Khabur, rather than Ḫabura, which was instead located near modern Al-Hasakah. In Mesopotamia she was worshiped alongside other western deities, such as Dagan and Išḫara.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8acfde66-7862-545a-ba14-60a05d3b6e64",
+      "name": "Harbe",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Hurrian storm god of the city of Nagar",
+      "figureDescription": "Ḫarbe was likely the head of the Kassite pantheon. His symbol, known from some Mesopotamian kudurru (boundary stones), was a bird with its head turned back.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d81453f0-fdad-59ed-821d-904daaa1079d",
+      "name": "Inshushinak",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Elamite god of Susa; kingship, oaths and the underworld",
+      "figureDescription": "Inshushinak (from Sumerian: \"Lord of Susa\") was one of the main Elamite gods. He was associated with kingship and the underworld, and served as the tutelary god of Susa. In some Mesopotamian texts he appears as an underworld god, for example in the god list An = Anum he can be found among the deities forming the entourage of Ereshkigal.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "98a8081c-637c-5b4f-9c5e-c0f702c3f5e2",
+      "name": "Inzak",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Chief god of Dilmun; god of date-palms",
+      "figureDescription": "The Sumerians regarded Inzak as the chief god of the Dilmunite pantheon, but the Dilmunites themselves regarded him as a god of Agaru, a land in eastern Arabia. His main cult center was on Failaka Island, where a temple was dedicated to him.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0d5edf14-b887-5911-adec-ea87e8ac4411",
+      "name": "Ishara",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of oaths and love; associated with Ereshkigal",
+      "figureDescription": "An Eblaite goddess of pre-Semitic and pre-Hurrian origin. She was among the western deities introduced in Mesopotamia in the Ur III period, and shared temples with Belet Nagar in Ur and with Dagan in Nippur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "78cbc5a5-aca8-51a3-b324-176780ebb5d4",
+      "name": "Jabru",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Hurrian father of the sky god; related to Anu",
+      "figureDescription": "According to Mesopotamian sources, such as the god list An = Anum, Jabru was a god similar to Anu or Enlil. While described as Elamite, he is not attested in any sources from Elam.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "82c6e458-f890-5fc7-a7fe-fe17398bd35e",
+      "name": "Kumarbi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Hurrian father of the gods; equated with Enlil",
+      "figureDescription": "Kumarbi was one of the main gods of the Hurrians, regarded as partially analogous to Enlil (and Dagan) due to his role as \"father of the gods.\" He had a chthonic character and was associated with grain and prosperity. In Mesopotamia he appears in the Assyrian Tākultu text as the god of Taite, alongside Nabarbi and Samnuha.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d8644c36-2a0d-5aa2-9099-6ebf3e6f2b16",
+      "name": "Manziniri",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Elamite goddess of a sacred forest",
+      "figureDescription": "An Elamite deity known chiefly from a passage mentioning \"the forest of Manziniri.\" She appears in a letter of Esarhaddon addressed to Urtaku, an Elamite ruler, as one of the deities meant to guarantee peace between the two monarchs, alongside Assyrian gods Ashur, Bel, Nabu, Sin, Shamash, Ishtar of Nineveh and Ishtar of Arbela. Wilfred G.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7d5d9391-17db-5dfa-a76b-c22625ac58e1",
+      "name": "Meskilak",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of Dilmun; wife of Inzak",
+      "figureDescription": "Meskilak was a Dilmunite goddess and the wife of Inzak. The Mesopotamians viewed her as a daughter of Enki and Ninhursag under the name Ninsikila, it is possible that later on she was identified with Nabu's wife Tashmetum.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ebe398fa-e246-59c0-b90c-0e2db6155f0a",
+      "name": "Nabarbi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Hurrian goddess; consort of the weather god",
+      "figureDescription": "Nabarbi (\"she of Nawar\") was Hurrian goddess possibly analogous to Belet Nagar. In Mesopotamian sources she is attested in the Assyrian Tākultu text, where she appears alongside Kumarbi and Samnuha as one of the deities of Taite.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b278976f-c282-52d9-a2ca-bffa92f52839",
+      "name": "Narundi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Elamite goddess of victory; identified with Ishtar",
+      "figureDescription": "An Elamite goddess known from Susa who in Mesopotamia was regarded as analogous to Ishtar or Nanaya and developed a distinct apotropaic role as early as in the Old Babylonian period. Mesopotamians viewed her as sister of the Sebitti, equated with \"Divine Seven of Elam\" – a Mesopotamian grouping of Elamite gods – in god lists.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "41021aa8-b7ad-5870-9e45-dc851221b1bb",
+      "name": "Ninatta and Kulitta",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Hurrian handmaidens of the goddess Shaushka",
+      "figureDescription": "Musician goddesses always mentioned as a pair who were handmaidens of Shaushka. In Assyria they were incorporated into Ishtar's entourage in her temple in Ashur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "eb244359-1347-5924-86da-81f9a73fefd2",
+      "name": "Pinikir",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Elamite goddess of love; identified with Ishtar",
+      "figureDescription": "An Elamite goddess regarded as analogous to Ishtar by modern researchers, but incorrectly assumed to be an alternate name of Kiririsha in the past. She was also worshiped by Hurrians in Syria and Anatolia, and Gary Beckman proposes that her worship was transmitted there from a Mesopotamian source.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4f8ec406-2938-50b5-8d1b-b9e91880bb22",
+      "name": "Shalash",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Syrian grain goddess; wife of Dagan",
+      "figureDescription": "Shalash was the wife of the Syrian god Dagan. She appears with her husband in cylinder seal inscriptions from the Isin-Larsa period.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fcbc8e55-7b4a-5c2c-b164-81b634f11ee0",
+      "name": "Shaushka",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Hurrian goddess of war and love; equated with Ishtar",
+      "figureDescription": "Shaushka was a Hurrian goddess regarded as analogous to Ishtar (\"Ishtar of Subartu\" or \"Ishtar of Nineveh\"). Despite her origin, the oldest known attestations of both Shaushka and her main cult center, Nineveh, come from Mesopotamian, rather than Hurrian, documents.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "dab5de8b-1333-52e7-a7a0-d3ed044bee5a",
+      "name": "Shuqamuna and Shumaliya",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "",
+      "domain": "Kassite royal divine pair; protectors of kings",
+      "figureDescription": "Shuqamuna and Shumaliya were a pair of Kassite gods regarded as the tutelary deities of the Kassite dynasty of Babylon. They were depicted on a number of kudurru in the symbolic form of birds sitting on a perch.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "49d968c3-ca96-51a0-8490-0df2b9efca02",
+      "name": "Shuwala",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Hurrian underworld goddess; companion of Allani",
+      "figureDescription": "Shuwala, the tutelary goddess of Mardaman, a city located in the north of modern Iraq, is attested in sources from the Ur III period. She is assumed to be an underworld deity of Hurrian origin.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4fb2080b-7ed1-5356-b9bf-a76f762753fd",
+      "name": "Simut",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Elamite god of the planet Mars; herald of the gods",
+      "figureDescription": "Simut was an Elamite god associated with Mars, regarded as herald of the gods. His name was used as a theophoric element in Old Babylonian personal names, while god lists associate him with Nergal.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "62fef5c4-ae27-5593-ade7-e2e43eb90ddb",
+      "name": "Nupatik",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Hurrian god of the mountains and the hunt",
+      "figureDescription": "Umbidaki was a god worshiped in the temple of Ishtar of Arbela in neo-Assyrian times. It is assumed that he was analogous to the Hurrian god Nupatik, possibly introduced to Arbela after a statue of him was seized in a war.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "294a9ecc-0cdd-5b8f-8a17-5ec349326496",
+      "name": "Ninlil",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wife of Enlil; queen of the gods; grain and air",
+      "figureDescription": "Goddess of grain and air; wife of Enlil and queen of the gods. Originally the goddess Sud of Shuruppak, she was created as Enlil's consort, shared his authority, and with him was regarded as a source of royal power.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "adefe41b-e327-5f07-b96b-7b22e3311882",
+      "name": "Gibil",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Fire; purification; forging and kilns",
+      "figureDescription": "Gibil (𒀭𒉈𒄀), also known under the Akkadian name Girra, was a Mesopotamian god associated with fire, both in its positive and negative aspects. He also played a role in ritual purification.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "77101745-57f9-5861-8a07-aa9e1bcdefc4",
+      "name": "Ishum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Fire; night watchman; protector of houses",
+      "figureDescription": "Ishum (Išum; possibly the masculine form of Akkadian išātum, \"fire\") was a Mesopotamian god of Akkadian origin. He is best attested as a divine night watchman, tasked with protecting houses at night, but he was also associated with various underworld deities, especially Nergal (or Erra) and Shubula.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "c03750ab-5803-5441-b92e-1a27d01393b5",
+      "name": "Lisin",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Mother goddess; later fire and the star of Nabu",
+      "figureDescription": "Goddess addressed as 'mother' who in later periods developed an association with fire; the name also designated a star linked to the god Nabu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "41ac516d-ce42-5761-8160-3224d2912ef0",
+      "name": "Mummu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "Male",
+      "domain": "Vizier of Apsu and Ea; craftsman of the gods",
+      "figureDescription": "Vizier of Apsu and Ea; craftsman of the gods. Attested in Mesopotamian sources.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4e13f66e-151f-5447-897a-f7e32ce09481",
+      "name": "Lahmu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "Male",
+      "domain": "First-born of Tiamat; apotropaic 'hairy one'",
+      "figureDescription": "Laḫmu (𒀭𒌓𒈬 or 𒀭𒈛𒈬, d laḫ-mu, lit. 'hairy one') is a class of apotropaic creatures from Mesopotamian mythology.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "bd650bad-4084-5824-8cf4-9c3c0b642762",
+      "name": "Lahamu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Primordial",
+      "gender": "Female",
+      "domain": "Sister of Lahmu; ancestor of Anu; first-born of Tiamat",
+      "figureDescription": "Lahamu (𒀭𒆷𒄩𒈬 , d la-ḫa-mu) was a minor figure in some variants of Mesopotamian cosmology, the feminine counterpart of Lahmu. In some god lists she was one of the ancestors of Anu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "f5c53c01-e757-5d9f-80e3-ec8d1008704c",
+      "name": "Belili",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Sister of Dumuzi; primordial twin of Alala",
+      "figureDescription": "Belili (Sumerian: 𒀭𒁁𒇷𒇷, dbe-li-li), was a Mesopotamian goddess. This name refers both to a sister of Dumuzi known from some of the texts pertaining to his death, and to a primordial deity paired with Alala and listed in enumerations of ancestors of Anu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b8830b75-f53a-5cce-be4a-8de81b6187d5",
+      "name": "Uttu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of weaving, clothes and spiders",
+      "figureDescription": "Goddess of weaving and textiles, daughter of Enki and Ninkurra. In the myth of Enki and Ninhursag she is the weaver who is seduced by Enki, giving birth to plants.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4d409d9a-b02e-5446-8010-95332e80e102",
+      "name": "Tashmetum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wisdom; sexual attractiveness; consort of Nabu",
+      "figureDescription": "Divine consort of Nabu, associated with wisdom, listening and sexual attractiveness; her statue was brought together with Nabu's in an annual marriage ritual.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "24a2d4cb-21db-5690-bca3-371d280d4274",
+      "name": "Mamitu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Oaths; underworld; wife of Nergal and Erra",
+      "figureDescription": "Goddess of oaths and judgment in the underworld, regarded as the wife of Nergal or gods equated with him such as Erra.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4d7b22a6-73c6-57fd-95e4-a60f38d300f3",
+      "name": "Ninmug",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of casting and metalwork; divine craftswoman",
+      "figureDescription": "Goddess of casting and the mould, a divine craftswoman who helped create humankind together with the mother goddesses and was responsible for fashioning kings.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e06bd00b-0423-5fa7-8396-287c36e1f501",
+      "name": "Sulpae",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Astral god of Jupiter; husband of Ninhursag; disease (bennu)",
+      "figureDescription": "Astral god associated with the planet Jupiter and with the disease bennu; in Nippur he was regarded as the husband of Ninhursag.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "dab213bb-da00-507d-a555-c63346c71e99",
+      "name": "Ninkarrak",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Healing; patroness of physicians",
+      "figureDescription": "Healing; patroness of physicians. Attested in Mesopotamian sources.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "364d840b-de11-5867-a373-a835872eee79",
+      "name": "Ninildu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of carpenters and woodworking",
+      "figureDescription": "God of carpenters and woodworking, created by Ea together with Arazu and the mould-goddess to build temples.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "d7c02d5d-ab0e-573d-b841-86a5d2b3be32",
+      "name": "Nunbarsegunu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Barley; mother of Ninlil; 'old woman of Nippur'",
+      "figureDescription": "Mother goddess and goddess of barley, the 'old woman of Nippur' who in creation texts is the mother of Ninlil.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "667f674d-ffa8-5eeb-9a1a-3390cfc87231",
+      "name": "Ninti",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Mother of Ninkasi; healing (Enki and Ninhursag)",
+      "figureDescription": "Goddess worshiped in Lagash, mother of the beer goddess Ninkasi; in Enki and Ninhursag she is one of the goddesses who heals Enki's ailment, giving her name the meaning 'lady of the rib/life'.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5941c2ea-590b-5e22-8c58-b1c10fca8c4b",
+      "name": "Ninagal",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine smith; craftsman of the gods",
+      "figureDescription": "Divine smith and craftsman of the gods, responsible for metalworking alongside other artisan deities.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2bdb59f2-6ee2-5978-ac3e-7c980dcc8af5",
+      "name": "Nunura",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine potter; apotropaic magic and exorcism",
+      "figureDescription": "Nunura (also romanized as Nunurra) was a Mesopotamian god regarded as a divine potter. He was also associated with apotriopaic magic and exorcisms, and in multiple incantations he is invoked against demons.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "403892ff-5312-5a1e-804e-3663c42684d4",
+      "name": "Azimua",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Underworld; wife of Ningishzida",
+      "figureDescription": "Azimua, also known as Ninazimua, was a Mesopotamian goddess regarded as the wife of Ningishzida.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "42cc5fa1-e7b3-5911-b0aa-936a63454ac8",
+      "name": "Alla",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Underworld; sukkal of Ningishzida; dying god",
+      "figureDescription": "Alla or Alla-gula was a Mesopotamian god associated with the underworld. He functioned as the sukkal (attendant deity) of Ningishzida, and most likely was a dying god similar to Dumuzi and Damu, but his character is not well known otherwise.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "aabbd197-89bc-552f-8d6e-034ba562af07",
+      "name": "Lammasaga",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Sukkal of Bau; protective Lamma goddess",
+      "figureDescription": "Lammašaga was a Mesopotamian goddess who functioned as the sukkal (divine attendant) of Bau. She belonged to a class of protective deities known as Lamma.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "bf107e80-26f2-57a6-aba6-a75a92d1299d",
+      "name": "Ninnibru",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wife of Ninurta; 'lady of Nippur'",
+      "figureDescription": "Ninnibru, also romanized as Nin-Nibru, was a Mesopotamian goddess regarded as the wife of Ninurta. She is attested in sources from between the Ur III and Kassite periods, including offering lists, the god list An = Anum, and the poem Angim.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4fea946d-366a-56b6-9ed7-2c6eb50e9b8d",
+      "name": "Ninnigara",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of the nigar (temple interior)",
+      "figureDescription": "Ninniĝara (also romanized as Ninnigar, Ninnigara and Ninnigarra) was a Mesopotamian goddess. She was associated with the niĝar, presumed to be a special part of certain temples dedicated to deities such as Ninisina and Inanna.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "85d9a498-70e2-5745-8d8f-f3de3f95861d",
+      "name": "Ninura",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Tutelary goddess of Umma; wife of Shara",
+      "figureDescription": "Ninura (dNin-ur4(-ra); also romanized as Ninurra) was a Mesopotamian goddess associated with the state of Umma. The god Shara, worshiped in the same area, was regarded as her husband.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "2f1c5475-9a11-575d-a702-982cb6866197",
+      "name": "Ninurima",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Spouse of Alammus (attendant of Nanna)",
+      "figureDescription": "Ninurima was a Mesopotamian goddess regarded as the spouse of Alammuš, an attendant of the moon god Nanna. She is best attested in texts from the Ur III period from Ur, though she also occurs in a number of god lists, including An = Anum.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e4072fed-e1a2-5764-aa22-0b0daf46c084",
+      "name": "Ningidru",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Deified royal scepter; coronation rites",
+      "figureDescription": "Ninĝidru (dNin-PA; alternatively read Ninĝešduru) was a Mesopotamian goddess who most likely represented a deified scepter. She played a role in coronation rituals.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "84c9046b-2b78-5042-9db2-e0e6ddbc5e2b",
+      "name": "Ninhinuna",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Servant goddess; deified lyre of Inanna",
+      "figureDescription": "Ninḫinuna or Ninḫenunna was a Mesopotamian goddess. She could be regarded as a servant deity or a deified instrument, specifically a harp or a lyre.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "ccdf37b4-bc64-53fd-889a-098588ab0bf9",
+      "name": "Kalkal",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine doorkeeper of the Ekur",
+      "figureDescription": "Kalkal was a Mesopotamian god regarded as a divine doorkeeper. He was associated with the Ekur, the temple of Enlil in Nippur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "47ed334e-f7b0-5196-9709-d553a0a81d5e",
+      "name": "Ua-Ildak",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine doorkeeper of the Ekur",
+      "figureDescription": "Doorkeeper god of the Ekur, the temple of Enlil in Nippur.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a6416409-b6fc-5bca-9bd3-966f64322bd0",
+      "name": "Iqbi-damiq",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "One of the 'Daughters of Edubba'; sukkal of Niggina",
+      "figureDescription": "Iqbi-damiq was a Mesopotamian goddess who was regarded as one of the \"Daughters of Edubba\", and was worshiped in Kish for this role. According to the god list An = Anum she also functioned as the sukkal (attendant deity) of Niĝgina.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8a54d2f7-c650-5456-afe4-fc247782cda6",
+      "name": "Bilulu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of rain clouds",
+      "figureDescription": "Bilulu was a Mesopotamian goddess who most likely functioned as the deification of rain clouds. She might be related to Ninbilulu known from a number of Early Dynastic texts.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "625df579-3836-5e4f-a08a-06564b490421",
+      "name": "Imzuanna",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Wife of Lugal-Marada; goddess of Marad",
+      "figureDescription": "Imzuanna, also known as Ninzuanna, was a Mesopotamian goddess worshiped in Marad as the wife of the city's tutelary god, Lugal-Marada. She is attested in various god lists, in the literary composition Lament for Sumer and Ur, and in at least one theophoric name.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5da4b2b8-88c7-520e-9fd0-20367c438187",
+      "name": "Deritum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Hypostasis of Ishtar; goddess of Der (Mari)",
+      "figureDescription": "Dērītum or Dīrītum was a Mesopotamian goddess associated with Dēr in the kingdom of Mari. While she was originally a hypostasis of Ishtar, she eventually developed into a fully separate deity, and achieved a degree of prominence in the local pantheon during the reign of Zimri-Lim in the 18th century BCE.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "bdbd9aae-dd5b-5956-954c-c3818544b300",
+      "name": "Kititum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of Kiti (Tell Ishchali); form of Inanna",
+      "figureDescription": "Kitītum was a Mesopotamian goddess closely associated with Tell Ishchali. Her name was derived from the oldest known name of this site, Kiti.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "a24b2387-a1ae-5a47-b09d-bad92d71e40a",
+      "name": "Hishamitum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Tutelary goddess of Hishamta (Mari kingdom)",
+      "figureDescription": "Ḫišamītum or Ḫišametum was a Mesopotamian goddess worshiped in the kingdom of Mari. She was the tutelary deity of the city of Ḫišamta, and it is presumed she originated as a hypostasis of Ishtar.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "729f87e2-3581-54e5-ae47-7711f1d93d30",
+      "name": "Iksudum",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Mari god; deified ancestor; close to Lagamal",
+      "figureDescription": "Ikšudum or Yakšudum was a Mesopotamian god worshiped in the kingdom of Mari, possibly a deified ancestor. He was closely associated with Lagamal.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8fed1b94-dbdc-594b-8f2f-3dd24e1efe69",
+      "name": "Irhan",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Deified western branch of the Euphrates",
+      "figureDescription": "Irḫan was a Mesopotamian god who personified the western branch of the Euphrates, which in the first millennium BCE became its main course. The name could also refer to the river itself.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "42cc2cce-04c0-56c4-b066-f49f10f70084",
+      "name": "Isartu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of righteousness; consort of Misharu",
+      "figureDescription": "Išartu was a Mesopotamian goddess regarded as the divine hypostasis of righteousness. She was closely associated with a deity of similar character, Mīšaru, and in the god list An = Anum they are described as a couple.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "0da65a39-e417-5aee-999a-bfa5a2a1a78e",
+      "name": "Apladad",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "War god; 'son of Adad'; patron of Suhum",
+      "figureDescription": "Apladad (later Aphlad), \"son of Adad\", was a Mesopotamian god first attested in the eighth century BCE. He was chiefly worshiped in Suhum in cities such as Anat and Āl-gabbāri-bānî.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5dd45381-e455-5fe1-95ad-b7afd5d9c237",
+      "name": "Ara",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Servant of the god Enki",
+      "figureDescription": "Ara (Sumerian: dŠA) was a Mesopotamian goddess regarded as a servant of the god Enki. While in the past it was often assumed this theonym was only an alternate name for Isimud, today the two are regarded as distinct deities who eventually came to be conflated with each other.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "6f8c5aad-8eb5-50a5-8271-cdf642212ecd",
+      "name": "Arazu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of construction and crafts",
+      "figureDescription": "Arazu is a Babylonian god of construction and or crafts. Arazu was created by Ea, along with the gods Ninsimug and Ninildu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "37c84d56-6985-532a-9dbc-174bad500ff0",
+      "name": "Kusibanda",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Tutelary god of goldsmiths and silversmiths",
+      "figureDescription": "Kusibanda (Kusigbanda), also known under the disputed older reading of the name, Guškinbanda, was a Mesopotamian god regarded as the tutelary deity of goldsmiths and silversmiths. He was commonly grouped with other deities of similar character, such as Ninagal.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e8af8ab7-6503-507f-9e7e-3047cb12e913",
+      "name": "Siris",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of beer",
+      "figureDescription": "Siris or Siraš was a Mesopotamian goddess associated with beer. She was also worshiped in Ebla, where her name was spelled as Zilaš.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b58a88cb-f93a-5dfe-8d50-7016b9d6aae2",
+      "name": "Shulmanu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Assyrian deity; later associated with the underworld",
+      "figureDescription": "Shulmanu or Shulman (Assyrian Akkadian: Salmānu, Babylonian Akkadian: Šulmānu) was an ancient Mesopotamian deity. The deity is only ever recorded as having been worshipped by the ancient Assyrians, in contrast to many other deities of the Mesopotamian pantheon which were more universal, and was particularly popular in the Middle Assyrian period.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5fb16f1d-9ad3-5a71-b887-5a6155dafc5f",
+      "name": "Saggar",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Syrian god of the Sinjar mountains",
+      "figureDescription": "Saggar (also Šaggar, Sanugaru, Šanugaru) was a god worshiped in ancient Syria, especially in the proximity of Ebla and Emar, later incorporated into the Hurrian and Hittite pantheons. His name was also the ancient name of the Sinjar Mountains.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "7936b1ae-d991-5b3e-bb83-a3a7dadf9248",
+      "name": "Sagkud",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "God of Anu's court; tax collector and warrior",
+      "figureDescription": "Saĝkud was a Mesopotamian god who might have been regarded as a divine tax collector or as a warrior deity. He belonged to the court of Anu, though an association between him and Ninurta is also attested.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "645af073-117b-5bd2-a867-68ce32efe1c6",
+      "name": "Kajamanu",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Astral deity of the planet Saturn",
+      "figureDescription": "Kajamānu or Kayyamanu (Akkadian: 𒅗𒀀𒀀𒈠𒉡 ka-a-a-ma-nu \"the constant\") or Uduimin-saĝuš (Sumerian: 𒀯𒇻𒅂𒊕𒍑 MULUDU.IMIN-saĝ-uš, \"star of the sun\") is the ancient Mesopotamian name for the planet Saturn. In ancient Mesopotamia, he was also regarded as the \"star of Ninurta,\" the Mesopotamian fertility deity.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "fc347f53-7988-51a5-aa34-f6dcbfc58bef",
+      "name": "Shullat and Hanish",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine attendants of Shamash; warlike pair",
+      "figureDescription": "Shullat (Šûllat) and Hanish (Ḫaniš) were a pair of Mesopotamian gods. They were usually treated as inseparable, and appear together in various works of literature.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "e2e3c70f-a0ea-50be-b3ba-dc942f17b6a6",
+      "name": "Hushbishag",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Underworld goddess; wife of Namtar",
+      "figureDescription": "Hušbišag or Hushbishag (𒀭𒄭𒄊𒁉𒊷) is a Sumerian netherworld goddess. She is the wife of Namtar and mother of Hemdikug, a daughter.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "33358533-d3b7-5d69-9f6f-814e94404da7",
+      "name": "Kindazi",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Divine barber; acolyte of Ningirsu",
+      "figureDescription": "Kindazi (Sumerian: 𒀭𒃱𒍣, dkinda2-zi) was a minor Sumerian god. He was a \"divine barber\" and an acolyte of god Ningirsu.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "5a6532d8-fc18-54b0-ae01-ffd5b4a3458d",
+      "name": "Ebih",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Deified Hamrin mountain range",
+      "figureDescription": "Ebiḫ (Ebih) was a Mesopotamian god presumed to represent the Hamrin Mountains. It has been suggested that while such an approach was not the norm in Mesopotamian religion, no difference existed between the deity and the associated location in his case.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "189604ef-e626-5ea2-b3f6-ce157278cb0e",
+      "name": "Kippat-mati",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Neo-Assyrian goddess; mediator with royal ancestors",
+      "figureDescription": "Kippat-māti or Kippatu was a Mesopotamian goddess. She is almost exclusively attested in Neo-Assyrian state rituals.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "4c58d2dc-44bb-552d-a098-70db660b1716",
+      "name": "Beltu-sha-Resh",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Goddess of the Resh temple; Uruk divine pentad",
+      "figureDescription": "Bēltu-ša-Rēš was a Mesopotamian goddess associated with a temple, or temples, bearing the name Rēš. She is only attested in sources from Uruk from the Neo-Babylonian and Seleucid periods.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "debe133d-2880-5cdf-a750-17504c46847c",
+      "name": "Gataru",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Syrian god (Gashru); worshiped at Ugarit, Mari, Opis",
+      "figureDescription": "Gaṯaru (Ugaritic: gṯr) or Gašru (Akkadian: dgaš-ru, dga-aš-ru) was a god worshiped in Ugarit, Emar and Mari in modern Syria, and in Opis in historical Babylonia in Iraq. While he is relatively sparsely attested, it is known that in Ugarit he was associated with the underworld, while in Mesopotamia he was understood as similar in character to Lugalirra or Erra.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "9077c46d-4e70-51c9-85ed-d246d76460cf",
+      "name": "Agasaya",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Semitic war goddess; 'the shrieker'; merged into Ishtar",
+      "figureDescription": "Agasaya is a Semitic war goddess. Her name is thought to translate to \"the shrieker\", though there is no solid proof of this.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "8a78ff2c-e053-5f15-916f-c985b410f755",
+      "name": "Ishtar of Arbela",
+      "disambiguation": "",
+      "title": "",
+      "figureType": "Deity",
+      "gender": "Female",
+      "domain": "Tutelary goddess of Arbela; patron of Neo-Assyrian kings",
+      "figureDescription": "Ishtar of Arbela or the Lady of Arbela (Akkadian: dbēlat(gašan)-uruarba-il) was a prominent goddess of the Neo-Assyrian Empire. She was the tutelary goddess of the city of Arbela (or Arbail, modern Erbil) as well as a patron goddess of the king.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    }
+  ],
+  "imageAssets": [],
+  "placePlaceAssociations": [],
+  "placeTypes": [],
+  "places": [],
+  "relationships": [],
+  "sources": [],
+  "tags": [],
+  "things": []
+}

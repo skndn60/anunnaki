@@ -92,7 +92,7 @@ struct PlaceFormView: View {
     private var identityStep: some View {
         Form {
             Section("Identity") {
-                TextField("Name", text: $name, prompt: Text("e.g. Uruk, Eridu, Kur"))
+                TextField("Name", text: $name, prompt: Text("Uruk, Eridu, Kur"))
                     .textFieldStyle(.roundedBorder)
                     .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                     .help("The primary name of this place")
@@ -117,16 +117,16 @@ struct PlaceFormView: View {
     private var locationStep: some View {
         Form {
             Section("Location") {
-                TextField("Modern Location", text: $modernLocation, prompt: Text("e.g. Southern Iraq, Warka"), axis: .vertical)
+                TextField("Modern Location", text: $modernLocation, prompt: Text("Southern Iraq, Warka"), axis: .vertical)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(2...6)
             }
 
             Section("Coordinates") {
                 HStack {
-                    TextField("Latitude", text: $latitudeStr, prompt: Text("e.g. 31.322"))
+                    TextField("Latitude", text: $latitudeStr, prompt: Text("31.322"))
                         .textFieldStyle(.roundedBorder)
-                    TextField("Longitude", text: $longitudeStr, prompt: Text("e.g. 45.637"))
+                    TextField("Longitude", text: $longitudeStr, prompt: Text("45.637"))
                         .textFieldStyle(.roundedBorder)
                 }
                 Toggle("Exact site not identified", isOn: $coordinatesUnknown)

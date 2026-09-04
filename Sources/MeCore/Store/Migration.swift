@@ -118,6 +118,15 @@ package struct Migration {
         try? context.save()
     }
 
+    /// Ensure Demon FigureType exists (flame.fill, red-orange) for monsters/demons.
+    package static func ensureDemonFigureTypeExists(context: ModelContext) {
+        let allTypes = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        guard !allTypes.contains(where: { $0.name == "Demon" }) else { return }
+        let demonType = FigureType(name: "Demon", icon: "flame.fill", colorHex: "DC2626")
+        context.insert(demonType)
+        try? context.save()
+    }
+
     /// Backfill Commander FigureType + reassign 23 Watcher chiefs from Igigi to Commander.
     package static func ensureCommanderFigureTypeExists(context: ModelContext) {
         let commanderPredicate = #Predicate<FigureType> { $0.name == "Commander" }
@@ -603,6 +612,93 @@ package struct Migration {
             guard !alreadyHas else { continue }
             context.insert(StickyNote(text: stickyPrefix, figure: figure))
         }
+        try? context.save()
+    }
+
+    /// Import the broad attested Mesopotamian pantheon from
+    /// mesopotamian_deities_import.json (129 gods across Sumerian,
+    /// Akkadian, Hurrian, Elamite and Kassite traditions). Additive +
+    /// idempotent: only names absent from the store are inserted.
+    package static func ensureMesopotamianDeitiesImportExist(context: ModelContext) {
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
+
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "mesopotamian_deities_import", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "mesopotamian_deities_import", withExtension: "json")
+        }()
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+            return
+        }
+
+        let toImport = root.figures.filter { !existingNames.contains($0.name.lowercased()) }
+        guard !toImport.isEmpty else { return }
+
+        var filteredRoot = root
+        filteredRoot.figures = toImport
+        SeedData.importFrom(root: filteredRoot, context: context)
+        try? context.save()
+    }
+
+    /// Import curated alternate names (bynames, cross-language equivalents,
+    /// epithets, syncretisms and hypostases) from alt_names_import.json.
+    /// Keyed by exact figure name; additive + idempotent per (figure, name, tradition).
+    package static func ensureAlternateNamesImportExist(context: ModelContext) {
+        struct AltRow: Decodable {
+            let name: String
+            let tradition: String
+            let nameType: String
+            let note: String
+        }
+        struct AltNameEntry: Decodable {
+            let figure: String
+            let alternates: [AltRow]
+        }
+
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "alt_names_import", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "alt_names_import", withExtension: "json")
+        }()
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let entries = try? JSONDecoder().decode([AltNameEntry].self, from: data) else {
+            return
+        }
+
+        let figuresByName = Dictionary(uniqueKeysWithValues:
+            ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).map { ($0.name, $0) })
+        let existing = Set(((try? context.fetch(FetchDescriptor<AlternateName>())) ?? []).compactMap { alt -> String? in
+            guard let fig = alt.figure else { return nil }
+            return "\(fig.name.lowercased())|\(alt.name.lowercased())|\(alt.tradition.rawValue.lowercased())"
+        })
+
+        var added = 0
+        for entry in entries {
+            guard let figure = figuresByName[entry.figure] else { continue }
+            for row in entry.alternates {
+                let key = "\(figure.name.lowercased())|\(row.name.lowercased())|\(row.tradition.lowercased())"
+                guard !existing.contains(key),
+                      let tradition = AlternateName.Tradition(rawValue: row.tradition),
+                      let nameType = AlternateName.NameType(rawValue: row.nameType) else { continue }
+                context.insert(AlternateName(figure: figure, name: row.name, tradition: tradition, nameType: nameType, note: row.note))
+                added += 1
+            }
+        }
+        guard added > 0 else { return }
+        try? context.save()
+    }
+
+    /// Removes the legacy orphaned alternate-name pair created before the
+    /// Kittum/Niĝgina mapping was expressed as a linked AlternateName. These two
+    /// rows have neither a figure nor a place link and trip the orphaned-alternate-
+    /// name integrity check. Targeted by (name, unlinked) so no other rows are touched.
+    package static func removeOrphanedKittumNigginaAltNames(context: ModelContext) {
+        let names = ["Niĝgina", "Kittum"].map { $0.lowercased() }
+        let orphans = ((try? context.fetch(FetchDescriptor<AlternateName>())) ?? [])
+            .filter { $0.figure == nil && $0.place == nil && names.contains($0.name.lowercased()) }
+        guard !orphans.isEmpty else { return }
+        for orphan in orphans { context.delete(orphan) }
         try? context.save()
     }
 
@@ -2832,6 +2928,133 @@ package struct Migration {
         if changed { try? context.save() }
     }
 
+    /// Links every association's `sourceRef` (7 types) to the `Source` entity
+    /// named by its free-text `source` string. Reuses `primarySourceName` for
+    /// matching and creates coarse Source rows for unknown names, mirroring
+    /// `ensureRelationshipSources`. Additive + idempotent.
+    package static func ensureAssociationSources(context: ModelContext) {
+        var byName: [String: Source] = [:]
+        for source in (try? context.fetch(FetchDescriptor<Source>())) ?? [] {
+            byName[source.name.lowercased()] = source
+        }
+
+        var changed = false
+
+        // Figure ↔ Place
+        for assoc in (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.figurePlaceAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.figurePlaceAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        // Place ↔ Place
+        for assoc in (try? context.fetch(FetchDescriptor<PlacePlaceAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.placePlaceAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.placePlaceAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        // Event ↔ Place
+        for assoc in (try? context.fetch(FetchDescriptor<EventPlaceAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.eventPlaceAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.eventPlaceAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        // Event ↔ Event
+        for assoc in (try? context.fetch(FetchDescriptor<EventEventAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.eventEventAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.eventEventAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        // Thing ↔ Figure
+        for assoc in (try? context.fetch(FetchDescriptor<ThingFigureAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.thingFigureAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.thingFigureAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        // Thing ↔ Place
+        for assoc in (try? context.fetch(FetchDescriptor<ThingPlaceAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.thingPlaceAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.thingPlaceAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        // Thing ↔ Event
+        for assoc in (try? context.fetch(FetchDescriptor<ThingEventAssociation>())) ?? [] where assoc.sourceRef == nil {
+            guard let name = Self.primarySourceName(from: assoc.source) else { continue }
+            let key = name.lowercased()
+            if let existing = byName[key] {
+                existing.thingEventAssociations.append(assoc)
+            } else {
+                let source = Source(name: name, sourceType: .ancientText, author: "", language: "", period: "", sourceDescription: "", publicationInfo: "", url: "")
+                context.insert(source)
+                source.thingEventAssociations.append(assoc)
+                byName[key] = source
+            }
+            assoc.sourceRef = byName[key]
+            changed = true
+        }
+
+        if changed { try? context.save() }
+    }
+
     private static func primarySourceName(from raw: String) -> String? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count >= 3 else { return nil }
@@ -3598,5 +3821,83 @@ extension Migration {
         }
 
         if changed { try? context.save() }
+    }
+
+    package static func backfillBuziDescription(context: ModelContext) {
+        guard let buzi = ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).first(where: { $0.name == "Buzi" }),
+              buzi.figureDescription.isEmpty else { return }
+        buzi.figureDescription = "Buzi was the father of Ezekiel and a priest of Jerusalem (Ezekiel 1:3). The name derives from the Hebrew word Buz, meaning 'despise.' Some traditions identify Buzi with the prophet Jeremiah, also called Buzi because he was despised by his compatriots in Judah."
+        try? context.save()
+    }
+
+    /// Import demons and monsters from demons_import.json.
+    /// Requires Demon FigureType to exist (ensureDemonFigureTypeExists).
+    /// Each imported figure gets a sticky note "IMPORTED — needs review".
+    /// Additive + idempotent.
+    package static func ensureDemonsImportExist(context: ModelContext) {
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
+
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "demons_import", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "demons_import", withExtension: "json")
+        }()
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+            return
+        }
+
+        let toImport = root.figures.filter { !existingNames.contains($0.name.lowercased()) }
+        guard !toImport.isEmpty else { return }
+
+        var filteredRoot = root
+        filteredRoot.figures = toImport
+        SeedData.importFrom(root: filteredRoot, context: context)
+
+        let stickyPrefix = "IMPORTED — needs review"
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let importedNames = Set(toImport.map { $0.name.lowercased() })
+        for figure in allFigures where importedNames.contains(figure.name.lowercased()) {
+            let alreadyHas = figure.stickies.contains { $0.text.hasPrefix(stickyPrefix) }
+            guard !alreadyHas else { continue }
+            context.insert(StickyNote(text: stickyPrefix, figure: figure))
+        }
+        try? context.save()
+    }
+
+    /// Import curated notable names from curated_names_import.json.
+    /// These are recognizable mythological figures from the broader An = Anum
+    /// attestation list that have Wikipedia articles or scholarly recognition.
+    /// Each imported figure gets a sticky note "IMPORTED — needs review".
+    /// Additive + idempotent.
+    package static func ensureCuratedNamesImportExist(context: ModelContext) {
+        let existingNames = Set((try? context.fetch(FetchDescriptor<Figure>()))?.map { $0.name.lowercased() } ?? [])
+
+        let url: URL? = {
+            if let u = Bundle.module.url(forResource: "curated_names_import", withExtension: "json") { return u }
+            return Bundle.main.url(forResource: "curated_names_import", withExtension: "json")
+        }()
+        guard let url,
+              let data = try? Data(contentsOf: url),
+              let root = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
+            return
+        }
+
+        let toImport = root.figures.filter { !existingNames.contains($0.name.lowercased()) }
+        guard !toImport.isEmpty else { return }
+
+        var filteredRoot = root
+        filteredRoot.figures = toImport
+        SeedData.importFrom(root: filteredRoot, context: context)
+
+        let stickyPrefix = "IMPORTED — needs review"
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let importedNames = Set(toImport.map { $0.name.lowercased() })
+        for figure in allFigures where importedNames.contains(figure.name.lowercased()) {
+            let alreadyHas = figure.stickies.contains { $0.text.hasPrefix(stickyPrefix) }
+            guard !alreadyHas else { continue }
+            context.insert(StickyNote(text: stickyPrefix, figure: figure))
+        }
+        try? context.save()
     }
 }

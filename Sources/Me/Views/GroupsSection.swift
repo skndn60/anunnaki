@@ -113,7 +113,7 @@ private struct GroupLinkPopover: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search groups...", text: $searchText)
+                TextField("Search groups", text: $searchText)
                     .textFieldStyle(.roundedBorder)
             }
 
@@ -150,7 +150,7 @@ private struct GroupLinkPopover: View {
                     Text("Note (optional):")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("e.g. chief deity of this council", text: $note)
+                    TextField("such as chief deity of this council", text: $note)
                         .textFieldStyle(.plain)
                         .padding(8)
                         .background(Color(.textBackgroundColor))
@@ -175,10 +175,7 @@ private struct GroupLinkPopover: View {
 
     private func createAssociation() {
         guard let group = selectedGroup else { return }
-        let assoc = FigureGroupAssociation(figure: figure, group: group, note: note)
-        modelContext.insert(assoc)
-        figure.groupAssociations.append(assoc)
-        group.figureAssociations.append(assoc)
+        RelationshipManager(context: modelContext).addGroupMember(group: group, figure: figure, note: note, dedupe: false)
         try? modelContext.save()
     }
 }

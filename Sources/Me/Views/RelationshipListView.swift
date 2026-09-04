@@ -310,16 +310,13 @@ struct RelationshipFormView: View {
             }
             for rel in existing { rel.isPreferred = false }
         }
-        let relationship = Relationship(
-            fromFigure: from, toFigure: to,
+        RelationshipManager(context: modelContext).addRelationship(
+            from: from, to: to, relationshipType: type,
             source: selectedSource?.name ?? "",
-            isPreferred: isPreferred
+            sourceRef: selectedSource,
+            isPreferred: isPreferred,
+            dedupe: false
         )
-        modelContext.insert(relationship)
-        type.relationships.append(relationship)
-        if let source = selectedSource {
-            source.relationships.append(relationship)
-        }
         try? modelContext.save()
         dismiss()
     }
@@ -339,16 +336,13 @@ struct RelationshipFormView: View {
             $0.relationshipType?.name == type.name
         }
         if existing.isEmpty {
-            let relationship = Relationship(
-                fromFigure: from, toFigure: to,
+            RelationshipManager(context: modelContext).addRelationship(
+                from: from, to: to, relationshipType: type,
                 source: selectedSource?.name ?? "",
-                isPreferred: false
+                sourceRef: selectedSource,
+                isPreferred: false,
+                dedupe: false
             )
-            modelContext.insert(relationship)
-            type.relationships.append(relationship)
-            if let source = selectedSource {
-                source.relationships.append(relationship)
-            }
             try? modelContext.save()
             dismiss()
         } else if type.category == "parent" {

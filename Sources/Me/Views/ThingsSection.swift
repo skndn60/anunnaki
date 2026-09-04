@@ -196,11 +196,7 @@ private struct ThingLinkPopover: View {
 
     private func createAssociation() {
         guard let thing = selectedThing, let role = selectedRole else { return }
-        let assoc = ThingFigureAssociation(figure: figure)
-        modelContext.insert(assoc)
-        figure.thingAssociations.append(assoc)
-        thing.figureAssociations.append(assoc)
-        role.associations.append(assoc)
+        RelationshipManager(context: modelContext).addThingFigureAssociation(thing: thing, figure: figure, roleType: role, dedupe: false)
         try? modelContext.save()
     }
 }

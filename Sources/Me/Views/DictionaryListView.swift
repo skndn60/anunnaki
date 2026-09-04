@@ -8,7 +8,7 @@ struct DictionaryListView: View {
     @State private var showingAddSheet = false
     @State private var editingEntry: DictionaryEntry?
     @State private var selectedEntryID: PersistentIdentifier?
-    @AppStorage("dictionaryDetailWidth") private var detailWidth: Double = 380
+    @DetailWidth(.dictionary) private var detailWidth
     @State private var showDeleteConfirm = false
     @State private var searchText = ""
     enum DictionarySortOrder: String, CaseIterable {
@@ -386,14 +386,14 @@ private struct DictionaryFormView: View {
 
             Form {
                 Section("Translation") {
-                    TextField("English (primary)", text: $english, prompt: Text("e.g. spouse"))
-                    TextField("Alternate English", text: $alternateEnglishText, prompt: Text("e.g. wife, husband"))
-                    TextField("Sumerian", text: $sumerian, prompt: Text("e.g. dam"))
-                    TextField("Part of Speech", text: $partOfSpeech, prompt: Text("e.g. noun, verb"))
-                    TextField("Pronunciation", text: $pronunciation, prompt: Text("e.g. shoe"))
+                    TextField("English (primary)", text: $english, prompt: Text("spouse"))
+                    TextField("Alternate English", text: $alternateEnglishText, prompt: Text("wife, husband"))
+                    TextField("Sumerian", text: $sumerian, prompt: Text("dam"))
+                    TextField("Part of Speech", text: $partOfSpeech, prompt: Text("noun, verb"))
+                    TextField("Pronunciation", text: $pronunciation, prompt: Text("shoe"))
                 }
                 Section("Cuneiform") {
-                    TextField("Cuneiform", text: $cuneiform, prompt: Text("e.g. \u{12000}\u{1229A}"))
+                    TextField("Cuneiform", text: $cuneiform, prompt: Text("\u{12000}\u{1229A}"))
                     if !nonCuneiformScalars.isEmpty {
                         Label {
                             Text("Contains \(nonCuneiformScalars.count) non-cuneiform character(s): ")

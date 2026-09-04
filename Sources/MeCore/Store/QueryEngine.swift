@@ -1251,10 +1251,6 @@ package class QueryEngine {
         let clean = cleanQueryText(remaining)
         guard !clean.isEmpty else { return nil }
 
-        if let result = matchDateRangeQuery(clean, entityRef: entityRef, entityName: entityName) {
-            return result
-        }
-
         let isChoice = clean.contains(" or ")
 
         switch entityRef {
@@ -1463,53 +1459,6 @@ package class QueryEngine {
             }
         }
         return false
-    }
-
-    private func matchDateRangeQuery(_ clean: String, entityRef: EntityRef, entityName: String) -> QueryResult? {
-        // "between X and Y", "from X to Y", "between X and Y bce" etc.
-        let pattern = "(?:between|from)\\s+([\\d,]+)\\s+(?:and|to)\\s+([\\d,]+)\\s*(bce|bce\\.|bc|b\\.c\\.|ce|ad|ae)?"
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
-        let range = NSRange(clean.startIndex..., in: clean)
-        guard let match = regex.firstMatch(in: clean, range: range) else { return nil }
-
-        func yearGroup(_ index: Int) -> Int? {
-            let g = Range(match.range(at: index), in: clean).flatMap { Int(String(clean[$0]).replacingOccurrences(of: ",", with: "")) }
-            return g
-        }
-        guard let start = yearGroup(1), let end = yearGroup(2) else { return nil }
-
-        let eraWord: String
-        if let eraRange = Range(match.range(at: 3), in: clean) {
-            eraWord = String(clean[eraRange]).lowercased()
-        } else {
-            eraWord = ""
-        }
-        let isBCE = eraWord.contains("b")
-        let multiplier = isBCE ? -1 : 1
-        let queryStart = start * multiplier
-        let queryEnd = end * multiplier
-
-        let date: MythologicalDate
-        switch entityRef {
-        case .event(let event):
-            date = event.date
-        case .figure(let figure):
-            date = figure.birthDate
-        default:
-            return nil
-        }
-
-        let storedStart = date.startYear
-        let storedEnd = date.endYear
-        guard let storedStart, let storedEnd else { return nil }
-
-        let overlaps = storedStart <= queryEnd && storedEnd >= queryStart
-        let suffix = isBCE ? "BCE" : "CE"
-        if overlaps {
-            return .answer("Yes, \(entityName) occurred between \(start) and \(end) \(suffix) (recorded as \(date.displayLabel)).")
-        } else {
-            return .answer("No, \(entityName) is recorded as occurring in \(date.displayLabel), not between \(start) and \(end) \(suffix).")
-        }
     }
 
     private func handleEntityTypeCheck(_ clean: String, entityName: String, typeName: String, isChoice: Bool) -> QueryResult? {

@@ -8,7 +8,7 @@ struct SumerianKingListView: View {
     @Query private var figures: [Figure]
     @Query(sort: \Era.orderIndex) private var eras: [Era]
 
-    @AppStorage("sklDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.skl) private var detailWidth
     @State private var selectedFigureID: PersistentIdentifier?
     @State private var imageDetailImage: ImageAsset?
     @State private var showDeleteConfirm = false
@@ -146,7 +146,7 @@ struct SumerianKingListView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         if let s = dynasty.startBCE, let e = dynasty.endBCE {
-                            Text("c. \(abs(s))\u{2013}\(abs(e)) BC")
+                            Text("c. \(abs(s))\u{2013}\(abs(e)) BCE")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }

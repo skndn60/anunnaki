@@ -135,196 +135,10 @@ struct PopupTableView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(table.name)
-                    .font(.title2)
-                if !table.tableDescription.isEmpty {
-                    Text(table.tableDescription)
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                }
-                if let tableSource = table.source, !tableSource.isEmpty {
-                    SourceFootnoteView(
-                        sourceName: tableSource,
-                        url: table.sourceRef.flatMap { $0.url.isEmpty ? nil : URL(string: $0.url) }
-                    )
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .padding(.vertical, 3)
-                }
-            }
-            .padding()
-
+            headerSection
             Divider()
-
-            if columns.isEmpty || sortedAttributes.isEmpty {
-                VStack(spacing: 12) {
-                    Spacer()
-                    Image(systemName: "tablecells")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary)
-                    Text(columns.isEmpty ? (table.columnMode == .strings ? "No columns in this table" : "No figures in this table") : "No attributes defined")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Text(table.columnMode == .strings ? "Add columns and attributes in the table settings" : "Add figures and attributes in the table settings")
-                        .font(.body)
-                        .foregroundStyle(.tertiary)
-                    Spacer()
-                }
-            } else {
-                ScrollView(.vertical) {
-                    HStack(alignment: .top, spacing: 0) {
-                        // Frozen row-label column: scrolls vertically with the rows
-                        // but never horizontally, so the attribute names stay visible.
-                        VStack(spacing: 1) {
-                            Rectangle()
-                                .fill(Color(nsColor: .controlBackgroundColor))
-                                .frame(width: rowHeaderWidth, height: headerHeight + 5)
-                            ForEach(sortedAttributes) { attribute in
-                                AttributeRowHeader(attribute: attribute)
-                                    .frame(width: rowHeaderWidth)
-                                    .frame(height: rowHeights[attribute.persistentModelID] ?? rowHeight)
-                            }
-                        }
-                        .padding(1)
-                        .background(Color(nsColor: .separatorColor))
-
-                        // Data area: header row + cells, scrolls horizontally. The
-                        // header row shares this scroll so it always lines up with
-                        // the columns (the blank corner cell is its first slot).
-                        ScrollView(.horizontal) {
-                            VStack(spacing: 1) {
-                                HStack(spacing: 1) {
-                                    ForEach(columns) { column in
-                                        let width = columnWidth(for: column)
-                                        ZStack(alignment: .trailing) {
-                                            columnHeader(column)
-                                                .frame(width: width, height: headerHeight)
-                                            ColumnResizeHandle(
-                                                isActive: resizingColumnID == column.id,
-                                                isHovered: hoveredColumnID == column.id
-                                            )
-                                            .frame(width: 24, height: headerHeight)
-                                            .gesture(columnResizeGesture(for: column))
-                                            .onHover { hovering in
-                                                if hovering {
-                                                    hoveredColumnID = column.id
-                                                    NSCursor.resizeLeftRight.set()
-                                                } else if hoveredColumnID == column.id {
-                                                    hoveredColumnID = nil
-                                                    NSCursor.arrow.set()
-                                                }
-                                            }
-                                        }
-                                        .frame(width: width, height: headerHeight)
-                                    }
-                                }
-                                .background(Color(nsColor: .controlBackgroundColor))
-
-                                Rectangle()
-                                    .fill(headerHovered || headerHeightStart != nil ? Color.accentColor.opacity(0.1) : Color(nsColor: .windowBackgroundColor))
-                                    .frame(height: 5)
-                                    .contentShape(Rectangle())
-                                    .gesture(headerHeightGesture())
-                                    .onHover { hovering in
-                                        headerHovered = hovering
-                                        if hovering || headerHeightStart != nil { NSCursor.resizeUpDown.set() }
-                                        else { NSCursor.arrow.set() }
-                                    }
-                                    .help("Drag to resize the header row height")
-
-                                ForEach(sortedAttributes) { attribute in
-                                    HStack(spacing: 1) {
-                                        ForEach(columns) { column in
-                                            let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
-                                            CellView(
-                                                value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
-                                                sourceNumbers: footnoteNumbers(for: key),
-                                                comment: cellComments[key] ?? "",
-                                                onOpen: {
-                                                    activeCell = ActiveCell(
-                                                        attributeID: attribute.persistentModelID,
-                                                        columnID: column.id,
-                                                        attributeName: attribute.name,
-                                                        columnName: columnName(column),
-                                                        sources: cellSourceNames[key] ?? []
-                                                    )
-                                                },
-                                                onEditComment: {
-                                                    commentTarget = ActiveCell(
-                                                        attributeID: attribute.persistentModelID,
-                                                        columnID: column.id,
-                                                        attributeName: attribute.name,
-                                                        columnName: columnName(column),
-                                                        sources: cellSourceNames[key] ?? []
-                                                    )
-                                                }
-                                            )
-                                            .frame(width: columnWidth(for: column))
-                                            .frame(minHeight: rowHeight)
-                                        }
-                                    }
-                                    .background(GeometryReader { proxy in
-                                        Color.clear.preference(
-                                            key: RowHeightPreferenceKey.self,
-                                            value: [attribute.persistentModelID: proxy.size.height]
-                                        )
-                                    })
-                                }
-                            }
-                            .padding(1)
-                            .background(Color(nsColor: .separatorColor))
-                        }
-                    }
-
-                    // Footnote block: numbered source references, under the grid.
-                    // Stays inside the vertical scroll so it scrolls with content.
-                    if !tableFootnotes.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Divider()
-                                .padding(.top, 6)
-                            ForEach(tableFootnotes) { footnote in
-                                HStack(spacing: 6) {
-                                    Text("\(footnote.id)")
-                                        .font(.caption2.monospacedDigit())
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 16, alignment: .trailing)
-                                    SourceFootnoteView(sourceName: footnote.sourceName, url: footnote.url)
-                                }
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 8)
-                    }
-                }
-                .onPreferenceChange(RowHeightPreferenceKey.self) { rowHeights = $0 }
-            }
-
-            Divider()
-
-            HStack(spacing: 12) {
-                Spacer()
-                Button("Close") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                GridScaleHandle(columnScale: columnScale, rowScale: rowScale, isDragging: scaleStart != nil)
-                    .gesture(gridScaleGesture())
-                    .help("Drag to scale the whole grid. Hold ⇧ for width only, ⌃ for height only.")
-                Text("\(Int((columnScale * 100).rounded()))% × \(Int((rowScale * 100).rounded()))%")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .frame(minWidth: 76, alignment: .leading)
-                Button {
-                    resetGridScale()
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.caption)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .disabled(columnScale == 1.0 && rowScale == 1.0 && storedColumnWidthPoints.isEmpty)
-                .help("Reset table to default width, scale, and size")
-            }
-            .padding()
+            gridOrEmpty
+            footerBar
         }
         .frame(width: tableSize.width, height: tableSize.height)
         .background(WindowAccessor { window in
@@ -358,6 +172,200 @@ struct PopupTableView: View {
                 onClose: { commentTarget = nil }
             )
         }
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(table.name)
+                .font(.title2)
+            if !table.tableDescription.isEmpty {
+                Text(table.tableDescription)
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+            }
+            if let tableSource = table.source, !tableSource.isEmpty {
+                SourceFootnoteView(
+                    sourceName: tableSource,
+                    url: table.sourceRef.flatMap { $0.url.isEmpty ? nil : URL(string: $0.url) }
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.vertical, 3)
+            }
+        }
+        .padding()
+    }
+
+    @ViewBuilder
+    private var gridOrEmpty: some View {
+        if columns.isEmpty || sortedAttributes.isEmpty {
+            VStack(spacing: 12) {
+                Spacer()
+                Image(systemName: "tablecells")
+                    .font(.system(size: 48))
+                    .foregroundStyle(.secondary)
+                Text(columns.isEmpty ? (table.columnMode == .strings ? "No columns in this table" : "No figures in this table") : "No attributes defined")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                Text(table.columnMode == .strings ? "Add columns and attributes in the table settings" : "Add figures and attributes in the table settings")
+                    .font(.body)
+                    .foregroundStyle(.tertiary)
+                Spacer()
+            }
+        } else {
+            ScrollView(.vertical) {
+                HStack(alignment: .top, spacing: 0) {
+                    // Frozen row-label column: scrolls vertically with the rows
+                    // but never horizontally, so the attribute names stay visible.
+                    VStack(spacing: 1) {
+                        Rectangle()
+                            .fill(Color(nsColor: .controlBackgroundColor))
+                            .frame(width: rowHeaderWidth, height: headerHeight + 5)
+                        ForEach(sortedAttributes) { attribute in
+                            AttributeRowHeader(attribute: attribute)
+                                .frame(width: rowHeaderWidth)
+                                .frame(height: rowHeights[attribute.persistentModelID] ?? rowHeight)
+                        }
+                    }
+                    .padding(1)
+                    .background(Color(nsColor: .separatorColor))
+
+                    // Data area: header row + cells, scrolls horizontally. The
+                    // header row shares this scroll so it always lines up with
+                    // the columns (the blank corner cell is its first slot).
+                    ScrollView(.horizontal) {
+                        VStack(spacing: 1) {
+                            HStack(spacing: 1) {
+                                ForEach(columns) { column in
+                                    let width = columnWidth(for: column)
+                                    ZStack(alignment: .trailing) {
+                                        columnHeader(column)
+                                            .frame(width: width, height: headerHeight)
+                                        ColumnResizeHandle(
+                                            isActive: resizingColumnID == column.id,
+                                            isHovered: hoveredColumnID == column.id
+                                        )
+                                        .frame(width: 24, height: headerHeight)
+                                        .gesture(columnResizeGesture(for: column))
+                                        .onHover { hovering in
+                                            if hovering {
+                                                hoveredColumnID = column.id
+                                                NSCursor.resizeLeftRight.set()
+                                            } else if hoveredColumnID == column.id {
+                                                hoveredColumnID = nil
+                                                NSCursor.arrow.set()
+                                            }
+                                        }
+                                    }
+                                    .frame(width: width, height: headerHeight)
+                                }
+                            }
+                            .background(Color(nsColor: .controlBackgroundColor))
+
+                            Rectangle()
+                                .fill(headerHovered || headerHeightStart != nil ? Color.accentColor.opacity(0.1) : Color(nsColor: .windowBackgroundColor))
+                                .frame(height: 5)
+                                .contentShape(Rectangle())
+                                .gesture(headerHeightGesture())
+                                .onHover { hovering in
+                                    headerHovered = hovering
+                                    if hovering || headerHeightStart != nil { NSCursor.resizeUpDown.set() }
+                                    else { NSCursor.arrow.set() }
+                                }
+                                .help("Drag to resize the header row height")
+
+                            ForEach(sortedAttributes) { attribute in
+                                HStack(spacing: 1) {
+                                    ForEach(columns) { column in
+                                        let key = cellKey(attributeID: attribute.persistentModelID, columnID: column.id)
+                                        CellView(
+                                            value: cellBinding(attributeID: attribute.persistentModelID, columnID: column.id),
+                                            sourceNumbers: footnoteNumbers(for: key),
+                                            comment: cellComments[key] ?? "",
+                                            onOpen: {
+                                                activeCell = ActiveCell(
+                                                    attributeID: attribute.persistentModelID,
+                                                    columnID: column.id,
+                                                    attributeName: attribute.name,
+                                                    columnName: columnName(column),
+                                                    sources: cellSourceNames[key] ?? []
+                                                )
+                                            },
+                                            onEditComment: {
+                                                commentTarget = ActiveCell(
+                                                    attributeID: attribute.persistentModelID,
+                                                    columnID: column.id,
+                                                    attributeName: attribute.name,
+                                                    columnName: columnName(column),
+                                                    sources: cellSourceNames[key] ?? []
+                                                )
+                                            }
+                                        )
+                                        .frame(width: columnWidth(for: column))
+                                        .frame(minHeight: rowHeight)
+                                    }
+                                }
+                                .background(GeometryReader { proxy in
+                                    Color.clear.preference(
+                                        key: RowHeightPreferenceKey.self,
+                                        value: [attribute.persistentModelID: proxy.size.height]
+                                    )
+                                })
+                            }
+                        }
+                        .padding(1)
+                        .background(Color(nsColor: .separatorColor))
+                    }
+                }
+
+                // Footnote block: numbered source references, under the grid.
+                // Stays inside the vertical scroll so it scrolls with content.
+                if !tableFootnotes.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Divider()
+                            .padding(.top, 6)
+                        ForEach(tableFootnotes) { footnote in
+                            HStack(spacing: 6) {
+                                Text("\(footnote.id)")
+                                    .font(.caption2.monospacedDigit())
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 16, alignment: .trailing)
+                                SourceFootnoteView(sourceName: footnote.sourceName, url: footnote.url)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 8)
+                }
+            }
+            .onPreferenceChange(RowHeightPreferenceKey.self) { rowHeights = $0 }
+        }
+    }
+
+    private var footerBar: some View {
+        HStack(spacing: 12) {
+            Spacer()
+            Button("Close") { dismiss() }
+                .keyboardShortcut(.cancelAction)
+            GridScaleHandle(columnScale: columnScale, rowScale: rowScale, isDragging: scaleStart != nil)
+                .gesture(gridScaleGesture())
+                .help("Drag to scale the whole grid. Hold ⇧ for width only, ⌃ for height only.")
+            Text("\(Int((columnScale * 100).rounded()))% × \(Int((rowScale * 100).rounded()))%")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 76, alignment: .leading)
+            Button {
+                resetGridScale()
+            } label: {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.caption)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .disabled(columnScale == 1.0 && rowScale == 1.0 && storedColumnWidthPoints.isEmpty)
+            .help("Reset table to default width, scale, and size")
+        }
+        .padding()
     }
 
     @ViewBuilder
@@ -918,14 +926,14 @@ private struct CellEditPopover: View {
             }
             Divider()
             VStack(alignment: .leading, spacing: 4) {
-                Text("VALUE")
+                Text("Value")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 RichTextEditorSection(richData: $richValue, plainText: $value)
                     .frame(maxHeight: .infinity)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("COMMENT")
+                Text("Comment")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 Button {
@@ -949,7 +957,7 @@ private struct CellEditPopover: View {
                 .help(hasComment ? "Edit this cell's comment" : "Add a comment to this cell")
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("SOURCES")
+                Text("Sources")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                 if sourceEntries.isEmpty {
@@ -1002,7 +1010,7 @@ private struct CellEditPopover: View {
                     .buttonStyle(.plain)
                 }
                 HStack(spacing: 6) {
-                    TextField("Location (e.g. Tablet V, lines 120\u{2013}143)", text: $newLocation)
+                    TextField("Location (such as Tablet V, lines 120\u{2013}143)", text: $newLocation)
                         .textFieldStyle(.roundedBorder)
                 }
             }

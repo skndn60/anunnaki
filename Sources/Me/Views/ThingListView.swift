@@ -10,7 +10,7 @@ struct ThingListView: View {
     @State private var showingAddSheet = false
     @State private var editingThing: Thing?
     @State private var selectedThingID: PersistentIdentifier?
-    @AppStorage("thingDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.thing) private var detailWidth
     @State private var showDeleteConfirm = false
     @State private var showingAddFigureAssociation = false
     @State private var showingAddPlaceAssociation = false
@@ -440,8 +440,7 @@ struct ThingDetailView: View {
 
                 // Stickies
                 StickyNoteSection(stickies: thing.stickies) { text in
-                    let note = StickyNote(text: text, thing: thing)
-                    modelContext.insert(note)
+                    RelationshipManager(context: modelContext).addStickyNote(to: thing, text: text)
                 }
 
                 Divider()
@@ -541,10 +540,7 @@ struct ThingDetailView: View {
                 EntityGroupsSection(
                     associations: thing.groupAssociations,
                     onCreateAssociation: { group in
-                        let assoc = FigureGroupAssociation(thing: thing)
-                        modelContext.insert(assoc)
-                        thing.groupAssociations.append(assoc)
-                        group.figureAssociations.append(assoc)
+                        RelationshipManager(context: modelContext).addGroupMember(group: group, thing: thing, dedupe: false)
                         try? modelContext.save()
                     },
                     onRemove: { assoc in
@@ -755,14 +751,13 @@ struct AddThingFigureAssociationForm: View {
 
     private func save() {
         guard let figure = selectedFigure?.figure else { return }
-        let assoc = ThingFigureAssociation(
-            thing: thing,
-            figure: figure,
-            roleType: selectedRoleType,
+        RelationshipManager(context: modelContext).addThingFigureAssociation(
+            thing: thing, figure: figure, roleType: selectedRoleType,
             source: selectedSource?.name ?? "",
-            displayName: selectedFigure?.matchedAlternateName
+            sourceRef: selectedSource,
+            displayName: selectedFigure?.matchedAlternateName,
+            dedupe: false
         )
-        modelContext.insert(assoc)
         dismiss()
     }
 }
@@ -857,13 +852,10 @@ struct AddThingPlaceAssociationForm: View {
 
     private func save() {
         guard let place = selectedPlace else { return }
-        let assoc = ThingPlaceAssociation(
-            thing: thing,
-            place: place,
-            roleType: selectedRoleType,
-            source: selectedSource?.name ?? ""
+        RelationshipManager(context: modelContext).addThingPlaceAssociation(
+            thing: thing, place: place, roleType: selectedRoleType,
+            source: selectedSource?.name ?? "", sourceRef: selectedSource, dedupe: false
         )
-        modelContext.insert(assoc)
         dismiss()
     }
 }
@@ -958,13 +950,10 @@ struct AddThingEventAssociationForm: View {
 
     private func save() {
         guard let event = selectedEvent else { return }
-        let assoc = ThingEventAssociation(
-            thing: thing,
-            event: event,
-            roleType: selectedRoleType,
-            source: selectedSource?.name ?? ""
+        RelationshipManager(context: modelContext).addThingEventAssociation(
+            thing: thing, event: event, roleType: selectedRoleType,
+            source: selectedSource?.name ?? "", sourceRef: selectedSource, dedupe: false
         )
-        modelContext.insert(assoc)
         dismiss()
     }
 }

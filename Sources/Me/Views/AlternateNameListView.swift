@@ -259,7 +259,7 @@ struct AlternateNameFormView: View {
                 }
 
                 Section("Alternate Name") {
-                    TextField("Name", text: $name, prompt: Text("e.g. Ea, Ptah, Ishtar"))
+                    TextField("Name", text: $name, prompt: Text("Ea, Ptah, Ishtar"))
                     Picker("Tradition", selection: $tradition) {
                         ForEach(AlternateName.Tradition.allCases, id: \.self) { t in
                             Text(t.rawValue).tag(t)
@@ -273,7 +273,7 @@ struct AlternateNameFormView: View {
                 }
 
                 Section("Note") {
-                    TextField("Note", text: $note, prompt: Text("e.g. Identified by Herodotus"))
+                    TextField("Note", text: $note, prompt: Text("Identified by Herodotus"))
                 }
             }
             .formStyle(.grouped)
@@ -447,13 +447,12 @@ struct AlternateNameFormView: View {
             alternateName.nameType = nameType
             alternateName.note = note
         } else {
-            let newAltName = AlternateName(
-                figure: selectedFigure,
-                place: selectedPlace,
-                name: name, tradition: tradition,
-                nameType: nameType, note: note
-            )
-            modelContext.insert(newAltName)
+            let manager = RelationshipManager(context: modelContext)
+            if let figure = selectedFigure {
+                manager.addAlternateName(to: figure, name: name, tradition: tradition, nameType: nameType, note: note, dedupe: false)
+            } else if let place = selectedPlace {
+                manager.addAlternateName(to: place, name: name, tradition: tradition, nameType: nameType, note: note, dedupe: false)
+            }
         }
         dismiss()
     }

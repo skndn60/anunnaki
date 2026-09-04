@@ -123,7 +123,7 @@ struct EventFormView: View {
     private var identityStep: some View {
         Form {
             Section("Event Details") {
-                TextField("Name", text: $name, prompt: Text("e.g. Slaying of Tiamat"))
+                TextField("Name", text: $name, prompt: Text("Slaying of Tiamat"))
                     .textFieldStyle(.roundedBorder)
                     .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                 if let duplicate = duplicateNameWarning {
@@ -143,7 +143,7 @@ struct EventFormView: View {
                     }
                 }
                 SourcePickerView(selection: $selectedSource, sources: sources)
-                TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
+                TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("Flood for \"The Great Flood\""))
                     .textFieldStyle(.roundedBorder)
             }
         }
@@ -378,11 +378,12 @@ struct EventFormView: View {
             event.isConcept = false
             event.involvedFigures = selectedFigs
             for assoc in event.placeAssociations { modelContext.delete(assoc) }
-            event.placeAssociations = placeSelections.map { sel in
-                let assoc = EventPlaceAssociation(event: event, place: sel.place, roleType: sel.roleType)
-                modelContext.insert(assoc)
-                return assoc
+            let manager = RelationshipManager(context: modelContext)
+            var newPlaceAssocs: [EventPlaceAssociation] = []
+            for sel in placeSelections {
+                newPlaceAssocs.append(manager.addEventPlaceAssociation(event: event, place: sel.place, roleType: sel.roleType, sourceRef: selectedSource, dedupe: false))
             }
+            event.placeAssociations = newPlaceAssocs
             event.tags = selectedTags
             RecentEditStore.trackEdit(entityType: "Event", entityName: event.name)
             ActivityLogger.record(action: .updated, entityType: "Event", entityName: event.name, context: modelContext, session: userSession)
@@ -397,12 +398,12 @@ struct EventFormView: View {
             newEvent.tags = selectedTags
             newEvent.richDescription = richDescription
             modelContext.insert(newEvent)
+            let manager = RelationshipManager(context: modelContext)
+            for sel in placeSelections {
+                manager.addEventPlaceAssociation(event: newEvent, place: sel.place, roleType: sel.roleType, sourceRef: selectedSource, dedupe: false)
+            }
             RecentEditStore.trackEdit(entityType: "Event", entityName: newEvent.name)
             ActivityLogger.record(action: .created, entityType: "Event", entityName: newEvent.name, context: modelContext, session: userSession)
-            for sel in placeSelections {
-                let assoc = EventPlaceAssociation(event: newEvent, place: sel.place, roleType: sel.roleType)
-                modelContext.insert(assoc)
-            }
         }
         try? modelContext.save()
         showSuccessAlert = true

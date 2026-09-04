@@ -44,7 +44,7 @@ struct DuplicateMergeView: View {
                     Image(systemName: "checkmark.seal")
                         .font(.system(size: 36))
                         .foregroundStyle(.secondary)
-                    Text("No duplicate names found.")
+                    Text("No duplicate names found")
                         .font(.callout)
                     Text("Entities are matched case-insensitively by name.")
                         .font(.caption)

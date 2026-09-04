@@ -10,7 +10,7 @@ struct BackupSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Backup & Restore")
+            Text("Backup and Restore")
                 .font(.title2.bold())
 
             Text("Create a full snapshot of your database, or restore from an earlier one. Backups are copies of the entire store and include everything: figures, places, events, things, groups, sources, and their relationships.")

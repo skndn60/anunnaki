@@ -385,7 +385,7 @@ struct ContentAttributionSection: View {
             }
 
             if attributions.isEmpty {
-                Text("No attributions recorded.")
+                Text("No attributions recorded")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {

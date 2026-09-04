@@ -119,7 +119,7 @@ struct EntityGroupsSection: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search groups...", text: $searchText)
+                TextField("Search groups", text: $searchText)
                     .textFieldStyle(.roundedBorder)
             }
 

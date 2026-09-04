@@ -13,7 +13,7 @@ struct EventListView: View {
     @State private var selectedEventID: PersistentIdentifier?
     @State private var sortOrder: EventSortOrder = .name
     @State private var imageDetailImage: ImageAsset?
-    @AppStorage("eventDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.event) private var detailWidth
     @State private var showDeleteConfirm = false
     @State private var selectedTypeFilters: Set<String> = []
     @Query(sort: \EventType.name) private var eventTypes: [EventType]

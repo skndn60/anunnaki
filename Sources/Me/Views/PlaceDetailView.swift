@@ -58,516 +58,7 @@ struct PlaceDetailView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                if let backLabel, let onBack {
-                    Button(action: onBack) {
-                        HStack(spacing: 4) {
-                            Image(systemName: "chevron.left")
-                                .font(.caption2.weight(.semibold))
-                            Text("Back to \(backLabel)")
-                                .font(.caption)
-                        }
-                        .foregroundColor(.accentColor)
-                    }
-                    .buttonStyle(.plain)
-                    .pointingHand()
-                }
-
-                // Header
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(Color.teal.opacity(0.2))
-                        .frame(width: 44, height: 44)
-                        .overlay(
-                            Image(systemName: placeIcon)
-                                .foregroundStyle(.teal)
-                        )
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(place.name)
-                            .font(.title2.bold())
-                        Text(place.placeType?.name ?? "City")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    if place.isConcept {
-                        Text("Concept")
-                            .font(.caption2)
-                            .foregroundStyle(.orange)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(.orange.opacity(0.12))
-                            )
-                    }
-
-                    if place.latitude != nil, place.longitude != nil {
-                        MapPreviewPopoverButton(place: place)
-                    }
-
-                    Button {
-                        editRichDescription = place.richDescription
-                        editPlainDescription = place.placeDescription
-                        showDescriptionEditor = true
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help("Edit description")
-                }
-                .sheet(isPresented: $showDescriptionEditor) {
-                    DescriptionEditorSheet(
-                        entityName: place.name,
-                        richDescription: $editRichDescription,
-                        plainDescription: $editPlainDescription
-                    )
-                    .onDisappear {
-                        place.richDescription = editRichDescription
-                        place.placeDescription = editPlainDescription
-                        try? modelContext.save()
-                    }
-                }
-
-                // Stickies
-                StickyNoteSection(stickies: place.stickies) { text in
-                    let note = StickyNote(text: text, place: place)
-                    modelContext.insert(note)
-                }
-
-                Divider()
-
-                // Properties
-                LazyVGrid(columns: [GridItem(.fixed(110), alignment: .trailing), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 10) {
-                    if !place.source.isEmpty {
-                        PropertyRow(label: "Source", value: place.source)
-                    }
-                    if let founded = place.foundedDate, founded != .unknown {
-                        PropertyRow(label: "Founded", value: founded.displayLabel)
-                    }
-                }
-                if !place.modernLocation.isEmpty {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Modern Location")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        Text(place.modernLocation)
-                            .font(.callout)
-                            .textSelection(.enabled)
-                    }
-                }
-
-                // Historical map
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Map")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-                    HistoricalMapView(place: place)
-                        .frame(height: 260)
-                }
-
-                // Description
-                if !place.placeDescription.isEmpty || place.richDescription != nil {
-                    AttributedPropertyView(attributions: placeAttributions, propertyName: "placeDescription") {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Description")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
-                            LinkedDescription(text: place.placeDescription, richData: place.richDescription)
-                                .font(.body)
-                        }
-                    }
-                }
-
-                // Attributions
-                ContentAttributionSection(
-                    attributions: placeAttributions,
-                    onAdd: { showAddAttribution = true },
-                    onEdit: { editingAttribution = $0 },
-                    onDelete: { attribution in
-                        attributionToDelete = attribution
-                        showDeleteAttributionConfirm = true
-                    }
-                )
-
-                // Alternate Names
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Also Known As")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        Spacer()
-                        Button {
-                            showAddAltSheet = true
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Add alternate name")
-                    }
-
-                    if place.alternateNames.isEmpty {
-                        Text("No alternate names")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    } else {
-                        ForEach(place.alternateNames) { altName in
-                            HStack(spacing: 8) {
-                                Text(altName.name)
-                                    .font(.callout)
-                                    .fontWeight(.medium)
-                                Text(altName.tradition.rawValue)
-                                    .font(.caption2)
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 2)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 3)
-                                            .fill(Color.secondary.opacity(0.1))
-                                    )
-                                Text(altName.nameType.rawValue)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                Spacer()
-                                Button(action: {
-                                    altToDelete = altName
-                                    showDeleteAltConfirm = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.red.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Delete alternate name")
-                            }
-                            if !altName.note.isEmpty {
-                                Text(altName.note)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .padding(.leading, 4)
-                            }
-                        }
-                    }
-                }
-
-                // Place associations (containment, proximity, etc.)
-                if !placeAssociations.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Related Places")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        ForEach(placeAssociations) { assoc in
-                            HStack(spacing: 8) {
-                                if assoc.fromPlace == place {
-                                    Text(assoc.toPlace?.name ?? "?")
-                                        .font(.callout)
-                                        .fontWeight(.medium)
-                                    Text(assoc.roleType?.displayName(isReverse: false) ?? "—")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Text("←")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                    Text(place.name)
-                                        .font(.callout)
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text(place.name)
-                                        .font(.callout)
-                                        .foregroundStyle(.secondary)
-                                    Text("→")
-                                        .font(.caption)
-                                        .foregroundStyle(.tertiary)
-                                    Text(assoc.roleType?.displayName(isReverse: true) ?? "—")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Text(assoc.fromPlace?.name ?? "?")
-                                        .font(.callout)
-                                        .fontWeight(.medium)
-                                }
-                                Spacer()
-                                Text(assoc.source)
-                                    .font(.caption2)
-                                    .foregroundStyle(.tertiary)
-                                    .lineLimit(1)
-                                Button(action: {
-                                    assocToDelete = assoc
-                                    showDeleteAssocConfirm = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.red.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Delete association")
-                            }
-                        }
-                    }
-                }
-
-                // Events at this place
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Events Here")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        Spacer()
-                        Button(action: { showEventLinkPopover = true }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Link an event")
-                        .popover(isPresented: $showEventLinkPopover) {
-                            PlaceEventLinkPopover(
-                                place: place,
-                                searchText: $eventSearchText,
-                                selectedEvent: $selectedEventForLink,
-                                selectedRole: $selectedEventRole,
-                                isPresented: $showEventLinkPopover
-                            )
-                            .frame(width: 340, height: 400)
-                        }
-                    }
-
-                    if relatedEvents.isEmpty {
-                        Text("No events linked")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .padding(.vertical, 4)
-                    } else {
-                        ForEach(relatedEvents) { event in
-                            HStack(spacing: 8) {
-                                Image(systemName: eventIcon(event.eventType))
-                                    .font(.caption)
-                                    .foregroundStyle(eventColor(event.eventType))
-                                    .frame(width: 14)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Button(action: { onSelectEvent?(event) }) {
-                                        Text(event.name)
-                                            .font(.callout)
-                                            .fontWeight(.medium)
-                                            .foregroundStyle(Color.accentColor)
-                                            .underline()
-                                    }
-                                    .buttonStyle(.plain)
-                                    .pointingHand()
-                                    Text(event.date.displayLabel)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                Spacer()
-                                Button(action: {
-                                    eventAssocToDelete = place.eventAssociations.first { $0.event?.persistentModelID == event.persistentModelID }
-                                    showDeleteEventAssocConfirm = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.red.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Delete association")
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                }
-
-                // All figures (direct associations + event-derived)
-                let allFigures = { () -> [Figure] in
-                    let direct = place.figureAssociations.compactMap { $0.figure }
-                    var seen = Set<PersistentIdentifier>()
-                    var result: [Figure] = []
-                    for fig in direct + relatedFigures {
-                        if seen.insert(fig.persistentModelID).inserted {
-                            result.append(fig)
-                        }
-                    }
-                    return result
-                }()
-
-                let figureDisplayNames: [PersistentIdentifier: String] = Dictionary(
-                    place.figureAssociations.compactMap { assoc in
-                        guard let fig = assoc.figure, let name = assoc.displayName, !name.isEmpty else { return nil }
-                        return (fig.persistentModelID, name)
-                    },
-                    uniquingKeysWith: { first, _ in first }
-                )
-
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text("Associated Figures")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-                        Spacer()
-                        Button(action: { showFigureLinkPopover = true }) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Link a figure")
-                        .popover(isPresented: $showFigureLinkPopover) {
-                            PlaceFigureLinkPopover(
-                                place: place,
-                                searchText: $figureSearchText,
-                                selectedFigure: $selectedFigureForLink,
-                                selectedRole: $selectedFigureRole,
-                                isPresented: $showFigureLinkPopover
-                            )
-                            .frame(width: 340, height: 400)
-                        }
-                    }
-
-                    if allFigures.isEmpty {
-                        Text("No figures linked")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .padding(.vertical, 4)
-                    } else {
-                        FlowLayout(spacing: 6) {
-                            ForEach(allFigures) { figure in
-                                HStack(spacing: 3) {
-                                    Button(action: { onSelectFigure?(figure) }) {
-                                        HStack(spacing: 3) {
-                                            Text(figure.gender.symbol)
-                                                .font(.system(size: 9))
-                                            Text(figureDisplayNames[figure.persistentModelID].map { "\(figure.name) as \($0)" } ?? figure.name)
-                                                .font(.caption)
-                                        }
-                                    }
-                                    .buttonStyle(.plain)
-                                    .pointingHand()
-                                    if let assoc = place.figureAssociations.first(where: { $0.figure?.persistentModelID == figure.persistentModelID }) {
-                                        Button(action: {
-                                            figureAssocToDelete = assoc
-                                            showDeleteFigureAssocConfirm = true
-                                        }) {
-                                            Image(systemName: "xmark.circle.fill")
-                                                .font(.system(size: 10))
-                                                .foregroundStyle(.secondary)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .help("Delete association")
-                                    }
-                                }
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, 3)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 4)
-                                        .fill(figure.figureType?.color.opacity(0.1) ?? .gray.opacity(0.1))
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Images
-                Divider()
-                ImageGallery(
-                    title: "Images",
-                    images: place.images,
-                    onLinkImage: { asset in
-                        place.images.append(asset)
-                    },
-                    onSelectImage: onSelectImage
-                )
-
-                // Tags
-                if !place.tags.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Tags")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        FlowLayout(spacing: 4) {
-                            ForEach(place.tags) { tag in
-                                TagTokenView(tag: tag, onRemove: {
-                                    tagToRemove = tag
-                                    showRemoveTagConfirm = true
-                                })
-                            }
-                        }
-                    }
-                }
-
-                // Groups
-                EntityGroupsSection(
-                    associations: place.groupAssociations,
-                    onCreateAssociation: { group in
-                        let assoc = FigureGroupAssociation(place: place)
-                        modelContext.insert(assoc)
-                        place.groupAssociations.append(assoc)
-                        group.figureAssociations.append(assoc)
-                        try? modelContext.save()
-                    },
-                    onRemove: { assoc in
-                        groupAssocToRemove = assoc
-                        showRemoveGroupConfirm = true
-                    }
-                )
-
-                // Citations
-                if !placeCitations.isEmpty {
-                    Divider()
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Sources & Citations")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        ForEach(placeCitations) { citation in
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "doc.text")
-                                    .font(.caption)
-                                    .foregroundStyle(.brown)
-                                    .frame(width: 14)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text("\(citation.source?.name ?? "Unknown"), \(citation.safeLocation)")
-                                        .font(.caption)
-                                        .fontWeight(.medium)
-                                    Text(citation.safeNote)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(3)
-                                }
-                                Spacer()
-                                Button(action: {
-                                    citationToDelete = citation
-                                    showDeleteCitationConfirm = true
-                                }) {
-                                    Image(systemName: "trash")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(.red.opacity(0.7))
-                                }
-                                .buttonStyle(.plain)
-                                .help("Delete citation")
-                            }
-                        }
-                    }
-                }
-            }
-            .padding(20)
-            .textSelection(.enabled)
+            contentStack
         }
         .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
             Button("Delete", role: .destructive) {
@@ -651,6 +142,556 @@ struct PlaceDetailView: View {
             ContentAttributionFormView(attribution: attribution)
         }
     }
+
+    private var contentStack: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            if let backLabel, let onBack {
+                Button(action: onBack) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.caption2.weight(.semibold))
+                        Text("Back to \(backLabel)")
+                            .font(.caption)
+                    }
+                    .foregroundColor(.accentColor)
+                }
+                .buttonStyle(.plain)
+                .pointingHand()
+            }
+            headerSection
+            propertiesSection
+            alternateNamesSection
+            relatedPlacesSection
+            eventsSection
+            figuresSection
+            imagesSection
+            tagsSection
+            groupsSection
+            citationsSection
+        }
+        .padding(20)
+        .textSelection(.enabled)
+    }
+
+    @ViewBuilder
+    private var headerSection: some View {
+        // Header
+        HStack(spacing: 12) {
+            Circle()
+                .fill(Color.teal.opacity(0.2))
+                .frame(width: 44, height: 44)
+                .overlay(
+                    Image(systemName: placeIcon)
+                        .foregroundStyle(.teal)
+                )
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(place.name)
+                    .font(.title2.bold())
+                Text(place.placeType?.name ?? "City")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            if place.isConcept {
+                Text("Concept")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(
+                        RoundedRectangle(cornerRadius: 5)
+                            .fill(.orange.opacity(0.12))
+                    )
+            }
+
+            if place.latitude != nil, place.longitude != nil {
+                MapPreviewPopoverButton(place: place)
+            }
+
+            Button {
+                editRichDescription = place.richDescription
+                editPlainDescription = place.placeDescription
+                showDescriptionEditor = true
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Edit description")
+        }
+        .sheet(isPresented: $showDescriptionEditor) {
+            DescriptionEditorSheet(
+                entityName: place.name,
+                richDescription: $editRichDescription,
+                plainDescription: $editPlainDescription
+            )
+            .onDisappear {
+                place.richDescription = editRichDescription
+                place.placeDescription = editPlainDescription
+                try? modelContext.save()
+            }
+        }
+
+        // Stickies
+        StickyNoteSection(stickies: place.stickies) { text in
+            RelationshipManager(context: modelContext).addStickyNote(to: place, text: text)
+        }
+
+        Divider()
+    }
+
+    @ViewBuilder
+    private var propertiesSection: some View {
+        // Properties
+        LazyVGrid(columns: [GridItem(.fixed(110), alignment: .trailing), GridItem(.flexible(), alignment: .leading)], alignment: .leading, spacing: 10) {
+            if !place.source.isEmpty {
+                PropertyRow(label: "Source", value: place.source)
+            }
+            if let founded = place.foundedDate, founded != .unknown {
+                PropertyRow(label: "Founded", value: founded.displayLabel)
+            }
+        }
+        if !place.modernLocation.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Modern Location")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Text(place.modernLocation)
+                    .font(.callout)
+                    .textSelection(.enabled)
+            }
+        }
+
+        // Historical map
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Map")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            HistoricalMapView(place: place)
+                .frame(height: 260)
+        }
+
+        // Description
+        if !place.placeDescription.isEmpty || place.richDescription != nil {
+            AttributedPropertyView(attributions: placeAttributions, propertyName: "placeDescription") {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Description")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    LinkedDescription(text: place.placeDescription, richData: place.richDescription)
+                        .font(.body)
+                }
+            }
+        }
+
+        // Attributions
+        ContentAttributionSection(
+            attributions: placeAttributions,
+            onAdd: { showAddAttribution = true },
+            onEdit: { editingAttribution = $0 },
+            onDelete: { attribution in
+                attributionToDelete = attribution
+                showDeleteAttributionConfirm = true
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var alternateNamesSection: some View {
+        // Alternate Names
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Also Known As")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Button {
+                    showAddAltSheet = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .help("Add alternate name")
+            }
+
+            if place.alternateNames.isEmpty {
+                Text("No alternate names")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(place.alternateNames) { altName in
+                    HStack(spacing: 8) {
+                        Text(altName.name)
+                            .font(.callout)
+                            .fontWeight(.medium)
+                        Text(altName.tradition.rawValue)
+                            .font(.caption2)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(Color.secondary.opacity(0.1))
+                            )
+                        Text(altName.nameType.rawValue)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Button(action: {
+                            altToDelete = altName
+                            showDeleteAltConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete alternate name")
+                    }
+                    if !altName.note.isEmpty {
+                        Text(altName.note)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.leading, 4)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var relatedPlacesSection: some View {
+        // Place associations (containment, proximity, etc.)
+        if !placeAssociations.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Related Places")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                ForEach(placeAssociations) { assoc in
+                    HStack(spacing: 8) {
+                        if assoc.fromPlace == place {
+                            Text(assoc.toPlace?.name ?? "?")
+                                .font(.callout)
+                                .fontWeight(.medium)
+                            Text(assoc.roleType?.displayName(isReverse: false) ?? "—")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text("←")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text(place.name)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Text(place.name)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                            Text("→")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            Text(assoc.roleType?.displayName(isReverse: true) ?? "—")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Text(assoc.fromPlace?.name ?? "?")
+                                .font(.callout)
+                                .fontWeight(.medium)
+                        }
+                        Spacer()
+                        Text(assoc.source)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                        Button(action: {
+                            assocToDelete = assoc
+                            showDeleteAssocConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete association")
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var eventsSection: some View {
+        // Events at this place
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Events Here")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Button(action: { showEventLinkPopover = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .help("Link an event")
+                .popover(isPresented: $showEventLinkPopover) {
+                    PlaceEventLinkPopover(
+                        place: place,
+                        searchText: $eventSearchText,
+                        selectedEvent: $selectedEventForLink,
+                        selectedRole: $selectedEventRole,
+                        isPresented: $showEventLinkPopover
+                    )
+                    .frame(width: 340, height: 400)
+                }
+            }
+
+            if relatedEvents.isEmpty {
+                Text("No events linked")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 4)
+            } else {
+                ForEach(relatedEvents) { event in
+                    HStack(spacing: 8) {
+                        Image(systemName: eventIcon(event.eventType))
+                            .font(.caption)
+                            .foregroundStyle(eventColor(event.eventType))
+                            .frame(width: 14)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Button(action: { onSelectEvent?(event) }) {
+                                Text(event.name)
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(Color.accentColor)
+                                    .underline()
+                            }
+                            .buttonStyle(.plain)
+                            .pointingHand()
+                            Text(event.date.displayLabel)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button(action: {
+                            eventAssocToDelete = place.eventAssociations.first { $0.event?.persistentModelID == event.persistentModelID }
+                            showDeleteEventAssocConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete association")
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var figuresSection: some View {
+        // All figures (direct associations + event-derived)
+        let allFigures = { () -> [Figure] in
+            let direct = place.figureAssociations.compactMap { $0.figure }
+            var seen = Set<PersistentIdentifier>()
+            var result: [Figure] = []
+            for fig in direct + relatedFigures {
+                if seen.insert(fig.persistentModelID).inserted {
+                    result.append(fig)
+                }
+            }
+            return result
+        }()
+
+        let figureDisplayNames: [PersistentIdentifier: String] = Dictionary(
+            place.figureAssociations.compactMap { assoc in
+                guard let fig = assoc.figure, let name = assoc.displayName, !name.isEmpty else { return nil }
+                return (fig.persistentModelID, name)
+            },
+            uniquingKeysWith: { first, _ in first }
+        )
+
+        Divider()
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Associated Figures")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                Spacer()
+                Button(action: { showFigureLinkPopover = true }) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                }
+                .buttonStyle(.plain)
+                .help("Link a figure")
+                .popover(isPresented: $showFigureLinkPopover) {
+                    PlaceFigureLinkPopover(
+                        place: place,
+                        searchText: $figureSearchText,
+                        selectedFigure: $selectedFigureForLink,
+                        selectedRole: $selectedFigureRole,
+                        isPresented: $showFigureLinkPopover
+                    )
+                    .frame(width: 340, height: 400)
+                }
+            }
+
+            if allFigures.isEmpty {
+                Text("No figures linked")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                    .padding(.vertical, 4)
+            } else {
+                FlowLayout(spacing: 6) {
+                    ForEach(allFigures) { figure in
+                        HStack(spacing: 3) {
+                            Button(action: { onSelectFigure?(figure) }) {
+                                HStack(spacing: 3) {
+                                    Text(figure.gender.symbol)
+                                        .font(.system(size: 9))
+                                    Text(figureDisplayNames[figure.persistentModelID].map { "\(figure.name) as \($0)" } ?? figure.name)
+                                        .font(.caption)
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .pointingHand()
+                            if let assoc = place.figureAssociations.first(where: { $0.figure?.persistentModelID == figure.persistentModelID }) {
+                                Button(action: {
+                                    figureAssocToDelete = assoc
+                                    showDeleteFigureAssocConfirm = true
+                                }) {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete association")
+                            }
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(figure.figureType?.color.opacity(0.1) ?? .gray.opacity(0.1))
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var imagesSection: some View {
+        // Images
+        Divider()
+        ImageGallery(
+            title: "Images",
+            images: place.images,
+            onLinkImage: { asset in
+                place.images.append(asset)
+            },
+            onSelectImage: onSelectImage
+        )
+    }
+
+    @ViewBuilder
+    private var tagsSection: some View {
+        // Tags
+        if !place.tags.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Tags")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                FlowLayout(spacing: 4) {
+                    ForEach(place.tags) { tag in
+                        TagTokenView(tag: tag, onRemove: {
+                            tagToRemove = tag
+                            showRemoveTagConfirm = true
+                        })
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var groupsSection: some View {
+        // Groups
+        EntityGroupsSection(
+            associations: place.groupAssociations,
+            onCreateAssociation: { group in
+                RelationshipManager(context: modelContext).addGroupMember(group: group, place: place, dedupe: false)
+                try? modelContext.save()
+            },
+            onRemove: { assoc in
+                groupAssocToRemove = assoc
+                showRemoveGroupConfirm = true
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var citationsSection: some View {
+        // Citations
+        if !placeCitations.isEmpty {
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Sources & Citations")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+
+                ForEach(placeCitations) { citation in
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "doc.text")
+                            .font(.caption)
+                            .foregroundStyle(.brown)
+                            .frame(width: 14)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("\(citation.source?.name ?? "Unknown"), \(citation.safeLocation)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                            Text(citation.safeNote)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(3)
+                        }
+                        Spacer()
+                        Button(action: {
+                            citationToDelete = citation
+                            showDeleteCitationConfirm = true
+                        }) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.red.opacity(0.7))
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete citation")
+                    }
+                }
+            }
+        }
+    }
+
 
     private var placeIcon: String { place.placeType?.icon ?? "mappin" }
 
@@ -790,7 +831,7 @@ private struct PlaceFigureLinkPopover: View {
                     Text("Comments:")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("e.g. first antediluvian king", text: $comments)
+                    TextField("such as first antediluvian king", text: $comments)
                         .textFieldStyle(.plain)
                         .padding(8)
                         .background(Color(.textBackgroundColor))
@@ -818,12 +859,12 @@ private struct PlaceFigureLinkPopover: View {
 
     private func createAssociation() {
         guard let figure = selectedFigure?.figure, let role = selectedRole else { return }
-        let assoc = FigurePlaceAssociation(comments: comments.isEmpty ? nil : comments)
-        assoc.displayName = selectedFigure?.matchedAlternateName
-        modelContext.insert(assoc)
-        place.figureAssociations.append(assoc)
-        figure.placeAssociations.append(assoc)
-        role.associations.append(assoc)
+        RelationshipManager(context: modelContext).addFigurePlaceAssociation(
+            figure: figure, place: place, roleType: role,
+            comments: comments.isEmpty ? nil : comments,
+            displayName: selectedFigure?.matchedAlternateName,
+            dedupe: false
+        )
         try? modelContext.save()
     }
 }
@@ -924,11 +965,7 @@ private struct PlaceEventLinkPopover: View {
 
     private func createAssociation() {
         guard let event = selectedEvent, let role = selectedRole else { return }
-        let assoc = EventPlaceAssociation()
-        modelContext.insert(assoc)
-        place.eventAssociations.append(assoc)
-        event.placeAssociations.append(assoc)
-        role.associations.append(assoc)
+        RelationshipManager(context: modelContext).addEventPlaceAssociation(event: event, place: place, roleType: role, dedupe: false)
         try? modelContext.save()
     }
 }

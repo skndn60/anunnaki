@@ -11,6 +11,20 @@ struct ParentCouple: Identifiable {
     var sourceLabel: String? { fatherRel?.sourceDisplayName ?? motherRel?.sourceDisplayName }
 }
 
+private struct ParentPairDashCenterKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
+private struct LineageColumnCenterKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 func buildCouples(for figure: Figure, from relationships: [Relationship]) -> [ParentCouple] {
     let parentRels = relationships.filter {
         ($0.relationshipType?.name == "Father" || $0.relationshipType?.name == "Mother") &&
@@ -81,6 +95,8 @@ private func makeCouple(id: String, rels: [Relationship]) -> ParentCouple {
 }
 
 struct MiniLineageView: View {
+    static let spaceName = "miniLineageColumnSpace"
+
     let figure: Figure
     let relationships: [Relationship]
     var isParentGap: ((String) -> Bool)? = nil
@@ -93,6 +109,12 @@ struct MiniLineageView: View {
     @State private var showUnknownDialog: String? = nil
     @State private var showRevertDialog: String? = nil
     @State private var immediateGaps: [String: Bool] = [:]
+    @State private var pairDashCenterX: CGFloat = 0
+    @State private var lineageColumnCenterX: CGFloat = 0
+
+    private var parentTrunkOffset: CGFloat {
+        pairDashCenterX - lineageColumnCenterX
+    }
 
     private func effectiveIsGap(typeName: String) -> Bool {
         (isParentGap?(typeName) ?? false) || (immediateGaps[typeName] ?? false)
@@ -187,9 +209,7 @@ struct MiniLineageView: View {
                 if let couple = preferredCouple {
                     HStack(spacing: 8) {
                         coupleChip(figure: couple.father, typeName: "Father")
-                        Text("—")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                        pairDash
                         coupleChip(figure: couple.mother, typeName: "Mother")
 
                         if !altCouples.isEmpty {
@@ -201,17 +221,26 @@ struct MiniLineageView: View {
                 } else {
                     HStack(spacing: 8) {
                         parentSlotChip(typeName: "Father")
-                        Text("—")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
+                        pairDash
                         parentSlotChip(typeName: "Mother")
                     }
                 }
 
-                connectorPiece
+                parentTrunk
 
                 MiniChip(name: figure.name, symbol: figure.gender.symbol, color: chipColor(figure), isHighlighted: true)
             }
+            .coordinateSpace(name: MiniLineageView.spaceName)
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: LineageColumnCenterKey.self,
+                        value: geo.frame(in: .named(MiniLineageView.spaceName)).midX
+                    )
+                }
+            }
+            .onPreferenceChange(LineageColumnCenterKey.self) { lineageColumnCenterX = $0 }
+            .onPreferenceChange(ParentPairDashCenterKey.self) { pairDashCenterX = $0 }
             .padding(.vertical, 8)
         }
     }
@@ -349,6 +378,25 @@ struct MiniLineageView: View {
 
     private var chipRowHeight: CGFloat { 24 }
     private var connectorHeight: CGFloat { 18 }
+
+    private var pairDash: some View {
+        Text("—")
+            .font(.caption)
+            .foregroundStyle(.tertiary)
+            .background {
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: ParentPairDashCenterKey.self,
+                        value: geo.frame(in: .named(MiniLineageView.spaceName)).midX
+                    )
+                }
+            }
+    }
+
+    private var parentTrunk: some View {
+        connectorPiece
+            .offset(x: parentTrunkOffset)
+    }
 
     private var connectorPiece: some View {
         VStack(spacing: 0) {

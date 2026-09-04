@@ -8,6 +8,342 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-04 — Demons/curated import shipped + Apple Style Guide pass
+
+**State:** All work uncommitted (layered on the prior uncommitted tree). `swift build` clean, **497/497** tests, no `--reseed`, user DB untouched apart from intended additive imports.
+
+**Changes (newest first):**
+1. **Apple Style Guide audit + fixes** — user-facing text pass across `Sources/Me/Views` (~540 Text + 95 Button literals sampled) against the ASG/HIG:
+   - Era terminology unified to **BCE** (was mixed "BC" vs "BCE/CE"): `FigureDetailView` reign row, `SumerianKingListView`, `SumerianDynastyMapView` now "…BCE" (timeline + date editor already used BCE/CE).
+   - "Tap a node to inspect" → "Click…" (`NetworkGraphView`; macOS uses click).
+   - Removed ASCII `...` from search-field placeholders ("Search Wikipedia", "Search figures", …) and progress/status labels ("Searching Wikipedia", "Loading article", "Looking up X", "Ollama is processing"); Query box placeholder → `Try "what do we know about Enki?"`; menu-style `…` untouched.
+   - Empty-state punctuation: stripped trailing periods from lone fragments ("No adds yet", "No duplicate names found", …); normalized em-dash empties to two sentences ("No images yet. Import a statue photo.").
+   - All-caps micro-labels → sentence case: "Epithet" (detail keeps `.textCase(.uppercase)` visual), "Value"/"Comment"/"Sources" (popup table), "Source image"/"Preview" (mugshot).
+   - Replaced ~60 Latin "e.g. " prefixes: field prompts now show the bare example (`prompt: Text("5500")`), unlabeled fields use "such as …"; help/grammar fixes ("Figures use…", curly apostrophes/quotes).
+   - Misc: "Backup & Restore" → "Backup and Restore"; dropped 📌 from "Stickies" label; curly apostrophe in MapPreview empty state.
+2. **Demons + curated import root-cause** — both JSONs were silently failing to decode: `SeedDataRoot` requires non-optional keys; files were missing `"things": []` (and had a stray `"stickyNotes"` key). Added decode-error logging temporarily to find it, then removed. 15 demons + 20 curated names now import with "IMPORTED — needs review" stickies; Demon FigureType created via fetch-all-and-check (dropped a fragile `#Predicate` check).
+
+**Files touched (style pass):** `Sources/Me/Views/{NetworkGraphView, FigureDetailView, SumerianKingListView, SumerianDynastyMapView, ImportView, PopupTableFormView, EntityReportSheet, QueryView, GroupsSection, EntityGroupsSection, FigureGroupFormView, FigureImageGallery, FromTextHistorySheet, CitationsSection, ContentAttributionFormView, LineageTreeView, DuplicateMergeView, MugshotSheet, FigureFormView, PopupTableView, FigureDetailInfoView, BackupSheet, StickyNoteListView, MapPreview}.swift` plus the ~20 files touched by the `e.g.` sweep (TypeSettingsView, SourceListView, DictionaryListView, AlternateNameListView, PlaceFormView, EventFormView, EraListView, ThingFormView, PlaceDetailView, AssociationsView, PlacesSection, VersionListView, MissionControlView, FigureGroupListView).
+
+**Open (unchanged):** duplicate-deity-row dedupe migration; review of 59 spill-over entries; demons/curated entries pending user review of descriptions/stickies.
+
+---
+
+### 2026-09-03 → 2026-09-04 — Session save (dashboard tile, alt-name sweeps, integrity fixes)
+
+**State:** All work uncommitted (deity/alt imports + view tweaks layered on the prior uncommitted tree). `swift build` clean, **497/497** tests passing, no `--reseed`, user DB untouched apart from the intended additive imports.
+
+**Work completed this stretch (newest first):**
+1. **Data-integrity row selectable highlight** — clicking a finding row now selects/highlights it (accent tint); inline Fix/Dismiss/⋯ buttons unaffected. User chose "just selectable highlight" over navigate-on-click.
+2. **Data-integrity collapsible polish** — the category headings were already individually collapsible; added **persisted collapse state** (`dataIntegrityCollapsedCategories` in UserDefaults, restored on appear) + a **Collapse All / Expand All** toolbar button so the page can be folded in one click.
+3. **Orphaned alt-name cleanup** — root-caused the "Alternate name 'Niĝgina' not linked" integrity warning: it referred to a *legacy orphan* row (pk 137, unlinked `Niĝgina` syncretism + sibling orphan `Kittum` translation, pk 138), distinct from the correctly-linked `Niggina` (pk 318) on Kittum that search resolves. Added `Migration.removeOrphanedKittumNigginaAltNames` (targeted by name + unlinked, so no other rows touched) + test. Orphans now `[]`.
+4. **Dashboard Figures tile (2-column)** — split into left (icon, figure count, "Figures") / right (`textformat.abc` icon, alias count, "aliases"); left column right-aligned, right column left-aligned, 20pt spacing each side of the vertical divider; alias label bumped caption→callout. `figureAliasCount` = figure-attached AlternateNames only (excludes 9 place + orphans). Live: 547 figures / 253 aliases.
+5. **Alternate-name sweep part 2** — Ningishzida (+7 grounded rows) + systematic pass over the 196 zero-alias divine figures: batched Wikipedia exintro leads, auto-flagged 49 with alias info, curated **+45 rows across ~30 figures** (Kumarbi→Kumurwe/Kumarwi/Kumarma, Kittum→Niggina, Nungal→Manungal/Belet-balati, Pinikir variants, Ashnan→Ezina, Wer→Mer/Ber/Iluwer, Inshushinak "Lord of Susa", Ninegal→Belet Ekallim, Anunitu→Ishtar of Akkad, Zababa→Zamama…). Deliberately excluded cross-figure conflicts and disambiguation-page noise. Live: **316 alt names / 160 figures** (from 264/131).
+6. Earlier same session: grounded deity import (186 figures in file; DB 370→547) + first alt-name run + orphan cleanup; all logged below.
+
+**DB-truth lesson reinforced:** dedup/attach must check the *live* `ZFIGURE`/`ZALTERNATENAME` (+ alias map), not seed-derived name lists; the live store diverges (Dumuzi the Shepherd vs seed Dumuzi; duplicate deity rows `Istaran`/`Ištaran`, `Gibil`/`Girra`, `Mushdamma`/`Musdamme`, `Haya`/`Haia`, etc. still pending a merge task).
+
+**Files touched:** `Sources/Me/Views/DataIntegrityView.swift`, `Sources/Me/Views/DashboardView.swift`, `Sources/MeCore/Resources/alt_names_import.json`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`, `docs/TODO.md`.
+
+**Open (unchanged):** duplicate-deity-row dedupe migration; demons/monsters FigureType decision (spill-over bucket); optional god-list name-only bulk file; review of 59 spill-over entries.
+
+---
+
+### 2026-09-03 — Alternate-name sweep part 2 (Ningishzida + systematic flag-based pass)
+
+**Context:** User noticed Ningishzida's card showed no aliases although Wikipedia lists several — correct: the earlier alt run covered only 61 figures. Confirmed DB had 196 divine figures with zero aliases.
+
+**Changes:**
+1. Ningishzida: 7 grounded rows (Ninĝišzida transliteration, Ningizzida syllabic, Gishbanda 'little tree', name-translation, underworld/innkeeper epithets, Dumuzi syncretism from laments).
+2. Systematic sweep: fetched exintro leads for the 196 zero-alias divine figures (batched MediaWiki API), auto-flagged 49 whose leads mention alias-type info, curated **45 more rows across ~30 figures** (Kumarbi→Kumurwe/Kumarwi/Kumarma, Kittum→Niggina, Nungal→Manungal/Belet-balati, Pinikir's four variants, Ashnan→Ezina, Wer→Mer/Ber/Iluwer, Inshushinak 'Lord of Susa', Ninegal→Belet Ekallim, Anunitu→Annunitum/Ishtar of Akkad, Zababa→Zamama, …). Deliberately skipped: cross-figure conflicts (e.g. Ninsun→Gula), disambiguation-page noise (Shara, Simut, Saggar, Haia), and deities whose leads carry no alias info.
+
+**Verify:** alt import file now covers 81 figure-entries; live DB alternate names **264 → 316** across **160 figures**; migration idempotent test green; full suite **496/496**; build clean; no reseed.
+
+**Files touched:** `Sources/MeCore/Resources/alt_names_import.json`, `docs/SESSION_LOG.md`. Sweep scripts under `/var/folders/.../T/opencode/deity_import/` (`fetchleads.py`, `review_leads.md`, `flags.md`, `sweep3.py`).
+
+---
+
+### 2026-09-03 — Alternate-name curation run (bynames, equivalents, hypostases)
+
+**Context:** User admitted initial alternate-name collection was inaccurate and asked for a separate run. Scope chosen: proportional across the pantheon (majors deep, minors 1-3) with local hypostases included as syncretism/epithet rows. Grounded authoring (Wikipedia canonical-list alt cells + byname scholarship); no fabrication — only names confidently attested.
+
+**Changes:**
+1. Authored `ALT1`/`ALT2` tables (data scripts in `/var/folders/.../T/opencode/deity_import/altdata_part1.py`, `altdata_part23.py`) keyed by exact live-DB figure names: 61 figures, ~155 candidate rows.
+2. Assembly-time pruning (`altgen.py`): dropped alt rows that (a) collide with an existing *separate* figure (e.g. Sulpae→Pabilsag, Nergal→Erragal — those are duplicate-figure cases for a future dedupe task, not alt links), (b) already exist in the store, (c) target figures not in store. Result: **77 new rows across 51 figures**.
+3. New resource `Sources/MeCore/Resources/alt_names_import.json` — bespoke `[{figure, alternates:[{name, tradition, nameType, note}]}]` array.
+4. `Migration.ensureAlternateNamesImportExist` (Migration.swift, after the deity import) — decodes, resolves figure by exact name, dedupes on (figure, name, tradition), inserts `AlternateName`s. Registered in `ContentView.task`.
+5. Test `testEnsureAlternateNamesImportIsAdditiveAndIdempotent` (asserts ≥20 rows + Ashur gains "Assur" + no dup on rerun).
+
+**DB-truth discoveries:** live store diverges from seed names (Dumuzi stored as "Dumuzi the Shepherd"; some seed deities absent); duplicate deity rows pre-exist (`Istaran`/`Ištaran`, `Mushdamma`/`Musdamme`, `Misharu`/`Mīšaru`, `Kittu`/`Kittum`, `Ninsar`/`Ninšar`, `Haya`/`Haia`, `Asalluhi`/`Asarluhi`, `Gibil`/`Girra`, `Sud`, `Nintu`/`Nintur`, `Sherida`, `Lugalirra` + pair) — flagged as a future merge/dedupe item.
+
+**Verify:** in-memory tests green; full suite **496/496**; `swift build` clean; relaunched → live DB alternate names **187 → 264** (131 figures covered). No reseed.
+
+**Files touched:** `Sources/MeCore/Resources/alt_names_import.json` (new), `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-03 — Broad Mesopotamian pantheon import (web-grounded)
+
+**Context:** User learned the attested Mesopotamian pantheon numbers 3,000–3,600 names (mostly bare god-list entries from *An = Anum*), found the DB's ~85 deities "severely lacking", and asked for a significant grounded import. Chose **broad & grounded (~600+)** with **web-grounding** (no name-only rows; minimum = name + gender + domain).
+
+**Reality check surfaced:** the grounded ceiling is far below 600. Wikipedia's canonical *List of Mesopotamian deities* (fetched raw, 252 KB wikitext, parsed with a custom script) contains ~221 rows covering essentially every deity modern scholarship can describe. The remaining thousands are attestations with no published substance. User accepted this and approved importing the real inventory.
+
+**Changes:**
+1. New `Sources/MeCore/Resources/mesopotamian_deities_import.json` — now **186 figures** in `SeedDataRoot` shape (all non-optional keys incl. `things: []`; the older `deities_import.json`/`missing_deities_import.json` lack `things` and no longer decode against current `SeedDataRoot`). Tranche A: 129 deities parsed from the Wikipedia list, deduped vs the 87 seed-derived divine names, enriched with curated gender/domain + trimmed sourced descriptions (5 Primordial; ~90 Sumero-Akkadian; ~30 Hurrian/Elamite/Kassite absorbed gods). Tranche B (+57): deities with standalone articles absent from the list page (Ninlil, Gibil, Ishum, Ninkarrak, Ninti, artisan deities, underworld entourage, local/ANE gods), authored from extracts/knowledge and DB-verified.
+2. `Migration.ensureMesopotamianDeitiesImportExist` (Migration.swift, after `ensureMissingDeitiesImportExist`) — additive + idempotent, name-filtered vs live store, registered in `ContentView.task` (after line 248). No sticky markers (129 sticky notes would flood).
+3. `docs/deity_spillover_bucket.json` — 59 researched-but-not-imported entries with reasons (alias-of-existing, hypostasis/epithet, monster/demon — no FigureType, group collective, spurious/biblical, non-deity, insufficient gender/domain). Kept, not discarded, never imported name-only.
+4. New test `testEnsureMesopotamianDeitiesImportIsAdditiveAndIdempotent`.
+
+**Key DB-discovery along the way:** the live store diverges from the seed-derived name set (e.g. stores Dumuzi as "Dumuzi the Shepherd", lacks Ninlil/Gibil/Uttu/Tashmetum that the seed JSON lists). Dedup must check the **live ZFIGURE ZNAME** (+ alias map), not seed files.
+
+**Verification:** JSON `jq`-validated; in-memory migration test passes; **495/495** suite green; `swift build` clean. App relaunched → user DB went **370 → 490 → 547** figures; 186/186 import-file names confirmed present via sqlite. No reseed; data additive only.
+
+**Files touched:** `Sources/MeCore/Resources/mesopotamian_deities_import.json` (new), `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/deity_spillover_bucket.json` (new), `docs/SESSION_LOG.md`. Parser/authoring scripts left in `/var/folders/.../T/opencode/deity_import/` (parse_wiki.py, author.py, author2.py, summaries.json) for future tranches.
+
+**Open:** creatures/demons still need a FigureType decision before any import; optional god-list name-only bulk file remains intentionally unbuilt.
+
+---
+
+### 2026-09-02 → 2026-09-03 — Session save (end of working stretch)
+
+**State:** Everything below is **uncommitted** in the working tree (48 modified files + new untracked `Sources/Me/Views/DetailWidth.swift`, `Sources/MeCore/Store/RelationshipManager.swift`, `Sources/MeCore/Store/LineageTreeLayout.swift`, plus `Package.swift`). `swift build` clean and `swift test` **494/494 passing** at end of session. No `--reseed` was ever run; user DB untouched.
+
+**Work completed this stretch (all logged below, newest first):**
+1. **RelationshipManager** landed + all 16 view call sites migrated onto it (annotated-side convention enforced by construction).
+2. **Keys-not-strings**: the 7 association models gained `sourceRef: Source?` + `Source` inverse arrays; `Migration.ensureAssociationSources` backfills idempotently.
+3. **Architectural 4B** marked resolved — `ConsistencyEngine.runAll` is the single validation API.
+4. **LayoutManager 3A → `@DetailWidth` property wrapper** (`Sources/Me/Views/DetailWidth.swift`): centralizes the 10 per-view `<entity>DetailWidth` keys/defaults into `DetailWidthSlot`; all 10 list views migrated from `@AppStorage("...DetailWidth")` to `@DetailWidth(.slot)`. `ResizableDivider` usage (MissionControlView) still binds via `$detailWidth`.
+5. **Compile-time work**: `Package.swift` debug-only `-debug-time-function-bodies`; then point-1 "small `body`s" refactor across ContentView, PlaceDetailView, EventDetailView, FigureListView, FigureGroupListView, FigureDetailView, EntityGroupCollectionView (reignTower→`ReignBarRow`), PopupTableView. Worst bodies: 2.7s/2.4s/1.36s/1.36s → sub-500ms each, most under 100ms.
+
+**Open / unresolved at save:**
+- Doc items **3A** (critique doc not yet marked done for the `@DetailWidth` consolidation) and the **"ParentCoupleSheet: add source picker"** TODO remain open.
+- Compile-time: remaining hotspots are list-view `.sheet`/`.alert` modifier tails (~150–450ms, largely irreducible) and secondary ~150ms bodies (e.g. `EntityGroupCollectionView` top body). Points 3–5 (avoid conditional-modifier type splits, bounded generics for any future form-consolidation, `AnyView` pragmatism) not yet actioned.
+- **Planned review**: user intends to visually smoke-test the refactored render paths (figure/place/event detail panels, group text-block rows, reign bars, comparison-table grid, figure-list selection) and review the accumulated diffs before further work.
+
+**Files touched this stretch:** see the per-item entries below (Views/*, MeCore Models/Store, Package.swift, AGENTS.md, docs/*).
+
+---
+
+### 2026-09-02 → 2026-09-03 — LayoutManager (arch. weakness 3A) consolidated via `@DetailWidth`
+
+**Context:** Review-doc item 3A ("Scattered Width Management Pattern") claimed each list view hand-manages its own `@AppStorage("<entity>DetailWidth")` key. Verified against code: **true** — 10 keys + defaults, though mostly lightweight (most views have the `ResizableDivider` call commented out and only apply `.frame(width: detailWidth)`; only MissionControlView actively resizes).
+
+**Decision:** user chose the property-wrapper design over the doc's literal `LayoutManager` EnvironmentObject. Rationale: the views legitimately want *independent* widths (a single shared value would over-couple), `@AppStorage` is the established idiom, and a wrapper gives the DRY win with one-line churn per view and zero environment-injection plumbing across ~10 list views + sheets.
+
+**Change:** new `Sources/Me/Views/DetailWidth.swift` — `enum DetailWidthSlot` (10 cases: dictionary/era/event/figure/figureGroup/missionControl/place/skl/source/thing) owning `key`, `defaultValue` (320 default; 380/390/480 overrides), and `defaultRange` (200...800); `@propertyWrapper struct DetailWidth` wrapping `@AppStorage` with `wrappedValue` + `projectedValue: Binding<Double>` (so `ResizableDivider(width: $detailWidth)` keeps working). All 10 views migrated: `@DetailWidth(.slot) private var detailWidth`. Keys unchanged → existing persisted widths survive.
+
+**Verify:** `swift build` clean; `swift test` 494/494.
+
+**Files touched:** `Sources/Me/Views/DetailWidth.swift` (new), `Sources/Me/Views/{DictionaryListView,EraListView,EventListView,FigureGroupListView,FigureListView,MissionControlView,PlaceListView,SourceListView,SumerianKingListView,ThingListView}.swift`.
+
+**Note:** critique doc 3A not yet marked done — pending this entry; TODO not yet updated.
+
+---
+
+### 2026-09-03 — Point-1 refactor, continued (PopupTableView)
+
+**Context:** Last scheduled item before a review checkpoint: split `PopupTableView.body` (the comparison-table grid, ~297ms).
+
+**Change:** Extracted the outer `VStack`'s children into computed properties — `headerSection` (title/description/source), `gridOrEmpty` (the deep `if columns.isEmpty` empty-state vs. nested-vertical+horizontal-`ScrollView` grid with column resize / header-height / cell bindings), and `footerBar` (close + scale handle + reset). `body` is now a thin layout shell + the modifier tail.
+
+**Result:** `body` cost moves into `gridOrEmpty`, now isolated at 192ms (the residual is inherent to the nested-scroll grid, no longer conflated with the rest of the view).
+
+**Verify:** `swift build` clean; `swift test` 494/494 pass.
+
+**Files touched:** `Sources/Me/Views/PopupTableView.swift`.
+
+**Checkpoint:** 9 files touched across the compile-time refactor sessions (ContentView, PlaceDetailView, EventDetailView, FigureListView, FigureGroupListView, FigureDetailView, EntityGroupCollectionView, PopupTableView, Package.swift). Remaining hotspots are list-view `.sheet`/`.alert` modifier tails (~150-450ms, largely irreducible) plus a few ~150ms secondary bodies. Pausing for review as agreed.
+
+---
+
+### 2026-09-03 — Point-1 refactor, continued (FigureListView, FigureGroupDetailView, FigureDetailView, reignTower)
+
+**Context:** Continued applying "small `body`s" down the type-check ranking measured earlier. All changes purely structural; `swift build` clean + 494/494 tests after each.
+
+**Changes:**
+- `FigureListView.body` (was 675ms): split the `HStack` into `leftPane` (list column incl. header/filters/list) and `detailPane` (detail panel + toolbar). body → ~451ms (residual is the `.sheet`/`.onChange`/`.alert` modifier tail); `leftPane` 54ms.
+- `FigureGroupDetailView.body` (was ~539ms): split the `ScrollView` VStack into `headerSection`, `actionsBar`, `membersSection` (the big ordered/alphabetical drag-drop spine `if/else`), `subgroupsSection`. body → 24ms.
+- `FigureDetailView.body` (was ~312ms): extracted the content VStack into `contentStack`. body → 153ms (modifier tail), `contentStack` 66ms.
+- `EntityGroupCollectionView.reignTower` (was ~290ms): extracted the per-row bar (GeometryReader + gradient + shadow + reveal animation) into a new `private struct ReignBarRow` taking plain values + an `onHover` closure; `formattedNumber` widened `private` → `fileprivate static` so the row can reuse it. `reignTower` → 82ms.
+
+**Mechanics:** same scripted verbatim-move approach; the recurring prefix/suffix off-by-one (a duplicated `var body: some View {` line) was caught and fixed each time before measuring.
+
+**Verify:** `swift build` clean; `swift test` 494/494 pass.
+
+**Files touched:** `Sources/Me/Views/{FigureListView,FigureGroupListView,FigureDetailView,EntityGroupCollectionView}.swift`.
+
+**Remaining known hotspots (decreasing):** `EntityGroupCollectionView` top-level body ~158ms, `PopupTableView.body` ~297ms, plus the various list-view modifier tails (~150-450ms each) which are largely irreducible `.sheet`/`.alert` chains. Stopped here for a review checkpoint.
+
+---
+
+### 2026-09-03 — Compile-time diagnosis + point-1 refactor (split large `body`s)
+
+**Context:** User reported no visible output from the `-debug-time-function-bodies` timing flag added to `Package.swift` (debug-only). Explanation: the output goes to stdout and only appears when files actually recompile — fully incremental builds print nothing. Demonstrated via forced recompiles.
+
+Then drove a full measurement pass (clean rebuild → 124k timing lines) to rank actual type-check hotspots, and applied "point 1" (small `body`s) to the four worst offenders.
+
+**Diagnosis tooling:** `Package.swift` now defines `compileTimingSettings` = `-Xfrontend -debug-time-function-bodies` applied to Me + MeCore in `.debug` config only.
+
+**Aggregate per-file type-check cost (top):** ContentView 32.7s, EntityGroupCollectionView 28.7s, PlaceDetailView 25.7s, EventDetailView 17.8s, AssociationsView 13.7s, FigureGroupListView 11.6s, FigureDetailView 9.7s. (Note: totals include duplicated reporting across build stages.)
+
+**Worst single `body`s → after refactor (single-function type-check ms):**
+
+| body | before | after | split into |
+|---|---|---|---|
+| `ContentView.body` (200) | 2669 | 6 | `seedingView`, `mainView`, `sidebarContent`, `detailContent` |
+| `PlaceDetailView.body` (59) | 2385 | 475 | `contentStack` + 10 section props (header, properties, alternateNames, relatedPlaces, events, figures, images, tags, groups, citations) |
+| `EventDetailView.body` (59) | 1355 | 229 | `contentStack` + 13 section props (backButton, header, stickies, properties, description, attributions, involvedFigures, citations, places, things, images, tags, groups) |
+| `TextBlockRow.body` (EntityGroupCollectionView) | 1361 | 192 | promoted locals to computed props (`textAlignment`, `frameAlignment`, `controlsVisible`); split `titleBar`, `contentBlock`, `footnotesBlock` |
+
+Each section prop now type-checks in isolation (typically < 50ms); the residual cost in the detail views' `body` is the irreducible alert/sheet modifier chain.
+
+**Mechanics:** the refactors were done with throwaway Python slice/dedent scripts (verbatim block moves, no transcription), each followed by manual brace-seam fixes at the `prefix`/`suffix` boundaries (a duplicate `var body`/struct-close can slip in). No behavior change; new hotspots that surface after splitting (`EntityGroupCollectionView.reignTower` at 290ms, and the 800ms aggregate sidebar bodies of FigureListView etc.) remain for a later pass.
+
+**Verify:** `swift build` clean; `swift test` 494/494 pass after each refactor.
+
+**Files touched:** `Sources/Me/Views/{ContentView,PlaceDetailView,EventDetailView,EntityGroupCollectionView}.swift`, `Package.swift`.
+
+---
+
+### 2026-09-02 — Architectural weakness 4B marked resolved (centralized data checks)
+
+**Context:** The review-doc item "4B. Lack of Global Build Validation Hook" claimed there was no single internal API validating all models before runtime. The user pointed out the centralized data checks already solve it.
+
+Review of ground truth: `Sources/MeCore/Store/ConsistencyEngine.swift` is a **single internal validation API** — `package enum ConsistencyEngine` with a pure, side-effect-free `runAll(figures:relationships:alternateNames:events:eras:places:imageAssets:sources:popupTables:)` entry point (`ConsistencyEngine.swift:903`) covering every `@Model` kind via 24 check kinds across text-signal (pronoun/gendered-noun/gender-wording), role-gender, parent-cycle, relationship-consistency (bidirectional mismatch, self-edges, duplicate edges, missing spouse links), completeness (stub figures, missing types/descriptions, unlinked events, coordinate-less places), temporal logic (death-before-birth, reign-outside-lifespan, child-born-before-parent), and integrity (orphaned aliases/images, URL-less sources, AI-draft tables) families. It's consumed by `DataIntegrityView`'s scan (`DataIntegrityView.swift:528`), which additionally filters per-kind on `ConsistencyCheckSettings`.
+
+**Changes:** `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md` — 4B marked ✅ with the write-side/read-side distinction (DuplicateMerger + Migration backfills = structural fixers; ConsistencyEngine = read-side oracle, reusable by any future CI or pre-launch validation step). `docs/TODO.md` — added the resolved item.
+
+No source changes, no tests needed (ConsistencyEngine rules are already unit-tested).
+
+**Files touched:** `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md`, `docs/TODO.md`.
+
+---
+
+### 2026-09-02 — Keys-not-strings: association source attribution promoted to `Source?`
+
+**Context:** User pushback on architectural weakness 2A — "Relations by String should never happen again. I would mark that as sloppy design." The `Relationship` entity had `sourceRef` since 2026-08-15, but all 7 association models were still writing source attribution as a free-text `source: String`. This session eliminated string-keyed relations from every association call site.
+
+**Changes:**
+- **Models (7):** `FigurePlaceAssociation`, `PlacePlaceAssociation`, `EventPlaceAssociation`, `EventEventAssociation`, `ThingFigureAssociation`, `ThingPlaceAssociation`, `ThingEventAssociation` each gained `sourceRef: Source?` (optional, migration-safe) alongside the string.
+- **`Source`:** 7 new annotated `.nullify` inverse arrays — `figurePlaceAssociations`, `placePlaceAssociations`, `eventPlaceAssociations`, `eventEventAssociations`, `thingFigureAssociations`, `thingPlaceAssociations`, `thingEventAssociations`.
+- **`RelationshipManager`:** the 7 association `add*` methods take `sourceRef: Source?` and push into the corresponding `Source` array via the annotated side (same as `addRelationship`).
+- **Forms:** all Add forms with a `SourcePickerView` now pass `sourceRef: selectedSource` alongside the display string (AssociationsView ×4, ThingListView ×3, EventFormView ×2). Edit forms preselect via `assoc.sourceRef` first and, on save, detach from the old Source's array and attach to the new one (mirroring `EditRelationshipForm`).
+- **Backfill:** `Migration.ensureAssociationSources` — one pass per association type, reusing `primarySourceName` (first comma segment, ≥3 chars) + exact-lowercase-key match, creating a coarse Source for unknown names; additive + idempotent, never re-points. Wired into ContentView launch after `ensureRelationshipSources`.
+- **Tests:** +3 — `testRelationshipManagerAssociationsLinkSource` (all 7 kinds link sourceRef + annotated inverse), `testEnsureAssociationSourcesBackfillsEachTypeAndIsIdempotent` (case-insensitive match, both directions verified, single Source row), `testEnsureAssociationSourcesCreatesCoarseSourceForUnknownName`. **494 tests pass.**
+
+**Decisions:**
+- Entity-metadata provenance strings (`Figure.source`, `Place.source`, `Event.source`, `Thing.source`, `FigureImage.source`) are *not* relational joins and are out of scope — they describe where the record came from, not what it points to. Promote only if entity-level source filtering is wanted.
+- The free-text `source` string is retained on all rows as a display/legacy mirror per the codebase pattern (never the join).
+
+**Files touched:** `Sources/MeCore/Models/{FigurePlaceAssociation,PlacePlaceAssociation,EventPlaceAssociation,EventEventAssociation,ThingFigureAssociation,ThingPlaceAssociation,ThingEventAssociation,Source}.swift`, `Sources/MeCore/Store/{RelationshipManager,Migration}.swift`, `Sources/Me/Views/{AssociationsView,ThingListView,EventFormView,ContentView}.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/{ARCHITECTURAL_WEAKNESSES_CRITIQUE,TODO,SESSION_LOG}.md`, `AGENTS.md` (convention already stated; reinforced).
+
+---
+
+### 2026-09-02 (follow-up) — View call sites migrated onto RelationshipManager
+
+**Context:** Pass 2 of architectural weakness 1A. The `RelationshipManager` service (previous entry) had landed with tests; the last step was converting every manual `context.insert(...)` + multi-array-append pattern in the views onto the manager so the annotated-side linking convention can't be sidestepped at call sites.
+
+**Changes (manager-first refactor across 16 view files + one store file):**
+- **Figure↔Figure:** `RelationshipListView.commit/save`, `FigureDetailView` drop-relationship confirm + `upsertParent` (the manager's `fetchOrCreateType` replaced the old manual fetch-or-create helper, which became non-optional and the `guard let` went away) + `AddCitationSheet`.
+- **Figure↔Place:** `PlacesSection.createAssociation`, `PlaceDetailView` figure-link, `AssociationsView` AddFigurePlaceAssociationForm.
+- **Place↔Place / Event↔Event / Event↔Place:** `AssociationsView` AddPlacePlace/AddEventEvent/AddEventPlace forms, `PlaceDetailView` event-link, `EventDetailView` event-place, `EventFormView` place-selections (rebuild path now collects manager-created rows into a local array then assigns once).
+- **Event↔Figure:** `EventDetailView.linkFigure` (was already skipping involvedFigures; kept `alsoLinkInvolvedFigures: false`).
+- **Thing links:** `ThingListView` AddThingFigure/Place/Event forms + group membership, `EventDetailView` thing-event, `ThingsSection.createAssociation`.
+- **Groups/Pantheons:** `FigureGroupListView.syncMembers` + `addAllMatching`, `FigureGroupFormView` toAdd loop (aliases threaded via `displayName:`), `GroupsSection.createAssociation`, `PlaceDetailView`/`ThingListView` group membership, `PantheonsSection` add + alias-set.
+- **Leaves:** `AlternateNameListView`, `SourceListView.addAttachment`, stickies in Figure/Place/Event/Thing detail, `ImportService.createCitation` (returns the manager's row).
+- **Dead code removed:** `GroupMemberItem.makeAssociation()` and `FigureGroupFormView.makeAssociation(for:)` (only callers were the migrated loops).
+
+**Manager API refinement:** the roleType params (`figurePlaceRoleType`, `placePlaceRoleType`, `eventPlaceRoleType`, `eventEventRoleType`, `eventFigureRoleType`, `thingFigureRoleType`, `thingPlaceRoleType`, `thingEventRoleType`) were relaxed from non-optional to `?` to match the data model's optional role properties — this let association rows whose role may be nil (a legitimate state) flow through the manager as a drop-in. Dedupe for nil-role rows on the role-scoped joins (`PlacePlaceRoleType.associations`, `EventEventRoleType.associations`) falls back to a full-fetch pair match so unreasoned links still dedupe correctly. Role append uses `if let roleType { ... }`.
+
+**Verify:** `swift build` clean; `swift test` **491 tests, 0 failures** (unchanged count — no behavioral change, just routing; the 14 manager tests still cover the annotated-side linkage).
+
+**Files touched:** 16 view files under `Sources/Me/Views/` (RelationshipListView, FigureDetailView, AssociationsView, PlaceDetailView, PlacesSection, EventDetailView, EventFormView, ThingListView, ThingsSection, GroupsSection, PantheonsSection, FigureGroupListView, FigureGroupFormView, GroupMemberItem, AlternateNameListView, SourceListView), `Sources/MeCore/Store/RelationshipManager.swift`, `Sources/MeCore/Store/ImportService.swift`, `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md`, `docs/TODO.md`.
+
+---
+
+### 2026-09-02 — RelationshipManager service lands (architectural weakness 1A)
+
+**Context:** Picked up recommendation 1A from `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md`: the "Bidirectional Relationship Anti-Pattern" — developers must remember that every SwiftData link must be established by appending through the side annotated with `@Relationship(inverse:)`, or the plain-side assignment silently leaves the property `nil`. The recommendation was a high-level **`RelationshipManager`** service to make inserts + appends atomic, type-safe, and readable.
+
+**Changes:** New `Sources/MeCore/Store/RelationshipManager.swift` (`package struct`, holds a `ModelContext`). Every add method inserts the row, links it through the correct annotated sides, and returns the row (`@discardableResult`) with a `dedupe: Bool = true` default (compares `persistentModelID`s, returns the existing row). Coverage:
+- `addRelationship(from:to:relationshipType:source:sourceRef:isPreferred:groupID:)` → appends to `Figure.outgoingRelationships`, `RelationshipType.relationships`, `Source.relationships`.
+- `addFigurePlaceAssociation`, `addPlacePlaceAssociation`, `addEventPlaceAssociation`, `addEventEventAssociation`, `addEventFigureAssociation` (also mirrors into `Event.involvedFigures`/`Figure.events` via the annotated side, guarded against duplicates).
+- `addThingFigureAssociation` / `addThingPlaceAssociation` / `addThingEventAssociation` (thing/entity/role-type arrays).
+- `addGroupMember` (handles figure/place/event/thing members, dedupe compares member IDs across the four kinds), `addPantheonMembership` (links the `FigurePantheonAssociation` join row AND the plain m2m via annotated `Figure.pantheons.append(pantheon)`).
+- Leaves: `addAlternateName` (figure/place), `addStickyNote` (figure/place/event/thing), `addTag`, `addCitation`, `addAttachment`.
+- Fetch-or-create helpers: `relationshipType(named:)` + `figurePlaceRoleType` / `placePlaceRoleType` / `eventPlaceRoleType` / `eventEventRoleType` / `eventFigureRoleType` / `thingFigureRoleType` / `thingPlaceRoleType` / `thingEventRoleType`, backed by a private generic `first<M: PersistentModel>(where:)` fetch.
+- `save() throws` convenience. No auto-save inside adds — call sites keep transaction control. Internal `push` helpers (`inout [M]`, `inout [M]?`) keep optional-array appends (`figure.pantheonAssociations`, `event.figureAssociations`) uniform.
+
+**Tests:** 14 new `// MARK: - RelationshipManager` tests verify both-sides linkage + row counts (the whole point of the annotated-side fix), dedupe (incl. `dedupe: false`), sourceRef linking, optional-array appends, group/pantheon membership, alternate-name/sticky/tag/citation/attachment leaves, fetch-or-create idempotency, and a `save()` round-trip on a disk container. One interesting catch: `testRelationshipManagerPantheonMembership` failed on the plain m2m `Pantheon.figures` until `addPantheonMembership` also pushed the pantheon into annotated `Figure.pantheons` — the join row alone does NOT populate the m2m.
+
+**Also:** marked 1A as ✅ in `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md` with a follow-up note to migrate view call sites onto the manager.
+
+**Verify:** `swift build` clean; `swift test` **491 tests, 0 failures** (477 + 14 new).
+
+**Files touched:** `Sources/MeCore/Store/RelationshipManager.swift` (new), `Tests/MeCoreTests/MeCoreTests.swift`, `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md`.
+
+---
+
+### 2026-09-02 (follow-up) — Mini lineage trunk anchored to the parent-pair midpoint
+
+**Context:** User reported (mini lineage tree) that when the father is known but the mother is unknown, the vertical trunk to the inspected figure hangs off-center — originating at/near the Unknown-Mother chip — instead of from the middle of the "connection line" (the `—` between the two parent chips). The big lineage tree's engine was already ruled correct: `LineageTreeLayout` reproduces the exact scenario with the trunk at the couple midpoint, and that case is now locked in a regression test (`testLineageTreeLayoutTrunkOriginatesAtCoupleMidpoint`, covering both-unknown / father-known / mother-known).
+
+**Root cause:** `MiniLineageView`'s `connectorPiece` is a plain *centered* child of the column `VStack`, so its x is pinned to the row's center-of-mass. With equal-width chips (both parents unknown) the row center coincides with the chip midpoint; with a real `ParentChipView` father + narrower `? unknown mother` chip it sags toward the mother.
+
+**Changes:** the trunk is now anchored to the dash itself. `pairDash` (the `—` `Text`) reports its `midX` through a `PreferenceKey` (`ParentPairDashCenterKey`) in a named coordinate space; the column reports its own center (`LineageColumnCenterKey`); `parentTrunk` = `connectorPiece.offset(x: pairDashCenter − columnCenter)`. Since the dash sits between the two chips with equal (8pt) spacing, its center is by construction the parent-pair midpoint, so the trunk now hangs from the middle of the connection line in every configuration — including the both-unknown case (offset ≈ 0, unchanged) and when the Alt-couples button adds trailing asymmetry. Grandparents connector untouched.
+
+**Why not structural:** embedding the dash + trunk + chevron as one column between the chips would be shift-free but changes vertical alignment/sizing of the parent row; the offset approach preserves the existing vertical layout exactly and only relocates the trunk horizontally (`.offset` relocates drawing, not layout).
+
+**Verify:** `swift build` clean; `swift test` **477 tests, 0 failures** (476 + 1 new regression test).
+
+**Files touched:** `Sources/Me/Views/MiniLineageView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-02 — Lineage tree geometry extracted into testable MeCore engine
+
+**Context:** The user found it disturbing that the lineage tree view — the source of many past display bugs — had zero automated test coverage. Pushing back on "views are hard to test" as an excuse, I established (and this session implements) that the lineage tree's hard part was never SwiftUI rendering: tree building, card-frame layout, and bracket-segment geometry are deterministic math over the figure/relationship models. The pure logic is now extracted into a MeCore engine and unit-tested; the view became a thin drawing pass-through.
+
+**Finding (TODO #2 opened/closed along the way):** `FigureCardView`'s `coordinateSpace`/`onPositionChange` plumbing — the subject of the open "Lineage lines: consider PreferenceKey approach" item — turned out to be **dead code**. No caller ever passed either parameter (`LineageTreeView` computes everything itself via `Canvas`; `FigureLineageExplorer`/`MiniLineageView` never supply frames). There was nothing fragile left to convert; the plumbing was removed instead.
+
+**Changes:**
+- New `Sources/MeCore/Store/LineageTreeLayout.swift` — a `package enum` (mirroring the `SKLDatePropagator`/`SKLTimelineLayout` pattern) holding the pure logic ported verbatim from `LineageTreeView`, operating on the real `Figure`/`Relationship`/`RelationshipType` models:
+  - Types: `LineageEntry`, `LineageTreeData` (entries/levels/parentToChild), `LineageLayout` (nodeLayouts/figureAltCounts/canvas), `LineageSegment` (Equatable), `Metrics` (geometry constants with `.standard` defaults matching the old view).
+  - `buildTreeData(center:relationships:generationsAbove:generationsBelow:collapsedNames:)` — entry building incl. unknown-parent placeholders, share-a-figure dedup, collapse handling.
+  - `computeLayout(data:metrics:)` — card frames, child-subtree trunk alignment, canvas sizing/recentering.
+  - `bracketSegments(data:layout:metrics:)` + `segmentsForBracket(parentFrames:childFrames:branchBarOffset:marriageGap:)` — pure line-segment geometry (marriage bar, trunk, branch bar, drop lines).
+  - `preferredPartner(of:relationships:)`, `partnerCount(of:relationships:)`, `isUnknownParentName(_:)`.
+- `LineageTreeView.swift` — deleted the ~370 lines of ported logic and all private geometry constants; now calls the engine (`metrics = LineageTreeLayout.Metrics.standard`) and strokes the returned `[LineageSegment]` in `drawBrackets`. Drawing (colors, badge, mugshot) and interaction (tap/hover/hit-test on `nodeLayouts`) unchanged.
+- `FigureCardView.swift` — removed the dead `coordinateSpace` + `onPositionChange` + `GeometryReader` frame-reporting (also dropped the `.onChange(of: frame)`).
+- **14 new tests** (`// MARK: - LineageTreeLayout` + `// MARK: - Lineage bracket segments` in `MeCoreTests.swift`): generation structure, preferred-partner/alt-count, trunk alignment (exhaustive over every parent→children link), no-overlap within a generation, couple-card adjacency, vertical generation spacing, canvas bounds, descendant-side Unknown-Mother placeholder, ancestor-side Unknown-couple placeholder, collapse stops expansion both directions, `isUnknownParentName`, exact bracket geometry for a couple and a single parent, and end-to-end bracket invariants on a real tree (marriage bar + drop lines + axis-alignment).
+
+**Key decisions:** the engine operates on the real SwiftData models rather than a model-light view-projection, so the tested code is byte-for-byte the production path (placeholder `Figure` instances created inside `buildTreeData` stay un-inserted, exactly as at runtime). Geometry constants are injectable via `Metrics` so tests can adjust canvases later; firing placeholders/`PersistentIdentifier` in the test fixture is done by inserting real figures into an in-memory container (mirrors the app). The `PreferenceKey` refactor is unnecessary — connector lines come from computed layout, not rendered-frame lookup.
+
+**Verify:** `swift build` clean. `swift test`: **476 tests, 0 failures** (462 prior + 14 new).
+
+**Files touched:** `Sources/MeCore/Store/LineageTreeLayout.swift` (new), `Sources/Me/Views/LineageTreeView.swift`, `Sources/Me/Views/FigureCardView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/TODO.md`.
+
+---
+
+### 2026-09-01 (evening) — Collectives feature, skip-login dev switch, lineage gating
+
+**Context:** Continuing after the dynasty-ordering fix. The user wanted to track the peoples/nations of Mesopotamia (Akkadians, Assyrians, Hittites, …) — "collectives" distinct from individual figures. Debated modeling options (figure-with-type vs subclassing vs Thing); settled on **Figures with a dynamic FigureType**, the same pattern the existing "Divine Collective" (Anunnaki/Igigi) already uses. Also asked for a dev-only login bypass.
+
+**Changes:**
+- `Migration.ensureCollectives`: creates "Human Collective"/"Mixed Collective" types, a top-level **"Collectives"** sidebar group, and 10 collective figures (Sumerians, Akkadians, Gutians, Amorites, Babylonians, Assyrians, Elamites, Hurrians, Kassites, Hittites) with descriptions, domains, and era links; folds existing divine collectives (Anunnaki, Igigi) into the group.
+- `Migration.ensureCollectiveMembers`: seeds 35 key rulers across the thin collectives + links them to their collective via a new **"Member of"** relationship type; also links 53 pre-existing figures (SKL kings, Isin kings, Kültepe merchants) to their collectives.
+- `Migration.ensureCollectiveAlternateNames`: 23 cross-cultural aliases (Akkadeans, Amurru/Martu, Hatti/Nesites, …).
+- `Migration.ensureCollectiveTerritory`: new **Homeland/Capital/Territory** `FigurePlaceRoleType`s, creates Hattusa/Washukanni/Dur-Kurigalzu, links 22 collective↔place associations.
+- **Skip-login dev hack** (`@AppStorage("skipLogin")`, default off): ContentView auto-signs-in as the first user after migrations; toggle in App Settings → Development.
+- **Lineage gating**: "Show in Lineage Tree" is now disabled (not hidden) for collectives — a collective has no family relationships, so the lineage tree showed a meaningless lone node. Disabled in the Figures-list context menu, the green-tree detail-toolbar button (added `isEnabled` to `ToolbarButton`), and QueryView's "Show Lineage" (added a plain `figureTypeName` value to `FigureDossier` to avoid faulting in body).
+- Committed + pushed as `b004536` (34 files; also swept in the user's prior uncommitted text-block-attribution work per user request).
+
+**Key decisions:** collectives are figures (not a new model) — the type is a data-level flag, so a future dedicated model would be an additive migration; roles (Homeland/Capital/Territory) are dynamic `FigurePlaceRoleType` rows, not enum changes; "Member of" relationship category `membership` is deliberately excluded from lineage trees (family only).
+
+**Verify:** `swift build` clean; 450 tests pass (added tests for each migration). Manual: relaunch → "Collectives" appears in the sidebar History section; collective pages show members, aliases, and homeland/capital places.
+
+**Files touched:** `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/AppSettingsView.swift`, `Sources/Me/Views/FigureListView.swift`, `Sources/Me/Views/QueryView.swift`, `Sources/Me/Views/DetailToolbar.swift`, `Sources/MeCore/Store/DossierBuilder.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `AGENTS.md` (debugging lesson), `docs/SESSION_LOG.md`.
+
 ### 2026-09-01 — Dynasty sidebar ordering: root cause was the view, not the data
 
 **Context:** User reported the "Dynasties" sidebar entry not matching the post-flood timeline sequence (first appeared alphabetical, then out-of-order). Three data-layer fixes were applied and each was declared "fixed" — but the user kept seeing the wrong order. Lesson: the cause was never the data; it was the **view**.

@@ -21,7 +21,7 @@ struct FromTextHistorySheet: View {
                 .fixedSize(horizontal: false, vertical: true)
 
             if records.isEmpty {
-                Text("No adds yet.")
+                Text("No adds yet")
                     .font(.callout)
                     .foregroundStyle(.tertiary)
                     .frame(maxWidth: .infinity)

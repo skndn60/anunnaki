@@ -151,7 +151,7 @@ struct NoCoordinatesView: View {
                 .foregroundStyle(.secondary)
             Text(place.name)
                 .font(.headline)
-            Text("No coordinates are stored for this place, so it can't be placed on the map.")
+            Text("No coordinates are stored for this place, so it can\u{2019}t be placed on the map.")
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

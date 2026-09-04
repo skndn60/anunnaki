@@ -14,7 +14,7 @@ struct MissionControlView: View {
     @State private var blindSpotFilter: BlindSpotCategory? = nil
     @State private var dispatchingSpot: BlindSpot?
     @State private var dispatchQuery: String = ""
-    @AppStorage("missionControlDetailWidth") private var detailWidth: Double = 480
+    @DetailWidth(.missionControl) private var detailWidth
 
     @Query private var blockedSources: [BlockedSource]
 
@@ -505,7 +505,7 @@ private struct DispatchAgentSheet: View {
 
             Form {
                 TextField("Agent Name", text: $name, prompt: Text("Optional — defaults to search query"))
-                TextField("Search Query", text: $missionParameter, prompt: Text("e.g. Enki, Sumerian deities"))
+                TextField("Search Query", text: $missionParameter, prompt: Text("Enki, Sumerian deities"))
                     .help("The search term the agent will use to collect data")
                 Stepper("Target: \(targetCount) results", value: $targetCount, in: 1...50)
             }

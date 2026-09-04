@@ -94,7 +94,7 @@ struct FigureEpithetRow: View {
     var body: some View {
         if let epithet, !epithet.isEmpty {
             VStack(alignment: .leading, spacing: 2) {
-                Text("EPITHET")
+                Text("Epithet")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .textCase(.uppercase)

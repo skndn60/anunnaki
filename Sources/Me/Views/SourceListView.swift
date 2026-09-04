@@ -19,7 +19,7 @@ struct SourceListView: View {
         .sorted { $0.key < $1.key }
         .map { (key: $0.key, sources: $0.value.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }) }
     }
-    @AppStorage("sourceDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.source) private var detailWidth
     @State private var showingAddSheet = false
     @State private var editingSource: Source?
     @State private var selectedSourceID: PersistentIdentifier?
@@ -516,7 +516,7 @@ struct AttachmentFormView: View {
 
             Form {
                 Section("Reference Details") {
-                    TextField("Title", text: $title, prompt: Text("e.g. ETCSL Sumerian King List translation"))
+                    TextField("Title", text: $title, prompt: Text("ETCSL Sumerian King List translation"))
                     TextField("URL", text: $url, prompt: Text("https://..."))
                     Picker("Type", selection: $attachmentType) {
                         ForEach(Attachment.AttachmentType.allCases, id: \.self) { type in
@@ -542,13 +542,12 @@ struct AttachmentFormView: View {
     }
 
     private func save() {
-        let attachment = Attachment(
-            source: source,
-            title: title, url: url,
+        RelationshipManager(context: modelContext).addAttachment(
+            to: source, title: title, url: url,
             attachmentType: attachmentType,
-            note: note.isEmpty ? nil : note
+            note: note.isEmpty ? nil : note,
+            dedupe: false
         )
-        modelContext.insert(attachment)
         dismiss()
     }
 }// MARK: - Source Form
@@ -580,21 +579,21 @@ struct SourceFormView: View {
 
             Form {
                 Section("Source Details") {
-                    TextField("Name", text: $name, prompt: Text("e.g. Enuma Elish"))
+                    TextField("Name", text: $name, prompt: Text("Enuma Elish"))
                     Picker("Type", selection: $sourceType) {
                         ForEach(Source.SourceType.allCases, id: \.self) { type in
                             Text(type.rawValue).tag(type)
                         }
                     }
-                    TextField("Author / Translator", text: $author, prompt: Text("e.g. Stephanie Dalley"))
-                    TextField("Language", text: $language, prompt: Text("e.g. Akkadian, English translation"))
-                    TextField("Period", text: $period, prompt: Text("e.g. Old Babylonian, 7th century BCE"))
+                    TextField("Author / Translator", text: $author, prompt: Text("Stephanie Dalley"))
+                    TextField("Language", text: $language, prompt: Text("Akkadian, English translation"))
+                    TextField("Period", text: $period, prompt: Text("Old Babylonian, 7th century BCE"))
                 }
 
                 Section("Publication") {
-                    TextField("Publication Info", text: $publicationInfo, prompt: Text("e.g. British Museum, BM 36322"))
-                    TextField("URL", text: $url, prompt: Text("e.g. https://etcsl.orinst.ox.ac.uk/..."))
-                    TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("e.g. Flood for \"The Great Flood\""))
+                    TextField("Publication Info", text: $publicationInfo, prompt: Text("British Museum, BM 36322"))
+                    TextField("URL", text: $url, prompt: Text("https://etcsl.orinst.ox.ac.uk/..."))
+                    TextField("Sort key (overrides alphabetical sorting)", text: $sortName, prompt: Text("Flood for \"The Great Flood\""))
                 }
 
                 Section("Description") {

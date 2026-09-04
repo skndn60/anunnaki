@@ -464,7 +464,7 @@ struct SumerianDynastyMapView: View {
                         Image(systemName: "calendar")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        Text("c. \(abs(s))–\(abs(e)) BC")
+                        Text("c. \(abs(s))–\(abs(e)) BCE")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }

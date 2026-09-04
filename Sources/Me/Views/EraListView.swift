@@ -7,7 +7,7 @@ struct EraListView: View {
     @State private var showingAddSheet = false
     @State private var editingEra: Era?
     @State private var selectedEraID: PersistentIdentifier?
-    @AppStorage("eraDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.era) private var detailWidth
     @State private var showDeleteConfirm = false
 
     private var selectedEra: Era? {
@@ -172,7 +172,7 @@ struct EraFormView: View {
 
             Form {
                 Section("Era Details") {
-                    TextField("Name", text: $name, prompt: Text("e.g. Before the Flood"))
+                    TextField("Name", text: $name, prompt: Text("Before the Flood"))
                         .foregroundStyle(duplicateNameWarning == nil ? Color.primary : Color.orange)
                     if let duplicate = duplicateNameWarning {
                         Label("An era named \"\(duplicate)\" already exists — continuing will create another one.", systemImage: "exclamationmark.triangle.fill")

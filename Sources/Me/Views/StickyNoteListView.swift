@@ -78,7 +78,7 @@ struct StickyNoteSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("📌 Stickies")
+            Text("Stickies")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)

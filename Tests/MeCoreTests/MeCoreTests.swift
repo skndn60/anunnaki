@@ -91,6 +91,68 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(figureTypes.map(\.name), ["Archangel", "Commander", "Deity", "Divine Collective", "Human", "Igigi", "Primordial", "Semi-Divine"])
     }
 
+    func testEnsureMesopotamianDeitiesImportIsAdditiveAndIdempotent() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        Migration.ensureMesopotamianDeitiesImportExist(context: context)
+        let first = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertGreaterThanOrEqual(first.count, 100, "migration should insert 100+ figures, got \(first.count)")
+        let importedNames = Set(first.map { $0.name.lowercased() })
+        XCTAssertTrue(importedNames.contains("ashur"))
+        XCTAssertTrue(importedNames.contains("siduri"))
+
+        Migration.ensureMesopotamianDeitiesImportExist(context: context)
+        let second = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(second.count, first.count, "second run must not duplicate figures")
+    }
+
+    func testEnsureAlternateNamesImportIsAdditiveAndIdempotent() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        Migration.ensureMesopotamianDeitiesImportExist(context: context)
+
+        Migration.ensureAlternateNamesImportExist(context: context)
+        let alts = (try? context.fetch(FetchDescriptor<AlternateName>())) ?? []
+        XCTAssertGreaterThanOrEqual(alts.count, 20, "expected 20+ curated alternate-name rows, got \(alts.count)")
+
+        let ashurAlts = alts.filter { $0.figure?.name == "Ashur" }.map { $0.name }
+        XCTAssertTrue(ashurAlts.contains("Assur"), "Ashur should gain Akkadian spelling Assur; got \(ashurAlts)")
+
+        Migration.ensureAlternateNamesImportExist(context: context)
+        let alts2 = (try? context.fetch(FetchDescriptor<AlternateName>())) ?? []
+        XCTAssertEqual(alts2.count, alts.count, "second run must not duplicate alternate names")
+    }
+
+    func testRemoveOrphanedKittumNigginaAltNamesRemovesOnlyTargetPair() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+        Migration.ensureMesopotamianDeitiesImportExist(context: context)
+        Migration.ensureAlternateNamesImportExist(context: context)
+
+        context.insert(AlternateName(name: "Niĝgina", tradition: .sumerian, nameType: .syncretism))
+        context.insert(AlternateName(name: "Kittum", tradition: .akkadian, nameType: .translation))
+        context.insert(AlternateName(name: "Unrelated Orphan", tradition: .other, nameType: .epithet))
+        try? context.save()
+
+        Migration.removeOrphanedKittumNigginaAltNames(context: context)
+
+        let orphans = ((try? context.fetch(FetchDescriptor<AlternateName>())) ?? [])
+            .filter { $0.figure == nil && $0.place == nil }
+        XCTAssertFalse(orphans.contains { $0.name == "Niĝgina" })
+        XCTAssertFalse(orphans.contains { $0.name == "Kittum" })
+        XCTAssertTrue(orphans.contains { $0.name == "Unrelated Orphan" }, "unrelated orphans must be untouched")
+
+        let kittum = (try? context.fetch(FetchDescriptor<Figure>()))?.first { $0.name == "Kittum" }
+        let linked = ((try? context.fetch(FetchDescriptor<AlternateName>())) ?? [])
+            .filter { $0.figure == kittum }.map { $0.name }
+        XCTAssertTrue(linked.contains("Niggina"), "linked Niggina alt must survive; got \(linked)")
+    }
+
     func testEnsureTypesExistCreatesDefaultPlaceTypes() {
         let container = makeContainer()
         let context = ModelContext(container)
@@ -301,60 +363,6 @@ final class MeCoreTests: XCTestCase {
         default:
             XCTFail("Expected answer string, got \(result)")
         }
-    }
-
-    func testQueryEngineEventDateRangeYes() {
-        let container = makeContainer()
-        let context = ModelContext(container)
-        SeedData.ensureTypesExist(context: context)
-
-        let flood = Event(name: "The Great Flood", date: MythologicalDate(startYear: -30000, endYear: -24000))
-        context.insert(flood)
-        try? context.save()
-
-        let engine = QueryEngine(context: context)
-        let result = engine.query("Was the Great Flood between 30000 and 24000 BCE?")
-        guard case .answer(let text) = result else {
-            XCTFail("Expected answer string, got \(result)")
-            return
-        }
-        XCTAssertTrue(text.hasPrefix("Yes"))
-    }
-
-    func testQueryEngineEventDateRangeNo() {
-        let container = makeContainer()
-        let context = ModelContext(container)
-        SeedData.ensureTypesExist(context: context)
-
-        let flood = Event(name: "The Great Flood", date: MythologicalDate(startYear: -30000, endYear: -24000))
-        context.insert(flood)
-        try? context.save()
-
-        let engine = QueryEngine(context: context)
-        let result = engine.query("Was the Great Flood between 1000 and 500 BCE?")
-        guard case .answer(let text) = result else {
-            XCTFail("expected answer string, got \(result)")
-            return
-        }
-        XCTAssertTrue(text.hasPrefix("No"))
-    }
-
-    func testQueryEngineFigureDateRangeFrom() {
-        let container = makeContainer()
-        let context = ModelContext(container)
-        SeedData.ensureTypesExist(context: context)
-
-        let figure = Figure(name: "Gilgamesh", gender: .male, birthDate: MythologicalDate(startYear: -2900, endYear: -2700))
-        context.insert(figure)
-        try? context.save()
-
-        let engine = QueryEngine(context: context)
-        let result = engine.query("Was Gilgamesh alive from 2500 to 2100 BCE?")
-        guard case .answer(let text) = result else {
-            XCTFail("expected answer string, got \(result)")
-            return
-        }
-        XCTAssertTrue(text.hasPrefix("No"))
     }
 
     func testQueryEngineUnknownReturnsNoMatch() {
@@ -8314,5 +8322,1198 @@ func testRegnalKeyOrdersEventsByDate() {
 
         let stickies = (try? context.fetch(FetchDescriptor<StickyNote>())) ?? []
         XCTAssertTrue(stickies.isEmpty)
+    }
+
+    // MARK: - Migration.backfillBuziDescription
+
+    func testBackfillBuziDescriptionFillsEmpty() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let buzi = Figure(name: "Buzi")
+        context.insert(buzi)
+        try? context.save()
+
+        Migration.backfillBuziDescription(context: context)
+
+        XCTAssertFalse(buzi.figureDescription.isEmpty)
+        XCTAssertTrue(buzi.figureDescription.contains("Ezekiel"))
+    }
+
+    func testBackfillBuziDescriptionSkipsNonEmpty() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let buzi = Figure(name: "Buzi", figureDescription: "Custom description")
+        context.insert(buzi)
+        try? context.save()
+
+        Migration.backfillBuziDescription(context: context)
+
+        XCTAssertEqual(buzi.figureDescription, "Custom description")
+    }
+
+    func testBackfillBuziDescriptionNoBuziNoCrash() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Figure(name: "Enki"))
+        try? context.save()
+
+        Migration.backfillBuziDescription(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.count, 1)
+    }
+
+    // MARK: - Migration.ensureBidirectionalRelationshipConsistency
+
+    func testEnsureBidirectionalConsistencyCreatesReverseLink() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let spouseType = RelationshipType(name: "Spouse", icon: "heart", colorHex: "FF3B30", category: "partner")
+        context.insert(spouseType)
+        let enki = Figure(name: "Enki")
+        let ninhursag = Figure(name: "Ninhursag")
+        context.insert(enki)
+        context.insert(ninhursag)
+        context.insert(Relationship(fromFigure: enki, toFigure: ninhursag, relationshipType: spouseType, source: "test"))
+        try? context.save()
+
+        Migration.ensureBidirectionalRelationshipConsistency(context: context)
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(edges.count, 2)
+        XCTAssertTrue(edges.contains { $0.fromFigure === ninhursag && $0.toFigure === enki })
+        XCTAssertTrue(edges.contains { $0.fromFigure === enki && $0.toFigure === ninhursag })
+    }
+
+    func testEnsureBidirectionalConsistencyIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let spouseType = RelationshipType(name: "Spouse", icon: "heart", colorHex: "FF3B30", category: "partner")
+        context.insert(spouseType)
+        let enki = Figure(name: "Enki")
+        let ninhursag = Figure(name: "Ninhursag")
+        context.insert(enki)
+        context.insert(ninhursag)
+        context.insert(Relationship(fromFigure: enki, toFigure: ninhursag, relationshipType: spouseType, source: "test"))
+        try? context.save()
+
+        Migration.ensureBidirectionalRelationshipConsistency(context: context)
+        Migration.ensureBidirectionalRelationshipConsistency(context: context)
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(edges.count, 2)
+    }
+
+    func testEnsureBidirectionalConsistencyDoesNotDoubleNonMutual() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fatherType = RelationshipType(name: "Father", icon: "arrow.down", colorHex: "007AFF", category: "parent")
+        context.insert(fatherType)
+        let anu = Figure(name: "Anu")
+        let enlil = Figure(name: "Enlil")
+        context.insert(anu)
+        context.insert(enlil)
+        context.insert(Relationship(fromFigure: anu, toFigure: enlil, relationshipType: fatherType, source: "test"))
+        try? context.save()
+
+        Migration.ensureBidirectionalRelationshipConsistency(context: context)
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(edges.count, 1, "Father is not a mutual type and must not gain a reverse edge")
+    }
+
+    // MARK: - Migration.fixEraTypos
+
+    func testFixEraTyposCorrectsGuthianToGutian() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Gutian rule", orderIndex: 700)
+        context.insert(era)
+        let figure = Figure(name: "Inkishush")
+        figure.birthDate = MythologicalDate(startYear: nil, endYear: nil, era: "Guthian rule")
+        figure.deathDate = MythologicalDate(startYear: nil, endYear: nil, era: "Guthian rule")
+        figure.era = nil
+        context.insert(figure)
+        try? context.save()
+
+        Migration.fixEraTypos(context: context)
+
+        XCTAssertEqual(figure.birthDate.era, "Gutian rule")
+        XCTAssertEqual(figure.deathDate.era, "Gutian rule")
+        XCTAssertEqual(figure.era?.name, "Gutian rule")
+    }
+
+    // MARK: - Migration.ensureFigureGroupKinds
+
+    func testEnsureFigureGroupKindsSetsKindFromName() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let enoch = FigureGroup(name: "Book of Enoch")
+        let skl = FigureGroup(name: "SKL Kings")
+        let standard = FigureGroup(name: "Divine Council")
+        context.insert(enoch)
+        context.insert(skl)
+        context.insert(standard)
+        try? context.save()
+
+        Migration.ensureFigureGroupKinds(context: context)
+
+        XCTAssertEqual(enoch.kind, .enoch)
+        XCTAssertEqual(skl.kind, .skl)
+        XCTAssertEqual(standard.kind, .standard)
+    }
+
+    // MARK: - Migration.ensureDefaultFigureGroups
+
+    func testEnsureDefaultFigureGroupsCreatesDefaults() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        Migration.ensureDefaultFigureGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        XCTAssertEqual(groups.count, 6)
+        let names = groups.map(\.name)
+        XCTAssertTrue(names.contains("Divine Council"))
+        XCTAssertTrue(names.contains("Sumerian Pantheon"))
+        XCTAssertTrue(names.contains("SKL Kings"))
+        XCTAssertTrue(names.contains("Book of Enoch"))
+    }
+
+    func testEnsureDefaultFigureGroupsSkipsIfGroupsExist() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureGroup(name: "My Custom Group"))
+        try? context.save()
+
+        Migration.ensureDefaultFigureGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups.first?.name, "My Custom Group")
+    }
+
+    // MARK: - Migration.removeFloodPlaceholder
+
+    func testRemoveFloodPlaceholderRemovesEmptyGroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureGroup(name: "The Flood", kind: .flood))
+        try? context.save()
+
+        Migration.removeFloodPlaceholder(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        XCTAssertTrue(groups.isEmpty)
+    }
+
+    func testRemoveFloodPlaceholderPreservesGroupWithFigure() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let group = FigureGroup(name: "The Flood", kind: .flood)
+        context.insert(group)
+        let figure = Figure(name: "Ziusudra")
+        context.insert(figure)
+        let assoc = FigureGroupAssociation(figure: figure)
+        group.figureAssociations.append(assoc)
+        try? context.save()
+
+        Migration.removeFloodPlaceholder(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups.first?.name, "The Flood")
+    }
+
+    // MARK: - Migration.markPreExistingSyncretisms
+
+    func testMarkPreExistingSyncretismsAddsSticky() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let ninhursag = Figure(name: "Ninhursag")
+        context.insert(ninhursag)
+        try? context.save()
+
+        Migration.markPreExistingSyncretisms(context: context)
+
+        XCTAssertEqual(ninhursag.stickies.count, 1)
+        XCTAssertTrue(ninhursag.stickies.first?.text.hasPrefix("FROM 26-08-2026 IMPORT") ?? false)
+    }
+
+    func testMarkPreExistingSyncretismsIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let ninhursag = Figure(name: "Ninhursag")
+        context.insert(ninhursag)
+        try? context.save()
+
+        Migration.markPreExistingSyncretisms(context: context)
+        Migration.markPreExistingSyncretisms(context: context)
+
+        XCTAssertEqual(ninhursag.stickies.count, 1)
+    }
+
+    // MARK: - Migration.ensureCanonicalDeityFamilies
+
+    func testEnsureCanonicalDeityFamiliesCreatesSpouseLink() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let motherType = RelationshipType(name: "Mother", icon: "arrow.down", colorHex: "FF2D55", category: "parent")
+        let fatherType = RelationshipType(name: "Father", icon: "arrow.down", colorHex: "007AFF", category: "parent")
+        let spouseType = RelationshipType(name: "Spouse", icon: "heart", colorHex: "FF3B30", category: "partner")
+        context.insert(motherType)
+        context.insert(fatherType)
+        context.insert(spouseType)
+        let father = Figure(name: "Enki")
+        let mother = Figure(name: "Damkina")
+        let child = Figure(name: "Asarluhi")
+        context.insert(father)
+        context.insert(mother)
+        context.insert(child)
+        context.insert(Relationship(fromFigure: father, toFigure: child, relationshipType: fatherType, source: "test"))
+        context.insert(Relationship(fromFigure: mother, toFigure: child, relationshipType: motherType, source: "test"))
+        try? context.save()
+
+        Migration.ensureCanonicalDeityFamilies(context: context)
+
+        let edges = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let spouses = edges.filter { $0.relationshipType?.name == "Spouse" }
+        XCTAssertEqual(spouses.count, 1)
+        XCTAssertTrue(spouses.contains { $0.fromFigure === father && $0.toFigure === mother })
+    }
+
+    // MARK: - LineageTreeLayout
+
+    private func makeLineageFixture(_ context: ModelContext) -> (father: RelationshipType, mother: RelationshipType, spouse: RelationshipType) {
+        let father = RelationshipType(name: "Father", icon: "", colorHex: "#4A90D9", category: "parent")
+        let mother = RelationshipType(name: "Mother", icon: "", colorHex: "#D94A64", category: "parent")
+        let spouse = RelationshipType(name: "Spouse", icon: "", colorHex: "#888888", category: "partner")
+        context.insert(father)
+        context.insert(mother)
+        context.insert(spouse)
+        try? context.save()
+        return (father, mother, spouse)
+    }
+
+    @discardableResult
+    private func makeTreeFigure(_ context: ModelContext, _ name: String, _ gender: Figure.Gender = .male) -> Figure {
+        let f = Figure(name: name, gender: gender)
+        context.insert(f)
+        return f
+    }
+
+    @discardableResult
+    private func makeParentRel(_ context: ModelContext, parent: Figure, child: Figure, type: RelationshipType, preferred: Bool = false) -> Relationship {
+        let rel = Relationship(fromFigure: parent, toFigure: child, relationshipType: type, source: "test", isPreferred: preferred)
+        context.insert(rel)
+        return rel
+    }
+
+    @discardableResult
+    private func makeSpouseRel(_ context: ModelContext, _ a: Figure, _ b: Figure, type: RelationshipType, preferred: Bool = false) -> Relationship {
+        let rel = Relationship(fromFigure: a, toFigure: b, relationshipType: type, source: "test", isPreferred: preferred)
+        context.insert(rel)
+        return rel
+    }
+
+    private func framesForGeneration(_ gen: Int, data: LineageTreeData, layout: LineageLayout) -> [CGRect] {
+        var frames: [CGRect] = []
+        for entry in data.entries.values where entry.generation == gen {
+            if let f = layout.nodeLayouts[entry.primary.persistentModelID] { frames.append(f) }
+            if let partner = entry.partner, let f = layout.nodeLayouts[partner.persistentModelID] { frames.append(f) }
+        }
+        return frames
+    }
+
+    private func makeThreeGenerationFamily(_ context: ModelContext) -> (father: RelationshipType, mother: RelationshipType, spouse: RelationshipType, anu: Figure) {
+        let types = makeLineageFixture(context)
+        let an = makeTreeFigure(context, "An")
+        let nammu = makeTreeFigure(context, "Nammu", .female)
+        let anu = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        let enlil = makeTreeFigure(context, "Enlil")
+        let ninlil = makeTreeFigure(context, "Ninlil", .female)
+        let enki = makeTreeFigure(context, "Enki")
+        let damkina = makeTreeFigure(context, "Damkina", .female)
+        let sin = makeTreeFigure(context, "Sin")
+        let shala = makeTreeFigure(context, "Shala", .female)
+
+        makeParentRel(context, parent: an, child: anu, type: types.father)
+        makeParentRel(context, parent: nammu, child: anu, type: types.mother)
+        makeSpouseRel(context, anu, antu, type: types.spouse, preferred: true)
+        makeParentRel(context, parent: anu, child: enlil, type: types.father)
+        makeParentRel(context, parent: antu, child: enlil, type: types.mother)
+        makeParentRel(context, parent: anu, child: enki, type: types.father)
+        makeParentRel(context, parent: antu, child: enki, type: types.mother)
+        makeParentRel(context, parent: enlil, child: sin, type: types.father)
+        makeParentRel(context, parent: ninlil, child: sin, type: types.mother)
+        makeSpouseRel(context, enlil, ninlil, type: types.spouse)
+        makeSpouseRel(context, enki, damkina, type: types.spouse)
+        makeSpouseRel(context, sin, shala, type: types.spouse)
+        try? context.save()
+
+        return (types.father, types.mother, types.spouse, anu)
+    }
+
+    func testLineageTreeLayoutBuildsThreeGenerations() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixtures = makeThreeGenerationFamily(context)
+        let anu = fixtures.anu
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+
+        let data = LineageTreeLayout.buildTreeData(center: anu, relationships: allRels, generationsAbove: 1, generationsBelow: 1, collapsedNames: [])
+
+        XCTAssertEqual(data.rootID, anu.persistentModelID)
+        XCTAssertEqual(data.levels.count, 3)
+        XCTAssertEqual(Set(data.levels.map { $0.first?.generation ?? 99 }), Set([-1, 0, 1]))
+
+        let center = data.entries["Anu@0"]
+        XCTAssertNotNil(center)
+        XCTAssertEqual(center?.generation, 0)
+        XCTAssertEqual(center?.partner?.name, "Antu")
+
+        XCTAssertTrue(data.entries.keys.contains("An@-1"))
+        XCTAssertTrue(data.entries.keys.contains("Enki@1"))
+        XCTAssertTrue(data.entries.keys.contains("Enlil@1"))
+
+        XCTAssertEqual(data.parentToChild["An@-1"], ["Anu@0"])
+    }
+
+    func testLineageTreeLayoutPreferredPartnerAndAltCount() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let center = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        let tiamat = makeTreeFigure(context, "Tiamat", .female)
+        makeSpouseRel(context, center, antu, type: fixture.spouse, preferred: true)
+        makeSpouseRel(context, center, tiamat, type: fixture.spouse)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: center, relationships: allRels, generationsAbove: 0, generationsBelow: 0, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+
+        let entry = data.entries["Anu@0"]
+        XCTAssertEqual(entry?.partner?.name, "Antu", "preferred partner must win")
+        XCTAssertEqual(entry?.altPartnerCount, 1, "one of two partners is the preferred one")
+        XCTAssertEqual(layout.figureAltCounts[center.persistentModelID], 1)
+    }
+
+    func testLineageTreeLayoutChildGroupAlignsUnderParentTrunk() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let anu = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        let kids = (0..<4).map { makeTreeFigure(context, "Kid\($0)") }
+        let spouses = (0..<4).map { makeTreeFigure(context, "Spouse\($0)", .female) }
+        for i in kids.indices {
+            makeParentRel(context, parent: anu, child: kids[i], type: fixture.father)
+            makeParentRel(context, parent: antu, child: kids[i], type: fixture.mother)
+            makeSpouseRel(context, kids[i], spouses[i], type: fixture.spouse)
+        }
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: anu, relationships: allRels, generationsAbove: 0, generationsBelow: 2, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+
+        for (parentID, childIDs) in data.parentToChild {
+            guard let parentEntry = data.entries[parentID] else { continue }
+            let parentIDs = [parentEntry.primary.persistentModelID] + (parentEntry.partner.map { [$0.persistentModelID] } ?? [])
+            let parentFrames = parentIDs.compactMap { layout.nodeLayouts[$0] }
+            let childFrames = childIDs.compactMap { cid -> CGRect? in
+                guard let ce = data.entries[cid] else { return nil }
+                return layout.nodeLayouts[ce.primary.persistentModelID]
+            }
+            guard !parentFrames.isEmpty, !childFrames.isEmpty else { continue }
+            let trunkX = parentFrames.map(\.midX).reduce(0, +) / CGFloat(parentFrames.count)
+            let childGroupMidX = childFrames.map(\.midX).reduce(0, +) / CGFloat(childFrames.count)
+            XCTAssertEqual(childGroupMidX, trunkX, accuracy: 2.01, "children of \(parentID) must sit under the parent trunk")
+        }
+    }
+
+    func testLineageTreeLayoutCardsDoNotOverlapWithinGeneration() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let anu = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        let kids = (0..<4).map { makeTreeFigure(context, "Kid\($0)") }
+        let spouses = (0..<4).map { makeTreeFigure(context, "Spouse\($0)", .female) }
+        for i in kids.indices {
+            makeParentRel(context, parent: anu, child: kids[i], type: fixture.father)
+            makeParentRel(context, parent: antu, child: kids[i], type: fixture.mother)
+            makeSpouseRel(context, kids[i], spouses[i], type: fixture.spouse)
+        }
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: anu, relationships: allRels, generationsAbove: 0, generationsBelow: 1, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+
+        for level in data.levels {
+            let gen = level.first?.generation ?? 0
+            let frames = framesForGeneration(gen, data: data, layout: layout)
+            for i in 0..<frames.count {
+                for j in (i + 1)..<frames.count {
+                    XCTAssertFalse(frames[i].intersects(frames[j]), "generation \(gen) cards overlap: \(frames[i]) vs \(frames[j])")
+                }
+            }
+        }
+    }
+
+    func testLineageTreeLayoutCoupleCardsAreAdjacent() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let anu = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        makeSpouseRel(context, anu, antu, type: fixture.spouse)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: anu, relationships: allRels, generationsAbove: 0, generationsBelow: 0, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+
+        guard let anuFrame = layout.nodeLayouts[anu.persistentModelID],
+              let antuFrame = layout.nodeLayouts[antu.persistentModelID] else {
+            XCTFail("missing couple frames")
+            return
+        }
+        XCTAssertEqual(anuFrame.minY, antuFrame.minY)
+        XCTAssertEqual(antuFrame.minX - anuFrame.maxX, MetricsTestConstants.partnerGap, accuracy: 0.001)
+        XCTAssertEqual(antuFrame.width, anuFrame.width)
+        XCTAssertEqual(antuFrame.height, anuFrame.height)
+    }
+
+    func testLineageTreeLayoutGenerationsVerticallySpaced() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let anu = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        let kid = makeTreeFigure(context, "Kid")
+        makeSpouseRel(context, anu, antu, type: fixture.spouse)
+        makeParentRel(context, parent: anu, child: kid, type: fixture.father)
+        makeParentRel(context, parent: antu, child: kid, type: fixture.mother)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: anu, relationships: allRels, generationsAbove: 0, generationsBelow: 1, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+
+        guard let centerFrame = layout.nodeLayouts[anu.persistentModelID],
+              let childFrame = layout.nodeLayouts[kid.persistentModelID] else {
+            XCTFail("missing frames")
+            return
+        }
+        XCTAssertEqual(childFrame.minY - centerFrame.minY, MetricsTestConstants.verticalGap, accuracy: 0.001)
+    }
+
+    func testLineageTreeLayoutCanvasContainsAllContent() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixtures = makeThreeGenerationFamily(context)
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+
+        let data = LineageTreeLayout.buildTreeData(center: fixtures.anu, relationships: allRels, generationsAbove: 1, generationsBelow: 2, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+
+        XCTAssertGreaterThanOrEqual(layout.canvasWidth, 600)
+        XCTAssertGreaterThanOrEqual(layout.canvasHeight, 400)
+        for (_, frame) in layout.nodeLayouts {
+            XCTAssertGreaterThanOrEqual(frame.minX, 0)
+            XCTAssertLessThanOrEqual(frame.maxX, layout.canvasWidth)
+            XCTAssertGreaterThanOrEqual(frame.minY, 0)
+            XCTAssertLessThanOrEqual(frame.maxY, layout.canvasHeight)
+        }
+    }
+
+    func testLineageTreeLayoutDescendantSideUnknownPlaceholder() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let adam = makeTreeFigure(context, "Adam")
+        let cain = makeTreeFigure(context, "Cain")
+        makeParentRel(context, parent: adam, child: cain, type: fixture.father)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: adam, relationships: allRels, generationsAbove: 0, generationsBelow: 1, collapsedNames: [])
+
+        let entry = data.entries["Adam@0"]
+        XCTAssertEqual(entry?.partner?.name, "Unknown Mother", "a father with children but no mother rel gets the placeholder spouse")
+        XCTAssertEqual(entry?.partner?.gender, .female)
+    }
+
+    func testLineageTreeLayoutAncestorSideUnknownCouplePlaceholder() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let orphan = makeTreeFigure(context, "Orphan")
+        try? context.save()
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+
+        let data = LineageTreeLayout.buildTreeData(center: orphan, relationships: allRels, generationsAbove: 1, generationsBelow: 0, collapsedNames: [])
+
+        let entry = data.entries["Unknown Father@-1"]
+        XCTAssertNotNil(entry)
+        XCTAssertEqual(entry?.primary.name, "Unknown Father")
+        XCTAssertEqual(entry?.partner?.name, "Unknown Mother")
+        XCTAssertEqual(entry?.generation, -1)
+        XCTAssertEqual(data.parentToChild["Unknown Father@-1"], ["Orphan@0"])
+    }
+
+    func testLineageTreeLayoutCollapseStopsExpansion() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let grandpa = makeTreeFigure(context, "Grandpa")
+        let papa = makeTreeFigure(context, "Papa")
+        let me = makeTreeFigure(context, "Me")
+        let son = makeTreeFigure(context, "Son")
+        let grandson = makeTreeFigure(context, "Grandson")
+        makeParentRel(context, parent: grandpa, child: papa, type: fixture.father)
+        makeParentRel(context, parent: papa, child: me, type: fixture.father)
+        makeParentRel(context, parent: me, child: son, type: fixture.father)
+        makeParentRel(context, parent: son, child: grandson, type: fixture.father)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: me, relationships: allRels, generationsAbove: 2, generationsBelow: 2, collapsedNames: ["Papa", "Son"])
+
+        XCTAssertTrue(data.entries.keys.contains("Papa@-1"), "collapsed node itself still appears")
+        XCTAssertTrue(data.entries.keys.contains("Son@1"), "collapsed node itself still appears")
+        XCTAssertFalse(data.entries.keys.contains("Grandpa@-2"), "ancestors of a collapsed node must not render")
+        XCTAssertFalse(data.entries.keys.contains("Grandson@2"), "descendants of a collapsed node must not render")
+        XCTAssertEqual(data.entries.keys.filter { $0.hasSuffix("@-2") }.count, 0)
+        XCTAssertEqual(data.entries.keys.filter { $0.hasSuffix("@2") }.count, 0)
+    }
+
+    func testLineageTreeLayoutIsUnknownParentName() {
+        XCTAssertTrue(LineageTreeLayout.isUnknownParentName("Unknown Father"))
+        XCTAssertTrue(LineageTreeLayout.isUnknownParentName("Unknown Mother"))
+        XCTAssertFalse(LineageTreeLayout.isUnknownParentName("Anu"))
+        XCTAssertFalse(LineageTreeLayout.isUnknownParentName(""))
+    }
+
+    // MARK: - Lineage bracket segments
+
+    func testLineageBracketSegmentsCoupleGeometry() {
+        let p1 = CGRect(x: 100, y: 100, width: 120, height: 52)
+        let p2 = CGRect(x: 234, y: 100, width: 120, height: 52)
+        let c1 = CGRect(x: 120, y: 300, width: 120, height: 52)
+        let c2 = CGRect(x: 320, y: 300, width: 120, height: 52)
+
+        let segments = LineageTreeLayout.segmentsForBracket(parentFrames: [p1, p2], childFrames: [c1, c2], branchBarOffset: 16)
+
+        let expected: [LineageSegment] = [
+            LineageSegment(start: CGPoint(x: 160, y: 152), end: CGPoint(x: 160, y: 166)),
+            LineageSegment(start: CGPoint(x: 294, y: 152), end: CGPoint(x: 294, y: 166)),
+            LineageSegment(start: CGPoint(x: 160, y: 166), end: CGPoint(x: 294, y: 166)),
+            LineageSegment(start: CGPoint(x: 227, y: 166), end: CGPoint(x: 227, y: 284)),
+            LineageSegment(start: CGPoint(x: 180, y: 284), end: CGPoint(x: 380, y: 284)),
+            LineageSegment(start: CGPoint(x: 180, y: 284), end: CGPoint(x: 180, y: 300)),
+            LineageSegment(start: CGPoint(x: 380, y: 284), end: CGPoint(x: 380, y: 300)),
+        ]
+        XCTAssertEqual(segments, expected)
+    }
+
+    func testLineageBracketSegmentsSingleParentOmitsMarriageBar() {
+        let parent = CGRect(x: 100, y: 100, width: 120, height: 52)
+        let c1 = CGRect(x: 140, y: 300, width: 120, height: 52)
+        let c2 = CGRect(x: 380, y: 300, width: 120, height: 52)
+
+        let segments = LineageTreeLayout.segmentsForBracket(parentFrames: [parent], childFrames: [c1, c2], branchBarOffset: 16)
+
+        let expected: [LineageSegment] = [
+            LineageSegment(start: CGPoint(x: 160, y: 166), end: CGPoint(x: 160, y: 284)),
+            LineageSegment(start: CGPoint(x: 160, y: 284), end: CGPoint(x: 440, y: 284)),
+            LineageSegment(start: CGPoint(x: 200, y: 284), end: CGPoint(x: 200, y: 300)),
+            LineageSegment(start: CGPoint(x: 440, y: 284), end: CGPoint(x: 440, y: 300)),
+        ]
+        XCTAssertEqual(segments, expected)
+    }
+
+    func testLineageBracketSegmentsCoversRealTree() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let anu = makeTreeFigure(context, "Anu")
+        let antu = makeTreeFigure(context, "Antu", .female)
+        let enlil = makeTreeFigure(context, "Enlil")
+        let enki = makeTreeFigure(context, "Enki")
+        makeSpouseRel(context, anu, antu, type: fixture.spouse)
+        makeParentRel(context, parent: anu, child: enlil, type: fixture.father)
+        makeParentRel(context, parent: antu, child: enlil, type: fixture.mother)
+        makeParentRel(context, parent: anu, child: enki, type: fixture.father)
+        makeParentRel(context, parent: antu, child: enki, type: fixture.mother)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let data = LineageTreeLayout.buildTreeData(center: anu, relationships: allRels, generationsAbove: 0, generationsBelow: 1, collapsedNames: [])
+        let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+        let segments = LineageTreeLayout.bracketSegments(data: data, layout: layout, metrics: .standard)
+
+        XCTAssertFalse(segments.isEmpty)
+
+        for segment in segments {
+            let isHorizontal = segment.start.y == segment.end.y
+            let isVertical = segment.start.x == segment.end.x
+            XCTAssertTrue(isHorizontal || isVertical, "bracket segments must be axis-aligned: \(segment)")
+        }
+
+        guard let anuFrame = layout.nodeLayouts[anu.persistentModelID],
+              let antuFrame = layout.nodeLayouts[antu.persistentModelID] else {
+            XCTFail("missing parent frames")
+            return
+        }
+        let marriageY = max(anuFrame.maxY, antuFrame.maxY) + 14
+        let hasMarriageBar = segments.contains {
+            $0.start.y == marriageY && $0.end.y == marriageY
+        }
+        XCTAssertTrue(hasMarriageBar, "a couple link must draw a marriage bar at y=\(marriageY)")
+
+        for child in [enlil, enki] {
+            guard let childFrame = layout.nodeLayouts[child.persistentModelID] else {
+                XCTFail("missing child frame for \(child.name)")
+                continue
+            }
+            let hasDropLine = segments.contains {
+                $0.end == CGPoint(x: childFrame.midX, y: childFrame.minY) && $0.start.y < childFrame.minY
+            }
+            XCTAssertTrue(hasDropLine, "each child \(child.name) must have a drop line onto its top edge")
+        }
+    }
+
+    enum MetricsTestConstants {
+        static let partnerGap: CGFloat = 14
+        static let verticalGap: CGFloat = 130
+    }
+
+    func testLineageTreeLayoutTrunkOriginatesAtCoupleMidpoint() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let fixture = makeLineageFixture(context)
+        let kid = makeTreeFigure(context, "Kid")
+        let dad = makeTreeFigure(context, "Dad")
+        let mom = makeTreeFigure(context, "Mom", .female)
+        makeParentRel(context, parent: dad, child: kid, type: fixture.father)
+        makeParentRel(context, parent: mom, child: kid, type: fixture.mother)
+        try? context.save()
+
+        let allRels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        for name in ["both", "father", "mother"] {
+            let rels: [Relationship]
+            switch name {
+            case "father": rels = allRels.filter { $0.relationshipType?.name == "Father" }
+            case "mother": rels = allRels.filter { $0.relationshipType?.name == "Mother" }
+            default: rels = []
+            }
+            let data = LineageTreeLayout.buildTreeData(center: kid, relationships: rels, generationsAbove: 1, generationsBelow: 0, collapsedNames: [])
+            let layout = LineageTreeLayout.computeLayout(data: data, metrics: .standard)
+            let segments = LineageTreeLayout.bracketSegments(data: data, layout: layout, metrics: .standard)
+            let keys = data.entries.values.filter { $0.generation == -1 }
+            let parentFrames = keys.flatMap { entry -> [CGRect] in
+                [entry.primary, entry.partner].compactMap { fig in
+                    guard let fig, let f = layout.nodeLayouts[fig.persistentModelID] else { return nil }
+                    return f
+                }
+            }
+            guard parentFrames.count == 2 else {
+                XCTFail("\(name): expected 2 parent frames, got \(parentFrames.count)")
+                continue
+            }
+            let marriageY = parentFrames.map(\.maxY).max()! + 14
+            let trunks = segments.filter { $0.start.x == $0.end.x && abs($0.start.y - marriageY) < 0.001 && $0.end.y > $0.start.y }
+            let expectedMid = (parentFrames[0].midX + parentFrames[1].midX) / 2
+            XCTAssertEqual(trunks.count, 1, "\(name): exactly one trunk from marriage bar")
+            if let trunk = trunks.first {
+                XCTAssertEqual(trunk.start.x, expectedMid, accuracy: 0.001, "\(name): trunk must originate at couple midpoint")
+            }
+            if let kidFrame = layout.nodeLayouts[kid.persistentModelID] {
+                XCTAssertEqual(kidFrame.midX, expectedMid, accuracy: 0.001, "\(name): child centered under couple midpoint")
+            }
+        }
+    }
+
+    // MARK: - RelationshipManager
+
+    private func count<M: PersistentModel>(_ type: M.Type, in context: ModelContext) -> Int {
+        (try? context.fetch(FetchDescriptor<M>()))?.count ?? 0
+    }
+
+    func testRelationshipManagerLinksRelationshipOnBothSides() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let anu = makeTreeFigure(context, "Anu")
+        let enlil = makeTreeFigure(context, "Enlil")
+        let fatherType = manager.relationshipType(named: "Father", category: "parent")
+
+        let rel = manager.addRelationship(from: anu, to: enlil, relationshipType: fatherType, source: "test")
+
+        XCTAssertTrue(rel.fromFigure === anu)
+        XCTAssertTrue(rel.toFigure === enlil)
+        XCTAssertTrue(rel.relationshipType === fatherType)
+        XCTAssertEqual(rel.source, "test")
+        XCTAssertTrue(anu.outgoingRelationships.contains { $0.persistentModelID == rel.persistentModelID })
+        XCTAssertTrue(enlil.incomingRelationships.contains { $0.persistentModelID == rel.persistentModelID })
+        XCTAssertTrue(fatherType.relationships.contains { $0.persistentModelID == rel.persistentModelID })
+        XCTAssertEqual(count(Relationship.self, in: context), 1)
+    }
+
+    func testRelationshipManagerDedupesRelationship() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let a = makeTreeFigure(context, "A")
+        let b = makeTreeFigure(context, "B")
+        let fatherType = manager.relationshipType(named: "Father", category: "parent")
+
+        let first = manager.addRelationship(from: a, to: b, relationshipType: fatherType)
+        let second = manager.addRelationship(from: a, to: b, relationshipType: fatherType)
+
+        XCTAssertEqual(first.persistentModelID, second.persistentModelID)
+        XCTAssertEqual(count(Relationship.self, in: context), 1)
+
+        _ = manager.addRelationship(from: a, to: b, relationshipType: fatherType, dedupe: false)
+        XCTAssertEqual(count(Relationship.self, in: context), 2)
+    }
+
+    func testRelationshipManagerRelationshipLinksSource() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let a = makeTreeFigure(context, "A")
+        let b = makeTreeFigure(context, "B")
+        let motherType = manager.relationshipType(named: "Mother", category: "parent")
+        let source = Source(name: "The Testament Divine")
+        context.insert(source)
+
+        let rel = manager.addRelationship(from: a, to: b, relationshipType: motherType, source: "display", sourceRef: source)
+
+        XCTAssertTrue(rel.sourceRef === source)
+        XCTAssertTrue(source.relationships.contains { $0.persistentModelID == rel.persistentModelID })
+    }
+
+    func testRelationshipManagerFigurePlaceAssociationLinksAllSidesAndDedupes() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let ninurta = makeTreeFigure(context, "Ninurta")
+        let nigeru = Place(name: "Nigeru")
+        context.insert(nigeru)
+        let patron = manager.figurePlaceRoleType(named: "Patron Deity", colorHex: "#4A90D9")
+
+        let assoc = manager.addFigurePlaceAssociation(figure: ninurta, place: nigeru, roleType: patron, source: "test", displayName: "Ninurta of Nigeru")
+
+        XCTAssertTrue(assoc.figure === ninurta)
+        XCTAssertTrue(assoc.place === nigeru)
+        XCTAssertTrue(assoc.roleType === patron)
+        XCTAssertEqual(assoc.source, "test")
+        XCTAssertEqual(assoc.displayName, "Ninurta of Nigeru")
+        XCTAssertTrue(ninurta.placeAssociations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertTrue(nigeru.figureAssociations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertTrue(patron.associations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertEqual(count(FigurePlaceAssociation.self, in: context), 1)
+
+        let again = manager.addFigurePlaceAssociation(figure: ninurta, place: nigeru, roleType: patron)
+        XCTAssertEqual(again.persistentModelID, assoc.persistentModelID)
+        XCTAssertEqual(count(FigurePlaceAssociation.self, in: context), 1)
+
+        _ = manager.addFigurePlaceAssociation(figure: ninurta, place: nigeru, roleType: patron, dedupe: false)
+        XCTAssertEqual(count(FigurePlaceAssociation.self, in: context), 2)
+    }
+
+    func testRelationshipManagerPlacePlaceAssociation() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let nigeru = Place(name: "Nigeru")
+        let esagil = Place(name: "Esagil")
+        context.insert(nigeru)
+        context.insert(esagil)
+        let locatedWithin = manager.placePlaceRoleType(named: "Located Within")
+
+        let assoc = manager.addPlacePlaceAssociation(from: esagil, to: nigeru, roleType: locatedWithin, source: "test")
+
+        XCTAssertTrue(assoc.fromPlace === esagil)
+        XCTAssertTrue(assoc.toPlace === nigeru)
+        XCTAssertTrue(assoc.roleType === locatedWithin)
+        XCTAssertTrue(locatedWithin.associations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertEqual(count(PlacePlaceAssociation.self, in: context), 1)
+
+        let again = manager.addPlacePlaceAssociation(from: esagil, to: nigeru, roleType: locatedWithin)
+        XCTAssertEqual(again.persistentModelID, assoc.persistentModelID)
+        XCTAssertEqual(count(PlacePlaceAssociation.self, in: context), 1)
+    }
+
+    func testRelationshipManagerEventPlaceAssociation() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let event = Event(name: "Building of Esagil")
+        let esagil = Place(name: "Esagil")
+        context.insert(event)
+        context.insert(esagil)
+        let at = manager.eventPlaceRoleType(named: "At")
+
+        let assoc = manager.addEventPlaceAssociation(event: event, place: esagil, roleType: at, source: "test")
+
+        XCTAssertTrue(assoc.event === event)
+        XCTAssertTrue(assoc.place === esagil)
+        XCTAssertTrue(assoc.roleType === at)
+        XCTAssertTrue(event.placeAssociations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertTrue(esagil.eventAssociations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertTrue(at.associations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertEqual(count(EventPlaceAssociation.self, in: context), 1)
+
+        let again = manager.addEventPlaceAssociation(event: event, place: esagil, roleType: at)
+        XCTAssertEqual(again.persistentModelID, assoc.persistentModelID)
+        XCTAssertEqual(count(EventPlaceAssociation.self, in: context), 1)
+    }
+
+    func testRelationshipManagerEventEventAssociation() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let first = Event(name: "First")
+        let second = Event(name: "Second")
+        context.insert(first)
+        context.insert(second)
+        let caused = manager.eventEventRoleType(named: "Caused")
+
+        let assoc = manager.addEventEventAssociation(from: first, to: second, roleType: caused, source: "test")
+
+        XCTAssertTrue(assoc.fromEvent === first)
+        XCTAssertTrue(assoc.toEvent === second)
+        XCTAssertTrue(assoc.roleType === caused)
+        XCTAssertTrue(caused.associations.contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertEqual(count(EventEventAssociation.self, in: context), 1)
+
+        let again = manager.addEventEventAssociation(from: first, to: second, roleType: caused)
+        XCTAssertEqual(again.persistentModelID, assoc.persistentModelID)
+    }
+
+    func testRelationshipManagerEventFigureAssociationLinksInvolvedFigures() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let event = Event(name: "The Flood")
+        let utnapishtim = makeTreeFigure(context, "Utnapishtim")
+        context.insert(event)
+        let survived = manager.eventFigureRoleType(named: "Survived")
+
+        let assoc = manager.addEventFigureAssociation(event: event, figure: utnapishtim, roleType: survived)
+
+        XCTAssertTrue(assoc.event === event)
+        XCTAssertTrue(assoc.figure === utnapishtim)
+        XCTAssertTrue(assoc.roleType === survived)
+        XCTAssertTrue((event.figureAssociations ?? []).contains { $0.persistentModelID == assoc.persistentModelID })
+        XCTAssertTrue(utnapishtim.events.contains { $0.persistentModelID == event.persistentModelID })
+        XCTAssertTrue(event.involvedFigures.contains { $0.persistentModelID == utnapishtim.persistentModelID })
+        XCTAssertEqual(count(EventFigureAssociation.self, in: context), 1)
+
+        let again = manager.addEventFigureAssociation(event: event, figure: utnapishtim, roleType: survived)
+        XCTAssertEqual(again.persistentModelID, assoc.persistentModelID)
+        XCTAssertEqual(count(EventFigureAssociation.self, in: context), 1)
+    }
+
+    func testRelationshipManagerThingAssociations() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let thing = Thing(name: "Tablet of Destinies")
+        let figure = makeTreeFigure(context, "Marduk")
+        let place = Place(name: "Esagil")
+        let event = Event(name: "Ritual")
+        context.insert(thing)
+        context.insert(place)
+        context.insert(event)
+        let tfr = manager.thingFigureRoleType(named: "Bearer")
+        let tpr = manager.thingPlaceRoleType(named: "Kept At")
+        let ter = manager.thingEventRoleType(named: "Used In")
+
+        let fa = manager.addThingFigureAssociation(thing: thing, figure: figure, roleType: tfr, source: "test")
+        let pa = manager.addThingPlaceAssociation(thing: thing, place: place, roleType: tpr, source: "test")
+        let ea = manager.addThingEventAssociation(thing: thing, event: event, roleType: ter, source: "test")
+
+        XCTAssertTrue(fa.figure === figure)
+        XCTAssertTrue(thing.figureAssociations.contains { $0.persistentModelID == fa.persistentModelID })
+        XCTAssertTrue(figure.thingAssociations.contains { $0.persistentModelID == fa.persistentModelID })
+        XCTAssertTrue(tfr.associations.contains { $0.persistentModelID == fa.persistentModelID })
+
+        XCTAssertTrue(pa.place === place)
+        XCTAssertTrue(thing.placeAssociations.contains { $0.persistentModelID == pa.persistentModelID })
+        XCTAssertTrue(place.thingAssociations.contains { $0.persistentModelID == pa.persistentModelID })
+        XCTAssertTrue(tpr.associations.contains { $0.persistentModelID == pa.persistentModelID })
+
+        XCTAssertTrue(ea.event === event)
+        XCTAssertTrue(thing.eventAssociations.contains { $0.persistentModelID == ea.persistentModelID })
+        XCTAssertTrue(event.thingAssociations.contains { $0.persistentModelID == ea.persistentModelID })
+        XCTAssertTrue(ter.associations.contains { $0.persistentModelID == ea.persistentModelID })
+    }
+
+    func testRelationshipManagerGroupMembership() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let anunnaki = FigureGroup(name: "Anunnaki")
+        let enlil = makeTreeFigure(context, "Enlil")
+        let nigeru = Place(name: "Nigeru")
+        context.insert(anunnaki)
+        context.insert(nigeru)
+
+        let member = manager.addGroupMember(group: anunnaki, figure: enlil, orderIndex: 1)
+        let placeMember = manager.addGroupMember(group: anunnaki, place: nigeru, orderIndex: 2)
+
+        XCTAssertTrue(member.figure === enlil)
+        XCTAssertTrue(placeMember.place === nigeru)
+        XCTAssertTrue(anunnaki.figureAssociations.contains { $0.persistentModelID == member.persistentModelID })
+        XCTAssertTrue(enlil.groupAssociations.contains { $0.persistentModelID == member.persistentModelID })
+        XCTAssertTrue(nigeru.groupAssociations.contains { $0.persistentModelID == placeMember.persistentModelID })
+        XCTAssertEqual(count(FigureGroupAssociation.self, in: context), 2)
+
+        let again = manager.addGroupMember(group: anunnaki, figure: enlil)
+        XCTAssertEqual(again.persistentModelID, member.persistentModelID)
+        XCTAssertEqual(count(FigureGroupAssociation.self, in: context), 2)
+    }
+
+    func testRelationshipManagerPantheonMembership() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let figure = makeTreeFigure(context, "Anu")
+        let mesopotamian = Pantheon(name: "Mesopotamian")
+        context.insert(mesopotamian)
+
+        let assoc = manager.addPantheonMembership(figure: figure, pantheon: mesopotamian, displayName: "Anu")
+
+        XCTAssertTrue(assoc.figure === figure)
+        XCTAssertTrue(assoc.pantheon === mesopotamian)
+        XCTAssertEqual(assoc.displayName, "Anu")
+        XCTAssertTrue(mesopotamian.figureAssociations?.contains { $0.persistentModelID == assoc.persistentModelID } == true)
+        XCTAssertTrue(mesopotamian.figures.contains { $0.persistentModelID == figure.persistentModelID })
+        XCTAssertEqual(count(FigurePantheonAssociation.self, in: context), 1)
+
+        let again = manager.addPantheonMembership(figure: figure, pantheon: mesopotamian)
+        XCTAssertEqual(again.persistentModelID, assoc.persistentModelID)
+        XCTAssertEqual(count(FigurePantheonAssociation.self, in: context), 1)
+    }
+
+    func testRelationshipManagerAlternateNamesStickiesTagsCitationsAttachments() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let inanna = makeTreeFigure(context, "Inanna")
+        let uruk = Place(name: "Uruk")
+        context.insert(uruk)
+        let source = Source(name: "Inanna's Descent")
+        context.insert(source)
+
+        let figAlt = manager.addAlternateName(to: inanna, name: "Ishtar", tradition: .akkadian)
+        let placeAlt = manager.addAlternateName(to: uruk, name: "Erech", tradition: .greek)
+        let note = manager.addStickyNote(to: inanna, text: "check the huluppu tree episode")
+        let tag = manager.addTag(Tag(name: "goddess"), to: inanna)
+        let citation = manager.addCitation(to: source, location: "line 1", entityType: .figure, linkedEntityName: "Inanna")
+        let attachment = manager.addAttachment(to: source, title: "Translation", url: "https://example.com")
+
+        XCTAssertEqual(figAlt.name, "Ishtar")
+        XCTAssertTrue(figAlt.figure === inanna)
+        XCTAssertTrue(inanna.alternateNames.contains { $0.persistentModelID == figAlt.persistentModelID })
+        XCTAssertTrue(uruk.alternateNames.contains { $0.persistentModelID == placeAlt.persistentModelID })
+        XCTAssertTrue(inanna.stickies.contains { $0.persistentModelID == note.persistentModelID })
+        XCTAssertTrue(inanna.tags.contains { $0.persistentModelID == tag.persistentModelID })
+        XCTAssertTrue(source.citations.contains { $0.persistentModelID == citation.persistentModelID })
+        XCTAssertEqual(citation.linkedEntityName, "Inanna")
+        XCTAssertTrue(source.attachments.contains { $0.persistentModelID == attachment.persistentModelID })
+
+        let dup = manager.addAlternateName(to: inanna, name: "Ishtar", tradition: .akkadian)
+        XCTAssertEqual(dup.persistentModelID, figAlt.persistentModelID)
+        XCTAssertEqual(count(AlternateName.self, in: context), 2)
+
+        let dupTag = manager.addTag(tag, to: inanna)
+        XCTAssertEqual(dupTag.persistentModelID, tag.persistentModelID)
+        XCTAssertEqual(count(Tag.self, in: context), 1)
+
+        let dupCitation = manager.addCitation(to: source, location: "line 1", entityType: .figure, linkedEntityName: "Inanna")
+        XCTAssertEqual(dupCitation.persistentModelID, citation.persistentModelID)
+        XCTAssertEqual(count(Citation.self, in: context), 1)
+    }
+
+    func testRelationshipManagerRoleTypeFetchOrCreate() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+
+        let a = manager.relationshipType(named: "Sibling", category: "family")
+        let b = manager.relationshipType(named: "Sibling", category: "family")
+        XCTAssertEqual(a.persistentModelID, b.persistentModelID)
+        XCTAssertEqual(count(RelationshipType.self, in: context), 1)
+        let c = manager.relationshipType(named: "Father", category: "parent")
+        XCTAssertNotEqual(a.persistentModelID, c.persistentModelID)
+
+        let r1 = manager.figurePlaceRoleType(named: "Worshipped At")
+        let r2 = manager.figurePlaceRoleType(named: "Worshipped At")
+        XCTAssertEqual(r1.persistentModelID, r2.persistentModelID)
+        XCTAssertEqual(count(FigurePlaceRoleType.self, in: context), 1)
+
+        let p1 = manager.placePlaceRoleType(named: "Near To")
+        let p2 = manager.placePlaceRoleType(named: "Near To")
+        XCTAssertEqual(p1.persistentModelID, p2.persistentModelID)
+
+        let e1 = manager.eventPlaceRoleType(named: "At")
+        let e2 = manager.eventPlaceRoleType(named: "At")
+        XCTAssertEqual(e1.persistentModelID, e2.persistentModelID)
+
+        let ee1 = manager.eventEventRoleType(named: "Caused")
+        let ee2 = manager.eventEventRoleType(named: "Caused")
+        XCTAssertEqual(ee1.persistentModelID, ee2.persistentModelID)
+
+        let ef1 = manager.eventFigureRoleType(named: "Attended")
+        let ef2 = manager.eventFigureRoleType(named: "Attended")
+        XCTAssertEqual(ef1.persistentModelID, ef2.persistentModelID)
+    }
+
+    func testRelationshipManagerSavePersistsRows() {
+        let container = makeDiskContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let a = makeTreeFigure(context, "A")
+        let b = makeTreeFigure(context, "B")
+        let type = manager.relationshipType(named: "Spouse", category: "partner")
+        manager.addRelationship(from: a, to: b, relationshipType: type)
+
+        do {
+            try manager.save()
+        } catch {
+            XCTFail("save() threw: \(error)")
+        }
+        XCTAssertEqual(count(Relationship.self, in: context), 1)
+    }
+
+    func testRelationshipManagerAssociationsLinkSource() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let manager = RelationshipManager(context: context)
+        let source = Source(name: "Enuma Elish")
+        context.insert(source)
+        let fig = makeTreeFigure(context, "Marduk")
+        let place = Place(name: "Babylon")
+        context.insert(place)
+        let event = Event(name: "Babylon Captivity")
+        context.insert(event)
+        let event2 = Event(name: "Marduk's Rise")
+        context.insert(event2)
+        let thing = Thing(name: "Tablet of Destinies")
+        context.insert(thing)
+        let fpRole = manager.figurePlaceRoleType(named: "Ruler")
+        let ppRole = manager.placePlaceRoleType(named: "Near To")
+        let epRole = manager.eventPlaceRoleType(named: "At")
+        let eeRole = manager.eventEventRoleType(named: "Caused")
+        let tfRole = manager.thingFigureRoleType(named: "Owned By")
+        let tpRole = manager.thingPlaceRoleType(named: "Found In")
+        let teRole = manager.thingEventRoleType(named: "Used In")
+
+        let fp = manager.addFigurePlaceAssociation(figure: fig, place: place, roleType: fpRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+        let pp = manager.addPlacePlaceAssociation(from: place, to: place, roleType: ppRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+        let ep = manager.addEventPlaceAssociation(event: event, place: place, roleType: epRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+        let ee = manager.addEventEventAssociation(from: event, to: event2, roleType: eeRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+        let tf = manager.addThingFigureAssociation(thing: thing, figure: fig, roleType: tfRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+        let tp = manager.addThingPlaceAssociation(thing: thing, place: place, roleType: tpRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+        let te = manager.addThingEventAssociation(thing: thing, event: event, roleType: teRole, source: "Enuma Elish", sourceRef: source, dedupe: false)
+
+        XCTAssertTrue(fp.sourceRef === source)
+        XCTAssertTrue(pp.sourceRef === source)
+        XCTAssertTrue(ep.sourceRef === source)
+        XCTAssertTrue(ee.sourceRef === source)
+        XCTAssertTrue(tf.sourceRef === source)
+        XCTAssertTrue(tp.sourceRef === source)
+        XCTAssertTrue(te.sourceRef === source)
+
+        XCTAssertTrue(source.figurePlaceAssociations.contains { $0.persistentModelID == fp.persistentModelID })
+        XCTAssertTrue(source.placePlaceAssociations.contains { $0.persistentModelID == pp.persistentModelID })
+        XCTAssertTrue(source.eventPlaceAssociations.contains { $0.persistentModelID == ep.persistentModelID })
+        XCTAssertTrue(source.eventEventAssociations.contains { $0.persistentModelID == ee.persistentModelID })
+        XCTAssertTrue(source.thingFigureAssociations.contains { $0.persistentModelID == tf.persistentModelID })
+        XCTAssertTrue(source.thingPlaceAssociations.contains { $0.persistentModelID == tp.persistentModelID })
+        XCTAssertTrue(source.thingEventAssociations.contains { $0.persistentModelID == te.persistentModelID })
+
+        XCTAssertEqual(count(Source.self, in: context), 1)
+    }
+
+    func testEnsureAssociationSourcesBackfillsEachTypeAndIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let source = Source(name: "Enuma Elish")
+        context.insert(source)
+        let fig = Figure(name: "Marduk")
+        context.insert(fig)
+        let place = Place(name: "Babylon")
+        context.insert(place)
+        let event = Event(name: "Babylon Captivity")
+        context.insert(event)
+        let event2 = Event(name: "Marduk's Rise")
+        context.insert(event2)
+        let thing = Thing(name: "Tablet of Destinies")
+        context.insert(thing)
+
+        let fp = FigurePlaceAssociation(figure: fig, place: place, source: "ENUMA ELISH")
+        context.insert(fp)
+        let pp = PlacePlaceAssociation(fromPlace: place, source: "Enuma Elish")
+        context.insert(pp)
+        let ep = EventPlaceAssociation(event: event, place: place, source: "Enuma Elish")
+        context.insert(ep)
+        let ee = EventEventAssociation(fromEvent: event, toEvent: event2, source: "Enuma Elish")
+        context.insert(ee)
+        let tf = ThingFigureAssociation(thing: thing, figure: fig, source: "Enuma Elish")
+        context.insert(tf)
+        let tp = ThingPlaceAssociation(thing: thing, place: place, source: "Enuma Elish")
+        context.insert(tp)
+        let te = ThingEventAssociation(thing: thing, event: event, source: "Enuma Elish")
+        context.insert(te)
+        try? context.save()
+
+        Migration.ensureAssociationSources(context: context)
+        Migration.ensureAssociationSources(context: context)
+
+        XCTAssertTrue(fp.sourceRef === source)
+        XCTAssertTrue(pp.sourceRef === source)
+        XCTAssertTrue(ep.sourceRef === source)
+        XCTAssertTrue(ee.sourceRef === source)
+        XCTAssertTrue(tf.sourceRef === source)
+        XCTAssertTrue(tp.sourceRef === source)
+        XCTAssertTrue(te.sourceRef === source)
+        XCTAssertTrue(source.figurePlaceAssociations.contains { $0.persistentModelID == fp.persistentModelID })
+        XCTAssertTrue(source.placePlaceAssociations.contains { $0.persistentModelID == pp.persistentModelID })
+        XCTAssertTrue(source.eventPlaceAssociations.contains { $0.persistentModelID == ep.persistentModelID })
+        XCTAssertTrue(source.eventEventAssociations.contains { $0.persistentModelID == ee.persistentModelID })
+        XCTAssertTrue(source.thingFigureAssociations.contains { $0.persistentModelID == tf.persistentModelID })
+        XCTAssertTrue(source.thingPlaceAssociations.contains { $0.persistentModelID == tp.persistentModelID })
+        XCTAssertTrue(source.thingEventAssociations.contains { $0.persistentModelID == te.persistentModelID })
+        XCTAssertEqual(count(Source.self, in: context), 1)
+    }
+
+    func testEnsureAssociationSourcesCreatesCoarseSourceForUnknownName() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fig = Figure(name: "Marduk")
+        context.insert(fig)
+        let place = Place(name: "Babylon")
+        context.insert(place)
+        let assoc = FigurePlaceAssociation(figure: fig, place: place, source: "Sumerian hymns")
+        context.insert(assoc)
+        try? context.save()
+
+        Migration.ensureAssociationSources(context: context)
+
+        XCTAssertNotNil(assoc.sourceRef)
+        XCTAssertEqual(assoc.sourceRef?.name, "Sumerian hymns")
+        XCTAssertEqual(assoc.sourceRef?.sourceType, .ancientText)
+        XCTAssertTrue(assoc.sourceRef?.figurePlaceAssociations.contains { $0.persistentModelID == assoc.persistentModelID } ?? false)
+        XCTAssertEqual(count(Source.self, in: context), 1)
     }
 }

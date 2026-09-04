@@ -115,7 +115,7 @@ struct VersionListView: View {
                 .padding()
 
             Form {
-                TextField("Commit message", text: $commitName, prompt: Text("e.g. Added Gilgamesh lineage"))
+                TextField("Commit message", text: $commitName, prompt: Text("Added Gilgamesh lineage"))
             }
             .formStyle(.grouped)
 
@@ -139,7 +139,7 @@ struct VersionListView: View {
                 .padding()
 
             Form {
-                TextField("Branch name", text: $branchName, prompt: Text("e.g. experimental-edits"))
+                TextField("Branch name", text: $branchName, prompt: Text("experimental-edits"))
                 if let v = selectedVersion {
                     Text("From: \(v.name) (\(v.branch))")
                         .font(.caption)

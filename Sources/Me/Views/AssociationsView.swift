@@ -574,7 +574,7 @@ struct AddFigurePlaceAssociationForm: View {
                 }
 
                 Section("Comments") {
-                    TextField("e.g. first antediluvian king", text: $comments)
+                    TextField("such as first antediluvian king", text: $comments)
                 }
             }
             .formStyle(.grouped)
@@ -589,8 +589,16 @@ struct AddFigurePlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = FigurePlaceAssociation(figure: selectedFigure?.figure, place: selectedPlace, roleType: selectedRoleType, source: selectedSource?.name ?? "", comments: comments.isEmpty ? nil : comments, displayName: selectedFigure?.matchedAlternateName, confidence: confidence)
-        modelContext.insert(assoc)
+        guard let figure = selectedFigure?.figure, let place = selectedPlace else { return }
+        RelationshipManager(context: modelContext).addFigurePlaceAssociation(
+            figure: figure, place: place, roleType: selectedRoleType,
+            source: selectedSource?.name ?? "",
+            sourceRef: selectedSource,
+            comments: comments.isEmpty ? nil : comments,
+            displayName: selectedFigure?.matchedAlternateName,
+            confidence: confidence,
+            dedupe: false
+        )
         dismiss()
     }
 }
@@ -734,8 +742,11 @@ struct AddPlacePlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = PlacePlaceAssociation(fromPlace: fromPlace, toPlace: toPlace, roleType: selectedRoleType, source: selectedSource?.name ?? "")
-        modelContext.insert(assoc)
+        guard let from = fromPlace, let to = toPlace else { return }
+        RelationshipManager(context: modelContext).addPlacePlaceAssociation(
+            from: from, to: to, roleType: selectedRoleType,
+            source: selectedSource?.name ?? "", sourceRef: selectedSource, dedupe: false
+        )
         dismiss()
     }
 }
@@ -798,8 +809,11 @@ struct AddEventEventAssociationForm: View {
     }
 
     private func save() {
-        let assoc = EventEventAssociation(fromEvent: fromEvent, toEvent: toEvent, roleType: selectedRoleType, source: selectedSource?.name ?? "")
-        modelContext.insert(assoc)
+        guard let from = fromEvent, let to = toEvent else { return }
+        RelationshipManager(context: modelContext).addEventEventAssociation(
+            from: from, to: to, roleType: selectedRoleType,
+            source: selectedSource?.name ?? "", sourceRef: selectedSource, dedupe: false
+        )
         dismiss()
     }
 }
@@ -981,7 +995,7 @@ struct EditFigurePlaceAssociationForm: View {
                 }
 
                 Section("Comments") {
-                    TextField("e.g. first antediluvian king", text: $comments)
+                    TextField("such as first antediluvian king", text: $comments)
                 }
             }
             .formStyle(.grouped)
@@ -1001,7 +1015,7 @@ struct EditFigurePlaceAssociationForm: View {
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
             confidence = assoc.confidence
-            selectedSource = sources.first(where: { $0.name == assoc.source })
+            selectedSource = assoc.sourceRef ?? sources.first(where: { $0.name == assoc.source })
             comments = assoc.comments ?? ""
         }
     }
@@ -1012,6 +1026,12 @@ struct EditFigurePlaceAssociationForm: View {
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
         assoc.confidence = confidence
+        let oldSource = assoc.sourceRef
+        if oldSource != selectedSource {
+            if let old = oldSource { old.figurePlaceAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID } }
+            assoc.sourceRef = nil
+            if let newSource = selectedSource { newSource.figurePlaceAssociations.append(assoc) }
+        }
         assoc.source = selectedSource?.name ?? ""
         assoc.comments = comments.isEmpty ? nil : comments
         dismiss()
@@ -1077,7 +1097,7 @@ struct EditPlacePlaceAssociationForm: View {
             fromPlace = assoc.fromPlace
             toPlace = assoc.toPlace
             selectedRoleType = assoc.roleType
-            selectedSource = sources.first { $0.name.compare(assoc.source, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }
+            selectedSource = assoc.sourceRef ?? sources.first { $0.name.compare(assoc.source, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }
         }
     }
 
@@ -1085,6 +1105,12 @@ struct EditPlacePlaceAssociationForm: View {
         assoc.fromPlace = fromPlace
         assoc.toPlace = toPlace
         assoc.roleType = selectedRoleType
+        let oldSource = assoc.sourceRef
+        if oldSource != selectedSource {
+            if let old = oldSource { old.placePlaceAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID } }
+            assoc.sourceRef = nil
+            if let newSource = selectedSource { newSource.placePlaceAssociations.append(assoc) }
+        }
         assoc.source = selectedSource?.name ?? ""
         dismiss()
     }
@@ -1149,7 +1175,7 @@ struct EditEventEventAssociationForm: View {
             fromEvent = assoc.fromEvent
             toEvent = assoc.toEvent
             selectedRoleType = assoc.roleType
-            selectedSource = sources.first(where: { $0.name == assoc.source })
+            selectedSource = assoc.sourceRef ?? sources.first(where: { $0.name == assoc.source })
         }
     }
 
@@ -1157,6 +1183,12 @@ struct EditEventEventAssociationForm: View {
         assoc.fromEvent = fromEvent
         assoc.toEvent = toEvent
         assoc.roleType = selectedRoleType
+        let oldSource = assoc.sourceRef
+        if oldSource != selectedSource {
+            if let old = oldSource { old.eventEventAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID } }
+            assoc.sourceRef = nil
+            if let newSource = selectedSource { newSource.eventEventAssociations.append(assoc) }
+        }
         assoc.source = selectedSource?.name ?? ""
         dismiss()
     }
@@ -1332,8 +1364,11 @@ struct AddEventPlaceAssociationForm: View {
     }
 
     private func save() {
-        let assoc = EventPlaceAssociation(event: selectedEvent, place: selectedPlace, roleType: selectedRoleType, source: selectedSource?.name ?? "")
-        modelContext.insert(assoc)
+        guard let event = selectedEvent, let place = selectedPlace else { return }
+        RelationshipManager(context: modelContext).addEventPlaceAssociation(
+            event: event, place: place, roleType: selectedRoleType,
+            source: selectedSource?.name ?? "", sourceRef: selectedSource, dedupe: false
+        )
         dismiss()
     }
 }
@@ -1398,7 +1433,7 @@ struct EditEventPlaceAssociationForm: View {
             selectedEvent = assoc.event
             selectedPlace = assoc.place
             selectedRoleType = assoc.roleType
-            selectedSource = sources.first(where: { $0.name == assoc.source })
+            selectedSource = assoc.sourceRef ?? sources.first(where: { $0.name == assoc.source })
         }
     }
 
@@ -1406,6 +1441,12 @@ struct EditEventPlaceAssociationForm: View {
         assoc.event = selectedEvent
         assoc.place = selectedPlace
         assoc.roleType = selectedRoleType
+        let oldSource = assoc.sourceRef
+        if oldSource != selectedSource {
+            if let old = oldSource { old.eventPlaceAssociations.removeAll { $0.persistentModelID == assoc.persistentModelID } }
+            assoc.sourceRef = nil
+            if let newSource = selectedSource { newSource.eventPlaceAssociations.append(assoc) }
+        }
         assoc.source = selectedSource?.name ?? ""
         dismiss()
     }

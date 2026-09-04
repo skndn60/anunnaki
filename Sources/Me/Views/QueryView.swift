@@ -73,7 +73,7 @@ struct QueryView: View {
             HStack(spacing: 8) {
                 Image(systemName: "questionmark.circle")
                     .foregroundStyle(.secondary)
-                AppKitTextField(text: $queryText, placeholder: "Ask a question... e.g. \"what do we know about Enki?\"", onCommit: { runQuery() })
+                AppKitTextField(text: $queryText, placeholder: "Try \"what do we know about Enki?\"", onCommit: { runQuery() })
                 Circle()
                     .fill(ollamaReachable ? Color.green : Color.red)
                     .frame(width: 8, height: 8)
@@ -81,7 +81,7 @@ struct QueryView: View {
                 if isProcessing {
                     ProgressView()
                         .scaleEffect(0.65)
-                        .help("Ollama is processing...")
+                        .help("Ollama is processing")
                 } else {
                     Button("Ask") { runQuery() }
                         .buttonStyle(.borderedProminent)
@@ -309,6 +309,7 @@ struct FigureDossierView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
+                .disabled(dossier.figureTypeName.localizedCaseInsensitiveContains("Collective"))
             }
             .padding(.bottom, 4)
 

@@ -610,7 +610,7 @@ struct NetworkGraphView: View {
                         Image(systemName: "hand.point.up")
                             .font(.title2)
                             .foregroundStyle(.tertiary)
-                        Text("Tap a node to inspect")
+                        Text("Click a node to inspect")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                         Text("Drag to rearrange \u{00B7} Scroll to zoom")

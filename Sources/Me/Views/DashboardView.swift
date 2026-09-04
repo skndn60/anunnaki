@@ -14,7 +14,13 @@ struct DashboardView: View {
     @Query private var relationships: [Relationship]
     @Query private var things: [Thing]
     @Query private var entries: [DictionaryEntry]
+    @Query private var alternateNames: [AlternateName]
     private var recentEdits: [RecentEdit] { RecentEditStore.items }
+
+    /// Alternate names attached to figures (excludes place aliases and orphans).
+    private var figureAliasCount: Int {
+        alternateNames.filter { $0.figure != nil }.count
+    }
 
     @State private var showingAddFigure = false
     @State private var showingAddPlace = false
@@ -112,7 +118,7 @@ struct DashboardView: View {
 
     private var statsGrid: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 3), spacing: 12) {
-            StatCard(title: "Figures", count: figures.count, icon: "person.3", color: .blue, action: { onNavigateTo?(.figures) })
+            figureStatsTile
             StatCard(title: "Places", count: places.count, icon: "building.columns", color: .green, action: { onNavigateTo?(.places) })
             StatCard(title: "Events", count: events.count, icon: "bolt.fill", color: .orange, action: { onNavigateTo?(.events) })
             StatCard(title: "Eras", count: eras.count, icon: "clock.arrow.circlepath", color: .purple, action: { onNavigateTo?(.eras) })
@@ -121,6 +127,53 @@ struct DashboardView: View {
             StatCard(title: "Things", count: things.count, icon: "cube.box", color: .cyan, action: { onNavigateTo?(.things) })
             StatCard(title: "Dictionary", count: entries.count, icon: "character.book.closed", color: .purple, action: { onNavigateTo?(.dictionary) })
         }
+    }
+
+    private var figureStatsTile: some View {
+        Button(action: { onNavigateTo?(.figures) }) {
+            HStack(spacing: 0) {
+                VStack(alignment: .trailing, spacing: 5) {
+                    Image(systemName: "person.3")
+                        .font(.title3)
+                        .foregroundStyle(.blue)
+                    Text("\(figures.count)")
+                        .font(.system(.title, design: .rounded).bold())
+                        .foregroundStyle(.primary)
+                    Text("Figures")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                Divider()
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 6)
+                VStack(alignment: .leading, spacing: 5) {
+                    Image(systemName: "textformat.abc")
+                        .font(.title3)
+                        .foregroundStyle(.blue)
+                    Text("\(figureAliasCount)")
+                        .font(.system(.title3, design: .rounded).bold())
+                        .foregroundStyle(.primary)
+                    Text("aliases")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 14)
+            .padding(.horizontal, 6)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.blue.opacity(0.08))
+                    .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.blue.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var quickActions: some View {

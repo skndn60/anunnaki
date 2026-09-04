@@ -46,11 +46,11 @@ struct MugshotSheet: View {
 
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("SOURCE IMAGE")
+                    Text("Source image")
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                     if figure.images.isEmpty {
-                        Text("No images yet — import a statue photo.")
+                        Text("No images yet. Import a statue photo.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .frame(height: 72, alignment: .topLeading)
@@ -94,7 +94,7 @@ struct MugshotSheet: View {
                             .frame(maxWidth: .infinity)
                     }
                     HStack {
-                        Text("PREVIEW")
+                        Text("Preview")
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                         Spacer()

@@ -69,7 +69,7 @@ struct PopupTableFormView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                    .help("Figures uses deities across the top; Text labels uses flat strings (e.g. worship activities).")
+                    .help("Figures use deities across the top; Text labels use flat strings (such as worship activities).")
                 }
 
                 if columnMode == .figures {
@@ -405,7 +405,7 @@ private struct FigurePickerSection: View {
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search figures...", text: $searchText)
+                TextField("Search figures", text: $searchText)
                     .textFieldStyle(.roundedBorder)
                 if !searchText.isEmpty {
                     Button(action: { searchText = "" }) {

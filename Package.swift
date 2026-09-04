@@ -21,7 +21,7 @@ let package = Package(
             dependencies: ["MeCore"],
             path: "Sources/Me",
             resources: [
-                .process("Resources")                 
+                .process("Resources")
             ]
         ),
         .testTarget(

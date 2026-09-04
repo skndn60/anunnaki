@@ -626,7 +626,7 @@ struct ImageDetailContent: View {
                     .foregroundStyle(.red)
                 }
             }
-            TextField("Search \(title.lowercased())...", text: searchText)
+            TextField("Search \(title.lowercased())", text: searchText)
                 .textFieldStyle(.roundedBorder)
             if !searchText.wrappedValue.isEmpty {
                 let filtered = allEntities.filter { e in

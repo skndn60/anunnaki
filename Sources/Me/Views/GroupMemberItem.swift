@@ -105,15 +105,6 @@ enum GroupMemberItem: Identifiable {
         }
     }
 
-    func makeAssociation() -> FigureGroupAssociation {
-        switch self {
-        case .figure(let entity, let alias): return FigureGroupAssociation(figure: entity, displayName: alias)
-        case .place(let entity, let alias): return FigureGroupAssociation(place: entity, displayName: alias)
-        case .event(let entity, let alias): return FigureGroupAssociation(event: entity, displayName: alias)
-        case .thing(let entity, let alias): return FigureGroupAssociation(thing: entity, displayName: alias)
-        }
-    }
-
     func matches(_ query: String) -> Bool {
         guard !query.isEmpty else { return true }
         if name.localizedCaseInsensitiveContains(query) { return true }

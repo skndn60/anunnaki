@@ -1,0 +1,1181 @@
+[
+ {
+  "figure": "Agasaya",
+  "alternates": [
+   {
+    "name": "Ishtar",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "warrior aspect absorbed into Ishtar"
+   }
+  ]
+ },
+ {
+  "figure": "Alla",
+  "alternates": [
+   {
+    "name": "Alla-gula",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "Full name form used in god lists"
+   }
+  ]
+ },
+ {
+  "figure": "An",
+  "alternates": [
+   {
+    "name": "Dingir",
+    "tradition": "Sumerian",
+    "nameType": "Logographic Reading",
+    "note": "Divine determinative used as his name"
+   }
+  ]
+ },
+ {
+  "figure": "Anshar",
+  "alternates": [
+   {
+    "name": "Anshur",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Assyrian form"
+   }
+  ]
+ },
+ {
+  "figure": "Anunitu",
+  "alternates": [
+   {
+    "name": "Annunitum",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian spelling"
+   },
+   {
+    "name": "Ishtar of Akkad",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "originally an epithet of Ishtar of Akkad"
+   }
+  ]
+ },
+ {
+  "figure": "Apsu",
+  "alternates": [
+   {
+    "name": "Absu",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Asarluhi",
+  "alternates": [
+   {
+    "name": "Asaralimnuna",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "byname in incantation texts"
+   },
+   {
+    "name": "Asaralim",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "short byname"
+   },
+   {
+    "name": "Asalim",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "short byname"
+   },
+   {
+    "name": "Asarnuna",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant byname"
+   }
+  ]
+ },
+ {
+  "figure": "Ashnan",
+  "alternates": [
+   {
+    "name": "Ezina",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "alternative name; goddess of grain"
+   },
+   {
+    "name": "Ezina-Kusu",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "compound name (Kusu possibly originally her epithet)"
+   }
+  ]
+ },
+ {
+  "figure": "Ashur",
+  "alternates": [
+   {
+    "name": "Assur",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "City and god name form"
+   },
+   {
+    "name": "Bel",
+    "tradition": "Assyrian",
+    "nameType": "Epithet",
+    "note": "'lord'; in Assyria Bel referred to Ashur"
+   },
+   {
+    "name": "Ashur of Assur",
+    "tradition": "Assyrian",
+    "nameType": "Epithet",
+    "note": "the god of the city Assur"
+   }
+  ]
+ },
+ {
+  "figure": "Azimua",
+  "alternates": [
+   {
+    "name": "Ninazimua",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "full name form"
+   }
+  ]
+ },
+ {
+  "figure": "Birtum",
+  "alternates": [
+   {
+    "name": "Birdu",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian form"
+   }
+  ]
+ },
+ {
+  "figure": "Bizilla",
+  "alternates": [
+   {
+    "name": "Bizila",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Bunene",
+  "alternates": [
+   {
+    "name": "Bunena",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Dagan",
+  "alternates": [
+   {
+    "name": "Dagun",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Damkina",
+  "alternates": [
+   {
+    "name": "Damkianna",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant form"
+   }
+  ]
+ },
+ {
+  "figure": "Dumuzi the Shepherd",
+  "alternates": [
+   {
+    "name": "Dumuzi",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Common short form"
+   }
+  ]
+ },
+ {
+  "figure": "Dumuzi-abzu",
+  "alternates": [
+   {
+    "name": "Dumuziabzu",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "unspaced spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Enki",
+  "alternates": [
+   {
+    "name": "Ninshiku",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'lord of the holy eye'; byname of Ea/Enki"
+   }
+  ]
+ },
+ {
+  "figure": "Enki and Ninki",
+  "alternates": [
+   {
+    "name": "Enki-Ninki",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Hyphenated form of the pair"
+   }
+  ]
+ },
+ {
+  "figure": "Enlil",
+  "alternates": [
+   {
+    "name": "Nunamnir",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'the prince'; divine name in god lists"
+   },
+   {
+    "name": "Numunamnir",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant of Nunamnir"
+   }
+  ]
+ },
+ {
+  "figure": "Enmesharra",
+  "alternates": [
+   {
+    "name": "Enmesharru",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian form"
+   }
+  ]
+ },
+ {
+  "figure": "Ereshkigal",
+  "alternates": [
+   {
+    "name": "Kigal",
+    "tradition": "Sumerian",
+    "nameType": "Translation",
+    "note": "'great earth' epithet of the underworld"
+   }
+  ]
+ },
+ {
+  "figure": "Erra",
+  "alternates": [
+   {
+    "name": "Irra",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Erragal",
+  "alternates": [
+   {
+    "name": "Errakal",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Gazbaba",
+  "alternates": [
+   {
+    "name": "Kazbaba",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant spelling"
+   },
+   {
+    "name": "Kazba",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "short form"
+   }
+  ]
+ },
+ {
+  "figure": "Geshtinanna",
+  "alternates": [
+   {
+    "name": "Ninshul",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'lady of ...'; rare byname"
+   },
+   {
+    "name": "Geshtinana",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Gibil",
+  "alternates": [
+   {
+    "name": "Gerra",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Gugalanna",
+  "alternates": [
+   {
+    "name": "Gugalana",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Imzuanna",
+  "alternates": [
+   {
+    "name": "Ninzuanna",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "full name form"
+   }
+  ]
+ },
+ {
+  "figure": "Inanna",
+  "alternates": [
+   {
+    "name": "Innin",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Archaic form of the name"
+   },
+   {
+    "name": "Ishtar of Nineveh",
+    "tradition": "Assyrian",
+    "nameType": "Syncretism",
+    "note": "Assyrian hypostasis of Ishtar"
+   },
+   {
+    "name": "Ishtar of Uruk",
+    "tradition": "Babylonian",
+    "nameType": "Syncretism",
+    "note": "Uruk hypostasis"
+   },
+   {
+    "name": "Ishtar of Agade",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "Agade hypostasis"
+   },
+   {
+    "name": "Inanna of Zabalam",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "Zabalam hypostasis"
+   }
+  ]
+ },
+ {
+  "figure": "Inshushinak",
+  "alternates": [
+   {
+    "name": "Lord of Susa",
+    "tradition": "Sumerian",
+    "nameType": "Translation",
+    "note": "meaning of the name"
+   }
+  ]
+ },
+ {
+  "figure": "Ishkur",
+  "alternates": [
+   {
+    "name": "Hadad",
+    "tradition": "Canaanite",
+    "nameType": "Syncretism",
+    "note": "West-Semitic storm god equated with Ishkur/Adad"
+   },
+   {
+    "name": "Ramman",
+    "tradition": "Akkadian",
+    "nameType": "Epithet",
+    "note": "'the thunderer'; title of Adad"
+   },
+   {
+    "name": "Mer",
+    "tradition": "Sumerian",
+    "nameType": "Logographic Reading",
+    "note": "Logographic writing of the storm god (also Wer)"
+   }
+  ]
+ },
+ {
+  "figure": "Ishmekarab",
+  "alternates": [
+   {
+    "name": "Ishme-karab",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Hyphenated form"
+   }
+  ]
+ },
+ {
+  "figure": "Ishum",
+  "alternates": [
+   {
+    "name": "Endubur",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "epithet/name in god lists"
+   }
+  ]
+ },
+ {
+  "figure": "Kishar",
+  "alternates": [
+   {
+    "name": "Kishshar",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Kittum",
+  "alternates": [
+   {
+    "name": "Niggina",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Sumerian name (Niĝgina), embodiment of truth"
+   }
+  ]
+ },
+ {
+  "figure": "Kumarbi",
+  "alternates": [
+   {
+    "name": "Kumurwe",
+    "tradition": "Hurrian",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Kumarwi",
+    "tradition": "Hurrian",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Kumarma",
+    "tradition": "Hurrian",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   }
+  ]
+ },
+ {
+  "figure": "Lahmu",
+  "alternates": [
+   {
+    "name": "Lahammu",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Mami",
+  "alternates": [
+   {
+    "name": "Mamma",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling of the mother goddess"
+   },
+   {
+    "name": "Mammi",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Mamitu",
+  "alternates": [
+   {
+    "name": "Mammitum",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian form"
+   },
+   {
+    "name": "Mammitu",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Marduk",
+  "alternates": [
+   {
+    "name": "Merodach",
+    "tradition": "Hebrew",
+    "nameType": "Alternate Spelling",
+    "note": "Biblical form of the name"
+   },
+   {
+    "name": "Marudduk",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Oldest attested spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Martu",
+  "alternates": [
+   {
+    "name": "Amurru",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "Akkadian name of the Amorite god"
+   },
+   {
+    "name": "Amurrum",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Misharu",
+  "alternates": [
+   {
+    "name": "Ili-mishar",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "possibly attested longer form"
+   }
+  ]
+ },
+ {
+  "figure": "Mummu",
+  "alternates": [
+   {
+    "name": "Mummu-Tiamat",
+    "tradition": "Akkadian",
+    "nameType": "Epithet",
+    "note": "'primeval chaos' name pair in Enuma Elish"
+   }
+  ]
+ },
+ {
+  "figure": "Nabu",
+  "alternates": [
+   {
+    "name": "Nabium",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Early form"
+   }
+  ]
+ },
+ {
+  "figure": "Nammu",
+  "alternates": [
+   {
+    "name": "Namma",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian form"
+   },
+   {
+    "name": "Nammaḫ",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'primeval mother' title"
+   }
+  ]
+ },
+ {
+  "figure": "Nanaya",
+  "alternates": [
+   {
+    "name": "Nanaja",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Nanna",
+  "alternates": [
+   {
+    "name": "Suen",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian form of Sin"
+   },
+   {
+    "name": "Zuen",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Earlier Akkadian form"
+   },
+   {
+    "name": "Enzu",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'lord of wisdom'"
+   }
+  ]
+ },
+ {
+  "figure": "Nanshe",
+  "alternates": [
+   {
+    "name": "Nanse",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Nergal",
+  "alternates": [
+   {
+    "name": "Irra",
+    "tradition": "Akkadian",
+    "nameType": "Epithet",
+    "note": "sometimes used as his title"
+   }
+  ]
+ },
+ {
+  "figure": "Nin-MAR.KI",
+  "alternates": [
+   {
+    "name": "Ninmar",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "suggested reading"
+   },
+   {
+    "name": "Ninmarki",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "suggested reading"
+   }
+  ]
+ },
+ {
+  "figure": "Ninegal",
+  "alternates": [
+   {
+    "name": "Belet Ekallim",
+    "tradition": "Akkadian",
+    "nameType": "Translation",
+    "note": "Akkadian: 'lady of the palace'"
+   }
+  ]
+ },
+ {
+  "figure": "Ningal",
+  "alternates": [
+   {
+    "name": "Nikkal",
+    "tradition": "Hurrian",
+    "nameType": "Syncretism",
+    "note": "Hurrian form of the wife of the moon god"
+   },
+   {
+    "name": "Ninkal",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Ningishzida",
+  "alternates": [
+   {
+    "name": "Ninĝišzida",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Transliteration with ĝ (D NIN.G̃IŠ.ZID.DA)"
+   },
+   {
+    "name": "Ningizzida",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Syllabic spelling Nin-gi-iz-zi-da"
+   },
+   {
+    "name": "Gishbanda",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'little tree'; also the name of his main cult site"
+   },
+   {
+    "name": "Lord of the Good Tree",
+    "tradition": "Sumerian",
+    "nameType": "Translation",
+    "note": "Meaning of the name (Jacobsen); accepted by Assyriologists"
+   },
+   {
+    "name": "Chamberlain of the Underworld",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "Underworld role; also 'chair bearer'"
+   },
+   {
+    "name": "Lord of the Innkeepers",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "Title connected to his wine association"
+   },
+   {
+    "name": "Dumuzi",
+    "tradition": "Sumerian",
+    "nameType": "Syncretism",
+    "note": "Some lamentations treat Ningishzida and Dumuzi as one"
+   }
+  ]
+ },
+ {
+  "figure": "Ninhursag",
+  "alternates": [
+   {
+    "name": "Ninhu(r)sag",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Ninigizibara",
+  "alternates": [
+   {
+    "name": "Igizibara",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant spelling"
+   },
+   {
+    "name": "Ningizippara",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Ninkasi",
+  "alternates": [
+   {
+    "name": "Ninkas",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant form"
+   },
+   {
+    "name": "Kasi",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "Short form of the name"
+   }
+  ]
+ },
+ {
+  "figure": "Ninlil",
+  "alternates": [
+   {
+    "name": "Mullissu",
+    "tradition": "Assyrian",
+    "nameType": "Syncretism",
+    "note": "Assyrian name of Enlil's consort"
+   }
+  ]
+ },
+ {
+  "figure": "Ninmug",
+  "alternates": [
+   {
+    "name": "Metalworker of the Land",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "epithet tibira kalamma, 'metalworker/sculptor of the land'"
+   }
+  ]
+ },
+ {
+  "figure": "Ninshubur",
+  "alternates": [
+   {
+    "name": "Nin-shubur",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Hyphenated transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Ninsianna",
+  "alternates": [
+   {
+    "name": "Ninsiannu",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Nintu",
+  "alternates": [
+   {
+    "name": "Belet-ili",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "mother-goddess title ('mistress of the gods')"
+   }
+  ]
+ },
+ {
+  "figure": "Ninurta",
+  "alternates": [
+   {
+    "name": "Ningursu",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   },
+   {
+    "name": "Nisrok",
+    "tradition": "Other",
+    "nameType": "Translation",
+    "note": "-- placeholder, do not use"
+   }
+  ]
+ },
+ {
+  "figure": "Nisaba",
+  "alternates": [
+   {
+    "name": "Nidaba",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant transliteration"
+   },
+   {
+    "name": "Nissaba",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant transliteration"
+   },
+   {
+    "name": "Nanibgal",
+    "tradition": "Sumerian",
+    "nameType": "Epithet",
+    "note": "'she of the Egal'; title used as a name"
+   }
+  ]
+ },
+ {
+  "figure": "Numushda",
+  "alternates": [
+   {
+    "name": "Numushde",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant"
+   }
+  ]
+ },
+ {
+  "figure": "Nungal",
+  "alternates": [
+   {
+    "name": "Manungal",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "fuller name form"
+   },
+   {
+    "name": "Belet-balati",
+    "tradition": "Akkadian",
+    "nameType": "Epithet",
+    "note": "'mistress of life'"
+   }
+  ]
+ },
+ {
+  "figure": "Papsukkal",
+  "alternates": [
+   {
+    "name": "Papsukal",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Pinikir",
+  "alternates": [
+   {
+    "name": "Pinigir",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Pirengir",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Pirinkir",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Parakaras",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   }
+  ]
+ },
+ {
+  "figure": "Shala",
+  "alternates": [
+   {
+    "name": "Shala of the rain",
+    "tradition": "Akkadian",
+    "nameType": "Epithet",
+    "note": "-- placeholder"
+   }
+  ]
+ },
+ {
+  "figure": "Shaushka",
+  "alternates": [
+   {
+    "name": "Shaushka of Nineveh",
+    "tradition": "Assyrian",
+    "nameType": "Epithet",
+    "note": "Assyrian hypostasis"
+   },
+   {
+    "name": "Ishhara",
+    "tradition": "Hurrian",
+    "nameType": "Syncretism",
+    "note": "sometimes associated (also separate figure)"
+   }
+  ]
+ },
+ {
+  "figure": "Shul-utula",
+  "alternates": [
+   {
+    "name": "Youngling Shepherd",
+    "tradition": "Sumerian",
+    "nameType": "Translation",
+    "note": "meaning of the name"
+   }
+  ]
+ },
+ {
+  "figure": "Shulshaga",
+  "alternates": [
+   {
+    "name": "Youth of His Heart",
+    "tradition": "Sumerian",
+    "nameType": "Translation",
+    "note": "meaning of the name"
+   }
+  ]
+ },
+ {
+  "figure": "Siduri",
+  "alternates": [
+   {
+    "name": "Shiduri",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Common transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Sirsir",
+  "alternates": [
+   {
+    "name": "Ninsirsir",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "longer name form"
+   }
+  ]
+ },
+ {
+  "figure": "Sulpae",
+  "alternates": [
+   {
+    "name": "Shulpa'e",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Common transliteration"
+   },
+   {
+    "name": "Sul-pa-e",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Hyphenated transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Sumugan",
+  "alternates": [
+   {
+    "name": "Shakkan",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "Akkadian equivalent of the steppe god"
+   },
+   {
+    "name": "Sumukan",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Variant spelling"
+   }
+  ]
+ },
+ {
+  "figure": "Tadmustum",
+  "alternates": [
+   {
+    "name": "Dadamusda",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   }
+  ]
+ },
+ {
+  "figure": "Tiamat",
+  "alternates": [
+   {
+    "name": "Tiamtu",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Older Akkadian form"
+   },
+   {
+    "name": "Tawatu",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Earliest attested form"
+   }
+  ]
+ },
+ {
+  "figure": "Urkitum",
+  "alternates": [
+   {
+    "name": "Urkayitu",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "variant transliteration"
+   }
+  ]
+ },
+ {
+  "figure": "Wer",
+  "alternates": [
+   {
+    "name": "Mer",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Ber",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   },
+   {
+    "name": "Iluwer",
+    "tradition": "Other",
+    "nameType": "Alternate Spelling",
+    "note": "variant form"
+   }
+  ]
+ },
+ {
+  "figure": "Zababa",
+  "alternates": [
+   {
+    "name": "Zamama",
+    "tradition": "Akkadian",
+    "nameType": "Alternate Spelling",
+    "note": "Akkadian variant spelling"
+   }
+  ]
+ }
+]

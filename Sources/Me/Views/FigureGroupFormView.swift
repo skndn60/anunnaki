@@ -242,7 +242,7 @@ struct FigureGroupFormView: View {
     private var identityStep: some View {
         Form {
             Section("Identity") {
-                TextField("Name", text: $name, prompt: Text("e.g. Divine Council, Anunnaki Council"))
+                TextField("Name", text: $name, prompt: Text("Divine Council, Anunnaki Council"))
                     .textFieldStyle(.roundedBorder)
                     .help("The name of this group")
 
@@ -302,7 +302,7 @@ struct FigureGroupFormView: View {
                         .help("Compute a sum or average over member values and display it in the group header.")
                     if aggregationEnabled {
                         if availableAggregationTargets.isEmpty {
-                            Text("No aggregateable fields for \(entityType.pluralName.lowercased()).")
+                            Text("No aggregateable fields for \(entityType.pluralName.lowercased())")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         } else {
@@ -316,7 +316,7 @@ struct FigureGroupFormView: View {
                                     Text(target.displayName).tag(target)
                                 }
                             }
-                            TextField("Label (optional)", text: $aggregationLabel, prompt: Text("e.g. Total dynasty reign"))
+                            TextField("Label (optional)", text: $aggregationLabel, prompt: Text("Total dynasty reign"))
                                 .textFieldStyle(.roundedBorder)
                                 .help("Custom text shown before the value; leave empty for an auto-generated label.")
                         }
@@ -336,7 +336,7 @@ struct FigureGroupFormView: View {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.secondary)
                             .font(.caption)
-                        TextField("Search groups...", text: $parentSearchText)
+                        TextField("Search groups", text: $parentSearchText)
                             .textFieldStyle(.roundedBorder)
                     }
                     let filtered = candidateParents.filter {
@@ -449,7 +449,7 @@ struct FigureGroupFormView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                TextField("Search members...", text: $searchText)
+                TextField("Search members", text: $searchText)
                     .textFieldStyle(.roundedBorder)
             }
             .padding(.horizontal)
@@ -512,7 +512,7 @@ struct FigureGroupFormView: View {
                         Text("By Domain Keyword")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextField("e.g. Sumerian, Akkadian, Kingship", text: $ruleDomainText)
+                        TextField("such as Sumerian, Akkadian, Kingship", text: $ruleDomainText)
                             .textFieldStyle(.roundedBorder)
                     }
                 }
@@ -559,7 +559,7 @@ struct FigureGroupFormView: View {
                     Text("By Name")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("e.g. Enki, Gilgamesh", text: $ruleNameMatch)
+                    TextField("such as Enki, Gilgamesh", text: $ruleNameMatch)
                         .textFieldStyle(.roundedBorder)
                 }
 
@@ -792,16 +792,13 @@ struct FigureGroupFormView: View {
             if case .event(let event, _) = candidate {
                 group.addEventWithPropagation(event: event, in: modelContext)
             } else {
-                let assoc = makeAssociation(for: candidate)
-                assoc.displayName = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
-                modelContext.insert(assoc)
-                group.figureAssociations.append(assoc)
+                let alias = newAliases[id].flatMap { $0.isEmpty ? nil : $0 }
+                RelationshipManager(context: modelContext).addGroupMember(
+                    group: group, figure: candidate.figure, place: candidate.place, thing: candidate.thing,
+                    displayName: alias, dedupe: false
+                )
             }
         }
-    }
-
-    private func makeAssociation(for candidate: GroupMemberItem) -> FigureGroupAssociation {
-        candidate.makeAssociation()
     }
 }
 

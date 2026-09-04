@@ -9,7 +9,7 @@ struct FigureGroupListView: View {
     @State private var editingGroup: FigureGroup?
     @State private var selectedGroupID: PersistentIdentifier?
     @State private var showDeleteConfirm = false
-    @AppStorage("figureGroupDetailWidth") private var detailWidth: Double = 320
+    @DetailWidth(.figureGroup) private var detailWidth
 
     private var selectedGroup: FigureGroup? {
         guard let id = selectedGroupID else { return nil }
@@ -403,254 +403,11 @@ struct FigureGroupDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-                // Header
-                HStack(alignment: .top, spacing: 12) {
-                    Image(systemName: group.icon)
-                        .font(.system(size: 36))
-                        .foregroundStyle(Color(hex: group.colorHex))
-                        .frame(width: 44)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(group.name)
-                            .font(.title2.bold())
-                        if !group.groupDescription.isEmpty || group.richDescription != nil {
-                            RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription, stripForegroundColor: true)
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        if group.isSmart {
-                            HStack(spacing: 4) {
-                                Image(systemName: "bolt.fill")
-                                    .font(.caption2)
-                                Text(group.decodedFilter?.summary ?? "Smart group")
-                                    .font(.caption2)
-                            }
-                            .foregroundStyle(.teal)
-                            .padding(.top, 2)
-                        } else if let filter = group.decodedFilter {
-                            HStack(spacing: 4) {
-                                Image(systemName: "repeat")
-                                    .font(.caption2)
-                                Text(filter.summary)
-                                    .font(.caption2)
-                            }
-                            .foregroundStyle(.teal)
-                            .padding(.top, 2)
-                        }
-                    }
-                    Spacer()
-                }
-
+                headerSection
                 Divider()
-
-                // Actions
-                HStack(spacing: 8) {
-                    if !group.isSmart {
-                        Button(action: { showBulkAdd = true }) {
-                            Label("Bulk Add", systemImage: "plus.rectangle.on.rectangle")
-                        }
-                        .buttonStyle(.bordered)
-
-                        if group.memberFilter != nil {
-                            Button(action: { showSyncConfirm = true }) {
-                                Label("Sync", systemImage: "arrow.triangle.2.circlepath")
-                            }
-                            .buttonStyle(.borderedProminent)
-                        }
-                    }
-
-                    Spacer()
-
-                    Picker("", selection: Binding(
-                        get: { group.sortMode },
-                        set: { newValue in
-                            group.setSortMode(newValue)
-                            try? modelContext.save()
-                        }
-                    )) {
-                        ForEach(GroupSortMode.allCases, id: \.self) { mode in
-                            Text(mode.displayName).tag(mode)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelStyle(.iconOnly)
-                    .disabled(group.isSmart)
-                    .help(group.isSmart
-                        ? "Smart groups always display members in name order."
-                        : "How members are ordered: by name, or by a manual order you arrange here.")
-
-                    Toggle(isOn: Binding(
-                        get: { group.isPublished },
-                        set: { group.isPublished = $0; try? modelContext.save() }
-                    )) {
-                        Label("Show in sidebar", systemImage: "sidebar.left")
-                    }
-                    .toggleStyle(.checkbox)
-                    .help("Hide this group from the sidebar while keeping its data")
-                }
-
-                if group.sortMode == .ordered && !group.isSmart {
-                    // Unified member+text spine (reorder arrows are meaningful relative to each other).
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 8) {
-                            Text("\(group.memberPluralLabel.capitalized) & Text (\(spineContents.count))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
-                            Spacer()
-                            Button(action: addTextBlock) {
-                                Image(systemName: "plus")
-                            }
-                            .buttonStyle(.plain)
-                            .help("Add text block")
-                        }
-
-                        if spineContents.isEmpty {
-                            Text("No \(group.memberPluralLabel) or prose in this group")
-                                .font(.callout)
-                                .foregroundStyle(.tertiary)
-                        } else {
-                            VStack(alignment: .leading, spacing: 8) {
-                                ForEach(spineContents, id: \.id) { entry in
-                                    spineRow(entry)
-                                        .contentShape(Rectangle())
-                                        .draggable(entry.id)
-                                        .background(SpineDropFrameReader(id: entry.id))
-                                }
-                            }
-                            .coordinateSpace(name: SpineDropSpaceName)
-                            .onPreferenceChange(SpineDropFrameKey.self) { spineDropFrames = $0 }
-                            .dropDestination(for: String.self) { items, location in
-                                guard let draggedID = items.first,
-                                      let draggedEntry = spineContents.first(where: { $0.id == draggedID }) else { return false }
-                                let targetIndex = insertionIndex(for: location, in: spineContents)
-                                if targetIndex != spineContents.firstIndex(where: { $0.id == draggedID }) {
-                                    moveSpine(draggedEntry, toIndex: targetIndex)
-                                }
-                                return true
-                            } isTargeted: { targeted in
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    isSpineDropTargeted = targeted
-                                }
-                            }
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .fill(isSpineDropTargeted ? Color.accentColor.opacity(0.08) : Color.clear)
-                            )
-                        }
-                    }
-                } else {
-                    // Members (alphabetical mode — reorder is inactive, text blocks pinned below).
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("\(group.memberPluralLabel.capitalized) (\(members.count))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        if group.isSmart {
-                            HStack(spacing: 4) {
-                                Image(systemName: "bolt.fill")
-                                    .font(.caption2)
-                                Text("Automatic membership — evaluated live. Edit the rule in the group form.")
-                                    .font(.caption2)
-                            }
-                            .foregroundStyle(.teal)
-                        }
-
-                        if members.isEmpty {
-                            Text("No \(group.memberPluralLabel) in this group")
-                                .font(.callout)
-                                .foregroundStyle(.tertiary)
-                        } else {
-                            ForEach(members, id: \.id) { item in
-                                memberRow(item, group: group)
-                            }
-                        }
-                    }
-
-                    // Text blocks (prose pinned below members in alphabetical mode).
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 8) {
-                            Text("Text Blocks (\(textBlocks.count))")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
-                            Spacer()
-                            Button(action: addTextBlock) {
-                                Image(systemName: "plus")
-                            }
-                            .buttonStyle(.plain)
-                            .help("Add text block")
-                        }
-
-                        if textBlocks.isEmpty {
-                            Text("No text blocks")
-                                .font(.callout)
-                                .foregroundStyle(.tertiary)
-                        } else {
-                            ForEach(textBlocks, id: \.persistentModelID) { block in
-                                HStack(spacing: 8) {
-                                    Image(systemName: "text.quote")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                        .frame(width: 16)
-                                    Button(action: { editingTextBlock = block }) {
-                                        Text(block.title.isEmpty ? "Untitled text block" : block.title)
-                                            .font(.callout)
-                                            .foregroundStyle(Color.accentColor)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .pointingHand()
-                                    Spacer()
-                                    Button(action: { deletingTextBlock = block; showDeleteTextBlockConfirm = true }) {
-                                        Image(systemName: "trash")
-                                            .font(.caption)
-                                            .foregroundStyle(.red.opacity(0.7))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .help("Delete text block")
-                                }
-                                .padding(.vertical, 2)
-                            }
-                        }
-                    }
-                }
-
-                // Subgroups
-                if let subgroups = group.subgroups, !subgroups.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Subgroups (\(subgroups.count))")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .textCase(.uppercase)
-
-                        ForEach(Array(group.sortedSubgroups.enumerated()), id: \.element.persistentModelID) { index, sub in
-                            HStack(spacing: 8) {
-                                if group.sortMode == .ordered {
-                                    MemberReorderButtons(
-                                        canMoveUp: index > 0,
-                                        canMoveDown: index < subgroups.count - 1,
-                                        onMove: { direction in
-                                            group.moveSubgroup(sub, direction: direction)
-                                            try? modelContext.save()
-                                        }
-                                    )
-                                }
-                                Image(systemName: "folder.fill")
-                                    .font(.caption)
-                                    .foregroundStyle(Color(hex: sub.colorHex))
-                                    .frame(width: 16)
-                                Text(sub.name)
-                                    .font(.callout)
-                                Spacer()
-                            }
-                            .padding(.vertical, 2)
-                        }
-                    }
-                }
-
+                actionsBar
+                membersSection
+                subgroupsSection
                 Spacer()
             }
             .padding(20)
@@ -675,6 +432,262 @@ struct FigureGroupDetailView: View {
         }
     }
 
+    private var headerSection: some View {
+            // Header
+            HStack(alignment: .top, spacing: 12) {
+                Image(systemName: group.icon)
+                    .font(.system(size: 36))
+                    .foregroundStyle(Color(hex: group.colorHex))
+                    .frame(width: 44)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(group.name)
+                        .font(.title2.bold())
+                    if !group.groupDescription.isEmpty || group.richDescription != nil {
+                        RichTextDisplay(richData: group.richDescription, fallback: group.groupDescription, stripForegroundColor: true)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    if group.isSmart {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.fill")
+                                .font(.caption2)
+                            Text(group.decodedFilter?.summary ?? "Smart group")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.teal)
+                        .padding(.top, 2)
+                    } else if let filter = group.decodedFilter {
+                        HStack(spacing: 4) {
+                            Image(systemName: "repeat")
+                                .font(.caption2)
+                            Text(filter.summary)
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.teal)
+                        .padding(.top, 2)
+                    }
+                }
+                Spacer()
+            }
+    }
+
+    private var actionsBar: some View {
+            // Actions
+            HStack(spacing: 8) {
+                if !group.isSmart {
+                    Button(action: { showBulkAdd = true }) {
+                        Label("Bulk Add", systemImage: "plus.rectangle.on.rectangle")
+                    }
+                    .buttonStyle(.bordered)
+
+                    if group.memberFilter != nil {
+                        Button(action: { showSyncConfirm = true }) {
+                            Label("Sync", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+
+                Spacer()
+
+                Picker("", selection: Binding(
+                    get: { group.sortMode },
+                    set: { newValue in
+                        group.setSortMode(newValue)
+                        try? modelContext.save()
+                    }
+                )) {
+                    ForEach(GroupSortMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelStyle(.iconOnly)
+                .disabled(group.isSmart)
+                .help(group.isSmart
+                    ? "Smart groups always display members in name order."
+                    : "How members are ordered: by name, or by a manual order you arrange here.")
+
+                Toggle(isOn: Binding(
+                    get: { group.isPublished },
+                    set: { group.isPublished = $0; try? modelContext.save() }
+                )) {
+                    Label("Show in sidebar", systemImage: "sidebar.left")
+                }
+                .toggleStyle(.checkbox)
+                .help("Hide this group from the sidebar while keeping its data")
+            }
+    }
+
+    @ViewBuilder
+    private var membersSection: some View {
+            if group.sortMode == .ordered && !group.isSmart {
+                // Unified member+text spine (reorder arrows are meaningful relative to each other).
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text("\(group.memberPluralLabel.capitalized) & Text (\(spineContents.count))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Spacer()
+                        Button(action: addTextBlock) {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Add text block")
+                    }
+
+                    if spineContents.isEmpty {
+                        Text("No \(group.memberPluralLabel) or prose in this group")
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(spineContents, id: \.id) { entry in
+                                spineRow(entry)
+                                    .contentShape(Rectangle())
+                                    .draggable(entry.id)
+                                    .background(SpineDropFrameReader(id: entry.id))
+                            }
+                        }
+                        .coordinateSpace(name: SpineDropSpaceName)
+                        .onPreferenceChange(SpineDropFrameKey.self) { spineDropFrames = $0 }
+                        .dropDestination(for: String.self) { items, location in
+                            guard let draggedID = items.first,
+                                  let draggedEntry = spineContents.first(where: { $0.id == draggedID }) else { return false }
+                            let targetIndex = insertionIndex(for: location, in: spineContents)
+                            if targetIndex != spineContents.firstIndex(where: { $0.id == draggedID }) {
+                                moveSpine(draggedEntry, toIndex: targetIndex)
+                            }
+                            return true
+                        } isTargeted: { targeted in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                isSpineDropTargeted = targeted
+                            }
+                        }
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .fill(isSpineDropTargeted ? Color.accentColor.opacity(0.08) : Color.clear)
+                        )
+                    }
+                }
+            } else {
+                // Members (alphabetical mode — reorder is inactive, text blocks pinned below).
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("\(group.memberPluralLabel.capitalized) (\(members.count))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    if group.isSmart {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.fill")
+                                .font(.caption2)
+                            Text("Automatic membership — evaluated live. Edit the rule in the group form.")
+                                .font(.caption2)
+                        }
+                        .foregroundStyle(.teal)
+                    }
+
+                    if members.isEmpty {
+                        Text("No \(group.memberPluralLabel) in this group")
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        ForEach(members, id: \.id) { item in
+                            memberRow(item, group: group)
+                        }
+                    }
+                }
+
+                // Text blocks (prose pinned below members in alphabetical mode).
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text("Text Blocks (\(textBlocks.count))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Spacer()
+                        Button(action: addTextBlock) {
+                            Image(systemName: "plus")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Add text block")
+                    }
+
+                    if textBlocks.isEmpty {
+                        Text("No text blocks")
+                            .font(.callout)
+                            .foregroundStyle(.tertiary)
+                    } else {
+                        ForEach(textBlocks, id: \.persistentModelID) { block in
+                            HStack(spacing: 8) {
+                                Image(systemName: "text.quote")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 16)
+                                Button(action: { editingTextBlock = block }) {
+                                    Text(block.title.isEmpty ? "Untitled text block" : block.title)
+                                        .font(.callout)
+                                        .foregroundStyle(Color.accentColor)
+                                }
+                                .buttonStyle(.plain)
+                                .pointingHand()
+                                Spacer()
+                                Button(action: { deletingTextBlock = block; showDeleteTextBlockConfirm = true }) {
+                                    Image(systemName: "trash")
+                                        .font(.caption)
+                                        .foregroundStyle(.red.opacity(0.7))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Delete text block")
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+            }
+    }
+
+    @ViewBuilder
+    private var subgroupsSection: some View {
+            // Subgroups
+            if let subgroups = group.subgroups, !subgroups.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Subgroups (\(subgroups.count))")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+
+                    ForEach(Array(group.sortedSubgroups.enumerated()), id: \.element.persistentModelID) { index, sub in
+                        HStack(spacing: 8) {
+                            if group.sortMode == .ordered {
+                                MemberReorderButtons(
+                                    canMoveUp: index > 0,
+                                    canMoveDown: index < subgroups.count - 1,
+                                    onMove: { direction in
+                                        group.moveSubgroup(sub, direction: direction)
+                                        try? modelContext.save()
+                                    }
+                                )
+                            }
+                            Image(systemName: "folder.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color(hex: sub.colorHex))
+                                .frame(width: 16)
+                            Text(sub.name)
+                                .font(.callout)
+                            Spacer()
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+    }
+
     private func syncMembers() {
         guard let filter = group.decodedFilter else { return }
         let existingIDs = Set(members.map(\.id))
@@ -693,9 +706,9 @@ struct FigureGroupDetailView: View {
             if case .event(let event, _) = item {
                 group.addEventWithPropagation(event: event, in: modelContext)
             } else {
-                let assoc = item.makeAssociation()
-                modelContext.insert(assoc)
-                group.figureAssociations.append(assoc)
+                RelationshipManager(context: modelContext).addGroupMember(
+                    group: group, figure: item.figure, place: item.place, thing: item.thing, dedupe: false
+                )
             }
         }
         if group.sortMode == .ordered, group.entityType == .figure {
@@ -813,7 +826,7 @@ private struct BulkAddMembersSheet: View {
                             Text("By Domain Keyword")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                            TextField("e.g. Sumerian, Akkadian, Kingship", text: $domainText)
+                            TextField("such as Sumerian, Akkadian, Kingship", text: $domainText)
                                 .textFieldStyle(.plain)
                                 .padding(8)
                                 .background(Color(.textBackgroundColor))
@@ -826,7 +839,7 @@ private struct BulkAddMembersSheet: View {
                         Text("By Name")
                             .font(.caption)
                             .foregroundStyle(.secondary)
-                        TextField("e.g. Enki, Gilgamesh", text: $nameSearch)
+                        TextField("such as Enki, Gilgamesh", text: $nameSearch)
                             .textFieldStyle(.plain)
                             .padding(8)
                             .background(Color(.textBackgroundColor))
@@ -952,9 +965,9 @@ private struct BulkAddMembersSheet: View {
             if case .event(let event, _) = item {
                 group.addEventWithPropagation(event: event, in: modelContext)
             } else {
-                let assoc = item.makeAssociation()
-                modelContext.insert(assoc)
-                group.figureAssociations.append(assoc)
+                RelationshipManager(context: modelContext).addGroupMember(
+                    group: group, figure: item.figure, place: item.place, thing: item.thing, dedupe: false
+                )
             }
         }
         if saveAsRule && hasActiveFilter {
