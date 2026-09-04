@@ -90,6 +90,15 @@ struct TimelineAxis {
 
         return TimelineAxis(minYear: minYear, maxYear: maxYear, width: curX, segments: segments)
     }
+
+    /// Builds a strictly linear axis where every year maps to a fixed number of
+    /// points, so calendar ticks are evenly spaced regardless of era widths.
+    static func linear(minYear: Int, maxYear: Int, pointsPerYear: CGFloat) -> TimelineAxis {
+        let span = maxYear - minYear
+        let width = span > 0 ? CGFloat(span) * pointsPerYear : 0
+        let segment = Segment(startYear: minYear, endYear: maxYear, startX: 0, endX: width)
+        return TimelineAxis(minYear: minYear, maxYear: maxYear, width: width, segments: [segment])
+    }
 }
 
 // MARK: - Swimlane Mode
@@ -411,11 +420,7 @@ struct EraSwimlaneRow: View {
         let minLevel = chipLayouts.map(\.level).min() ?? 0
         let maxLevel = chipLayouts.map(\.level).max() ?? 0
         let totalLevels = maxLevel - minLevel + 1
-        let contentHeight = min(max(swimlaneHeight, CGFloat(totalLevels) * 25 + 24), swimlaneHeight * 3)
         let levelCenter = CGFloat(minLevel + maxLevel) / 2.0
-        for i in chipLayouts.indices {
-            chipLayouts[i].chipY = contentHeight / 2 + (CGFloat(chipLayouts[i].level) - levelCenter) * 25
-        }
 
         let eraStartX: CGFloat
         let eraEndX: CGFloat
@@ -427,12 +432,32 @@ struct EraSwimlaneRow: View {
             eraEndX = 0
         }
 
-        var eventLayouts: [(event: Event, x: CGFloat)] = []
-        for event in events {
-            if let year = event.date.startYear {
-                let x = CGFloat(year - minYear) * ppy
-                eventLayouts.append((event, x))
+        let eventRowHeight: CGFloat = 30
+        let eventBottomPadding: CGFloat = 12
+        let eventRowSpacing: CGFloat = 92
+        let eventWidth: CGFloat = 80
+
+        var eventRows: [[CGFloat]] = []
+        var eventLayouts: [(event: Event, x: CGFloat, row: Int)] = []
+        for event in events.sorted(by: { ($0.date.startYear ?? Int.max) < ($1.date.startYear ?? Int.max) }) {
+            guard let year = event.date.startYear else { continue }
+            let x = CGFloat(year - minYear) * ppy
+            guard x >= 0 && x <= containerWidth else { continue }
+            var row = 0
+            while row < eventRows.count, let lastX = eventRows[row].last, x - lastX < eventRowSpacing {
+                row += 1
             }
+            if row == eventRows.count { eventRows.append([]) }
+            eventRows[row].append(x)
+            eventLayouts.append((event, x, row))
+        }
+
+        let chipCloudHeight = min(max(swimlaneHeight, CGFloat(totalLevels) * 25 + 24), swimlaneHeight * 3)
+        let eventStackHeight = eventLayouts.isEmpty ? 0 : eventBottomPadding + CGFloat(eventRows.count) * eventRowHeight
+        let contentHeight = chipCloudHeight + eventStackHeight
+        let chipCenterY = chipCloudHeight / 2
+        for i in chipLayouts.indices {
+            chipLayouts[i].chipY = chipCenterY + (CGFloat(chipLayouts[i].level) - levelCenter) * 25
         }
 
         return AnyView(ZStack(alignment: .leading) {
@@ -446,7 +471,7 @@ struct EraSwimlaneRow: View {
                         RoundedRectangle(cornerRadius: 1.5)
                             .fill((figure.figureType?.color ?? .gray).opacity(isHovered ? 0.7 : 0.22))
                             .frame(width: barWidth, height: isHovered ? 6 : 4)
-                            .position(x: birthX + barWidth / 2, y: contentHeight / 2 + 12)
+                            .position(x: birthX + barWidth / 2, y: chipCenterY + 12)
                             .onHover { inside in hoveredFigureID = inside ? figure.persistentModelID : nil }
                             .help("\(figure.name) — \(figure.birthDate.displayLabel) → \(figure.deathDate.displayLabel)")
                     }
@@ -468,6 +493,7 @@ struct EraSwimlaneRow: View {
 
             ForEach(eventLayouts, id: \.event.id) { layout in
                 let color = layout.event.eventType?.color ?? .gray
+                let centerY = contentHeight - eventBottomPadding - CGFloat(layout.row) * eventRowHeight - eventRowHeight / 2
                 VStack(spacing: 1) {
                     Image(systemName: layout.event.eventType?.icon ?? "flag.fill")
                         .font(.system(size: 14))
@@ -477,8 +503,8 @@ struct EraSwimlaneRow: View {
                         .lineLimit(1)
                         .foregroundStyle(.secondary)
                 }
-                .frame(width: 80)
-                .position(x: layout.x, y: contentHeight - 10)
+                .frame(width: eventWidth)
+                .position(x: layout.x, y: centerY)
                 .help(layout.event.name)
                 .onTapGesture { onSelectEvent?(layout.event) }
             }

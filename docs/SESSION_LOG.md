@@ -8,6 +8,21 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-04 — Timeline: pre-flood linear axis, BCE tick labels, event placement pass
+
+**State:** `swift build` clean. View-layer only; no schema/data impact. Timeline header fix from earlier this session is in `583a8c5`.
+
+**Changes (newest first):**
+1. **Event placement pass in historical swimlanes (`TimelineBase.historicalSwimlane`)** — post-flood lane events previously printed bottom-centered at each event's year with a fixed 80pt box and no collision handling: same-year events overprinted into unreadable blobs and sat half-in/half-out of the lane. Now: events are sorted by year and greedily packed bottom-up into rows (≥92pt horizontal separation), drawn inside a reserved bottom band (12pt clearance, row height 30) so they never straddle the lane edge; the figure-chip cloud is centered in the upper region (`chipCloudHeight`) and the lane only grows vertically when event rows require it, so chips/reign bars/events can't overlap; events whose year maps outside the drawn axis are skipped.
+2. **Pre-flood axis made strictly linear (`TimelineAxis.linear`)** — the mythological pre-flood timeline used `minimumWidth` (per-era min visual width), which stretched the short Creation/Watchers eras and made the 50k-year ruler read as "450k…400k…350k…300k [huge gap] 250k". New `TimelineAxis.linear(minYear:maxYear:pointsPerYear:)` maps every year to a fixed number of points; `TimelinePreView` now uses it, so ticks are evenly spaced and short eras render as narrow lanes (their chips still scroll inside the era's rail). Post-flood/SKL timeline untouched.
+3. **Axis year labels suffixed with " BCE"** (`TimelinePreView.preFloodAxisHeader`) — the standalone "BCE" overlay sat at top-leading and collided with the first tick (450,000, centered at x=0), printing through it; a floating marker also sat 1–2px off the number baseline. Labels are now single strings ("450,000 BCE" …) with runtime-measured half-widths and clamped centers so no label hangs off either frame edge.
+
+**Follow-ups parked in `docs/TODO.md` ("Timeline semantics & pre-flood rethink"):** events invisible in pre-flood rows (mythological-timed lanes pass `events: []`); era-name↔content mismatch ("Creation" holds the pantheon, not the cosmogony); decide framing of the Sitchin-style deep-time BCE ladder; name eras only after events drive meaning.
+
+**Files touched:** `Sources/Me/Views/TimelineBase.swift`, `Sources/Me/Views/TimelinePreView.swift`, `docs/TODO.md`.
+
+---
+
 ### 2026-09-04 — Timeline header layout fix
 
 **State:** `swift build` clean. Single-file change, no schema/data impact.

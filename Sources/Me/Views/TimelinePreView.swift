@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import SwiftData
 
@@ -9,7 +10,6 @@ struct TimelinePreView: View {
 
     private let swimlaneHeight: CGFloat = 64
     private let targetTimelineWidth: CGFloat = 1600
-    private let minEraWidth: CGFloat = 160
 
     private var preFloodEras: [Era] {
         eras.filter { $0.orderIndex < 7 }
@@ -32,13 +32,8 @@ struct TimelinePreView: View {
     }
 
     private var axis: TimelineAxis {
-        TimelineAxis.minimumWidth(
-            minYear: minYear,
-            maxYear: maxYear,
-            eras: preFloodErasWithFigures,
-            minEraWidth: minEraWidth,
-            basePointsPerYear: targetTimelineWidth / CGFloat(span)
-        )
+        let pointsPerYear = span > 0 ? targetTimelineWidth / CGFloat(span) : 1
+        return TimelineAxis.linear(minYear: minYear, maxYear: maxYear, pointsPerYear: pointsPerYear)
     }
 
     private var timelineWidth: CGFloat {
@@ -80,21 +75,29 @@ struct TimelinePreView: View {
 
         return ZStack(alignment: .topLeading) {
             ForEach(Array(ticks), id: \.self) { year in
-                let x = axis.x(for: year)
-                Text(NumberFormatter.localizedString(from: NSNumber(value: abs(year)), number: .decimal))
-                    .font(.system(.callout, design: .serif))
-                    .foregroundStyle(.primary)
-                    .position(x: x, y: 12)
+                tickLabel(for: year)
             }
         }
         .frame(width: timelineWidth, height: 24)
-        .overlay(alignment: .topLeading) {
-            Text("BCE")
-                .font(.system(.callout, design: .serif))
-                .foregroundStyle(.primary)
-                .padding(.leading, 2)
-        }
         .padding(.bottom, 8)
+    }
+
+    private func tickLabel(for year: Int) -> some View {
+        let label = NumberFormatter.localizedString(from: NSNumber(value: abs(year)), number: .decimal) + " BCE"
+        let half = measure(label) / 2
+        let maxX = max(half, timelineWidth - half)
+        let x = min(max(axis.x(for: year), half), maxX)
+        return Text(label)
+            .font(.system(.callout, design: .serif))
+            .foregroundStyle(.primary)
+            .position(x: x, y: 12)
+    }
+
+    private func measure(_ text: String) -> CGFloat {
+        let base = NSFont.systemFont(ofSize: 12)
+        let descriptor = base.fontDescriptor.withDesign(NSFontDescriptor.SystemDesign.serif) ?? base.fontDescriptor
+        let font = NSFont(descriptor: descriptor, size: base.pointSize) ?? base
+        return (text as NSString).size(withAttributes: [.font: font]).width
     }
 
     private var preFloodSection: some View {

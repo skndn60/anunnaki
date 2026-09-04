@@ -1,5 +1,14 @@
 # TODO
 
+## Timeline semantics & pre-flood rethink (2026-09-04 — awaiting ponder)
+
+- [ ] **Events are invisible in pre-flood timeline rows:** the mythological-timed swimlanes pass `events: []` (TimelinePreView) and render figure chips only — nothing shows *what happened* in an era. The historical (post-flood) mode already draws event markers (icon + label at their year); extend that to the mythological-timed lanes so an era row answers "what happened here", not just "who lived here".
+- [ ] **Era-name ↔ content mismatch in pre-flood rows (confusing):** the "Creation" row (300,000–280,000 BCE) actually holds the pantheon — 21 gods (An, Enlil, Enki, Ninhursag, Inanna, Marduk, Utu, Nanna, …) — not the Enuma Elish cosmogony, and "Creation of Mankind" (Adapa) sits immediately after it. Audit each pre-flood era's name against its actual figures/events and consider renames (e.g. "Creation" → "Age of the Gods on Earth").
+- [ ] **Decide the framing of the deep-time BCE era ladder:** the pre-flood dates (450,000 → 28,000 BCE) come from a modern Sitchin-style chronology, not from any Mesopotamian text; the pre-flood rows also mix traditions (Mesopotamian pantheon + Enochic Watchers/archangels). Decide whether to mark such eras as interpretative vs textual, and where that distinction lives (era qualifier/description? a "chronology tradition" field?).
+- [ ] **Revisit era naming after events are visible:** surface each era's defining events first, then choose names from the content so era labels stop overpromising (e.g. "Creation").
+
+---
+
 - [x] **Popup Tables — comparison tables for related entities (completed 2026-08-18):** A new feature for comparing figures across custom attributes. Implemented per the approved design:
   - **3 new `@Model` classes:** `PopupTable` (name, tableDescription), `PopupTableAttribute` (table, name, orderIndex), `PopupTableCell` (table, attribute, figure, value). Figures in a table derived from distinct figures across cells — no separate association model.
   - **New views:** `PopupTableListView` (management list-detail in sidebar Data section), `PopupTableFormView` (create/edit: name + description + figure multi-select + attribute builder), `PopupTableView` (comparison grid — header row with figure names/mugshots, first column with attribute names, editable text cells in edit mode).
