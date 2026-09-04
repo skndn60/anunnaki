@@ -8,6 +8,21 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-04 — Timeline header layout fix
+
+**State:** `swift build` clean. Single-file change, no schema/data impact.
+
+**Changes (newest first):**
+1. **Timeline header alignment bug (root cause):** `TimelineContainerView`'s outer `VStack(spacing: 0)` used the default `.center` cross-axis alignment. The header block hugs content (narrower than the window), so it was being *centered* — drifting right by half the unused width (single digits at large window sizes, hence a persistent "~7–8px off" report that changed with window size). Fixed by pinning `VStack(alignment: .leading, spacing: 0)` (Sources/Me/Views/TimelineView.swift:15).
+2. Header restructured to three left-aligned rows sharing the timeline content's exact left inset (**20pt**, matching `.padding(.horizontal, 20)` in `TimelinePreView`/`TimelinePostView`): row 1 = "Timeline" title, row 2 = Pre-Flood/Post-Flood segmented picker + "Reign bars" checkbox (post only), row 3 = figure-type legend chips. Rows use consistent vertical padding (5pt) + 12pt above/below the block; removed the forced 220pt picker width and `.fixedSize`.
+3. Verified the timeline swimlanes' inset is 20pt (`TimelinePreView.swift:58`, `TimelinePostView.swift:51`); header now uses the same value so title/filters align flush with the lane content at every window width.
+
+**Blind-layout lesson:** several attempts to eyeball SwiftUI alignment from code alone missed the centering bug. In-app offscreen `ImageRenderer` snapshots to `/tmp` work even without Screen Recording permission — but this model cannot interpret images, so pixel alignment still had to be closed via reasoning + user measurement. Worth promoting: when a SwiftUI block "looks centered/drifting a few px," check the enclosing stack's default cross-axis alignment before touching paddings.
+
+**Files touched:** `Sources/Me/Views/TimelineView.swift`.
+
+---
+
 ### 2026-09-04 — Demons/curated import shipped + Apple Style Guide pass
 
 **State:** All work uncommitted (layered on the prior uncommitted tree). `swift build` clean, **497/497** tests, no `--reseed`, user DB untouched apart from intended additive imports.

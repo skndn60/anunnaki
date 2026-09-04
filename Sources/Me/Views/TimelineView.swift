@@ -12,7 +12,7 @@ struct TimelineContainerView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 0) {
             header
             Divider()
             switch selectedSegment {
@@ -25,30 +25,37 @@ struct TimelineContainerView: View {
     }
 
     private var header: some View {
-        HStack {
+        VStack(alignment: .leading, spacing: 0) {
             Text("Timeline")
                 .font(.title2.bold())
-            Spacer()
-            Picker("Period", selection: $selectedSegment) {
-                ForEach(TimelineSegment.allCases, id: \.self) { segment in
-                    Text(segment.rawValue).tag(segment)
+                .padding(.vertical, 5)
+
+            HStack(spacing: 24) {
+                Picker("Period", selection: $selectedSegment) {
+                    ForEach(TimelineSegment.allCases, id: \.self) { segment in
+                        Text(segment.rawValue).tag(segment)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                if selectedSegment == .post {
+                    Toggle("Reign bars", isOn: $showReignBars)
+                        .toggleStyle(.checkbox)
+                        .help("Show each ruler's reign/lifespan bar; hover a bar or its chip to see whose it is.")
                 }
             }
-            .pickerStyle(.segmented)
-            .frame(width: 220)
-            Spacer()
-            if selectedSegment == .post {
-                Toggle("Reign bars", isOn: $showReignBars)
-                    .toggleStyle(.checkbox)
-                    .help("Show each ruler's reign/lifespan bar; hover a bar or its chip to see whose it is.")
-            }
-            HStack(spacing: 12) {
+            .padding(.vertical, 5)
+
+            HStack(spacing: 16) {
                 ForEach(figureTypes) { type in
                     LegendIcon(icon: type.icon, color: type.color, label: type.name)
                 }
             }
             .font(.caption)
+            .padding(.vertical, 5)
         }
-        .padding()
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
     }
 }
