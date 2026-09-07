@@ -135,6 +135,7 @@ struct ContentView: View {
     @State private var showNewPlaceSheet = false
     @State private var showNewEventSheet = false
     @State private var showNewThingSheet = false
+    @State private var bookmarkStore = BookmarkStore()
     @FocusState private var searchFocused: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FigureGroup.orderIndex) private var allFigureGroups: [FigureGroup]
@@ -240,6 +241,7 @@ struct ContentView: View {
                 Migration.ensureDivineCollectives(context: modelContext)
                 Migration.ensureCollectives(context: modelContext)
                 Migration.ensureCollectiveMembers(context: modelContext)
+                Migration.fixHumanCollectiveMemberTypes(context: modelContext)
                 Migration.ensureCollectiveAlternateNames(context: modelContext)
                 Migration.ensureCollectiveTerritory(context: modelContext)
                 Migration.ensureMesopotamianPantheons(context: modelContext)
@@ -254,8 +256,12 @@ struct ContentView: View {
                 Migration.ensureMissingFigureDescriptions(context: modelContext)
                 Migration.ensureAlternateNamesImportExist(context: modelContext)
                 Migration.removeOrphanedKittumNigginaAltNames(context: modelContext)
+                Migration.alignNergalErraSyncretism(context: modelContext)
+                Migration.deduplicateAsalluhiAsarluhi(context: modelContext)
                 Migration.ensureCanonicalDeityFamilies(context: modelContext)
                 Migration.ensureBidirectionalRelationshipConsistency(context: modelContext)
+                Migration.splitLugalIrraMeslamtaea(context: modelContext)
+                Migration.splitEnkiNinkiPair(context: modelContext)
                 Migration.ensureDefaultFigureGroups(context: modelContext)
                 Migration.ensureFigureGroupKinds(context: modelContext)
                 Migration.removeFloodPlaceholder(context: modelContext)
@@ -264,7 +270,11 @@ struct ContentView: View {
                 Migration.enrichSKLData(context: modelContext)
                 Migration.ensureComputedSKLDates(context: modelContext)
                 Migration.ensureAntediluvianChronology(context: modelContext)
+                Migration.correctAnomalousGenealogy(context: modelContext)
                 Migration.ensureEverydayLifeEpisodes(context: modelContext)
+                Migration.ensureEverydayLifeThings(context: modelContext)
+                Migration.convertYaleCulinaryTabletsEventToThing(context: modelContext)
+                Migration.repairInvolvedFiguresFromAssociations(context: modelContext)
                 Migration.ensureConsistentParentRoles(context: modelContext)
                 Migration.ensureHistoricalPeriodEras(context: modelContext)
                 Migration.ensureDynastyGroups(context: modelContext)
@@ -295,7 +305,8 @@ struct ContentView: View {
     }
 
     private var mainView: some View {
-        NavigationSplitView {
+        let sortedBookmarks = bookmarkStore.bookmarks.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        return NavigationSplitView {
             sidebarContent
         } detail: {
             detailContent
@@ -361,6 +372,13 @@ struct ContentView: View {
             }
             .help("Back up or restore the database")
         }
+
+        BookmarkToolbarContent(
+            bookmarks: sortedBookmarks,
+            store: bookmarkStore,
+            coordinator: coordinator,
+            modelContext: modelContext
+        )
     }
         .sheet(isPresented: $showFromTextSheet) {
             FromTextSheet()
@@ -399,6 +417,7 @@ struct ContentView: View {
             showNewThingSheet = true
         }
         .environment(\.navigationCoordinator, coordinator)
+        .environment(\.bookmarkStore, bookmarkStore)
         .environment(\.userSession, userSession)
     }
 
@@ -630,4 +649,55 @@ private struct SidebarGroupRow: View {
         )
     }
 }
+
+struct BookmarkToolbarContent: ToolbarContent {
+    let bookmarks: [Bookmark]
+    let store: BookmarkStore
+    let coordinator: NavigationCoordinator
+    let modelContext: ModelContext
+
+    var body: some ToolbarContent {
+        if bookmarks.count > 0 { item(bookmarks[0]) }
+        if bookmarks.count > 1 { item(bookmarks[1]) }
+        if bookmarks.count > 2 { item(bookmarks[2]) }
+        if bookmarks.count > 3 { item(bookmarks[3]) }
+        if bookmarks.count > 4 { item(bookmarks[4]) }
+    }
+
+    private func item(_ bookmark: Bookmark) -> some ToolbarContent {
+        ToolbarItem(id: "bookmark-\(bookmark.id.uuidString)", placement: .primaryAction) {
+            BookmarkButtonView(
+                bookmark: bookmark,
+                onNavigate: { navigate(to: bookmark) },
+                onRemove: { store.remove(id: bookmark.id) }
+            )
+        }
+    }
+
+    private func navigate(to bookmark: Bookmark) {
+        guard entityExists(bookmark.entityID, kind: bookmark.kind) else {
+            store.remove(entityID: bookmark.entityID)
+            return
+        }
+        switch bookmark.kind {
+        case .figures: coordinator.navigateToFigure(bookmark.entityID, name: bookmark.name)
+        case .places: coordinator.navigateToPlace(bookmark.entityID, name: bookmark.name)
+        case .events: coordinator.navigateToEvent(bookmark.entityID, name: bookmark.name)
+        case .things: coordinator.navigateToThing(bookmark.entityID, name: bookmark.name)
+        default: break
+        }
+    }
+
+    private func entityExists(_ entityID: PersistentIdentifier, kind: NavigationItem) -> Bool {
+        let model: (any PersistentModel)? = modelContext.model(for: entityID)
+        switch kind {
+        case .figures: return model is Figure
+        case .places: return model is Place
+        case .events: return model is Event
+        case .things: return model is Thing
+        default: return true
+        }
+    }
+}
+
 

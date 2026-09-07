@@ -41,6 +41,9 @@ FigurePlaceAssociations "Resident Of"/"Ruler Of".
 6. Zizizi's Angry Parents → -1860 Old Assyrian; [Zizizi, Imdi-ilum, Ishtar-bashti];
    Assur Started At + Kanesh Ended At; "Letter TCL 20 154; C. Michel"
 7. Yale Culinary Tablets → -1730; none; no place; "YBC 4644 et al.; J. Bottéro"
+   → REPLACED by Thing (type "Text"): imported as an Event initially, then reclassified
+   into Things (Migration.ensureEverydayLifeThings + convertYaleCulinaryTabletsEventToThing)
+   because the tablets are physical objects, not a happening.
 8. Farmer's Instructions → -1800 OB; none; Nippur; "Bendt Alster, The Instructions of Šuruppak"
 9. Dialogue of Pessimism → -1000; none; Babylon; "British Museum K.34113 (KAR 158)"
 10. Ashurnasirpal II's Banquet at Kalhu → -879 Neo-Assyrian (approx=false);

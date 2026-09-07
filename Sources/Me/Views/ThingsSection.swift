@@ -120,42 +120,25 @@ private struct ThingLinkPopover: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search things…", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            if filteredThings.isEmpty {
-                Text("No matching things")
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 20)
-            } else {
-                List(filteredThings, id: \.persistentModelID) { thing in
-                    Button(action: { selectedThing = thing }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: thing.thingType?.icon ?? "shippingbox")
-                                .font(.caption)
-                                .foregroundStyle(thing.thingType?.color ?? .brown)
-                                .frame(width: 16)
-                            Text(thing.name)
-                                .font(.body)
-                            Spacer()
-                            if selectedThing?.persistentModelID == thing.persistentModelID {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
+        AssociationLinkPopover(
+            searchPlaceholder: "Search things…",
+            emptyText: "No matching things",
+            items: filteredThings,
+            isSelected: { $0.persistentModelID == selectedThing?.persistentModelID },
+            onSelect: { selectedThing = $0 },
+            searchText: $searchText,
+            isPresented: $isPresented,
+            row: { thing in
+                HStack(spacing: 10) {
+                    Image(systemName: thing.thingType?.icon ?? "shippingbox")
+                        .font(.caption)
+                        .foregroundStyle(thing.thingType?.color ?? .brown)
+                        .frame(width: 16)
+                    Text(thing.name)
+                        .font(.body)
                 }
-                .listStyle(.plain)
             }
-
-            Divider()
-
+        ) {
             VStack(spacing: 8) {
                 HStack {
                     Text("Role:")
@@ -188,7 +171,6 @@ private struct ThingLinkPopover: View {
                 }
             }
         }
-        .padding()
         .onAppear {
             allRoles = (try? modelContext.fetch(FetchDescriptor<ThingFigureRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
         }

@@ -8,6 +8,567 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-07 — Design discussion: god-object `Figure` vs. composition (base + facets)
+
+**State:** Discussion only — no code, no schema change, nothing migrated. Captured because the user is actively weighing a long-term model refactor and wants the reasoning durable.
+
+**Context:** After a day of view-layer refactors, we discussed whether the single `@Model` `Figure` (one row carrying deity / human / SKL king / primordial / collective semantics via optional fields like `reignYears`, `epithet`, `isConcept`) is a bottleneck worth restructuring. Raised and rejected along the way: a SwiftData **class hierarchy** — under the hood it maps to Core Data entity inheritance, which is a heavyweight store migration, breaks the "additive-only / sacred DB" rule, couples every `@Query [Figure]` + `Relationship.fromFigure` to the hierarchy, and fights the existing data-driven `FigureType` design.
+
+**Where it landed — composition (base figure + facets):**
+- Keep a slim `Figure` **card** holding what every entity shares: name, gender, era, epithet, figureType, relationships, alternate names, pantheons, tags, images, citations.
+- Attach **optional 1:1 facet models** only for roles that bring their own fields, e.g. `DeityProfile` (domain, cult places, syncretisms) and `Kingship` (reign start/end, reign years, dynastic order). A facet is a separate `@Model` with `@Relationship(inverse:)` back to `Figure`.
+- Facets **compose**: Dumuzi the Shepherd = Figure + Kingship + DeityProfile; Enki = Figure + DeityProfile; Alulim = Figure + Kingship; a plain human = bare Figure with `figureType = Human` and no facets.
+- Rule of thumb: base = what every entity has; facet = a role that adds attributes. A role that adds no fields is just the base + its `figureType` (e.g. "collective" stays a flag, not a facet).
+
+**Why it's affordable:** SwiftData only allows additive schema changes anyway. The refactor can be done as (1) add new facet `@Model`s with 1:1 inverse relationships (migration-safe), (2) idempotent `Migration.ensure…` backfill from the existing optional columns, (3) leave the wide columns as deprecated mirrors until no caller remains. Store never breaks, no reseed.
+
+**Why it's not urgent:** the god-object has not blocked any feature — the tax is per-change friction (`if let reignYears`, `switch figureType`, ConsistencyEngine reasoning over the sprawl), not capability. Personal tool whose value is the data + tuned workflow. **Trigger to revisit:** when new code keeps writing `if let reignYears` / `switch figureType` (≈7 hats already: deity, SKL king, primordial, collective, hypostasis, biblical, everyday-life), or a feature needs per-kind invariants/validation.
+
+**Recommended order:** prototype as **composition-by-accessor first** — typed facade over the existing model (`figure.kingship` computed returning a `Kingship` value struct, `FigureKind`-driven protocol) captures ~80% of the benefit with zero migration risk. Escalate to real `@Model` facets only if the value layer proves insufficient. User is "brewing" on it; no action committed.
+
+**Files:** none (discussion only). Also logged the day's view refactors (DetailSection, CitationListSection, AssociationLinkPopover shell + rollout, EntitySearch unification) in entries above/below this one.
+
+---
+
+### 2026-09-07 — AssociationLinkPopover rollout to remaining four link popovers
+
+**State:** `swift build` clean, **531/531** tests. No schema change, no behavior change. Pilot (Place detail popovers) user-verified in the running app.
+
+**Change:** Completed the AssociationLinkPopover migration begun in the previous entry:
+- `EventDetailView.swift` — `EventPlaceLinkPopover` and `EventThingLinkPopover` now compose the shared shell (their callers keep entity fetch/filter/create; shell owns search + checkmark list chrome). 970 → 944 lines.
+- `PlacesSection.swift` — `PlaceLinkPopover` migrated (keeps magnifier + Comments footer).
+- `ThingsSection.swift` — `ThingLinkPopover` migrated.
+- `EventFigureLinkPopover` (two-step display-name confirm) and `GroupLinkPopover` (Join, no role) remain custom by design.
+
+**Files:** `EventDetailView.swift`, `PlacesSection.swift`, `ThingsSection.swift`, `AssociationLinkPopover.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Shared AssociationLinkPopover shell (pilot: Place detail popovers)
+
+**State:** `swift build` clean, **531/531** tests. No schema change, no behavior change.
+
+**Context:** Third view-reduction step. The initial #3 idea (reuse `SearchSection`) was ruled out after inspection — that component is a pick-once-then-clear `Form` control, whereas the entity link popovers (PlaceFigureLinkPopover, PlaceLinkPopover, PlaceEventLinkPopover, EventPlaceLinkPopover, EventThingLinkPopover, ThingLinkPopover) are a persistent-selection interaction: search → list of not-yet-linked entities with a checkmark on the selection → Role picker (+ optional Comments) → Link/Cancel. User approved building a dedicated generic and rolling out pilot-first.
+
+**Change (pilot — PlaceDetailView only):**
+- `Sources/Me/Views/AssociationLinkPopover.swift` (new) — generic `AssociationLinkPopover<Item: Identifiable, Row: View, Footer: View>` shell: search field (optional magnifier), list + selection checkmark, empty state, Divider, caller-supplied footer; explicit init so `@Binding searchText`/`isPresented` precede the two trailing view-builders. Plus a small `LinkCandidateRow` (icon + title + optional subtitle) for the place/event/thing rows.
+- `PlaceDetailView.swift` — `PlaceFigureLinkPopover` and `PlaceEventLinkPopover` now compose the shell: caller keeps its own entity fetch/filter/create, shell owns the search+list+checkmark chrome. 884 → 858 lines.
+- EventFigureLinkPopover (two-step display-name confirm) and GroupLinkPopover (Join, no role) intentionally remain custom.
+
+**Remaining follow-ups (deferred):** EventDetailView's EventPlaceLinkPopover + EventThingLinkPopover, PlacesSection's PlaceLinkPopover, ThingsSection's ThingLinkPopover — same mechanical migration onto the shell.
+
+**Files:** `Sources/Me/Views/AssociationLinkPopover.swift` (new), `PlaceDetailView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Extract shared DetailSection wrapper across detail views
+
+**State:** `swift build` clean, **531/531** tests. No schema change, no behavior change (additive view-layer refactor).
+
+**Context:** Second view-reduction step. Every detail view hand-rolled the same "`Divider()` + `VStack(spacing:8)` + uppercase caption" shell around its content rows — 12 genuine section blocks across Place/Event/Figure/Thing, several with a trailing add/link button + popover in the header. Event's copy had drifted into mis-indented code (again proof of duplication rot). Property-style blocks (Modern Location / Map / Description) and the already-extracted figure section components (`PlacesSection`, `EventsSection`, `AlternateNamesSection`, etc.) were deliberately left alone — they aren't this shell.
+
+**Change:**
+- `Sources/Me/Views/DetailSection.swift` (new) — `DetailSection<Content, Accessory>`: renders `Divider + VStack { HStack { caption; Spacer; accessory }; content }`. Two inits (plain title, and title + `@ViewBuilder accessory`) so callers pass the shell once.
+- Converted genuine section blocks to the wrapper:
+  - `PlaceDetailView` — Also Known As, Related Places, Events Here, Associated Figures, Tags.
+  - `EventDetailView` — Involved Figures, Associated Places, Things, Tags (mis-indentation normalised in the process).
+  - `FigureDetailView` — Relationships, Tags.
+  - `ThingListView` — Tags.
+- Line counts: Place 924→884, Event 1004→970, Figure 1002→990, Thing 986→981 (modest because each conversion adds one indent level; the win is one source of truth for the caption shell + drift removal).
+
+**Files:** `Sources/Me/Views/DetailSection.swift` (new), `PlaceDetailView.swift`, `EventDetailView.swift`, `FigureDetailView.swift`, `ThingListView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Extract shared CitationListSection (kill Place/Event copy-paste)
+
+**State:** `swift build` clean, **531/531** tests. No schema change, no behavior change.
+
+**Context:** Reducing the giant view files. First concrete target: `PlaceDetailView` and `EventDetailView` each carried a **byte-identical** inline "Sources & Citations" block (~40 lines, same icons/layout/delete flow, each with its own `citationToDelete`/`showDeleteCitationConfirm` state + `.alert`). Event's copy had drifted into mis-indentation — live proof the duplication was rotting.
+
+**Change:**
+- `Sources/Me/Views/CitationListSection.swift` (new) — self-contained `CitationListSection(citations:)` owning the header, rows, and its own delete-confirm alert, plus `CitationListRow` (doc-text icon + source/location line + note, optional delete). Callers stay thin — no state, no alert.
+- `PlaceDetailView.swift` — inline block replaced with `CitationListSection(citations: placeCitations)`; removed dead `citationToDelete`/`showDeleteCitationConfirm` states + `.alert`. 971 → 924 lines.
+- `EventDetailView.swift` — same. 1051 → 1004 lines.
+- **Not touched:** `FigureDetailView`'s richer figure-specific `CitationsSection` (different UX: always-visible header + add button + filter + empty state) and `FigureCitationsRow` (used by figure detail, quicklook, and query dossiers) — deliberately left since their contract differs. PopupTable's `doc.text` hits are unrelated cell/source icons.
+
+**Files:** `Sources/Me/Views/CitationListSection.swift` (new), `PlaceDetailView.swift`, `EventDetailView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Unify entity search helpers into shared EntitySearch.swift
+
+**State:** `swift build` clean, **531/531** tests. No schema change, no behavior change for event/thing search.
+
+**Context:** Search helpers were inconsistent. `searchFigures`/`FigureSearchResult` lived in their own file and returned a typed result so pickers could show "Name as Alt" when an alternate name matched; `searchPlaces`/`searchEvents`/`searchThings` were bare functions parked at the bottom of the Compare view files, each matching different fields (places: name/modern-location/alt-name; events & things: name/**description**). Only figures and places have `AlternateName` rows (events/things have no aliases). User approved "shared file + typed place result".
+
+**Change:**
+- `Sources/Me/Views/EntitySearch.swift` (new) — single home for all four search helpers + the typed result types:
+  - `FigureSearchResult` + `searchFigures` + `Figure.matchedAlternateName(for:)` moved verbatim from the deleted `FigureSearchResult.swift` (12 call sites unaffected — filename was never part of the contract).
+  - New `PlaceSearchResult` + `searchPlaces` returning typed results (alt-aware, mirrors figure) + `Place.matchedAlternateName(for:)`; place matches now also cover modern location as before.
+  - `searchEvents`/`searchThings` unchanged in behavior (name + description), now living in the shared file.
+- `PlaceCompareView` — filter maps `searchPlaces(...).map(\.place)`; row shows "Name as Alt" via `Place.matchedAlternateName(for:)` when the query hit an alias (matching FigureCompareView's behaviour).
+- `EventCompareView`/`ThingCompareView` — removed their now-duplicated bottom free functions (still resolve to the shared ones).
+- `Sources/Me/Views/FigureSearchResult.swift` deleted.
+
+**Files:** `Sources/Me/Views/EntitySearch.swift` (new), `FigureSearchResult.swift` (deleted), `PlaceCompareView.swift`, `EventCompareView.swift`, `ThingCompareView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Split the 4,423-line Migration.swift monolith into domain files
+
+**State:** `swift build` clean, **531/531** tests. Pure file-organization refactor — member inventory verified identical (110 members, none missing/duplicated).
+
+**Context:** `Migration.swift` was a 4,423-line `package struct` holding ~110 idempotent migration routines with no section markers. Any change forced the whole file to recompile and made navigation painful. `Migration` is already extended across files (`HistoricalEventsImport.swift`, `FigureBlurbsImport.swift`), so the `extension Migration` pattern was proven.
+
+**Change:**
+- Split into 1 main + 9 domain files along topical boundaries (kept each member and its doc comment intact):
+  - `Migration.swift` (~540 lines; keeps the `package struct Migration` decl + role types/collectives basics)
+  - `Migration+DeityImports.swift` — deity/alt-name import tranches
+  - `Migration+EraChronology.swift` — era order, antediluvian chronology, SKL anchor dates
+  - `Migration+SKLAndGenealogy.swift` — parent relations, coverage flags, domain/era enrichment
+  - `Migration+FigureGroups.swift` — default groups, kinds, regnal order, reign/epithet backfills
+  - `Migration+PantheonsCollectives.swift` — pantheons, divine/human collectives + members
+  - `Migration+OraccEpisodes.swift` — ORACC imports, everyday-life episodes/things
+  - `Migration+SourcesTags.swift` — relationship/association source backfills, auto tags
+  - `Migration+DynastyBoundaries.swift` — dynasty groups, polygon rings/geoJSON
+  - `Migration+MaintenanceSplits.swift` — activity-log/users, syncretism dedup, pair splits, genealogy fixes
+- **Access change:** the 15 file-scoped `private` static members (`StaticIdentifier`, `listedReignRegex`, `eraTypoMap`, helper funcs, etc.) became `package`. `private` is file-scoped, so helpers shared across the extension files could not stay `private`; `package` matches the surrounding 87 `package static` members exactly.
+- Integrity verified programmatically: reconstructing members across all files reproduces the original symbol list 1:1.
+
+**Files:** `Sources/MeCore/Store/Migration.swift` + 9 new `Migration+*.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Split the 10,438-line MeCoreTests.swift monolith into 8 files
+
+**State:** `swift build`/`swift test` clean, **531/531** tests. Pure file-organization refactor — member content verified byte-identical vs a backup (normalizing only the intended access change).
+
+**Context:** `Tests/MeCoreTests/MeCoreTests.swift` was a single 10,438-line, single-`@MainActor final class` monolith (531 tests + 26 private helpers). Navigation and diff review were painful; any change forced the whole file to recompile.
+
+**Change:**
+- Split the one class body into 8 files along existing `// MARK:` domain boundaries:
+  - `MeCoreTests.swift` (main; keeps the `final class` declaration + QueryEngine/resolution tests)
+  - `MeCoreTests+Groups.swift` (group ordering, aggregation, reign/epithet, era links)
+  - `MeCoreTests+PantheonsCollectives.swift` (apply/revert, pantheon, divine/human collectives, imports, Lugal/Enki splits)
+  - `MeCoreTests+ConsistencyTags.swift` (ConsistencyEngine, repairs, duplicate merger, tags)
+  - `MeCoreTests+EventsPopup.swift` (event propagation, popup tables, timeline, SKL dates, auth/activity log)
+  - `MeCoreTests+Migration.swift` (migration test suite)
+  - `MeCoreTests+Lineage.swift` (LineageTreeLayout + bracket segments)
+  - `MeCoreTests+RelationshipManager.swift`
+- Each non-main file is `@MainActor extension MeCoreTests { … }` with the same three imports.
+- **Access change:** the 26 class-level `private` helpers became internal (removed `private`). Swift `private` members are file-scoped, so helpers shared across the extension files (e.g. `makeContainer`, `count`, `deityType`) could not stay `private` once bodies moved to other files. Internal is the natural test-target access level; no API surface changed.
+- Cut points chosen only at clean method/MARK boundaries so no member straddles two files.
+
+**Files:** `Tests/MeCoreTests/MeCoreTests.swift` (now ~2,050 lines) + 7 new `MeCoreTests+*.swift` files, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Deduplicate split-screen compare into generic `EntityCompareView`
+
+**State:** `swift build` clean, **531/531** tests. No schema change, no migration risk.
+
+**Context:** Rolling the figure split-screen compare out to Places, Events, and Things produced four ~85%-identical views (FigureCompareView 114 lines, Place/Event/ThingCompareView 126–131 each). Before adding any fifth entity list, extract the shared shell.
+
+**Change:**
+- `Sources/Me/Views/EntityCompareView.swift` (new) — generic `EntityCompareView<Item: PersistentModel, Detail: View, Row: View>`: one implementation of the 1100×700 sheet (header title/subtitle, swap, Close, picker column, left/right panes). Callers inject: the `@Query` item array, title strings, a `name:` accessor, a `filter: ([Item], String) -> [Item]`, and `detail:`/`row:` view-builder closures. The picker already excludes the left item by `persistentModelID` before filtering.
+- Rewrote `FigureCompareView.swift`, `PlaceCompareView.swift`, `EventCompareView.swift`, `ThingCompareView.swift` as thin wrappers (~46–53 lines each) that own their `@Query` and supply per-entity closures. No list-view call sites changed.
+- Figure compare preserves its alt-name-aware picker ("Name as Alt") by keeping `searchFigures`/`FigureSearchResult` (shared elsewhere) intact and re-deriving the matched-alternate-name display inside the row closure.
+
+**Files:** `Sources/Me/Views/EntityCompareView.swift` (new), `FigureCompareView.swift`, `PlaceCompareView.swift`, `EventCompareView.swift`, `ThingCompareView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Figure header/toolbar cleanup, Enki/Ninki split, Place Compare
+
+**State:** `swift build` clean, **531/531** tests. JSON validated with `jq`.
+
+**Context:** Ongoing UI + data-curation session. Three threads: (1) consolidate the figure detail controls into the single `DetailToolbar`, (2) fix the combined "Enki and Ninki" primordial pair violating the one-person-per-figure convention, (3) generalise the figure split-screen compare to other entities.
+
+**Change 1 — figure detail controls moved into `DetailToolbar`** (`FigureListView`):
+- Compare (split screen) button moved out of `FigureDetailView`'s header into the `DetailToolbar` as a `leadingButtons` entry (`rectangle.split.2x1`).
+- Inline "copy name to clipboard" button removed from beside the figure name; `DetailToolbar` gained an optional `copyName: String?` slot that renders the copy icon + transient `checkmark` feedback. Passed `figure.name` from `FigureListView`.
+- Removed the duplicate inline "Edit description" button next to the figure name — the `DetailToolbar`'s `square.and.pencil` was already there. Dead `showDescriptionEditor`/`editRichDescription`/`editPlainDescription` state + `DescriptionEditorSheet` presentation removed from `FigureDetailView` (its toolbar keeps its own).
+- Header layout (per user spec): two-column header where the second column stacks **name** on line 1, then **gender symbol + FigureTypeBadge (+ Concept pill)** on line 2, then a separated block of the text lines (disambiguation/title/epithet). Badge no longer floats on the right edge.
+
+**Change 2 — split "Enki and Ninki" into two figures:**
+- `Migration.splitEnkiNinkiPair(context:)` — idempotent corrective split (precedent: `splitLugalIrraMeslamtaea`). Creates `Enki (Primordial)` (male) and `Ninki` (female), both `Primordial`, links them as **Spouse** in both directions, copies the pair's shared tags (minus `pair`) + Mesopotamian pantheon onto both, then deletes the combined row. Also reconciles a store that already has both split figures but no spouse edge.
+- `mesopotamian_deities_import.json` — replaced the single pair entry with the two split figure entries so imports/reseeds never recreate the pair.
+- `alt_names_import.json` — removed the obsolete `Enki-Ninki` hyphenated-pair entry.
+- Naming/genders/relationship decisions confirmed with user: qualify names in parentheses (`Enki (Primordial)`), Enki male / Ninki female, spouse pair only (no Enlil link), metadata re-tagged on both and pair refs dropped.
+- 4 new tests: split-with-metadata, idempotent re-run, link-existing-individuals-without-pair, no-op-when-nothing-present.
+
+**Change 3 — entity compare (split screen), rolled out to all four entity lists:**
+- `Sources/Me/Views/PlaceCompareView.swift`, `EventCompareView.swift`, `ThingCompareView.swift` (new) — each mirrors `FigureCompareView`: 1100×700 sheet, left = selected entity, right = second entity or a searchable picker, swap + Close, reuses the entity's own detail view in each pane.
+- `PlaceListView.swift`, `EventListView.swift`, `ThingListView.swift` — each gained a `showCompareSheet` state + a `rectangle.split.2x1` `leadingButtons` entry in its `DetailToolbar` + a sheet. Per-entity accent colors: figures `.accentColor`, places `.teal`, events `.orange`, things `.purple`.
+- Per-entity pickers search different fields: places by name/modern location/alternate name; events by name/description (shows type icon + date label); things by name/description (shows `cube.box` + description line).
+- No schema change, no migration risk; UI-only.
+
+**Files:** `Sources/Me/Views/FigureDetailView.swift`, `FigureListView.swift`, `DetailToolbar.swift`, `ContentView.swift`, `PlaceCompareView.swift` (new), `EventCompareView.swift` (new), `ThingCompareView.swift` (new), `PlaceListView.swift`, `EventListView.swift`, `ThingListView.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/MeCore/Resources/mesopotamian_deities_import.json`, `Sources/MeCore/Resources/alt_names_import.json`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-07 — Figure Compare (split screen)
+
+**State:** `swift build` clean. No schema change, no migration risk.
+
+**Context:** User wants two figures side by side for direct comparison, triggered from a figure's detail view.
+
+**Change:** New `FigureCompareView` + a Compare button in `FigureDetailView` header.
+
+- `Sources/Me/Views/FigureCompareView.swift` (new) — Full-screen sheet: left pane = primary figure (swappable), right pane = second figure or a searchable picker. Header bar shows a swap button and Close. Uses existing `searchFigures`/`FigureSearchResult` for the picker, reuses `FigureDetailView` directly in each pane. Frame is 1100×700.
+- `Sources/Me/Views/FigureDetailView.swift` — New `showCompareSheet` state + a `rectangle.split.2x1` button in the header (next to the edit-description icon), presents `FigureCompareView` as a sheet.
+
+**Design decisions:**
+- Trigger: compare button on the detail header (not a new sidebar section). Two figures only for now.
+- All data editing (mugshot, description, relationship creation via drag-drop) is available inside each pane through the existing `FigureDetailView` sheets/interactions.
+- Symmetric header with "Swap" (swaps left and right figure), Close button and figure name subtitle.
+
+**Files:** `Sources/Me/Views/FigureCompareView.swift`, `Sources/Me/Views/FigureDetailView.swift`.
+
+---
+
+**State:** `swift build` clean, **526/526** tests. BookmarkLayout tests removed (the geometry they tested is gone).
+
+**Context:** User changed the visual form of bookmarks: abandoned the original floating-panel design in favour of simple buttons in the button bar at the top of the screen.
+
+**Change:** Replaced the floating `NSPanel` overlay system with a row of toolbar buttons.
+
+- `Sources/Me/Views/BookmarkOverlay.swift` — Stripped down to `Bookmark` value struct (id/kind/entityID/name, `position` removed) + `@Observable BookmarkStore` (max 5, dedupes via "Remove Bookmark" swap, `isBookmarked`, `remove(entityID:)`) + the environment key. Removed `WindowReporter`, `BookmarkPanelWindow`, and `BookmarkOverlayController`.
+- `Sources/Me/Views/BookmarkPanelView.swift` — Now `BookmarkButtonView`: a `Menu` labelled with the entity's icon + name. The menu lists **Open** (navigate) and **Remove Bookmark** (destructive). Replaced the original right-click `contextMenu` because toolbar buttons swallow right-clicks — the user only ever saw the toolbar's own "Icon and Text / Icon Only" customization menu, not the bookmark's context menu. A discrete `Button` + chevron was considered but a single `Menu` with "Open" keeps remove always discoverable.
+- `Sources/MeCore/Store/BookmarkLayout.swift` — Deleted (floating-panel geometry no longer used).
+- `Sources/Me/Views/ContentView.swift` — Removed `BookmarkOverlayController` state, `WindowReporter` background, and the corner-reorg toolbar button. Added a `BookmarkBarView` toolbar item that renders the bookmarks as a horizontal row of buttons and handles navigate/remove with lazy deleted-entity cleanup.
+- `Tests/MeCoreTests/MeCoreTests.swift` — Removed `BookmarkLayoutTests` (5 tests) since `BookmarkLayout` no longer exists. `Bookmark`/`BookmarkStore` live in the `Me` target, not `MeCore`, so they're not unit-testable from `MeCoreTests`.
+- `docs/Bookmarks.md` — Rewritten for the toolbar-button design.
+
+**Design decisions:**
+- **Toolbar buttons instead of floating panels:** A simple row of `Button`s in the top button bar. No drag, no corner layout, no window resize reorganisation, no above-sheet behaviour needed.
+- **Navigation/removal heads the same way** as before: click → `NavigationCoordinator.navigateTo*`, right-click → remove. Deleted-entity cleanup still resolves lazily (synchronously here, in a button action).
+- **Row context menus** (Bookmark / Remove Bookmark swap, greyed at 5) are unchanged.
+
+**Files:** `Sources/Me/Views/BookmarkOverlay.swift`, `Sources/Me/Views/BookmarkPanelView.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/Bookmarks.md`. `Sources/MeCore/Store/BookmarkLayout.swift` deleted.
+
+---
+
+**State:** `swift build` clean, **531/531** tests (5 new BookmarkLayout tests). App relaunched (PID 13811); no crash reports.
+
+**Context:** User wanted the ability to bookmark up to 5 entities (figures/places/events/things) as always-visible floating icons on the main window — for quick switching between entities during research. Bookmarks are session-only (non-persistent), float above SwiftUI sheets, and live entirely inside the app window frame.
+
+**Change:** Three new files plus edits to five existing files:
+
+- `Sources/MeCore/Store/BookmarkLayout.swift` — Pure geometry functions (`cornerOrigins(count:contentRect:)`, `clamped(origin:panelSize:within:)`) for the bottom-left corner layout and screen-space clamping, unit-tested in MeCoreTests.
+- `Sources/Me/Views/BookmarkOverlay.swift` — `Bookmark` value struct, `@Observable BookmarkStore` (max 5, dedupes via "Remove Bookmark" swap, `setPosition`, `isBookmarked`, `remove(entityID:)`), `BookmarkOverlayController` (owns per-bookmark borderless `NSPanel` child windows at `.floating` level; idempotent `attach(to:)` + `cornerLayout()` + lazy entity-existence resolve on click + teardown on parent `willCloseNotification`), environment key, and `WindowReporter` NSViewRepresentable.
+- `Sources/Me/Views/BookmarkPanelView.swift` — Finder "View as icons" style tile (SF Symbol + name, rounded-rectangle thinMaterial), `DragGesture` for clamped repositioning, right-click `contextMenu` with confirmation-dialog delete, click-to-navigate via `NavigationCoordinator`.
+- `Sources/Me/Views/ContentView.swift` — `@State BookmarkStore` + `@State BookmarkOverlayController?`, environment injection, `WindowReporter` background to start the controller on the main window, toolbar "bookmark" button to trigger `cornerLayout` (greyed when empty).
+- `FigureListView`, `PlaceListView`, `EventListView`, `ThingListView` — Row context menus now carry a toggling "Bookmark"/"Remove Bookmark" item with `Label(systemImage:)`, greyed when full and not already bookmarked.
+- `Tests/MeCoreTests/MeCoreTests.swift` — 5 new tests in `BookmarkLayoutTests`: stack order, right-alignment, empty, clamp bounds, exact-fit edge case. 531/531.
+
+**Design decisions (incorporating user feedback):**
+- **Architecture:** Per-bookmark borderless `NSPanel` (not SwiftUI overlay) — the only route that satisfies "cannot be obscured by sheets" (spec §Living space). Panel `.floating` level (3) sits above the main window (0) and attached sheets; system modal dialogs would still cover them (accepted).
+- **Context menu surface:** List rows only (not detail headers) — one consistent surface across all four entity types.
+- **Duplicate handling:** "Remove Bookmark" swap — if the entity is already bookmarked, the menu item swaps to "Remove Bookmark"; no stale duplicates possible.
+- **Resize behavior:** Any window resize re-organizes bookmarks to the bottom-left corner (sidebar-width region, right-aligned, bottom→top, alphabetical by name) — per spec §Manipulation, confirmed by user.
+- **Persistence:** None (session-only, lost on relaunch) — per spec §Persistence, confirmed by user.
+- **Deleted entity → bookmark removed:** Resolved lazily on click via `ModelContext.model(for:)`; doesn't require deletion-hook plumbing.
+- **Keyboard shortcuts:** Deferred to a follow-up — spec confirmed this is a later addition.
+- **NSWindow.parentWindow → .parent:** `parentWindow` was renamed to `parent` in Swift 3; build-time fix.
+
+**Files:** `Sources/MeCore/Store/BookmarkLayout.swift`, `Sources/Me/Views/BookmarkOverlay.swift`, `Sources/Me/Views/BookmarkPanelView.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/FigureListView.swift`, `Sources/Me/Views/PlaceListView.swift`, `Sources/Me/Views/EventListView.swift`, `Sources/Me/Views/ThingListView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/Bookmarks.md`.
+
+---
+
+### 2026-09-06 — Five childBornBeforeParent complaints fixed via corrective migration
+
+**State:** `swift build` clean, **526/526** tests. App relaunched (PID 10322); live store corrected + verified via sqlite.
+
+**Context:** The 5 remaining date complaints (Data Integrity → childBornBeforeParent) were: Naram-Sin of Akkad (-2280) born before Manishtushu (-2205); Lipit-Enlil (-1874) before Bur-Suen (-1821); Puzur-Suen (-2273) before Hablum (-2135); Jared (-3544) before Mahalalel (-3386); Rashujal (-3749) before Rachujal (-3603). Root causes were mixed: mis-dated kings, a chronologically impossible Father edge, a broken Genesis-5 segment, and a mythical Watcher pair with invented dates.
+
+**Change:** New idempotent migration `Migration.correctAnomalousGenealogy(context:)` (wired after `ensureAntediluvianChronology`): Manishtushu birth -2205→-2305; Lipit-Enlil rebased to -1800/-1790 (after Bur-Suen, matching the DB's consecutive-reign convention); deleted the Hablum→Puzur-Suen Father edge; re-derived Jared (-3321) and Enoch (-3159) from Genesis 5 begetting ages (+65/+162, lifespans 962/365); inserted a `FindingDismissal` for the mythical Rashujal pair; deleted the 5 stale persisted IntegrityFinding rows. Each step fires only while the stale value is present, so user edits always win.
+
+**Files:** `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift` (+ `testCorrectAnomalousGenealogyResolvesChildBornBeforeParentFindings`, and integrity/dismissal models added to the test schema).
+
+**Verification:** New migration test passes (fixture → 5 warnings → corrected date/edge/dismissal/stale-clear assertions, idempotent on rerun, only Rashujal still computes). Full suite 526/526. Live store confirmed: Manishtushu -2305, Lipit-Enlil -1800/-1790, Jared -3321/-2359, Enoch -3159/-2794 (reignStart mirrored), Hablum→Puzur-Suen count 0, dismissal row present, childBornBeforeParent persisted findings 0.
+
+---
+
+### 2026-09-06 — "The daughters of Man" gender-wording false positive fixed (recurrence)
+
+**State:** `swift build` clean, **525/525** tests. App relaunched (PID 9234).
+
+**Context:** User: "It is back... 'The daughters of Man'." The 2026-08-29 fix removed RELATIONAL nouns (sons/daughters) from the gendered-noun sets, which silenced the original flags — but the figure's description since carried the full Genesis 6:1–4 passage (`[6:2] the sons of God saw…`, `[6:4] …the sons of God went in to the daughters…`), and unquoted singular "God" is a self-descriptive masculine noun, so the warning returned.
+
+**Change:** Added "The daughters of Man" to `ConsistencyEngine.genderWordingExemptNames`, extending the documented exemption beyond historical anomalies (Kubaba) to discussion/quotation records (the wording describes the passage, never the figure). Added `testGenderWordingExemptsDaughtersOfMan` mirroring the Kubaba test, including a non-exempt control that still flags.
+
+**Files:** `Sources/MeCore/Store/ConsistencyEngine.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+**Verification:** Gender-wording filter passes; full suite 525/525.
+
+---
+
+### 2026-09-06 — "Nin-Nibru" auto-link verified against live store; alternate spelling seeded
+
+**State:** `swift build` clean, **524/524** tests. Live app relaunched (PID 8793); live store now contains `Ninnibru | Nin-Nibru | Alternate Spelling`.
+
+**Context:** User re-reported the identical "Nin-Nibru"/"Ninnibru" miss a fourth time even after code fixes. Static analysis and seed-data tests always passed, so the fix was verified against the REAL store: a temporary probe opened a copy of the live `Me.store`, built `LinkResolver` from the live figure/place/event/alt names (1,175 candidates), and ran the real description. Output confirmed `Nin-Nibru` resolves to `ninnibru` (variant span) and its target is the Ninnibru figure. The 12:01 launch was already running the fixed binary. So resolution provably works end-to-end against live data.
+
+**Change:** To make the case work through EVERY name-based subsystem (search, backlinks, wiki matching, and the linker's exact pass), and to match the figure's own description ("also romanized as Nin-Nibru"), added `Nin-Nibru` as an Alternate Spelling alternate for Ninnibru in `alt_names_import.json`. Imported idempotently by `ensureAlternateNamesImportExist` (already registered at launch).
+
+**Verification:** `testEnsureAlternateNamesImportExist` now asserts Ninnibru gains Nin-Nibru; `testAutoLinkResolverMatchesNinNibruVariantInRealSeedData` now runs the alternate-names import too (mirroring launch order) and still resolves both spans. jq-validated the JSON. Full suite 524/524.
+
+**Files:** `Sources/MeCore/Resources/alt_names_import.json`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — Variant-spelling auto-link moved to MeCore LinkResolver; stale process was masking it in the running app
+
+**State:** `swift build` clean, **524/524** tests (3 new). App relaunched with the current binary.
+
+**Context:** User re-reported the original variant-spelling miss ("Nin-Nibru" vs registered "Ninnibru") a third time. Static analysis + existing tests always passed, yet the complaint persisted — the running process (`pgrep`) had been launched before the fixes were compiled, so the user kept exercising old code. Also found a real latent bug in the view's variant regex: key alternation was NOT sorted longest-first (the exact regex was), so a short key prefix ("nin") could shadow "ninnibru".
+
+**Change:** Pure name-matching logic moved out of the view into MeCore as `LinkResolver` (`MeCore/Store/LinkResolver.swift`), used verbatim by `LinkifiedDescription.swift`: longest-first alternation for BOTH exact and folded-key regexes (fixes the shadowing), folded variant pass over `FoldedProse` with exact-wins merge. `CandidateSet` now carries `LinkResolver` + `keyToCandidate`; `ParagraphView.runs` consumes resolved spans.
+
+**Verification:** `testAutoLinkResolverMatchesNinNibruVariantInRealSeedData` seeds the real import data and asserts both "Ninnibru" and "Nin-Nibru" resolve to the Ninnibru figure through the actual resolver; `testAutoLinkResolverDoesNotMatchSpaceSeparatedVariants` asserts "Nin Nibru" does not link while "Nin-Nibru" does. Suite 524/524. Relaunched the app so the running binary contains the fix.
+
+**Files:** `Sources/MeCore/Store/LinkResolver.swift` (new), `Sources/Me/Views/LinkifiedDescription.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — Variant-spelling auto-link locked in for figure Ninnibru
+
+**State:** `swift build` clean, **521/521** tests (2 new).
+
+**Context:** User pointed at the figure "Ninnibru" as the concrete case: no alternate names registered, yet its own description reads "Ninnibru, also romanized as Nin-Nibru, …". The mirror pass from the earlier session already covers this, but it lived (untestable) inside the Me target.
+
+**Change:** Extracted the folded-prose core into a new `MeCore/Store/FoldedProse.swift` (`FoldedProse`): lowercase + diacritic-strip + hyphen/apostrophe/dot strip with whitespace folded to one space, keeping every surviving char's original range so regex hits map back to the original UTF-16 span. `LinkifiedDescription.swift` now uses it (the private `LinkifiedMirror`/`buildLinkifiedMirror`/`mirrorOrigRange` are gone). The linker is otherwise unchanged: exact-name pass wins overlaps; variants append; space-separated "Nin Nibru" stays unmatched.
+
+**Verification:** `testVariantProseFoldingMapsNinNibruSpellingBackToFigureNinnibru` runs the exact real description through the key regex and asserts both "Ninnibru" and "Nin-Nibru" resolve and map to their original spans; `testVariantProseFoldingPreservesWordBoundaries` asserts "Ninnibru" links while "Nin Nibru" does not. Full suite 521/521. Confirmed `LinkedDescription` is used by all detail views (`FigureDetailView:480` etc.).
+
+**Files:** `Sources/MeCore/Store/FoldedProse.swift` (new), `Sources/Me/Views/LinkifiedDescription.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — Ambiguous-alias warning exempts deliberately shared aliases (epithets, titles, logographic readings)
+
+**State:** `swift build` clean, **522/522** tests (2 new).
+
+**Context:** User pushed back on the Data Integrity warning `The name "Bel" is attached to multiple figures: Ashur, Marduk.` — rightly so: "Bel" ("Lord") is an epithet/title, and in Assyria it referred to Ashur while in Babylon to Marduk. Then again with `The name "Mer" is attached to multiple figures: Ishkur, Wer.` — "Mer" is the logographic reading of dIM, the storm-god sign, deliberately attached to both Ishkur and Wer (they are the same god). Only spelling variants are expected to belong to exactly one figure.
+
+**Change:** `ConsistencyEngine.checkAmbiguousAliases` now skips Epithet, Translation, and Logographic Reading name types in addition to Syncretism (the existing exemption). A shared spelling e.g. "Ninsi'anna"/"Dup" across figures still flags as `.ambiguousAlias`; a shared title "Bel"/"Malka" or a shared sign reading "Mer" no longer warns.
+
+**Verification:** `testAmbiguousAliasRuleSkipsEpithetAndTranslationNames` (Bel on Ashur+Marduk and a translated title exempt; a real spelling duplicate still flagged) and `testAmbiguousAliasRuleSkipsLogographicReadingNames` (Mer on Ishkur+Wer with Ishkur's row typed Logographic Reading; a real duplicate still flagged). Full suite 522/522.
+
+**Files:** `Sources/MeCore/Store/ConsistencyEngine.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — Description auto-linking now matches variant spellings
+
+**State:** `swift build` clean, **518/518** tests (1 new). View-layer change only; no store edits.
+
+**Context:** User flagged that a description spells "Nin-Nibru" while the registered figure is "Ninnibru", and the auto-linker ignores the variant (no click-through, no link). The auto-linker in `LinkedDescription` built its candidate regex exclusively from exact figure/place/event names and `<AlternateName>` strings — `\bNinnibru\b` can never match "Nin-Nibru".
+
+**Change:** `Sources/Me/Views/LinkifiedDescription.swift` now runs a second matching pass over a folded *mirror* of each paragraph: lowercase, diacritic-stripped, punctuation-stripped exactly like `DuplicateMerger.normalizationKey` (hyphens, dashes, apostrophes, dots dropped; whitespace folded to a single space — so a real space between words stays a different name). A `keyRegex` built from the candidate keys runs on the mirror, matches are mapped back to the original UTF-16 span (surrogate-safe index map), the exact-name pass wins any overlap, and the link targets the canonical entity. Handles "Nin-Nibru"→Ninnibru, "Eanasir"/"Ninsianna"→hyphenated/apostrophe canonicals, "Meslamtaea"→Meslamta-ea, "Istaran"→Ištaran, etc.
+
+**Verification:** New `testNormalizationKeyEquatesVariantSpellings` pins the equivalence rule (hyphen/diacritic/case/apostrophe variants equate; genuine spaces and possessives do not, so no false links like "Nin Nibru" → Ninnibru). Full suite 518/518.
+
+**Files:** `Sources/Me/Views/LinkifiedDescription.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — "Lugal-irra and Meslamta-ea" split into two twin figures
+
+**State:** `swift build` clean, **516/516** tests (3 new). No store edits live yet — split fires at next launch.
+
+**Context:** User noticed a recent import (the Mesopotamian deities JSON) had added the twin pair "Lugal-irra and Meslamta-ea" as a *single* figure. Contrary to their curation rule — twins are always two separate figures — the merged row duplicated the already-existing ORACC "Lugalirra" (pk 336) and swallowed "Meslamta-ea" (which had no individual figure at all).
+
+**Decision:** Agreed with the user. A merged pair contradicts the figure-keyed model: dossiers, lineage trees, alternate names, associations, images, queries and consistency checks all operate on an individual; the pair was a dead-end row with zero links. Twins are richer as two figures plus a Twin edge.
+
+**Changes:**
+1. `Migration.splitLugalIrraMeslamtaea(context:)`: idempotent, additive-where-possible. Reuses the ORACC "Lugalirra" figure (creates it + "Lugal-irra" spelling alt-name if absent), creates "Meslamta-ea" (Deity, Male, Underworld domain, gatekeeper/Gemini description, "Meslamtaea" spelling alt-name), fetch-or-creates a `Twin` RelationshipType, adds a single canonical Twin edge (Lugalirra → Meslamta-ea), and deletes the now-empty merged import row (approved by user; no links on it). Also ensures Twin type + edge when both individuals already exist but no pair row remains (fresh-DB convergence). Registered in `ContentView` after `ensureBidirectionalRelationshipConsistency`.
+2. **First launch showed the twin relationship twice on each brother's card.** Root cause: the initial migration created a *mirrored* edge pair (both directions), and the card lists every matching row. Symmetric types are meant to be a single canonical edge — `addRelationship` always creates one, and `relationshipDirectionPrefix` phrases the incoming direction from the other card via the `reverseName` ("Twin") / gender logic. Fixed by collapsing to one edge: the migration now deletes the reciprocal if a mirrored pair exists, and `Twin` was *not* added to `ensureBidirectionalRelationshipConsistency`'s bidirectional set so no launch re-mirrors it (unlike Spouse/Consort/Ally, which are mirrored there — a deliberate exception since those were already double-displaying and the user only flagged twins).
+3. `mesopotamian_deities_import.json`: replaced the single pair entry with two individual entries ("Lugalirra", "Meslamta-ea") so a future import can never re-create the merged row.
+
+**Verification:** Five related tests (split/delete, missing-Lugalirra creation, no-pair convergence, mirrored-pair collapse, idempotency). Full suite 517/517. `jq` validated the JSON.
+
+**Files:** `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/MeCore/Resources/mesopotamian_deities_import.json`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — Event ↔ Figure links made bidirectional (Bur-Sagale eclipse fix)
+
+**State:** `swift build` clean, **513/513** tests (2 new for the button path + repair migration). No store edits live yet — repair fires at next launch.
+
+**Context:** User linked figure "Bur-Sagale" to "The eclipse of Bur-Sagale" via the event detail "Link figure" popover, but the link only half-applied: the event detail showed the figure while (a) the figure's Events section stayed empty, and (b) the "no figures/places linked" warning in Data Integrity (ConsistencyEngine) and the Dashboard persisted.
+
+**Root cause:** `EventDetailView`'s `EventFigureLinkPopover.linkFigure` called `RelationshipManager.addEventFigureAssociation(..., alsoLinkInvolvedFigures: false, dedupe: false)`. The explicit `false` created only the `EventFigureAssociation` row and deliberately did not append the figure to `event.involvedFigures` (nor the event to the inverse `figure.events`). Live DB proof: association pk 24 (event 123 ↔ figure 642) existed, but `Z_14INVOLVEDFIGURES` had no row for figure 642. Because `EventsSection` lists an event on a figure's card only via `$0.involvedFigures.contains`, the figure-side never updated, and both consistency checks only consult `involvedFigures` (DashboardView:82 and ConsistencyEngine.checkEventWithNoLinks:700 ignore `figureAssociations`). The flag was set explicitly in commit d8ba918 (the commit that introduced the popover); the parameter's default is `true`.
+
+**Also found:** 19 of 20 `EventFigureAssociation` rows in the live DB had no matching `Z_14INVOLVEDFIGURES` row (only assoc pk 13, event 8 Founding of Eridu → figure 98, was consistent). Many well-known links (Deluge/Ziusudra, Great Flood/Enki, Bull of Heaven) were affected. This is a latent inconsistency introduced over time by popover links, not a Bur-Sagale-specific bug — hence the backfill.
+
+**Changes:**
+1. `RelationshipManager.addEventFigureAssociation`: when `alsoLinkInvolvedFigures` is true, now pushes the figure into `event.involvedFigures` **and** the event into `figure.events` (previously only the inverse `figure.events` was touched). This makes the new-link path fully bidirectional.
+2. `EventDetailView.removeFigure`: was an `if/else` — with an association it deleted only the assoc row, otherwise only removed from `involvedFigures`. Now always removes from **both** `involvedFigures` and the association, so removal works after the dual linkage.
+3. `Migration.repairInvolvedFiguresFromAssociations(context:)`: additive/idempotent backfill — for every `EventFigureAssociation` whose figure is missing from its event's `involvedFigures`, appends it (and appends the event to `figure.events`). Registered in `ContentView` right after `convertYaleCulinaryTabletsEventToThing`, so it fires on next launch for the existing DB.
+
+**Verification:** New tests `testRelationshipManagerEventFigureAssociationWithoutInvolvedFiguresKeepsAssociationEvenIfNotVisible`, `testRepairInvolvedFiguresFromAssociations`, plus existing `testRelationshipManagerEventFigureAssociationLinksInvolvedFigures` already asserts the default bidirectional path. 513/513 pass. `swift build` clean.
+
+**Files:** `Sources/MeCore/Store/RelationshipManager.swift`, `Sources/Me/Views/EventDetailView.swift`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-06 — Yale Culinary Tablets reclassified from Event to Thing
+
+**State:** `swift build` clean, **511/511** tests (2 new). No store edits — conversion fires at next launch.
+
+**Context:** User flagged the imported "Yale Culinary Tablets" (live event pk 103, type "Daily Life", Old Babylonian ~1730) as a bad classification: the tablets are physical objects, not a happening, so they belong in Things rather than the event timeline.
+
+**Changes:**
+1. **`ensureEverydayLifeEpisodes`** no longer lists the Yale Culinary Tablets in the episode array — it can never be re-created as an Event (fresh or existing DB).
+2. **`ensureEverydayLifeThings`** (new) seeds curated everyday-life Things check-by-name (description + source + ThingType "Text") — the tablets' home going forward.
+3. **`convertYaleCulinaryTabletsEventToThing`** (new) converts a pre-existing Event into a Thing: carries over name/description/richDescription/source, types it "Text", drops the auto-generated dangling citation (`ensureEventCitations` artifact, name+`.event` match), then removes the Event. Idempotent and never overwrites a user-created Thing; both new migrations registered in `ContentView` right after `ensureEverydayLifeEpisodes`.
+4. Docs: `NEXT_SESSION_HANDOFF.md` item 7 annotated as replaced by a Thing.
+
+**Verification:** updated everyday-life counts (9 events, 27 stickies, "eight imports + user's own"); `testEverydayLifeThingsSeedsYaleCulinaryTablets` (seeds Text-typed Thing, no Event, idempotent) and `testExistingYaleEventConvertedToThing` (event removed, citation dropped, fields carried over, idempotent). Full suite 511/511.
+
+**Files touched:** `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/NEXT_SESSION_HANDOFF.md`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-06 — Recurring figure duplicates (diacritic variants): importer resurrected ASCII spellings every launch
+
+**State:** `swift build` clean, **509/509** tests (1 new). No store edits (fixes apply at next launch).
+
+**Context:** User reported three more recurring duplicates after the Atra-Hasis Source fix: `Ninšar`/`Ninsar`, `Ištaran`/`Istaran`, `Ninsi'anna`/`Ninsianna` (DB pks 292/640, 327/639, 335/638). They reappeared every launch after being merged via the deduper.
+
+**Root cause (same resurrection pattern as Atra-Hasis):** `mesopotamian_deities_import.json` uses ASCII names (`Istaran` figures[1], `Ninsar` figures[78], `Ninsianna` figures[79]), while the surviving keepers after a deduper merge are the diacritic figures (`Ištaran`, `Ninšar`, `Ninsi'anna`). `Migration`'s JSON importers guarded against re-import with `name.lowercased()` **exact** matches, so end of merge the keeper names never matched the ASCII file names and the importer re-created the ASCII variants next launch. This pattern existed in **five** importers (`ensureDeitiesImportExist`, `ensureMissingDeitiesImportExist`, `ensureMesopotamianDeitiesImportExist`, `ensureDemonsImportExist`, `ensureCuratedNamesImportExist`).
+
+**Key insight:** `NameDuplicateCheck.normalizedKey` (letters/digits only) is **not** diacritic-insensitive ("Ištaran" keeps `š`); the deduper's `DuplicateMerger.normalizationKey` (`.diacriticInsensitive` folding + punctuation strip) is the correct group key — the same key the deduper uses must be the key the importers use, so a merged-away variant can never be re-imported.
+
+**Changes:**
+1. **`DuplicateMerger.normalizationKey`** promoted `private` → `package static` (documented as the canonical name-grouping key).
+2. **All five JSON figure importers** now: (a) build `existingNames` from `DuplicateMerger.normalizationKey`, (b) filter `toImport` with `DuplicateMerger.normalizationKey($0.name)`, (c) sticky-note membership checks use the same key. ASCII import names now correctly resolve to existing diacritic figures → skipped.
+
+**Verification:** new `testEnsureMesopotamianDeitiesImportSkippedByDiacriticVariant` (pre-inserts diacritic figures, runs importer, asserts no ASCII variant duplicated). Full suite 509/509. Python checked all three pairs fold to identical keys via `normalizationKey`.
+
+**Files touched:** `Sources/MeCore/Store/DuplicateMerger.swift`, `Sources/MeCore/Store/Migration.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-06 — Recurring "Atra-Hasis" duplicate: merged Source resurrected every launch
+
+**State:** `swift build` clean, **508/508** tests (1 new). No store edits (fixes apply at next launch).
+
+**Context:** User reported a recurring duplicate — the de-duper kept showing an "Atrahasis"/"Atra-Hasis" pair that reappeared after every merge. Initial hypothesis (seeder, figure) was wrong on both counts: `seedIfEmpty` only runs on an empty store, and the figure "Atrahasis" (pk 309) is a user/import-created Human, distinct from canonical Ziusudra — not a dup.
+
+**Root cause (loop):**
+1. The pair is **Sources**: canonical "Atrahasis" (pk 10, full description) vs. stub "Atra-Hasis" (pk 97, blank), which the deduper's `normalizationKey` groups because hyphens are stripped.
+2. The stub is auto-created by `Migration.ensureAssociationSources`/`ensureRelationshipSources`, which matched Sources by **exact case-insensitive name** (`byName[name.lowercased()]`). The free-text seed strings use "Atra-Hasis" (hyphenated) so the canonical "Atrahasis" (no hyphen) never matched.
+3. ZEVENTEVENTASSOCIATION pk 2 carried `source="Atra-Hasis"` → `sourceRef=97`. `DuplicateMerger.mergeSources` re-pointed citations/attachments/relationships/popup tables/cells, but **skipped the seven association tables' `sourceRef`**. After the merge, pk 97 was deleted, EEA.sourceRef nullified, and on the next launch `ensureAssociationSources` saw the nil ref + "Atra-Hasis" text and re-created the stub. Infinite resurrection loop.
+
+**Changes:**
+1. **`DuplicateMerger.mergeSources`** now re-points `sourceRef` from the duplicate to the keeper across all seven association types (EventEvent, EventPlace, FigurePlace, PlacePlace, ThingFigure, ThingPlace, ThingEvent) — mirroring what `mergeEvents`/`mergePlaces` already do for their FKs.
+2. **`ensureRelationshipSources` + `ensureAssociationSources`** now build their Source lookup with `NameDuplicateCheck.normalizedKey` (letters/digits only) instead of `lowercased()`, so "Atra-Hasis" matches the canonical "Atrahasis" and no stub is ever spawned again.
+
+**Verification:** new `testDuplicateMergerMergeSourcesRePointsAssociationSourceRefs` (EEA + FPA re-pointed to keeper, duplicate deleted). Full suite 508/508.
+
+**Files touched:** `Sources/MeCore/Store/DuplicateMerger.swift`, `Sources/MeCore/Store/Migration.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-06 — Enmetena birth-era corrupted by description-derived era migration
+
+**State:** `swift build` clean, **507/507** tests (3 new). Store change: 1 row repaired at next launch (`Enmetena.birthDate.era` → "Early Dynastic Period", `figure.era` relinked).
+
+**Context:** Data Integrity flagged *"Birth date references era \"Lagash who defeated Umma and restored the border channel\", which does not match any Era in the database."* The live row (pk 613) had `ZERA` = the full description sentence and a **nil** `figure.era` link. The JSON source (`historical_events_a.json:4`) is correct: `era: "Early Dynastic Period"`.
+
+**Root cause (migration bug, not data):** `ensureHistoricalEventsImportExist` imported Enmetena with `figure.era` → "Early Dynastic Period" but left `birthDate.era` empty. On a later launch, `Migration.ensureFigureEraLinks` (Migration.swift:1732) derives an era name from any `"Ruler of …"` description prefix. For SKL figures that remainder *is* the era ("Ruler from the Second dynasty of Kish…"); for Enmetena the description is prose, so the whole sentence became `birthDate.era`, and since no Era matches, the migration then **nilled the correct era link**. `birthEraNameFromDescriptionIfEmpty` wrote the garbage name unconditionally; `resolveEraTarget` fell back to a description-derived nil and clobbered the link.
+
+**Changes:**
+1. **Guard** — `ensureFigureEraLinks` rewritten: `reconcileBirthEraString` only writes a description-derived era name when it resolves to a known Era (not before), and clears a provably auto-derived garbage string (one that exactly equals the description-derived name but matches no Era key). `resolveEraTarget` now uses an alias-aware `eraByKey` (maps "Before the Flood"→"Age of the Watchers", "Guthian rule"→"Gutian rule"). `eraName(fromDescription:)` made `package` (reused by importer).
+2. **Repair** — `ensureHistoricalEventsImportExist` now stamps `birthDate.era = king.era` (+ link) at creation, and a new `reconcileImportedKingEra` restores the era from the authoritative JSON for existing kings whose current value is empty or matches the auto-derived garbage. Idempotent; never overrides user-typed values.
+
+**Verification:** 3 new tests (`testEnsureFigureEraLinksDoesNotWriteUnmatchedDescriptionAsEra`, `testEnsureFigureEraLinksClearsAutoDerivedGarbageEraString`, `testHistoricalEventsImportRepairsAutoDerivedGarbageEra`). Full suite 507/507.
+
+**Files touched:** `Sources/MeCore/Store/Migration.swift`, `Sources/MeCore/Store/HistoricalEventsImport.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-05 — Watchdog `Task` bug: inherited main actor, never fired
+
+**State:** `swift build` clean. No store changes.
+
+**Context:** User reported a hang shortly after the watchdog landed. No `Me_hang_*.spin` existed despite the watchdog being live in the running binary (verified by symbols) and `/usr/bin/sample` working. Root cause: `Task {}` created inside `applicationDidFinishLaunching` inherited the main actor (macOS 26 SDK marks `NSApplicationDelegate` `@MainActor`), so `checkStall()` ran on the main thread it was supposed to monitor. During a block it never executed; after unblocking, the queued ping blocks flushed and refreshed `lastHeartbeat` before `checkStall` could inspect it — the stall was never observed.
+
+**Change:** `MainThreadWatchdog.start()` now uses `Task.detached(priority: .utility)`, running the loop off the main actor. Also lowered `stallThreshold` from 5s → 3s to catch shorter hangs.
+
+**Verification:** `swift build` clean. Requires app relaunch to activate.
+
+**Files touched:** `Sources/Me/MainThreadWatchdog.swift`.
+
+---
+
+### 2026-09-05 — Determinative-dot false positive in name-variant consistency check
+
+**State:** `swift build` clean, **504/504** tests (1 new). No store changes.
+
+**Context:** Data Integrity flagged *"Description writes \"Nin-MAR\"; the registered name is \"Ninmar\". Auto-linking misses variant spellings."* The figure is registered as **Nin-MAR.KI** (aliases *Ninmar*, *Ninmarki* — `alt_names_import.json:702-718`) and its own description opens "Nin-MAR.KI (reading uncertain)…". `isWordChar` in `ConsistencyEngine.checkNameVariants` treated `.` as a word boundary, so the alias key `ninmar` matched the prefix of the collapsed text `ninmarki…`, the end-boundary saw a non-word char (`.`) and accepted, and the truncated span "Nin-MAR" was flagged as a misspelling.
+
+**Change:** `Sources/MeCore/Store/ConsistencyEngine.swift` — `.` only counts as a word boundary at the start/end of a word. A `.` bounded by letters/digits on both sides (the determinative dot "Nin-MAR.**KI**", "Eridu.**KI**" etc.) is treated as word-interior, so the name is matched whole and an exact canonical spelling stays silent.
+
+**Verification:** full suite 504 pass, including new `testNameVariantRuleTreatsDeterminativeDotAsWordInterior`. Existing boundary rules (Anu∈Anunnaki, Puzur-Suen≠Su'en, Ur(Ur III≠Urur) unaffected.
+
+**Files touched:** `Sources/MeCore/Store/ConsistencyEngine.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-05 — Main-thread watchdog for intermittent figures-list freeze
+
+**State:** `swift build` clean, **503/503** tests. Diagnostic tooling only — no store changes, no migrations.
+
+**Context:** User reported an intermittent freeze where the Figures list renders but cannot be scrolled or selected; sometimes recovers on its own, sometimes requires relaunch, and can be days apart. On-demand `sample` capture is impractical for such a rare event (no automatic hang reports exist in `~/Library/Logs/DiagnosticReports/`). Suspected mechanisms under discussion: main-thread save churn during launch migrations (`ContentView` runs the whole 40+-step chain on the main actor, `ContentView.swift:219-263`) and/or live `AgentService` saves re-triggering `@Query` observers → full `rebuildRows()` across all 605 figures.
+
+**Changes:**
+1. `Sources/Me/MainThreadWatchdog.swift` — new passive background watchdog. A `.utility` Task pings the main queue every 1s (recording heartbeats under lock); if the main thread fails to respond for >5s (after ≥3 warm-up heartbeats, and >5 min since the last capture), it spawns `/usr/bin/sample <pid> 5 -file` and writes a hang report to `~/Library/Logs/DiagnosticReports/Me_hang_<timestamp>.spin`.
+2. `Sources/Me/AnunnakiApp.swift` — `MainThreadWatchdog.shared.start()` called from `applicationDidFinishLaunching`.
+
+**Verification:** `swift build` clean; tests still 503/503. Next step once a report exists: read the hung stack to find the blocking call, then fix root cause (likely coalescing `rebuildRows()` or offloading the migration chain from the main actor).
+
+**Files touched:** `Sources/Me/MainThreadWatchdog.swift` (new), `Sources/Me/AnunnakiApp.swift`.
+
+---
+
+### 2026-09-05 — Duplicate figure merge: Asalluhi → Asarluhi (variant spellings)
+
+**State:** `swift build` clean, **503/503** tests (2 new). Additive + idempotent data migration; applies on next app launch. No reseed, no data destroyed.
+
+**Context:** Consistency checker flagged "Asaralimnuna" as an ambiguous alias shared between figures Asalluhi (pk 245, old seed-era) and Asarluhi (pk 407, created later by the missing-deities import by exact-name match). These are *variant transliterations of the same god* (Eridu's incantation god, son of Enki, equated with Marduk) — a genuine duplicate figure, not a syncretism like Nergal/Erra. `DuplicateMerger.findGroups` cannot pair them (normalization only strips punctuation, not "ll" vs "rl"), so a targeted migration was needed.
+
+**Changes (newest first):**
+1. `Migration.deduplicateAsalluhiAsarluhi` (Sources/MeCore/Store/Migration.swift) — merges Asalluhi into Asarluhi via `DuplicateMerger.mergeFigures`, then reconciles to a single canonical mother (Damkina over Ninhursag) and drops the self-referencing "Asarluhi" alternate that folds in from the duplicate. No-op when only one figure exists (current seed only has Asarluhi, so fresh installs are unaffected).
+2. Registered in `ContentView` migration list (before `ensureCanonicalDeityFamilies`, so the family fixer still sees the single keeper this launch).
+
+**Verification:** new tests `testDeduplicateAsalluhiAsarluhiMergesAndKeepsCanonicalMother` and `testDeduplicateAsalluhiAsarluhiIsIdempotent`; full suite 503 pass.
+
+**Files touched:** `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
+### 2026-09-05 — Nergal/Erra syncretism: re-type "Irra", document parallel cult survival
+
+**State:** `swift build` clean, **501/501** tests (2 new). Additive + idempotent data migration; applies on next app launch via ContentView migration list. No reseed, no data destroyed.
+
+**Context:** Consistency checker flagged "Irra" as an ambiguous alias shared between Erra and Nergal. Discussion with the user clarified the theology: Erra and Nergal are consubstantial — Erra's cult ran in parallel for centuries (Erra Epic, 8th c. BC; Sargon II) before the name settled as an aspect of Nergal. Deleting Erra was rejected; both figures stay, and the identification is modeled as a Syncretism (shared aliases typed Syncretism are exempt from duplicate/ambiguity detection, mirroring the existing Asarluhi/Marduk convention).
+
+**Changes (newest first):**
+1. `Sources/MeCore/Resources/alt_names_import.json` — Nergal's "Irra" re-typed from `Epithet` to `Syncretism` with note *"Variant spelling of Erra; the Erra identification is treated as completed for lookups."* (Erra's own "Irra" stays `Alternate Spelling`.)
+2. `Migration.alignNergalErraSyncretism` (`Sources/MeCore/Store/Migration.swift`) — idempotently re-types any existing live-DB Nergal "Irra" epithet to Syncretism and adds an identical sticky note to Nergal and Erra documenting the parallel cult survival. Guarded (only touches exact name match, only when type is Epithet, deduped sticky text).
+3. Registered in `ContentView` migration list (after `removeOrphanedKittumNigginaAltNames`).
+
+**Verification:** new tests `testAlignNergalErraSyncretismReTypesIrra` and `testAlignNergalErraSyncretismIsIdempotent`; full suite 501 pass; `jq --exit-status .` on the JSON.
+
+**Files touched:** `Sources/MeCore/Resources/alt_names_import.json`, `Sources/MeCore/Store/Migration.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`.
+
+---
+
 ### 2026-09-04 — Historical events tranche + missing-description blurbs
 
 **State:** `swift build` clean, **499/499** tests (2 new). Additive, idempotent imports; applies on next app launch via ContentView migration list. No reseed, no data destroyed.

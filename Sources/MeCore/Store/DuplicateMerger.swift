@@ -65,9 +65,10 @@ package enum DuplicateMerger {
     }
 
     /// Normalizes a display name into a grouping key for duplicate detection:
-    /// lowercase, whitespace collapsed, and punctuation (hyphens, en/em dashes,
-    /// apostrophes, dots) removed, so "Atra-Hasis" and "Atrahasis" group together.
-    private static func normalizationKey(_ display: String) -> String {
+    /// lowercase, diacritic-insensitive, whitespace collapsed, and punctuation
+    /// (hyphens, en/em dashes, apostrophes, dots) removed, so "Atra-Hasis" and
+    /// "Atrahasis", or "Ištaran" and "Istaran", group together.
+    package static func normalizationKey(_ display: String) -> String {
         let lower = display.trimmingCharacters(in: .whitespacesAndNewlines).folding(
             options: [.caseInsensitive, .diacriticInsensitive],
             locale: .current
@@ -414,6 +415,28 @@ package enum DuplicateMerger {
             }
             for cellSource in duplicate.cellListSources where cellSource.sourceRef === duplicate {
                 keeper.cellListSources.append(cellSource)
+            }
+
+            for eea in (try? context.fetch(FetchDescriptor<EventEventAssociation>())) ?? [] {
+                if eea.sourceRef === duplicate { eea.sourceRef = keeper }
+            }
+            for epa in (try? context.fetch(FetchDescriptor<EventPlaceAssociation>())) ?? [] {
+                if epa.sourceRef === duplicate { epa.sourceRef = keeper }
+            }
+            for fpa in (try? context.fetch(FetchDescriptor<FigurePlaceAssociation>())) ?? [] {
+                if fpa.sourceRef === duplicate { fpa.sourceRef = keeper }
+            }
+            for ppa in (try? context.fetch(FetchDescriptor<PlacePlaceAssociation>())) ?? [] {
+                if ppa.sourceRef === duplicate { ppa.sourceRef = keeper }
+            }
+            for tfa in (try? context.fetch(FetchDescriptor<ThingFigureAssociation>())) ?? [] {
+                if tfa.sourceRef === duplicate { tfa.sourceRef = keeper }
+            }
+            for tpa in (try? context.fetch(FetchDescriptor<ThingPlaceAssociation>())) ?? [] {
+                if tpa.sourceRef === duplicate { tpa.sourceRef = keeper }
+            }
+            for tea in (try? context.fetch(FetchDescriptor<ThingEventAssociation>())) ?? [] {
+                if tea.sourceRef === duplicate { tea.sourceRef = keeper }
             }
 
             adoptString(&keeper.sourceDescription, duplicate.sourceDescription)

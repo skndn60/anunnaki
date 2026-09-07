@@ -66,7 +66,7 @@ struct ContentAttributionFormView: View {
                     Picker("Source", selection: $selectedSource) {
                         Text("None").tag(nil as Source?)
                         ForEach(sources) { source in
-                            Text(source.name).tag(source as Source?)
+                            Text(source.pickerLabel).tag(source as Source?)
                         }
                     }
                 }

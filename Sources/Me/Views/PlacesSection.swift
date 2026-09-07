@@ -167,47 +167,30 @@ private struct PlaceLinkPopover: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(.secondary)
-                TextField("Search places…", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-            }
-
-            if filteredPlaces.isEmpty {
-                Text("No matching places")
-                    .foregroundStyle(.tertiary)
-                    .padding(.vertical, 20)
-            } else {
-                List(filteredPlaces, id: \.persistentModelID) { place in
-                    Button(action: { selectedPlace = place }) {
-                        HStack(spacing: 10) {
-                            Image(systemName: place.placeType?.icon ?? "mappin")
-                                .font(.caption)
-                                .foregroundStyle(.teal)
-                                .frame(width: 16)
-                            Text(place.name)
-                                .font(.body)
-                            if !place.modernLocation.isEmpty {
-                                Text(place.modernLocation)
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            Spacer()
-                            if selectedPlace?.persistentModelID == place.persistentModelID {
-                                Image(systemName: "checkmark")
-                                    .foregroundStyle(Color.accentColor)
-                            }
-                        }
+        AssociationLinkPopover(
+            searchPlaceholder: "Search places…",
+            emptyText: "No matching places",
+            items: filteredPlaces,
+            isSelected: { $0.persistentModelID == selectedPlace?.persistentModelID },
+            onSelect: { selectedPlace = $0 },
+            searchText: $searchText,
+            isPresented: $isPresented,
+            row: { place in
+                HStack(spacing: 10) {
+                    Image(systemName: place.placeType?.icon ?? "mappin")
+                        .font(.caption)
+                        .foregroundStyle(.teal)
+                        .frame(width: 16)
+                    Text(place.name)
+                        .font(.body)
+                    if !place.modernLocation.isEmpty {
+                        Text(place.modernLocation)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
-                    .buttonStyle(.plain)
                 }
-                .listStyle(.plain)
             }
-
-            Divider()
-
+        ) {
             VStack(spacing: 8) {
                 HStack {
                     Text("Role:")
@@ -251,7 +234,6 @@ private struct PlaceLinkPopover: View {
                 }
             }
         }
-        .padding()
         .onAppear {
             allRoles = (try? modelContext.fetch(FetchDescriptor<FigurePlaceRoleType>(sortBy: [SortDescriptor(\.name)]))) ?? []
         }

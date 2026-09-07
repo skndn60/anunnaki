@@ -13,6 +13,14 @@ private let windowSidebarWidth: CGFloat = 260
 private let windowDetailBarWidth: CGFloat = 320
 private let windowEdgeMargin: CGFloat = 16
 
+/// An available source in the table's "Add source…" picker: the stored name is
+/// the join key, the label adds the author so same-titled sources read apart.
+private struct SourceEntryName: Identifiable {
+    let name: String
+    let label: String
+    var id: String { name }
+}
+
 /// Per-attribute row heights measured from the data cells, so the frozen
 /// row-label column aligns with its (content-sized) data rows.
 private struct RowHeightPreferenceKey: PreferenceKey {
@@ -909,10 +917,16 @@ private struct CellEditPopover: View {
     private var hasComment: Bool { !comment.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var commentPreview: String { let t = comment.trimmingCharacters(in: .whitespacesAndNewlines); return t.isEmpty ? "" : (t.count > 60 ? String(t.prefix(60)) + "…" : t) }
 
-    private var availableSourceNames: [String] {
-        var names = Set(allSources.map(\.name))
-        names.formUnion(sourceEntries.map(\.name))
-        return names.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+    private var availableSourceNames: [SourceEntryName] {
+        var labels: [String: String] = [:]
+        for source in allSources {
+            if labels[source.name] == nil { labels[source.name] = source.pickerLabel }
+        }
+        for entry in sourceEntries where labels[entry.name] == nil {
+            labels[entry.name] = entry.name
+        }
+        return labels.keys.sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+            .map { SourceEntryName(name: $0, label: labels[$0] ?? $0) }
     }
 
     var body: some View {
@@ -991,8 +1005,8 @@ private struct CellEditPopover: View {
                 HStack(spacing: 6) {
                     Picker("", selection: $newSource) {
                         Text("Add source\u{2026}").tag("")
-                        ForEach(availableSourceNames, id: \.self) { name in
-                            Text(name).tag(name)
+                        ForEach(availableSourceNames) { entry in
+                            Text(entry.label).tag(entry.name)
                         }
                     }
                     .labelsHidden()

@@ -33,10 +33,6 @@ struct FigureDetailView: View {
     @State private var editingAttribution: ContentAttribution?
     @State private var showMugshotSheet = false
     @State private var showingPopupTableGrid: PopupTable?
-    @State private var showDescriptionEditor = false
-    @State private var editRichDescription: Data? = nil
-    @State private var editPlainDescription = ""
-    @State private var copiedName = false
     @State private var tagToRemove: Tag?
     @State private var showRemoveTagConfirm = false
     @State private var attributionToDelete: ContentAttribution?
@@ -188,80 +184,43 @@ struct FigureDetailView: View {
             .help("Set mugshot")
 
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(figure.name)
-                        .font(.title2.bold())
-                    Button {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(figure.name, forType: .string)
-                        copiedName = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            if copiedName { copiedName = false }
-                        }
-                    } label: {
-                        Image(systemName: copiedName ? "checkmark" : "doc.on.doc")
-                            .font(.caption2)
-                            .foregroundStyle(copiedName ? Color.green : Color.secondary)
-                    }
-                    .buttonStyle(.borderless)
-                    .baselineOffset(9)
-                    .help("Copy name to clipboard")
+                Text(figure.name)
+                    .font(.title2.bold())
+
+                HStack(spacing: 8) {
                     Text(figure.gender.symbol)
                         .font(.title3)
                         .foregroundStyle(.secondary)
-                }
-                if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
-                    Text(disambiguation)
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                }
-                if !figure.title.isEmpty {
-                    AttributedPropertyView(attributions: figureAttributions, propertyName: "title") {
-                        Text(figure.title)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                    FigureTypeBadge(figureType: figure.figureType)
+                    if figure.isConcept {
+                        Text("Concept")
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(.orange.opacity(0.12))
+                            )
                     }
                 }
-                FigureEpithetRow(epithet: figure.epithet)
-            }
 
-            Spacer()
-
-            FigureTypeBadge(figureType: figure.figureType)
-            if figure.isConcept {
-                Text("Concept")
-                    .font(.caption2)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 3)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(.orange.opacity(0.12))
-                    )
-            }
-
-            Button {
-                editRichDescription = figure.richDescription
-                editPlainDescription = figure.figureDescription
-                showDescriptionEditor = true
-            } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help("Edit description")
-        }
-        .sheet(isPresented: $showDescriptionEditor) {
-            DescriptionEditorSheet(
-                entityName: figure.name,
-                richDescription: $editRichDescription,
-                plainDescription: $editPlainDescription
-            )
-            .onDisappear {
-                figure.richDescription = editRichDescription
-                figure.figureDescription = editPlainDescription
-                try? modelContext.save()
+                VStack(alignment: .leading, spacing: 2) {
+                    if let disambiguation = figure.disambiguation, !disambiguation.isEmpty {
+                        Text(disambiguation)
+                            .font(.subheadline)
+                            .foregroundStyle(.tertiary)
+                    }
+                    if !figure.title.isEmpty {
+                        AttributedPropertyView(attributions: figureAttributions, propertyName: "title") {
+                            Text(figure.title)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    FigureEpithetRow(epithet: figure.epithet)
+                }
+                .padding(.top, 4)
             }
         }
     }
@@ -499,13 +458,7 @@ struct FigureDetailView: View {
 
             // Relationships
             if !filteredRelationships.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Relationships")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-
+                DetailSection(title: "Relationships") {
                     ForEach(filteredRelationships, id: \.persistentModelID) { rel in
                         RelationshipGroupRow(
                             relationship: rel,
@@ -550,13 +503,7 @@ struct FigureDetailView: View {
 
             // Tags
             if !figure.tags.isEmpty {
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Tags")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
-
+                DetailSection(title: "Tags") {
                     FlowLayout(spacing: 4) {
                         ForEach(figure.tags) { tag in
                             TagTokenView(tag: tag, onRemove: {
@@ -1001,7 +948,7 @@ private struct AddCitationSheet: View {
                     Picker("Source", selection: $selectedSource) {
                         Text("Select a source").tag(nil as Source?)
                         ForEach(sources, id: \.persistentModelID) { source in
-                            Text(source.name).tag(source as Source?)
+                            Text(source.pickerLabel).tag(source as Source?)
                         }
                     }
                 }

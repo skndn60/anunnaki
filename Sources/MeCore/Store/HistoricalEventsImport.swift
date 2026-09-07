@@ -101,7 +101,10 @@ extension Migration {
         for root in roots {
             for king in root.kings {
                 let key = king.name.lowercased()
-                guard figuresByLower[key] == nil else { continue }
+                if let existing = figuresByLower[key] {
+                    self.reconcileImportedKingEra(existing, king: king, erasByLower: erasByLower)
+                    continue
+                }
                 let figure = Figure(
                     name: king.name,
                     title: king.title,
@@ -113,6 +116,7 @@ extension Migration {
                 figure.reignStartYear = king.reignStartYear
                 figure.reignEndYear = king.reignEndYear
                 if !king.era.isEmpty {
+                    figure.birthDate.era = king.era
                     figure.era = erasByLower[king.era.lowercased()]
                 }
                 context.insert(figure)
@@ -149,5 +153,24 @@ extension Migration {
             }
         }
         try? context.save()
+    }
+
+    /// Reconciles a previously imported historical king's era from the JSON.
+    /// Fixes years where `ensureFigureEraLinks` derived the whole description
+    /// ("Ruler of Lagash who defeated Umma…") into `birthDate.era`, destroying
+    /// the correct link. Only rewrites when the current era string is empty or
+    /// provably auto-derived garbage — never a user-typed value.
+    private static func reconcileImportedKingEra(
+        _ figure: Figure,
+        king: HistoricalKingImport,
+        erasByLower: [String: Era]
+    ) {
+        guard !king.era.isEmpty, let era = erasByLower[king.era.lowercased()] else { return }
+        let current = figure.birthDate.era.trimmingCharacters(in: .whitespacesAndNewlines)
+        let derived = Migration.eraName(fromDescription: figure.figureDescription)
+        let isDerivedGarbage = !current.isEmpty && current == derived && current != king.era
+        guard current.isEmpty || isDerivedGarbage else { return }
+        figure.birthDate.era = king.era
+        figure.era = era
     }
 }

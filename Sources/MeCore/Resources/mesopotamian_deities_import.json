@@ -126,14 +126,37 @@
       "source": ""
     },
     {
-      "id": "49200510-eb04-5c9d-ab16-e7248351d6ca",
-      "name": "Enki and Ninki",
+      "id": "6cd890ba-47c4-4472-8d24-f6c7805ca83e",
+      "name": "Enki (Primordial)",
       "disambiguation": "",
-      "title": "",
+      "title": "Primordial Ancestor of Enlil",
       "figureType": "Primordial",
-      "gender": "",
-      "domain": "Primordial pair of the Abzu; ancestors of Enlil",
-      "figureDescription": "Enki and Ninki were two primordial beings who were regarded as the first generation among the ancestors of Enlil. Enki and Ninki followed by a varying number of pairs of deities whose names start with \"En\" and \"Nin\" appear as Enlil's ancestors in various sources: god lists, incantations, liturgical texts, and the Sumerian composition \"Death of Gilgamesh,\" where the eponymous hero encounters these divine ancestors in the underworld.",
+      "gender": "Male",
+      "domain": "Abzu; ancestor of Enlil",
+      "figureDescription": "Enki was one of two primordial beings regarded as the first generation among the ancestors of Enlil. Enki and Ninki, followed by a varying number of pairs of deities whose names start with \"En\" and \"Nin\", appear as Enlil's ancestors in various sources: god lists, incantations, liturgical texts, and the Sumerian composition \"Death of Gilgamesh,\" where the eponymous hero encounters these divine ancestors in the underworld.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "03ddf85f-7a99-435c-8bd5-23933de0d5c5",
+      "name": "Ninki",
+      "disambiguation": "",
+      "title": "Primordial Ancestress of Enlil",
+      "figureType": "Primordial",
+      "gender": "Female",
+      "domain": "Abzu; ancestress of Enlil",
+      "figureDescription": "Ninki was one of two primordial beings regarded as the first generation among the ancestors of Enlil. Enki and Ninki, followed by a varying number of pairs of deities whose names start with \"En\" and \"Nin\", appear as Enlil's ancestors in various sources: god lists, incantations, liturgical texts, and the Sumerian composition \"Death of Gilgamesh,\" where the eponymous hero encounters these divine ancestors in the underworld.",
       "birthDate": {
         "startYear": null,
         "endYear": null,
@@ -1277,13 +1300,36 @@
     },
     {
       "id": "7666d7aa-f720-5e0f-bcc2-89782a745b53",
-      "name": "Lugal-irra and Meslamta-ea",
+      "name": "Lugalirra",
       "disambiguation": "",
-      "title": "",
+      "title": "Underworld God, Twin of Meslamtaea",
       "figureType": "Deity",
       "gender": "Male",
-      "domain": "Twin underworld gods guarding doorways; the constellation Gemini",
-      "figureDescription": "Lugal-irra and Meslamta-ea are a set of twin gods who were worshipped in the village of Kisiga, located in northern Babylonia. They were regarded as guardians of doorways and they may have originally been envisioned as a set of twins guarding the gates of the Underworld, who chopped the dead into pieces as they passed through the gates.",
+      "domain": "Underworld",
+      "figureDescription": "'Great king' — underworld god, twin brother of Meslamtaea; together the pair act as gatekeepers of the netherworld within the circle of Nergal (whose byname Meslamtaea also is). Worshipped especially at Kisiga.",
+      "birthDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "deathDate": {
+        "startYear": null,
+        "endYear": null,
+        "era": "",
+        "isApproximate": true
+      },
+      "source": ""
+    },
+    {
+      "id": "b1fcba84-0e59-4b8c-a0ec-45a9b8525a31",
+      "name": "Meslamta-ea",
+      "disambiguation": "",
+      "title": "Underworld God, Twin of Lugal-irra",
+      "figureType": "Deity",
+      "gender": "Male",
+      "domain": "Underworld",
+      "figureDescription": "Twin brother of Lugal-irra; the pair are the gatekeepers of the netherworld, guarding its doorways and chopping the dead into pieces as they pass through the gates. Worshipped at Kisiga in northern Babylonia; together they were envisioned as a pair of twin guardians and identified with the constellation Gemini.",
       "birthDate": {
         "startYear": null,
         "endYear": null,

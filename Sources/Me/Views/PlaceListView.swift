@@ -7,6 +7,7 @@ struct PlaceListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.bookmarkStore) private var bookmarkStore
     @Query private var places: [Place]
     @State private var showingAddSheet = false
     @State private var editingPlace: Place?
@@ -20,6 +21,7 @@ struct PlaceListView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var showCompareSheet = false
 
     enum PlaceSortOrder: String, CaseIterable {
         case name = "Name"
@@ -159,7 +161,12 @@ struct PlaceListView: View {
                                 editRichDescription = place.richDescription
                                 editPlainDescription = place.placeDescription
                                 showDescriptionEditor = true
-                            }
+                            },
+                            leadingButtons: [
+                                ToolbarButton(icon: "rectangle.split.2x1", color: .teal, help: "Compare with another place") {
+                                    showCompareSheet = true
+                                }
+                            ]
                         )
                     PlaceDetailView(
                             place: place,
@@ -204,6 +211,12 @@ struct PlaceListView: View {
                         try? modelContext.save()
                     }
                 )
+            }
+        }
+
+        .sheet(isPresented: $showCompareSheet) {
+            if let place = selectedPlace {
+                PlaceCompareView(place: place)
             }
         }
 
@@ -273,6 +286,20 @@ struct PlaceListView: View {
                     .tag(place.persistentModelID)
                     .id(place.persistentModelID)
                     .contextMenu {
+                        let bookmarked = bookmarkStore?.isBookmarked(entityID: place.persistentModelID) ?? false
+                        Button {
+                            if let store = bookmarkStore {
+                                if bookmarked {
+                                    store.remove(entityID: place.persistentModelID)
+                                } else {
+                                    store.add(kind: .places, entityID: place.persistentModelID, name: place.name)
+                                }
+                            }
+                        } label: {
+                            Label(bookmarked ? "Remove Bookmark" : "Bookmark", systemImage: bookmarked ? "bookmark.fill" : "bookmark")
+                        }
+                        .disabled(!bookmarked && (bookmarkStore?.isFull ?? true))
+                        Divider()
                         Button("Edit") {
                             editingPlace = place
                         }

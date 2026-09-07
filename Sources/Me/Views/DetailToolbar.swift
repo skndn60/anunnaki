@@ -14,6 +14,8 @@ struct DetailToolbar: View {
     let onClose: () -> Void
     var onEditDescription: (() -> Void)? = nil
     var leadingButtons: [ToolbarButton] = []
+    var copyName: String? = nil
+    @State private var copiedName = false
 
     var body: some View {
         HStack(spacing: 8) {
@@ -22,6 +24,17 @@ struct DetailToolbar: View {
                 IconActionButton(icon: "square.and.pencil", color: .accentColor, help: "Edit description", action: onEditDescription)
             }
             IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
+
+            if let copyName {
+                IconActionButton(icon: copiedName ? "checkmark" : "doc.on.doc", color: copiedName ? .green : .accentColor, help: "Copy name to clipboard") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(copyName, forType: .string)
+                    copiedName = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        if copiedName { copiedName = false }
+                    }
+                }
+            }
 
             ForEach(leadingButtons.indices, id: \.self) { index in
                 let btn = leadingButtons[index]

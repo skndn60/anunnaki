@@ -189,8 +189,13 @@ package struct RelationshipManager {
         let association = EventFigureAssociation(event: event, figure: figure, roleType: roleType, displayName: displayName)
         context.insert(association)
         push(association, into: &event.figureAssociations)
-        if alsoLinkInvolvedFigures && !figure.events.contains(where: { $0.persistentModelID == event.persistentModelID }) {
-            push(event, into: &figure.events)
+        if alsoLinkInvolvedFigures {
+            if !event.involvedFigures.contains(where: { $0.persistentModelID == figure.persistentModelID }) {
+                push(figure, into: &event.involvedFigures)
+            }
+            if !figure.events.contains(where: { $0.persistentModelID == event.persistentModelID }) {
+                push(event, into: &figure.events)
+            }
         }
         return association
     }

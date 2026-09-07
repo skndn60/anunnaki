@@ -144,12 +144,17 @@ package enum ConsistencyEngine {
     ]
 
     /// Figures whose records LEGITIMATELY use gender wording that contradicts the
-    /// recorded gender — attested historical anomalies. Kubaba (Kug-Bau) was the
-    /// only woman on the Sumerian King List, recorded as a "king" of Kish: the
-    /// masculine-wording reading is correct, not an error. For these figures the
-    /// gender-wording check is skipped entirely. Keys are normalized via
-    /// `NameDuplicateCheck.normalizedKey`.
-    private static let genderWordingExemptNames: Set<String> = ["Kug-Bau", "Kubaba", "Kugbau"]
+    /// recorded gender. Two classes:
+    /// 1. Historical anomalies — Kubaba (Kug-Bau) was the only woman on the
+    ///    Sumerian King List, recorded as a "king" of Kish: the masculine-wording
+    ///    reading is correct, not an error.
+    /// 2. Discussion/quotation records — "The daughters of Man" is a female
+    ///    collective whose description is a running analysis of Genesis 6:1–4
+    ///    ("sons of God", "kings", "warriors"); that wording describes the
+    ///    passage, never the figure herself, so it must not flag.
+    /// For these figures the gender-wording check is skipped entirely. Keys are
+    /// normalized via `NameDuplicateCheck.normalizedKey`.
+    private static let genderWordingExemptNames: Set<String> = ["Kug-Bau", "Kubaba", "Kugbau", "The daughters of Man"]
     private static var genderWordingExemptKeys: Set<String> {
         Set(genderWordingExemptNames.map { NameDuplicateCheck.normalizedKey($0) })
     }
@@ -377,10 +382,17 @@ package enum ConsistencyEngine {
         var byKey: [String: [(name: String, figureName: String)]] = [:]
         for alt in alternateNames {
             guard let figureName = alt.figure?.name else { continue }
-            // A name typed as a Syncretism is deliberately shared across the
-            // syncretized deities (e.g. "Asarluhi" on both Asalluhi and Marduk),
-            // so it never counts as an ambiguous/duplicate alias.
-            if alt.nameType == .syncretism { continue }
+            // Deliberately sharable name kinds never count as ambiguous aliases:
+            // a Syncretism ties two deities to one identity, an Epithet or
+            // translated title ("Bel" = "Lord") legitimately attaches to several
+            // gods at once — Ashur in Assyria, Marduk in Babylon — and a
+            // Logographic Reading ("Mer" for dIM) belongs to every god the sign
+            // refers to (Ishkur and Wer being the same storm god). Only spelling
+            // variants are expected to belong to a single figure.
+            switch alt.nameType {
+            case .syncretism, .epithet, .translation, .logographic: continue
+            default: break
+            }
             let key = NameDuplicateCheck.normalizedKey(alt.name)
             byKey[key, default: []].append((alt.name, figureName))
         }
@@ -455,9 +467,15 @@ package enum ConsistencyEngine {
             // word-interior so "Puzur-Suen" cannot split into a bare "Suen"
             // that then collides with the god "Su'en".
             func isWordChar(_ index: Int) -> Bool {
-                index >= 0 && index < scalars.count &&
-                (scalars[index].isLetter || scalars[index].isNumber ||
-                 scalars[index] == "-" || scalars[index] == "'")
+                guard index >= 0 && index < scalars.count else { return false }
+                let ch = scalars[index]
+                if ch.isLetter || ch.isNumber || ch == "-" || ch == "'" { return true }
+                if ch == "." && index > 0 && index < scalars.count - 1 {
+                    let prev = scalars[index - 1]
+                    let next = scalars[index + 1]
+                    return (prev.isLetter || prev.isNumber) && (next.isLetter || next.isNumber)
+                }
+                return false
             }
             var collapsed: [Character] = []
             var originIndices: [Int] = []

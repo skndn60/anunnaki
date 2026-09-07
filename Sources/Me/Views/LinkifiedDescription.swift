@@ -74,7 +74,8 @@ private struct LinkifiedProse: View {
                 ParagraphView(
                     paragraph: attributed.attributedSubstring(from: ranges[index]),
                     candidates: set.candidates,
-                    regex: set.regex
+                    resolver: set.resolver,
+                    keyToCandidate: set.keyToCandidate
                 )
             }
         }
@@ -103,7 +104,8 @@ private struct LinkifiedProse: View {
 /// until the database content changes (entity / alternate-name counts).
 private struct CandidateSet {
     let candidates: [MentionCandidate]
-    let regex: NSRegularExpression
+    let resolver: LinkResolver
+    let keyToCandidate: [String: MentionCandidate]
 }
 
 private struct CandidateFingerprint: Equatable {
@@ -153,14 +155,17 @@ private enum CandidateCache {
         for event in events {
             appendCandidate(event.name, kind: .event, target: event.name, targetID: event.persistentModelID, into: &result)
         }
-        let alternatives = result
-            .map { NSRegularExpression.escapedPattern(for: $0.matchText) }
-            .sorted { $0.count > $1.count }
-        let pattern = alternatives.isEmpty
-            ? "(?!)"
-            : "\\b(?:" + alternatives.map { "(?:\($0))" }.joined(separator: "|") + ")\\b"
-        let regex = try! NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
-        return CandidateSet(candidates: result, regex: regex)
+        var keyToCandidate: [String: MentionCandidate] = [:]
+        for candidate in result {
+            let key = DuplicateMerger.normalizationKey(candidate.matchText)
+            guard key.count >= 2 else { continue }
+            if keyToCandidate[key] == nil { keyToCandidate[key] = candidate }
+        }
+        return CandidateSet(
+            candidates: result,
+            resolver: LinkResolver(matchTexts: result.map { $0.matchText }),
+            keyToCandidate: keyToCandidate
+        )
     }
 
     private static func appendCandidate(_ name: String, kind: EntityKind, target: String, targetID: PersistentIdentifier, into result: inout [MentionCandidate]) {
@@ -186,7 +191,8 @@ private struct MentionCandidate {
 private struct ParagraphView: View {
     let paragraph: NSAttributedString
     let candidates: [MentionCandidate]
-    let regex: NSRegularExpression
+    let resolver: LinkResolver
+    let keyToCandidate: [String: MentionCandidate]
 
     var body: some View {
         if paragraph.string.isEmpty {
@@ -210,28 +216,35 @@ private struct ParagraphView: View {
     private var runs: [Run] {
         let plain = paragraph.string
         guard !candidates.isEmpty, !plain.isEmpty else { return [] }
-        let matches = regex.matches(in: plain, range: NSRange(plain.startIndex..., in: plain))
-        guard !matches.isEmpty else { return [] }
+
+        // Exact matches come first; the variant pass (folded prose, same
+        // folding as DuplicateMerger.normalizationKey) then adds matches that
+        // do not overlap an already-linked span — "Nin-Nibru" for a registered
+        // "Ninnibru", "Ea-Nasir" for "Ea-nasir".
+        let spans = resolver.resolve(in: plain)
+        guard !spans.isEmpty else { return [] }
 
         var runs: [Run] = []
         var location = 0
-        for match in matches {
-            let range = match.range
-            if location < range.location {
-                Self.appendWordRuns(paragraph.attributedSubstring(from: NSRange(location: location, length: range.location - location)), into: &runs)
+        for span in spans {
+            if location < span.range.location {
+                Self.appendWordRuns(paragraph.attributedSubstring(from: NSRange(location: location, length: span.range.location - location)), into: &runs)
             }
-            let matchedPlain = (plain as NSString).substring(with: range)
-            let matchedAttributed = paragraph.attributedSubstring(from: range)
-            if let candidate = candidates.first(where: { $0.matchText.caseInsensitiveCompare(matchedPlain) == .orderedSame }) {
+            let matchedAttributed = paragraph.attributedSubstring(from: span.range)
+            let candidate: MentionCandidate?
+            if let matchText = span.matchText {
+                candidate = candidates.first(where: { $0.matchText.caseInsensitiveCompare(matchText) == .orderedSame })
+            } else {
+                candidate = keyToCandidate[span.key]
+            }
+            if let candidate {
                 runs.append(.link(
                     attributed: styledLink(matchedAttributed),
                     candidate: candidate,
                     request: EntityReportRequest(name: candidate.targetName, kind: candidate.kind.rawValue)
                 ))
-            } else {
-                Self.appendWordRuns(matchedAttributed, into: &runs)
+                location = span.range.location + span.range.length
             }
-            location = range.location + range.length
         }
         if location < plain.utf16.count {
             Self.appendWordRuns(paragraph.attributedSubstring(from: NSRange(location: location, length: plain.utf16.count - location)), into: &runs)

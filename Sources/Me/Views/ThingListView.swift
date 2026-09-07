@@ -6,6 +6,7 @@ struct ThingListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.bookmarkStore) private var bookmarkStore
     @Query(sort: \Thing.name) private var things: [Thing]
     @State private var showingAddSheet = false
     @State private var editingThing: Thing?
@@ -24,6 +25,7 @@ struct ThingListView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var showCompareSheet = false
 
     enum ThingSortOrder: String, CaseIterable {
         case name = "Name"
@@ -158,7 +160,12 @@ struct ThingListView: View {
                                 editRichDescription = thing.richDescription
                                 editPlainDescription = thing.thingDescription
                                 showDescriptionEditor = true
-                            }
+                            },
+                            leadingButtons: [
+                                ToolbarButton(icon: "rectangle.split.2x1", color: .purple, help: "Compare with another thing") {
+                                    showCompareSheet = true
+                                }
+                            ]
                         )
                     ThingDetailView(
                             thing: thing,
@@ -234,6 +241,12 @@ struct ThingListView: View {
         } message: { _ in
             Text("Remove this association?")
         }
+        .sheet(isPresented: $showCompareSheet) {
+            if let thing = selectedThing {
+                ThingCompareView(thing: thing)
+            }
+        }
+
         .onAppear { consumePendingNavigation() }
         .onChange(of: coordinator?.pendingThingID) { _, _ in consumePendingNavigation() }
         .onChange(of: selectedThingID) { _, newValue in
@@ -292,6 +305,20 @@ struct ThingListView: View {
                 ThingRow(thing: thing)
                     .tag(thing.persistentModelID)
                     .contextMenu {
+                        let bookmarked = bookmarkStore?.isBookmarked(entityID: thing.persistentModelID) ?? false
+                        Button {
+                            if let store = bookmarkStore {
+                                if bookmarked {
+                                    store.remove(entityID: thing.persistentModelID)
+                                } else {
+                                    store.add(kind: .things, entityID: thing.persistentModelID, name: thing.name)
+                                }
+                            }
+                        } label: {
+                            Label(bookmarked ? "Remove Bookmark" : "Bookmark", systemImage: bookmarked ? "bookmark.fill" : "bookmark")
+                        }
+                        .disabled(!bookmarked && (bookmarkStore?.isFull ?? true))
+                        Divider()
                         Button("Edit") {
                             editingThing = thing
                         }
@@ -513,12 +540,7 @@ struct ThingDetailView: View {
                 }
 
                 // Tags
-                Divider()
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Tags")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .textCase(.uppercase)
+                DetailSection(title: "Tags") {
                     TagEditorView(tags: Binding(
                         get: { thing.tags },
                         set: { thing.tags = $0 }

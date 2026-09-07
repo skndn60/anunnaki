@@ -240,17 +240,6 @@
   ]
  },
  {
-  "figure": "Enki and Ninki",
-  "alternates": [
-   {
-    "name": "Enki-Ninki",
-    "tradition": "Sumerian",
-    "nameType": "Alternate Spelling",
-    "note": "Hyphenated form of the pair"
-   }
-  ]
- },
- {
   "figure": "Enlil",
   "alternates": [
    {
@@ -691,12 +680,12 @@
  {
   "figure": "Nergal",
   "alternates": [
-   {
-    "name": "Irra",
-    "tradition": "Akkadian",
-    "nameType": "Epithet",
-    "note": "sometimes used as his title"
-   }
+{
+     "name": "Irra",
+     "tradition": "Akkadian",
+     "nameType": "Syncretism",
+     "note": "Variant spelling of Erra; the Erra identification is treated as completed for lookups."
+    }
   ]
  },
  {
@@ -855,6 +844,17 @@
     "tradition": "Sumerian",
     "nameType": "Epithet",
     "note": "epithet tibira kalamma, 'metalworker/sculptor of the land'"
+   }
+  ]
+ },
+ {
+  "figure": "Ninnibru",
+  "alternates": [
+   {
+    "name": "Nin-Nibru",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Hyphenated transliteration; also romanized form"
    }
   ]
  },

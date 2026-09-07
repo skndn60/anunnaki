@@ -28,6 +28,7 @@ struct FigureListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.bookmarkStore) private var bookmarkStore
     @Query private var figures: [Figure]
     @Query private var figureTypes: [FigureType]
     @Query private var allGroups: [FigureGroup]
@@ -45,6 +46,7 @@ struct FigureListView: View {
     @State private var selectedDynastyGroup: FigureGroup?
     @State private var rows: [FigureRowDisplay] = []
     @State private var openTable: PopupTable?
+    @State private var showCompareSheet = false
     @DetailWidth(.figure) private var detailWidth
 
     enum FigureSortOrder: String, CaseIterable {
@@ -123,6 +125,11 @@ struct FigureListView: View {
         }
         .sheet(item: $openTable) { table in
             PopupTableView(table: table)
+        }
+        .sheet(isPresented: $showCompareSheet) {
+            if let figure = selectedFigure {
+                FigureCompareView(figure: figure)
+            }
         }
 
         .onChange(of: imageDetailImage) { _, newValue in
@@ -282,8 +289,12 @@ struct FigureListView: View {
                         leadingButtons: [
                             ToolbarButton(icon: "tree", color: .green, help: "Show in inline lineage tree", isEnabled: !isCollectiveFigure) {
                                 coordinator?.navigateToLineageFigure(figure.persistentModelID)
+                            },
+                            ToolbarButton(icon: "rectangle.split.2x1", color: .accentColor, help: "Compare with another figure") {
+                                showCompareSheet = true
                             }
-                        ]
+                        ],
+                        copyName: figure.name
                     )
                     FigureDetailView(
                         figure: figure,
@@ -405,6 +416,20 @@ struct FigureListView: View {
                     .tag(row.id)
                     .id(row.id)
                     .contextMenu {
+                        let bookmarked = bookmarkStore?.isBookmarked(entityID: row.id) ?? false
+                        Button {
+                            if let store = bookmarkStore {
+                                if bookmarked {
+                                    store.remove(entityID: row.id)
+                                } else {
+                                    store.add(kind: .figures, entityID: row.id, name: row.name)
+                                }
+                            }
+                        } label: {
+                            Label(bookmarked ? "Remove Bookmark" : "Bookmark", systemImage: bookmarked ? "bookmark.fill" : "bookmark")
+                        }
+                        .disabled(!bookmarked && (bookmarkStore?.isFull ?? true))
+                        Divider()
                         Button("Edit") {
                             if let figure = modelContext.model(for: row.id) as? Figure {
                                 editingFigure = figure

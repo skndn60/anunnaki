@@ -7,6 +7,7 @@ struct EventListView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.userSession) private var userSession
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.bookmarkStore) private var bookmarkStore
     @Query private var events: [Event]
     @State private var showingAddSheet = false
     @State private var editingEvent: Event?
@@ -20,6 +21,7 @@ struct EventListView: View {
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
+    @State private var showCompareSheet = false
 
     enum EventSortOrder: String, CaseIterable {
         case name = "Name"
@@ -158,7 +160,12 @@ struct EventListView: View {
                                 editRichDescription = event.richDescription
                                 editPlainDescription = event.eventDescription
                                 showDescriptionEditor = true
-                            }
+                            },
+                            leadingButtons: [
+                                ToolbarButton(icon: "rectangle.split.2x1", color: .orange, help: "Compare with another event") {
+                                    showCompareSheet = true
+                                }
+                            ]
                         )
                     EventDetailView(
                             event: event,
@@ -199,6 +206,12 @@ struct EventListView: View {
                         try? modelContext.save()
                     }
                 )
+            }
+        }
+
+        .sheet(isPresented: $showCompareSheet) {
+            if let event = selectedEvent {
+                EventCompareView(event: event)
             }
         }
 
@@ -268,6 +281,20 @@ struct EventListView: View {
                     .tag(event.persistentModelID)
                     .id(event.persistentModelID)
                     .contextMenu {
+                        let bookmarked = bookmarkStore?.isBookmarked(entityID: event.persistentModelID) ?? false
+                        Button {
+                            if let store = bookmarkStore {
+                                if bookmarked {
+                                    store.remove(entityID: event.persistentModelID)
+                                } else {
+                                    store.add(kind: .events, entityID: event.persistentModelID, name: event.name)
+                                }
+                            }
+                        } label: {
+                            Label(bookmarked ? "Remove Bookmark" : "Bookmark", systemImage: bookmarked ? "bookmark.fill" : "bookmark")
+                        }
+                        .disabled(!bookmarked && (bookmarkStore?.isFull ?? true))
+                        Divider()
                         Button("Edit") {
                             editingEvent = event
                         }
