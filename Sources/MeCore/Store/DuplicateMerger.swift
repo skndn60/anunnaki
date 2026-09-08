@@ -181,9 +181,7 @@ package enum DuplicateMerger {
             adoptOptional(&keeper.disambiguation, duplicate.disambiguation)
             adoptOptional(&keeper.epithet, duplicate.epithet)
             adoptOptional(&keeper.causeOfDeath, duplicate.causeOfDeath)
-            adoptOptional(&keeper.reignStartYear, duplicate.reignStartYear)
-            adoptOptional(&keeper.reignEndYear, duplicate.reignEndYear)
-            adoptOptional(&keeper.reignYears, duplicate.reignYears)
+            keeper.adoptMissingKingshipFields(from: duplicate)
             adoptOptional(&keeper.coverageExempt, duplicate.coverageExempt)
             adoptOptional(&keeper.coverageReviewedAt, duplicate.coverageReviewedAt)
             if keeper.figureType == nil { keeper.figureType = duplicate.figureType }

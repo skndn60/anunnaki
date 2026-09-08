@@ -402,16 +402,8 @@ struct FigureDetailView: View {
                 PropertyRow(label: "Death", value: figure.deathDate.displayLabel)
                 PropertyRow(label: "Cause of Death", value: figure.causeOfDeath ?? "Unknown")
                 PropertyRow(label: "Source", value: figure.source)
-                if figure.reignStartYear != nil || figure.reignEndYear != nil {
-                    let reignStr: String = {
-                        switch (figure.reignStartYear, figure.reignEndYear) {
-                        case let (s?, e?): return "\(abs(s))\u{2013}\(abs(e)) BCE"
-                        case let (s?, nil): return "From \(abs(s)) BCE"
-                        case let (nil, e?): return "To \(abs(e)) BCE"
-                        default: return ""
-                        }
-                    }()
-                    PropertyRow(label: "Reign", value: reignStr)
+                if let reignLabel = figure.kingship?.reignSpanLabel {
+                    PropertyRow(label: "Reign", value: reignLabel)
                 }
             }
 

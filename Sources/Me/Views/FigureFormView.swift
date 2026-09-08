@@ -314,9 +314,11 @@ struct FigureFormView: View {
             figure.source = selectedSource?.name ?? ""
             figure.causeOfDeath = causeOfDeath.isEmpty ? nil : causeOfDeath
             figure.isConcept = false
-            figure.reignStartYear = Int(reignStartText)
-            figure.reignEndYear = Int(reignEndText)
-            figure.reignYears = Int(reignYearsText)
+            figure.updateKingship(
+                reignStartYear: Int(reignStartText),
+                reignEndYear: Int(reignEndText),
+                reignYears: Int(reignYearsText)
+            )
             figure.tags = selectedTags
             figure.pantheons = selectedPantheons
             pruneOrphanedPantheonAssociations(figure)
@@ -330,9 +332,11 @@ struct FigureFormView: View {
                 causeOfDeath: causeOfDeath.isEmpty ? nil : causeOfDeath
             )
             newFigure.epithet = epithet.isEmpty ? nil : epithet
-            newFigure.reignStartYear = Int(reignStartText)
-            newFigure.reignEndYear = Int(reignEndText)
-            newFigure.reignYears = Int(reignYearsText)
+            newFigure.updateKingship(
+                reignStartYear: Int(reignStartText),
+                reignEndYear: Int(reignEndText),
+                reignYears: Int(reignYearsText)
+            )
             newFigure.richDescription = richDescription
             newFigure.tags = selectedTags
             newFigure.pantheons = selectedPantheons

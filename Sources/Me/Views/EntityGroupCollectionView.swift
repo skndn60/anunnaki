@@ -494,15 +494,13 @@ struct EntityGroupCollectionView: View {
         }
     }
 
-    /// Figure members in display order with their reign value (stored `reignYears`
-    /// field, falling back to the description parser). Members without a reign value
-    /// are excluded. Empty for non-figure groups.
+    /// Figure members in display order with their reign value (effective reign
+    /// years via `figure.kingship`, falling back to the description parser).
+    /// Members without a reign value are excluded. Empty for non-figure groups.
     private var reignEntries: [(name: String, years: Int, id: PersistentIdentifier)] {
         guard entityType == .figure else { return [] }
         return group.effectiveMemberItems(in: modelContext).compactMap { item in
-            guard let figure = item.figure else { return nil }
-            let years = figure.reignYears ?? ReignLength.parse(from: figure.figureDescription)?.years
-            guard let years else { return nil }
+            guard let figure = item.figure, let years = figure.kingship?.effectiveReignYears else { return nil }
             return (figure.name, years, figure.persistentModelID)
         }
     }
@@ -877,14 +875,12 @@ private struct MemberRow: View {
     }
 
     private var reignDisplay: String? {
-        guard case .figure(let figure, _) = item else { return nil }
-        if let years = figure.reignYears {
+        guard case .figure(let figure, _) = item, let kingship = figure.kingship else { return nil }
+        if let years = kingship.listedReignYears {
             return "Reigned \(Self.yearString(years)) years"
         }
-        if let reign = ReignLength.parse(from: figure.figureDescription) {
-            return reign.display
-        }
-        return nil
+        guard let parsed = kingship.descriptionReignYears else { return nil }
+        return "\(Self.yearString(parsed)) years"
     }
 
     private static func yearString(_ years: Int) -> String {

@@ -211,10 +211,9 @@ private struct KingRow: View {
     private var figure: Figure { reign.figure }
 
     private var reignLength: ReignLength? {
-        if let years = figure.reignYears {
-            return ReignLength(years: years, display: "\(Self.yearString(years)) years")
-        }
-        return ReignLength.parse(from: figure.figureDescription)
+        guard let kingship = figure.kingship else { return nil }
+        guard let years = kingship.listedReignYears ?? kingship.descriptionReignYears else { return nil }
+        return ReignLength(years: years, display: "\(Self.yearString(years)) years")
     }
 
     private static func yearString(_ years: Int) -> String {

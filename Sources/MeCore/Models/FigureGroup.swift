@@ -873,7 +873,7 @@ package enum GroupAggregationTarget: String, Codable, CaseIterable, Hashable {
         switch self {
         case .reignYears:
             guard let figure = assoc.figure else { return nil }
-            return figure.reignYears ?? ReignLength.parse(from: figure.figureDescription)?.years
+            return figure.kingship?.effectiveReignYears
         case .reignSpan:
             guard let figure = assoc.figure, let start = figure.reignStartYear, let end = figure.reignEndYear else { return nil }
             return end - start

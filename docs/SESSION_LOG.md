@@ -8,6 +8,79 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-08 — Composition decide-gate: Kingship stays at the value layer (HOLD, no escalation)
+
+**State:** Discussion + assessment only — no code changed. **540/540** tests remain green.
+
+**Decision:** Do **not** escalate `Kingship` to a real `@Model KingshipProfile` facet. The composition-by-accessor value layer (steps 1–3 above) has proven sufficient for the Kingship role. User accepted the hold.
+
+**Evidence for holding:**
+- Value layer already centralizes display (`reignSpanLabel`), the prose-fallback (`effectiveReignYears`, killing 5 duplicated `reignYears ?? ReignLength.parse` sites), presence semantics, and two clean whole-role writers (`updateKingship`, `adoptMissingKingshipFields`).
+- Remaining direct column touches are column-level *by nature*, not gate failures: `ConsistencyEngine` validation arithmetic, `DashboardView` coverage metric (different question: "has listed-reign field" ≠ `kingship == nil`), one-shot migration/import backfills, `FromTextRecognizer` field-level undo.
+- **Decisive:** additive-only migrations mean a facet would not slim `Figure` — old columns stay on the row regardless, yielding two synchronized representations (dual-write risk, relationship faulting, extra migration) to buy only one capability the value layer lacks.
+
+**The one thing a facet would buy:** kingship as a `@Query`/`#Predicate` discriminator (query "all figures with a reign" from data). No current feature needs this — king lists identify figures via `source` or in-memory filter.
+
+**Flip triggers (revisit on any):** (1) a feature needs kingship in a `@Query`/live predicate; (2) a second facet (e.g. `DeityProfile`) materializes — then the per-role accessor asymmetry becomes real cost and the hat system should go `@Model` together; (3) per-kind write invariants need one enforcement point (`updateKingship` can already host that in the value layer).
+
+**Files:** `docs/SESSION_LOG.md` (assessment only; composition steps 1–3 stand from earlier entries).
+
+---
+
+### 2026-09-08 — Composition step 3: route clean-fit writers through the `Kingship` facade
+
+**State:** `swift build` clean, **540/540** tests. No schema change, no migration.
+
+**Change:** Added two writer methods to the `Kingship` facade and migrated the write sites whose shape matches them:
+- `Figure.updateKingship(reignStartYear:reignEndYear:reignYears:)` — whole-role replace, the single write path for full kingship data. `FigureFormView` (edit + create branches) now routes through it.
+- `Figure.adoptMissingKingshipFields(from:)` — adopt-if-nil merge used when collapsing a duplicate into a keeper. `DuplicateMerger`'s three `adoptOptional` reign calls now collapse to one.
+
+**Scoping decision (user-approved):** `FromTextRecognizer` (partial/conditional writes + field-level undo comparing before/after snapshots that don't track `reignYears`) and the migration/import backfills (one-shot start/end-only writes) stay as direct column writers. Forcing them through the whole-role replace setter would clobber fields they must leave alone — not a clean fit, so they remain column-level.
+
+**Next steps:** decide-gate — assess whether the value layer (read facade + two writers) suffices, or escalate to a real `@Model KingshipProfile` facet.
+
+**Files:** `Sources/MeCore/Models/Kingship.swift`, `Sources/Me/Views/FigureFormView.swift`, `Sources/MeCore/Store/DuplicateMerger.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-08 — Composition step 2: migrate read sites onto `Kingship` facade
+
+**State:** `swift build` clean, **540/540** tests (3 new). No schema change, no migration.
+
+**Change:** Rolled the `Kingship` facade (from the step-1 entry below) across the read sites, after the user approved folding the prose fallback into the facade (`Kingship.effectiveReignYears`):
+- `Kingship.swift` — added `descriptionReignYears` (resolved once by the `Figure.kingship` accessor via `ReignLength.parse` when stored `reignYears` is nil) + computed `effectiveReignYears` (`listedReignYears ?? descriptionReignYears`).
+- Migrated call sites, removing the duplicated `reignYears ?? ReignLength.parse(from: figureDescription)` idiom:
+  - `FigureDetailView` reign PropertyRow → `figure.kingship?.reignSpanLabel` (replaces inline `switch (reignStartYear, reignEndYear)`).
+  - `SKLDatePropagator.DynastyTimeline.totalYears` → `figure.kingship?.effectiveReignYears`.
+  - `FigureGroup.GroupAggregationTarget.value(for:)` (`.reignYears`) → `figure.kingship?.effectiveReignYears`.
+  - `FigureGroupSmartMembers` extension `.value(for:)` (`.reignYears`) → `figure.kingship?.effectiveReignYears`.
+  - `EntityGroupCollectionView.reignEntries` + `.reignDisplay` → `figure.kingship` (listed vs. prose formatting preserved via `listedReignYears`/`descriptionReignYears`).
+  - `SumerianKingListView.KingRow.reignLength` → `figure.kingship`.
+
+**Behavior parity notes:** the five prose-fallback sites previously parsed the description only when stored `reignYears` was nil; `Figure.kingship` now resolves exactly that once per access and `Kingship` stays nil when neither stored data nor parseable prose exists. Remaining direct `ReignLength.parse` callers (`SKLDatePropagator` forward/backward chain propagation, `Migration+FigureGroups` backfill writer) are legitimate non-facade uses.
+
+**Next steps (not committed):** writers/forms (step 3 — route `FigureFormView`, `FromTextRecognizer`, `DuplicateMerger` through a facade setter), then the decide-gate (value layer sufficient vs. escalate to `@Model KingshipProfile` facet).
+
+**Files:** `Sources/MeCore/Models/Kingship.swift`, `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/SumerianKingListView.swift`, `Sources/Me/Views/EntityGroupCollectionView.swift`, `Sources/Me/Views/FigureGroupSmartMembers.swift`, `Sources/MeCore/Models/FigureGroup.swift`, `Sources/MeCore/Store/SKLDatePropagator.swift`, `Tests/MeCoreTests/MeCoreTests+Kingship.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-08 — Composition prototype step 1: `Kingship` accessor facade (MeCore)
+
+**State:** `swift build` clean, **537/537** tests (6 new). No schema change, no migration, no behavior change — pure additive facade layer.
+
+**Change:** First code step of the 2026-09-07 composition plan (composition-by-accessor before any `@Model` facets). Added `Sources/MeCore/Models/Kingship.swift`:
+- `Kingship` value struct wrapping the three stored reign columns (`reignStartYear`, `reignEndYear`, `listedReignYears` = `reignYears`) with presence helpers (`hasChronologicalSpan`, `hasListedDuration`) and the reign-span display label previously inlined in `FigureDetailView` (`reignSpanLabel`: "1792–1750 BCE" / "From 2334 BCE" / "To 2270 BCE").
+- `Figure.kingship` computed — returns `Kingship?`, non-nil when any reign datum is present. Facade over the god-object's SKL-king role.
+
+**Design notes:** The facade deliberately models the *Kingship role* (presence of reign data), not a `FigureKind` discriminator — no read/write call sites migrated yet (that's step 2), so no behavior changed. New tests cover presence rules, field passthrough, and span-label formatting.
+
+**Next steps (not committed):** migrate read sites onto `figure.kingship` (FigureDetailView reign row is the cleanest pilot — it replaces the inline `switch (reignStartYear, reignEndYear)`), then writers/forms, then the decide-gate (value layer sufficient vs. escalate to `@Model KingshipProfile` facet).
+
+**Files:** `Sources/MeCore/Models/Kingship.swift` (new), `Tests/MeCoreTests/MeCoreTests+Kingship.swift` (new), `docs/SESSION_LOG.md`.
+
+---
+
 ### 2026-09-07 — Design discussion: god-object `Figure` vs. composition (base + facets)
 
 **State:** Discussion only — no code, no schema change, nothing migrated. Captured because the user is actively weighing a long-term model refactor and wants the reasoning durable.
