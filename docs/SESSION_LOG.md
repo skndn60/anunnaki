@@ -8,6 +8,92 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-08 — Ollama cold-boot timeout: long-timeout session + retry for the real query
+
+**State:** `swift build` clean, **542/542** tests. No schema change.
+
+**Problem (follow-up):** after a full Mac reboot, the very first Ollama question still showed "The request timed out" (URLSession's `URLError.timedOut`), while follow-ups worked. Two compounding bugs:
+- The **warm-up** rode a 300s `warmupSession`, but the **real query** rode the 60s `session` — and worse, `sendPromptAsync` set `request.timeoutInterval = timeout` (60s), which overrides the session config. A large-context prompt after a cold boot can exceed 60s before its first token; streaming only resets the idle timer once tokens begin, so the pre-first-token window could still trip the 60s cap.
+- `resolveAsync` only retried *truncated* answers, not transport errors.
+
+**Fix (OllamaResolver):**
+- One `generationSession` (request 300s / resource 600s) now serves both the model warm-up and real `/api/generate` calls; `sendPromptAsync` sets `request.timeoutInterval = 300` so the per-request value no longer overrides the session.
+- `resolveAsync` retries once on any transport error string (`"Error: …"`) as well as on truncated/refusal-only answers. By the second attempt the model is warm, so the first question after a reboot is no longer a throwaway.
+
+**Files:** `Sources/MeCore/Store/OllamaResolver.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-08 — Ollama first-answer truncation: full-paragraph warm-up + auto-retry on weak answers
+
+**State:** `swift build` clean, **542/542** tests. No schema change. Live-verified: warm-up now returns a 533-char paragraph (was a 1-word reply).
+
+**Problem (follow-up):** after round 2 (streaming) the first question no longer timed out, but it returned a *truncated* answer — just the boilerplate refusal ("The database doesn't have this information.") with no follow-through. The identical query on the second attempt returned the full, helpful reply. Cause: the warm-up asked for one word (`num_predict: 2`), so the model's first *sustained* generation was the user's real query — and a freshly loaded model can truncate its very first sustained answer.
+
+**Fix (OllamaResolver):**
+- `warmUpModel()` now asks for a real 3–4 sentence paragraph about Ur (`num_predict: 120`), so the model's first sustained generation happens during warm-up, not on the user's question.
+- `resolveAsync` retries once automatically when the answer looks truncated: a short (<160 chars) reply that stops at a refusal marker ("does not have this information", "lacks relevant information", etc.). The retry runs on the now-warm model, so the user's first try is no longer a throwaway.
+
+**Files:** `Sources/MeCore/Store/OllamaResolver.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-08 — Ollama cold-start, round 2: stream the generation so first answers can't idle-timeout
+
+**State:** `swift build` clean, **542/542** tests. No schema change. Live-verified against a running Ollama (streaming request returns 200 and accumulates the answer).
+
+**Problem (follow-up):** warm-up (previous entry) helped but the first question still timed out ~9/10; the retry worked. Root cause found: `sendPromptAsync` used `"stream": false`. Ollama sends **zero bytes** until the whole answer is generated, so URLSession's `timeoutIntervalForRequest` (an *idle* timeout, 60s) killed any generation that took >60s mid-thought — warm or not. The "second try works" was the giveaway: the model had become resident and/or the response was faster, but the design was inherently racy.
+
+**Fix (OllamaResolver.sendPromptAsync):**
+- Switch to `"stream": true` and aggregate tokens line-by-line (NDJSON: `response` chunks until `done == true`), capturing any `error` field. Tokens now arrive continuously, so the idle request timer never fires and arbitrarily long generations succeed.
+- Raise `timeoutIntervalForResource` to 600s (the per-token idle time is fine at 60s request timeout; only the total-transfer cap needed raising).
+- Error handling returns a clear "Error: …" string on transport/HTTP failure (unchanged contract), and empty responses return nil.
+- The sync `resolve` path (stream:false, protocol conformance only — unused by the UI) is left as-is.
+
+**Files:** `Sources/MeCore/Store/OllamaResolver.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-08 — Ollama first-query cold-start: warm the model before answering
+
+**State:** `swift build` clean, **542/542** tests. No schema change.
+
+**Problem:** 9/10 first Ollama answers timed out. Root cause: `ensureRunning()` only waits for the *server* (`/api/tags` on port 11434); Ollama cold-loads the model lazily *inside* the first `/api/generate`, and that request carried the normal 60s timeout. The user's first real query silently paid the entire model-load latency.
+
+**Fix (OllamaResolver):** added `prepare()` — the full readiness pipeline used by `QueryView` before any question:
+- `ensureRunning()` boots the server if needed (as before).
+- `refreshModelName()` re-runs model discovery now that the server is up (init-time discovery runs pre-boot and may have fallen back to the default).
+- `warmUpModel()` sends a trivial generation (`"Reply with the single word OK."`, `num_predict: 2`, `keep_alive: 10m`) on a dedicated `warmupSession` with a 300s request / 360s resource timeout. Ollama blocks that call until the model finishes loading, so the cold-start cost is absorbed there — the subsequent real query finds the model resident.
+- Returns an `OllamaPrepareResult` (`.ready` / `.serverUnavailable` / `.modelUnavailable`) so `QueryView` can show a specific error (e.g. missing model → "ollama pull llama3.1") instead of a generic timeout.
+
+**QueryView:** `askOllama` now awaits `prepare()`; during model load it shows *"Starting Ollama model (name). First answer may take a moment…"*.
+
+**Note:** model stays loaded for 10 minutes (`keep_alive`), so only genuinely cold starts pay the warm-up.
+
+**Files:** `Sources/MeCore/Store/OllamaResolver.swift`, `Sources/Me/Views/QueryView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-08 — Query engine hardening: drop fuzzy guesswork, async Ollama handoff with auto-boot
+
+**State:** `swift build` clean, **542/542** tests (2 new, 11 rewritten as defers-to-Ollama). No schema change, no migration.
+
+**Context (bug):** Query "which city states operated in sumer" answered "Me". Root cause in the live DB: there is a Thing literally named "Me" (Sumerian `me`), and QueryEngine's final fuzzy fallback resolved the *whole sentence* as an entity via substring containment — `query.contains("me")` matched "Me" inside "su**me**r", returning `.thing(Me)`. Because the engine short-circuited with a confident-but-wrong answer, `.noMatch` never fired, so the (good) Ollama fallback never ran. User's framing: users cannot be expected to avoid reserved trigger words; the engine must be conservative and let Ollama answer when unsure.
+
+**Design decision (user-approved boundary):** keep the structured layer (dossiers/lists/counts from crisp patterns), drop the fuzzy guesswork. The Ollama fallback in `QueryView` always ran on `.noMatch` — so dropping fuzzy matchers both removes wrong answers *and* lets the capable LLM handle natural phrasing.
+
+**Dropped from QueryEngine** (deleted methods + dispatch steps): whole-sentence entity resolution (the bug), `matchYesNoQuery` (+ relationship yes/no, entity-type checks), `matchDomainQuery`, `matchEraQuery`, `matchStructuredQuery` (token entity extraction + intent classify), embedding synonym matcher (`bestEmbeddingMatch`/`cosineDistance`, "kids"→children), `matchFallbackQuery` declarative templates + `executeMeasure`, `matchReignQuery`'s description-scan group fallback. Pruned dead helpers (`EntityRef`, `tokenize`, `extractEntity`, `cleanQueryText`, `classifyEntityQuery`, `labeledResults`, `resolveFigureFromTokens`, `resolveFigureByFallback`, `resolveThing` wrapper, etc.). Replaced final resolution with `exactEntityMatch(_:)` — canonical/alternate name equality only, never substring-of-sentence. Kept crisp features working: relations, possessives, listings, gender, counts, reign/duration exact, images, prefix-stripped exact names; extended `matchHowManyQuery` to the natural "how many X did Y have" word order; added missing "creators of " plural prepositional prefix. ~1730 → ~890 lines.
+
+**Ollama engagement (OllamaResolver):** `isReachableAsync()`, `ensureRunning(maxWait:)` (probe → launch `open -a Ollama` → poll up to 25s). Model preference stays: `discoverModel` already prefers llama3.1, falls back to auto.
+
+**QueryView:** `runQuery` no longer wires a blocking sync resolver into the engine. On engine `.noMatch` (or `forceLLM`) it calls `askOllama(bootMessage:)` asynchronously: shows *"Cannot answer query. Booting Ollama for an answer. Please wait…"* with a spinner, ensures Ollama running (booting if needed), then `resolveAsync`; failures show a clear error instead of silently hanging (previously the sync semaphore blocked the main thread).
+
+**Tests:** 2 new regressions (`testWholeSentenceDoesNotResolveEmbeddedShortEntityName`, `testExactThingNameStillResolves`); 11 rewritten to assert `.noMatch` for the removed matchers (`…DefersToOllama` variants); creators + natural how-many still pass.
+
+**Files:** `Sources/MeCore/Store/QueryEngine.swift`, `Sources/MeCore/Store/OllamaResolver.swift`, `Sources/Me/Views/QueryView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
 ### 2026-09-08 — Composition decide-gate: Kingship stays at the value layer (HOLD, no escalation)
 
 **State:** Discussion + assessment only — no code changed. **540/540** tests remain green.

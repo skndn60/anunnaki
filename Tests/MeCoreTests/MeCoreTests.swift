@@ -384,7 +384,7 @@ final class MeCoreTests: XCTestCase {
         XCTAssertTrue(figures.contains(where: { $0.name == "Enki" }))
     }
 
-    func testQueryEngineEmbeddingSynonymKids() {
+    func testQueryEngineEmbeddingSynonymKidsDefersToOllama() {
         let container = makeContainer()
         let context = ModelContext(container)
         SeedData.ensureTypesExist(context: context)
@@ -404,25 +404,13 @@ final class MeCoreTests: XCTestCase {
 
         let result = engine.query("how many kids does anu have")
 
-        let title: String
-        let figures: [Figure]
-        switch result {
-        case .figureList(let t, let f):
-            title = t; figures = f
-        case .answer(let text):
-            XCTFail("Expected figureList, got answer: '\(text)'")
-            return
-        default:
-            XCTFail("Expected figureList, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (embedding synonym guessing removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertTrue(title.lowercased().contains("2"), "Title should mention the count: '\(title)'")
-        XCTAssertEqual(figures.count, 2)
-        XCTAssertTrue(figures.contains(where: { $0.name == "Enlil" }))
-        XCTAssertTrue(figures.contains(where: { $0.name == "Enki" }))
     }
 
-    func testQueryEnginePossessiveSynonymMom() {
+    func testQueryEnginePossessiveSynonymMomDefersToOllama() {
         let container = makeContainer()
         let context = ModelContext(container)
         SeedData.ensureTypesExist(context: context)
@@ -436,21 +424,13 @@ final class MeCoreTests: XCTestCase {
 
         let engine = QueryEngine(context: context)
         let result = engine.query("enki's mom")
-        let title: String
-        let figures: [Figure]
-        switch result {
-        case .figureList(let t, let f):
-            title = t; figures = f
-        default:
-            XCTFail("Expected figureList, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (embedding synonym guessing removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertEqual(title, "Mother of Enki")
-        XCTAssertEqual(figures.count, 1)
-        XCTAssertEqual(figures.first?.name, "Nammu")
     }
 
-    func testQueryEngineYesNoChoice() {
+    func testQueryEngineYesNoChoiceDefersToOllama() {
         let container = makeContainer()
         let context = ModelContext(container)
         SeedData.ensureTypesExist(context: context)
@@ -466,11 +446,9 @@ final class MeCoreTests: XCTestCase {
 
         let result = engine.query("Was Enki a deity or a human?")
 
-        switch result {
-        case .answer(let text):
-            XCTAssertEqual(text, "Enki is a Deity, not a Human.")
-        default:
-            XCTFail("Expected answer string, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (yes/no guessing removed; defers to Ollama), got \(result)")
+            return
         }
     }
 
@@ -508,6 +486,43 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(dossier.parents.map(\.name).sorted(), ["Antu", "Anu"])
         XCTAssertEqual(dossier.children.map(\.name), [])
         XCTAssertEqual(dossier.figure.name, "Enlil")
+    }
+
+    // MARK: - Whole-sentence resolution must not hit short-name entities
+
+    func testWholeSentenceDoesNotResolveEmbeddedShortEntityName() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        context.insert(Thing(name: "Me", thingDescription: "Sumerian divine powers"))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("which city states operated in sumer")
+
+        guard case .noMatch = result else {
+            XCTFail("Whole-sentence query must not resolve to the Thing 'Me' embedded in 'sumer'; got \(result)")
+            return
+        }
+    }
+
+    func testExactThingNameStillResolves() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        context.insert(Thing(name: "Me", thingDescription: "Sumerian divine powers"))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("me")
+
+        guard case .thing(let thing) = result else {
+            XCTFail("Exact name lookup of Thing 'Me' should resolve, got \(result)")
+            return
+        }
+        XCTAssertEqual(thing.name, "Me")
     }
 
     // MARK: - New Relationship Type Queries
@@ -683,7 +698,7 @@ final class MeCoreTests: XCTestCase {
 
     // MARK: - Domain Queries
 
-    func testQueryEngineDomainQuery() {
+    func testQueryEngineDomainQueryDefersToOllama() {
         let container = makeContainer()
         let context = ModelContext(container)
         SeedData.ensureTypesExist(context: context)
@@ -697,11 +712,10 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("wind gods")
 
-        guard case .figureList(_, let figures) = result else {
-            XCTFail("Expected figure list, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (domain prose guessing removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertTrue(figures.contains(where: { $0.name == "Enlil" }))
     }
 
     // MARK: - Gender Queries
@@ -732,7 +746,7 @@ final class MeCoreTests: XCTestCase {
 
     // MARK: - Era Queries
 
-    func testQueryEngineEraQuery() {
+    func testQueryEngineEraQueryDefersToOllama() {
         let container = makeContainer()
         let context = ModelContext(container)
         SeedData.ensureTypesExist(context: context)
@@ -746,12 +760,10 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("figures of the early dynastic period")
 
-        guard case .figureList(_, let figures) = result else {
-            XCTFail("Expected figure list, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (era prose guessing removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertEqual(figures.count, 1)
-        XCTAssertEqual(figures.first?.name, "Etana")
     }
 
     // MARK: - Duration Queries
@@ -1101,13 +1113,12 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(dossier.figure.name, "Enki")
     }
 
-    func testResolveFigurePartial() {
+    func testResolveFigurePartialDefersToOllama() {
         let f = makeFixture()
         let result = f.engine.query("enk")
-        guard case .figure(let dossier) = result else {
-            return XCTFail("Expected .figure, got \(result)")
+        guard case .noMatch = result else {
+            return XCTFail("Expected noMatch for partial-name substring resolution (defers to Ollama), got \(result)")
         }
-        XCTAssertEqual(dossier.figure.name, "Enki")
     }
 
     func testResolveFigureNoMatch() {
@@ -1342,9 +1353,9 @@ final class MeCoreTests: XCTestCase {
         XCTAssertTrue(names.contains("Marduk"), "Tiamat created Marduk")
     }
 
-    // MARK: - Fallback Intent-Based Queries
+    // MARK: - Fallback Intent-Based Queries (removed — defers to Ollama)
 
-    func testCountDynastiesAtPlace() {
+    func testCountDynastiesAtPlaceDefersToOllama() {
         let container = makeContainer()
         let context = container.mainContext
 
@@ -1371,17 +1382,13 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("how many dynasties did Kish have")
 
-        guard case .answer(let text) = result else {
-            XCTFail("Expected answer, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (declarative template removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertTrue(text.contains("2"), "Expected 2 dynasties, got: \(text)")
-        XCTAssertTrue(text.contains("Kish"))
-        XCTAssertTrue(text.contains("First Dynasty of Kish"))
-        XCTAssertTrue(text.contains("Second Dynasty of Kish"))
     }
 
-    func testCountKingsAtPlace() {
+    func testCountKingsAtPlaceDefersToOllama() {
         let container = makeContainer()
         let context = container.mainContext
 
@@ -1402,14 +1409,13 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("how many kings ruled in Uruk")
 
-        guard case .answer(let text) = result else {
-            XCTFail("Expected answer, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (declarative template removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertTrue(text.contains("3"), "Expected 3 kings, got: \(text)")
     }
 
-    func testListDynastiesAtPlace() {
+    func testListDynastiesAtPlaceDefersToOllama() {
         let container = makeContainer()
         let context = container.mainContext
 
@@ -1429,15 +1435,13 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("what dynasties ruled Kish")
 
-        guard case .answer(let text) = result else {
-            XCTFail("Expected answer, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (declarative template removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertTrue(text.contains("First Dynasty of Kish"))
-        XCTAssertTrue(text.contains("Second Dynasty of Kish"))
     }
 
-    func testWhoRuledPlace() {
+    func testWhoRuledPlaceDefersToOllama() {
         let container = makeContainer()
         let context = container.mainContext
 
@@ -1460,18 +1464,13 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("who ruled Uruk")
 
-        guard case .figureList(let title, let figures) = result else {
-            XCTFail("Expected figureList, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (declarative template removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertEqual(title, "Rulers of Uruk")
-        XCTAssertEqual(figures.count, 2)
-        XCTAssertTrue(figures.contains(where: { $0.name == "Gilgamesh" }))
-        XCTAssertTrue(figures.contains(where: { $0.name == "Enmerkar" }))
-        XCTAssertFalse(figures.contains(where: { $0.name == "Inanna" }))
     }
 
-    func testWhichRulersBelongedToEra() {
+    func testWhichRulersBelongedToEraDefersToOllama() {
         let container = makeContainer()
         let context = container.mainContext
 
@@ -1485,16 +1484,13 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("which rulers belonged to the first dynasty of kish")
 
-        guard case .figureList(let title, let figures) = result else {
-            XCTFail("Expected figureList, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (declarative template removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertEqual(figures.count, 3)
-        XCTAssertTrue(figures.allSatisfy { $0.name != "Gilgamesh" })
-        XCTAssertTrue(figures.contains(where: { $0.name == "Etana" }))
     }
 
-    func testKingsOfTheEra() {
+    func testKingsOfTheEraDefersToOllama() {
         let container = makeContainer()
         let context = container.mainContext
 
@@ -1507,11 +1503,10 @@ final class MeCoreTests: XCTestCase {
         let engine = QueryEngine(context: context)
         let result = engine.query("kings of the early dynastic period")
 
-        guard case .figureList(let title, let figures) = result else {
-            XCTFail("Expected figureList, got \(result)")
+        guard case .noMatch = result else {
+            XCTFail("Expected noMatch (declarative template removed; defers to Ollama), got \(result)")
             return
         }
-        XCTAssertEqual(figures.count, 3)
     }
 
     func testFallbackNoMatchForUnrelatedQuery() {

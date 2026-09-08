@@ -21,14 +21,7 @@ package enum QueryResult {
 /// Resolves natural language queries against the database.
 package class QueryEngine {
 
-    package enum EntityRef {
-        case figure(Figure)
-        case place(Place)
-        case event(Event)
-        case thing(Thing)
-    }
     private let context: ModelContext
-    package var fallbackResolver: QueryResolver?
 
     private struct QueryCache {
         let figures: [Figure]
@@ -87,7 +80,7 @@ package class QueryEngine {
             ),
             FigureRelationPattern(
                 possessiveSuffixes: ["creator", "creators"],
-                prepositionalPrefixes: ["creator of "],
+                prepositionalPrefixes: ["creator of ", "creators of "],
                 label: { "Creators of \($0)" },
                 finder: { self.findCreators(of: $0) }
             ),
@@ -169,7 +162,6 @@ package class QueryEngine {
 
         defer { cache = nil }
 
-        if let result = matchYesNoQuery(text) { return result }
         if let result = matchFigureRelationPossessive(text) { return result }
         if let result = matchPlacePossessive(text) { return result }
         if let result = matchEventPossessive(text) { return result }
@@ -227,14 +219,8 @@ package class QueryEngine {
         // "list all X" / "all X" patterns
         if let result = matchListingPatterns(text) { return result }
 
-        // Domain-based: "gods of the sky", "sky gods", "underworld deities"
-        if let result = matchDomainQuery(text) { return result }
-
         // Gender-based: "female deities", "male figures"
         if let result = matchGenderQuery(text) { return result }
-
-        // Era-based: "figures of the early dynastic period"
-        if let result = matchEraQuery(text) { return result }
 
         // "how many X had Y" — uses lemmatized text for verb normalization
         if let result = matchHowManyQuery(text) { return result }
@@ -244,27 +230,6 @@ package class QueryEngine {
 
         // Image search: "images of X", "pictures of X"
         if let result = matchImageQuery(text) { return result }
-
-        // Structured pipeline: extract entity + classify intent from remaining text
-        if let result = matchStructuredQuery(text) { return result }
-
-        // Fallback intent-based queries (before entity match to catch multi-word queries)
-        if let result = matchFallbackQuery(text) { return result }
-
-        // Direct entity match
-        if let figure = resolveFigure(text) {
-            let alias = matchedAliasName(for: figure, query: text)
-            return .figure(context.buildFigureDossier(figure, matchedAlias: alias))
-        }
-        if let place = resolvePlace(text) {
-            return .place(context.buildPlaceDossier(place))
-        }
-        if let event = resolveEvent(text) {
-            return .event(context.buildEventDossier(event))
-        }
-        if let thing = resolveThing(text) {
-            return .thing(thing)
-        }
 
         // Question prefix stripping
         let cleaned = text
@@ -277,27 +242,49 @@ package class QueryEngine {
             .trimmingCharacters(in: .punctuationCharacters)
             .trimmingCharacters(in: .whitespaces)
 
-        if !cleaned.isEmpty && cleaned != text {
-            if let figure = resolveFigure(cleaned) {
-                let alias = matchedAliasName(for: figure, query: cleaned)
-                return .figure(context.buildFigureDossier(figure, matchedAlias: alias))
-            }
-            if let place = resolvePlace(cleaned) {
-                return .place(context.buildPlaceDossier(place))
-            }
-            if let event = resolveEvent(cleaned) {
-                return .event(context.buildEventDossier(event))
-            }
-            if let thing = resolveThing(cleaned) {
-                return .thing(thing)
-            }
-        }
-
-        if let resolver = fallbackResolver, let result = resolver.resolve(query: input, modelContext: context) {
-            return result
+        if !cleaned.isEmpty {
+            if let result = exactEntityMatch(cleaned) { return result }
         }
 
         return .noMatch(input)
+    }
+
+    /// Exact-name lookup only: the input (after prefix stripping) must equal a
+    /// canonical name or an alternate name. Never resolves a whole sentence to an
+    /// entity — ambiguous input falls through to `.noMatch` (and the LLM fallback).
+    private func exactEntityMatch(_ name: String) -> QueryResult? {
+        let q = name.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return nil }
+
+        let figures = cache!.figures
+        let places = cache!.places
+        let events = cache!.events
+        let things = cache!.things
+        let alternateNames = cache!.alternateNames
+
+        if let figure = figures.first(where: { $0.name.lowercased() == q }) {
+            return .figure(context.buildFigureDossier(figure))
+        }
+        if let place = places.first(where: { $0.name.lowercased() == q }) {
+            return .place(context.buildPlaceDossier(place))
+        }
+        if let event = events.first(where: { $0.name.lowercased() == q }) {
+            return .event(context.buildEventDossier(event))
+        }
+        if let thing = things.first(where: { $0.name.lowercased() == q }) {
+            return .thing(thing)
+        }
+
+        for alt in alternateNames {
+            guard alt.name.lowercased() == q else { continue }
+            if let figure = alt.figure {
+                return .figure(context.buildFigureDossier(figure, matchedAlias: alt.name))
+            }
+            if let place = alt.place {
+                return .place(context.buildPlaceDossier(place))
+            }
+        }
+        return nil
     }
 
     // MARK: - Pattern Matching Steps
@@ -467,34 +454,6 @@ package class QueryEngine {
                 if let era = resolveEraByName(name) {
                     return formatEraDuration(era)
                 }
-                // Group fallback: "the early sumerian kings"
-                let stopWords = Set(["the", "a", "an", "of", "and", "in", "to", "for"])
-                let figures = cache!.figures
-                let queryTerms = name.lowercased().split(separator: " ").filter { !stopWords.contains(String($0)) }.map(String.init)
-                guard !queryTerms.isEmpty else { return nil }
-                let matched = figures.filter { fig in
-                    let desc = fig.figureDescription.lowercased()
-                    let domain = fig.domain.lowercased()
-                    let title = fig.title.lowercased()
-                    let figName = fig.name.lowercased()
-                    let eraName = fig.birthDate.era.lowercased()
-                    let typeName = fig.figureType?.name.lowercased() ?? ""
-                    let matchesAllTerms = queryTerms.allSatisfy { term in
-                        desc.contains(term) || domain.contains(term) || title.contains(term) ||
-                        figName.contains(term) || typeName.contains(term) || eraName.contains(term)
-                    }
-                    return matchesAllTerms && (title.contains("king") || desc.contains("king") || domain.contains("king") || typeName == "human")
-                }
-                if matched.isEmpty { return nil }
-                let totalYears = matched.compactMap { fig -> Int? in
-                    guard let birth = fig.birthDate.startYear, let death = fig.deathDate.endYear else { return nil }
-                    return death - birth
-                }
-                if !totalYears.isEmpty {
-                    let avg = totalYears.reduce(0, +) / totalYears.count
-                    return .answer("The \(name) reigned on average approximately \(avg.formatted()) years each (based on \(matched.count) figures).")
-                }
-                return .figureList("\(name.capitalized)", matched)
             }
         }
 
@@ -552,50 +511,6 @@ package class QueryEngine {
         return nil
     }
 
-    private func matchDomainQuery(_ text: String) -> QueryResult? {
-        let figures = cache!.figures
-
-        // "X gods", "gods of X", "deities of X", "X deities"
-        let domainPatterns = [
-            "gods of the ", "god of the ", "deities of the ", "deity of the ",
-            "gods of ", "god of ", "deities of ", "deity of ",
-        ]
-
-        if let domain = extractPattern(text, patterns: domainPatterns) {
-            let q = domain.lowercased()
-            let matched = figures.filter {
-                $0.domain.lowercased().contains(q) || q.contains($0.domain.lowercased())
-            }
-            if !matched.isEmpty {
-                return .figureList("\(domain.capitalized) Deities", matched)
-            }
-        }
-
-        // "sky gods" → domain contains "sky"
-        // "underworld gods" → domain contains "underworld"
-        // "war gods" → domain contains "war"
-        // "wisdom god" → domain contains "wisdom"
-        let suffixPatterns = [
-            " gods", " goddesses", " deities", " deity", " god", " goddess",
-        ]
-        for suffix in suffixPatterns {
-            if text.hasSuffix(suffix) {
-                let query = String(text.dropLast(suffix.count)).trimmingCharacters(in: .whitespaces)
-                if !query.isEmpty {
-                    let matched = figures.filter {
-                        $0.domain.lowercased().contains(query) || $0.name.lowercased().contains(query) ||
-                        $0.figureType?.name.lowercased() == query
-                    }
-                    if !matched.isEmpty {
-                        return .figureList("\(query.capitalized) Deities", matched)
-                    }
-                }
-            }
-        }
-
-        return nil
-    }
-
     private func matchGenderQuery(_ text: String) -> QueryResult? {
         let figures = cache!.figures
 
@@ -628,46 +543,6 @@ package class QueryEngine {
         return .figureList(label, matched)
     }
 
-    private func matchEraQuery(_ text: String) -> QueryResult? {
-        // "figures of the X era", "figures of X", "X figures", "X era figures"
-        let eraPatterns = [
-            "figures of the ", "figures of ",
-            "events of the ", "events of ",
-            "kings of the ", "kings of ",
-        ]
-
-        if let eraName = extractPattern(text, patterns: eraPatterns) {
-            let q = eraName.lowercased()
-
-            if text.contains("figures") || text.contains("kings") {
-                let figures = cache!.figures
-                let matched = figures.filter {
-                    $0.birthDate.era.lowercased().contains(q) ||
-                    $0.deathDate.era.lowercased().contains(q) ||
-                    $0.figureDescription.lowercased().contains(q) ||
-                    $0.figureType?.name.lowercased() == q
-                }
-                if !matched.isEmpty {
-                    return .figureList("Figures of \(eraName)", matched)
-                }
-            }
-
-            if text.contains("events") {
-                let events = cache!.events
-                let matched = events.filter {
-                    $0.date.era.lowercased().contains(q) ||
-                    $0.eventDescription.lowercased().contains(q) ||
-                    $0.era.lowercased().contains(q)
-                }
-                if !matched.isEmpty {
-                    return .eventList("Events of \(eraName)", matched)
-                }
-            }
-        }
-
-        return nil
-    }
-
     private func matchHowManyQuery(_ text: String) -> QueryResult? {
         guard text.hasPrefix("how many ") else { return nil }
         let rest = String(text.dropFirst("how many ".count))
@@ -675,17 +550,21 @@ package class QueryEngine {
 
         for pattern in figureRelationPatterns {
             for (suffix, lemSuffix) in zip(pattern.possessiveSuffixes, pattern.possessiveSuffixes.map({ lemmatize($0) })) {
+                var entityName: String?
                 if let range = lemRest.range(of: "\(lemSuffix) have "),
-                   range.lowerBound == lemRest.startIndex
-                {
-                    let entityName = String(lemRest[range.upperBound...])
-                        .trimmingCharacters(in: .punctuationCharacters)
-                        .trimmingCharacters(in: .whitespaces)
-                    if let figure = resolveFigure(entityName) {
-                        let results = pattern.finder(figure)
-                        let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : suffix)"
-                        return .figureList(label, results)
-                    }
+                   range.lowerBound == lemRest.startIndex {
+                    entityName = String(lemRest[range.upperBound...])
+                } else if let match = try? NSRegularExpression(
+                    pattern: "^\(NSRegularExpression.escapedPattern(for: lemSuffix)) (?:do|did|does) (.+?) have\\b"
+                ).firstMatch(in: lemRest, range: NSRange(lemRest.startIndex..., in: lemRest)),
+                   let nameRange = Range(match.range(at: 1), in: lemRest) {
+                    entityName = String(lemRest[nameRange])
+                }
+                if let entityName,
+                   let figure = resolveFigure(entityName.trimmingCharacters(in: .punctuationCharacters).trimmingCharacters(in: .whitespaces)) {
+                    let results = pattern.finder(figure)
+                    let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : suffix)"
+                    return .figureList(label, results)
                 }
             }
         }
@@ -762,280 +641,12 @@ package class QueryEngine {
         return nil
     }
 
-    // MARK: - Structured Pipeline (Phase 2)
-
-    private func matchStructuredQuery(_ text: String) -> QueryResult? {
-        let stripped = text.replacingOccurrences(of: "[?.,!;:()]", with: " ", options: .regularExpression)
-            .components(separatedBy: .whitespaces)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        let lemText = lemmatize(stripped)
-
-        guard let (entityRef, entityName) = extractEntity(from: text, lemText: lemText) else {
-            return nil
-        }
-
-        var remaining = lemText
-        if let range = remaining.range(of: entityName.lowercased()) {
-            remaining.removeSubrange(range)
-        }
-
-        let clean = cleanQueryText(remaining)
-        guard !clean.isEmpty else { return nil }
-
-        return classifyEntityQuery(clean, entity: entityRef)
-    }
-
-    private func extractEntity(from text: String, lemText: String) -> (EntityRef, String)? {
-        let tokens = tokenize(lemText)
-        let c = cache!
-
-        var candidates: [(EntityRef, String, String)] = []
-        for figure in c.figures {
-            candidates.append((.figure(figure), figure.name, figure.name.lowercased()))
-        }
-        for place in c.places {
-            candidates.append((.place(place), place.name, place.name.lowercased()))
-        }
-        for event in c.events {
-            candidates.append((.event(event), event.name, event.name.lowercased()))
-        }
-        for thing in c.things {
-            candidates.append((.thing(thing), thing.name, thing.name.lowercased()))
-        }
-        for figure in c.figures {
-            for alt in c.alternateNames where alt.figure?.persistentModelID == figure.persistentModelID {
-                candidates.append((.figure(figure), alt.name, alt.name.lowercased()))
-            }
-        }
-        for place in c.places {
-            for alt in c.alternateNames where alt.place?.persistentModelID == place.persistentModelID {
-                candidates.append((.place(place), alt.name, alt.name.lowercased()))
-            }
-        }
-
-        candidates.sort { $0.2.count > $1.2.count }
-
-        for (entityRef, displayName, lowerName) in candidates {
-            if tokens.contains(lowerName) {
-                return (entityRef, displayName)
-            }
-        }
-
-        // Multi-word entities (e.g. "The Great Flood") as contiguous token phrases
-        for (entityRef, displayName, lowerName) in candidates {
-            let nameTokens = lowerName.split(separator: " ").map(String.init)
-            guard nameTokens.count >= 2 && nameTokens.count <= tokens.count else { continue }
-            var matches = false
-            for i in 0...(tokens.count - nameTokens.count) {
-                if Array(tokens[i..<(i + nameTokens.count)]) == nameTokens {
-                    matches = true
-                    break
-                }
-            }
-            if matches {
-                return (entityRef, displayName)
-            }
-        }
-
-        if tokens.count >= 2 {
-            for i in 0..<(tokens.count - 1) {
-                let bigram = "\(tokens[i]) \(tokens[i + 1])"
-                for (entityRef, displayName, lowerName) in candidates {
-                    if lowerName == bigram { return (entityRef, displayName) }
-                }
-            }
-        }
-
-        return nil
-    }
-
-    private func tokenize(_ text: String) -> [String] {
-        let tokenizer = NLTokenizer(unit: .word)
-        tokenizer.string = text
-        var tokens: [String] = []
-        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { range, _ in
-            tokens.append(String(text[range]))
-            return true
-        }
-        return tokens
-    }
-
-    private func cleanQueryText(_ text: String) -> String {
-        let helperVerbs: Set<String> = ["be", "have", "do", "can", "could", "will", "would", "shall", "should", "may", "might"]
-        let questionWords: Set<String> = ["what", "who", "which", "where", "when", "why"]
-        let articles: Set<String> = ["the", "a", "an"]
-
-        let tokens = text.split(separator: " ").map(String.init)
-        var filtered: [String] = []
-
-        var i = 0
-        while i < tokens.count {
-            if tokens[i] == "how" && i + 1 < tokens.count && tokens[i + 1] == "many" {
-                filtered.append("how_many")
-                i += 2
-                continue
-            }
-
-            let token = tokens[i]
-            if helperVerbs.contains(token) || articles.contains(token) || questionWords.contains(token) {
-                i += 1
-                continue
-            }
-
-            filtered.append(token)
-            i += 1
-        }
-
-        return filtered.joined(separator: " ")
-    }
-
-    private let specificRelationshipTypes: [String: String] = [
-        "father": "Father", "mother": "Mother",
-        "brother": "Brother", "sister": "Sister",
-        "uncle": "Uncle", "aunt": "Aunt",
-        "spouse": "Spouse", "consort": "Consort",
-        "servant": "Servant", "commander": "Commander",
-        "worshipper": "Worshipper", "creator": "Creator",
-        "ally": "Ally", "enemy": "Enemy",
-    ]
-
-    private func labeledResults(for suffix: String, figure: Figure, pattern: FigureRelationPattern) -> (label: String, results: [Figure]) {
-        let lemSuffix = lemmatize(suffix)
-        if let typeName = specificRelationshipTypes[lemSuffix] {
-            let allResults = pattern.finder(figure)
-            let rels = cache!.relationships
-            let filtered = allResults.filter { fig in
-                rels.contains { rel in
-                    rel.relationshipType?.name == typeName &&
-                    ((rel.fromFigure?.persistentModelID == figure.persistentModelID && rel.toFigure?.persistentModelID == fig.persistentModelID) ||
-                     (rel.toFigure?.persistentModelID == figure.persistentModelID && rel.fromFigure?.persistentModelID == fig.persistentModelID))
-                }
-            }
-            return ("\(typeName) of \(figure.name)", filtered)
-        }
-        return (pattern.label(figure.name), pattern.finder(figure))
-    }
-
-    private func classifyEntityQuery(_ cleanText: String, entity: EntityRef) -> QueryResult? {
-        let isCount = cleanText.hasPrefix("how_many ")
-
-        for pattern in figureRelationPatterns {
-            let lemSuffixes = pattern.possessiveSuffixes.map { lemmatize($0) }
-            for (suffix, lemSuffix) in zip(pattern.possessiveSuffixes, lemSuffixes) {
-                if cleanText.contains(lemSuffix) || cleanText.contains(suffix) {
-                    switch entity {
-                    case .figure(let figure):
-                        if isCount {
-                            let results = pattern.finder(figure)
-                            let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : suffix)"
-                            return .figureList(label, results)
-                        } else {
-                            let (label, results) = labeledResults(for: suffix, figure: figure, pattern: pattern)
-                            return .figureList(label, results)
-                        }
-                    case .place, .event, .thing:
-                        return nil
-                    }
-                }
-            }
-        }
-
-        // Phase 3: word embedding fallback for synonyms (e.g., "kids" → children)
-        if let match = bestEmbeddingMatch(for: cleanText) {
-            switch entity {
-            case .figure(let figure):
-                if isCount {
-                    let results = match.pattern.finder(figure)
-                    let lemSuffix = lemmatize(match.suffix)
-                    let label = "\(figure.name) had \(results.count) \(results.count == 1 ? lemSuffix : match.suffix)"
-                    return .figureList(label, results)
-                } else {
-                    let (label, results) = labeledResults(for: match.suffix, figure: figure, pattern: match.pattern)
-                    return .figureList(label, results)
-                }
-            case .place, .event, .thing:
-                return nil
-            }
-        }
-
-        return nil
-    }
-
-    // MARK: - Word Embedding (Phase 3)
-
-    private func cosineDistance(_ a: String, _ b: String, embedding: NLEmbedding) -> Double? {
-        guard let va = embedding.vector(for: a), let vb = embedding.vector(for: b) else { return nil }
-        let dot = zip(va, vb).reduce(0.0) { $0 + $1.0 * $1.1 }
-        let na = sqrt(va.reduce(0.0) { $0 + $1 * $1 })
-        let nb = sqrt(vb.reduce(0.0) { $0 + $1 * $1 })
-        return 1 - (dot / (na * nb))
-    }
-
-    private func bestEmbeddingMatch(for cleanText: String) -> (pattern: FigureRelationPattern, suffix: String)? {
-        guard let embedding = NLEmbedding.wordEmbedding(for: .english) else { return nil }
-
-        let tokens = cleanText.split(separator: " ").map(String.init)
-        let noiseWords: Set<String> = ["i", "me", "my", "want", "number", "list", "their", "its", "give", "show", "tell", "find", "name", "names", "and", "or", "of", "for", "the", "a", "an", "that", "this"]
-
-        var suffixVectors: [(pattern: FigureRelationPattern, suffix: String, vector: [Double])] = []
-        for pattern in figureRelationPatterns {
-            for suffix in pattern.possessiveSuffixes {
-                let lemSuffix = lemmatize(suffix)
-                if let vec = embedding.vector(for: lemSuffix) {
-                    suffixVectors.append((pattern, suffix, vec))
-                }
-            }
-        }
-
-        var bestResult: (pattern: FigureRelationPattern, suffix: String, distance: Double)?
-
-        for token in tokens {
-            let lower = token.lowercased()
-            guard !noiseWords.contains(lower) else { continue }
-            guard let tokenVec = embedding.vector(for: lower) else { continue }
-
-            let tokenNorm = sqrt(tokenVec.reduce(0.0) { $0 + $1 * $1 })
-
-            for (pattern, suffix, vec) in suffixVectors {
-                let dot = zip(tokenVec, vec).reduce(0.0) { $0 + $1.0 * $1.1 }
-                let vecNorm = sqrt(vec.reduce(0.0) { $0 + $1 * $1 })
-                let distance = 1 - (dot / (tokenNorm * vecNorm))
-
-                let threshold = 0.45
-
-                if distance < threshold {
-                    if bestResult == nil || distance < bestResult!.distance {
-                        bestResult = (pattern, suffix, distance)
-                    }
-                }
-            }
-        }
-
-        return bestResult.map { ($0.pattern, $0.suffix) }
-    }
-
     // MARK: - Entity Resolution
 
     private func resolveFigure(_ name: String) -> Figure? {
         cache!.retriever.resolveFigure(name)
     }
 
-    private func resolveFigureByFallback(_ name: String) -> Figure? {
-        let figures = cache!.figures
-        let query = name.lowercased()
-
-        if let match = figures.first(where: { $0.title.lowercased().contains(query) || query.contains($0.title.lowercased()) }) {
-            return match
-        }
-        if let match = figures.first(where: { $0.figureDescription.lowercased().contains(query) }) {
-            return match
-        }
-        if let match = figures.first(where: { $0.domain.lowercased().contains(query) }) {
-            return match
-        }
-        return nil
-    }
 
     private func resolveFigureByAlternateName(_ name: String) -> Figure? {
         let altNames = cache!.alternateNames
@@ -1046,25 +657,6 @@ package class QueryEngine {
         return nil
     }
 
-    private func resolveFigureFromTokens(_ text: String) -> Figure? {
-        let figures = cache!.figures
-        let tokens = tokenize(text.lowercased())
-        for token in tokens {
-            for figure in figures {
-                if figure.name.lowercased() == token {
-                    return figure
-                }
-            }
-        }
-        for token in tokens {
-            for figure in figures {
-                if figure.name.lowercased().contains(token) || token.contains(figure.name.lowercased()) {
-                    return figure
-                }
-            }
-        }
-        return nil
-    }
 
     private func resolvePlace(_ name: String) -> Place? {
         cache!.retriever.resolvePlace(name)
@@ -1072,10 +664,6 @@ package class QueryEngine {
 
     private func resolveEvent(_ name: String) -> Event? {
         cache!.retriever.resolveEvent(name)
-    }
-
-    private func resolveThing(_ name: String) -> Thing? {
-        cache!.retriever.resolveThing(name)
     }
 
     // MARK: - Relationship Finders
@@ -1227,281 +815,6 @@ package class QueryEngine {
         })?.name
     }
 
-    // MARK: - Yes/No and Choice Questions
-
-    private func matchYesNoQuery(_ text: String) -> QueryResult? {
-        guard text.hasPrefix("was ") || text.hasPrefix("is ") else { return nil }
-
-        let stripped = text.replacingOccurrences(of: "[?.,!;:()]", with: " ", options: .regularExpression)
-            .components(separatedBy: .whitespaces)
-            .filter { !$0.isEmpty }
-            .joined(separator: " ")
-        let lemText = lemmatize(stripped)
-
-        if let result = matchRelationshipYesNo(text: text, lemText: lemText) {
-            return result
-        }
-
-        guard let (entityRef, entityName) = extractEntity(from: text, lemText: lemText) else { return nil }
-
-        var remaining = lemText
-        if let range = remaining.range(of: entityName.lowercased()) {
-            remaining.removeSubrange(range)
-        }
-        let clean = cleanQueryText(remaining)
-        guard !clean.isEmpty else { return nil }
-
-        let isChoice = clean.contains(" or ")
-
-        switch entityRef {
-        case .figure(let figure):
-            let typeName = figure.figureType?.name.lowercased() ?? ""
-            let domain = figure.domain.lowercased()
-            let description = figure.figureDescription.lowercased()
-
-            if isChoice {
-                guard let orRange = clean.range(of: " or ") else { return nil }
-                let first = stripLeadingArticle(String(clean[..<orRange.lowerBound]).trimmingCharacters(in: .whitespaces))
-                let second = stripLeadingArticle(String(clean[orRange.upperBound...]).trimmingCharacters(in: .whitespaces))
-                guard !first.isEmpty, !second.isEmpty else { return nil }
-
-                let matchFirst = typeName == first || domain == first || description.contains(first)
-                let matchSecond = typeName == second || domain == second || description.contains(second)
-
-                if matchFirst && !matchSecond {
-                    return .answer("\(figure.name) is a \(first.capitalized), not a \(second.capitalized).")
-                } else if matchSecond && !matchFirst {
-                    return .answer("\(figure.name) is a \(second.capitalized), not a \(first.capitalized).")
-                } else {
-                    return .answer("\(figure.name) is a \(typeName.capitalized).")
-                }
-            } else {
-                let first = stripLeadingArticle(clean.trimmingCharacters(in: .whitespaces))
-                guard !first.isEmpty else { return nil }
-
-                let match = typeName == first || domain == first || description.contains(first)
-                if match {
-                    return .answer("Yes, \(figure.name) is a \(first.capitalized).")
-                } else {
-                    return .answer("No, \(figure.name) is a \(typeName.capitalized), not a \(first.capitalized).")
-                }
-            }
-
-        case .place(let place):
-            let typeName = place.placeType?.name.lowercased() ?? ""
-            return handleEntityTypeCheck(clean, entityName: place.name, typeName: typeName, isChoice: isChoice)
-
-        case .event(let event):
-            let typeName = event.eventType?.name.lowercased() ?? ""
-            return handleEntityTypeCheck(clean, entityName: event.name, typeName: typeName, isChoice: isChoice)
-
-        case .thing:
-            return nil
-        }
-    }
-
-    private func matchRelationshipYesNo(text: String, lemText: String) -> QueryResult? {
-        let relationshipWords = [
-            "sibling", "brother", "sister",
-            "father", "mother",
-            "son", "daughter", "child",
-            "creator",
-            "spouse", "consort",
-            "servant", "commander", "worshipper",
-            "ally", "enemy"
-        ]
-
-        let lowerLem = lemText.lowercased()
-        for word in relationshipWords {
-            let pattern = "\(word) of "
-            guard let patternRange = lowerLem.range(of: pattern) else { continue }
-
-            let beforeRange = lowerLem.startIndex..<patternRange.lowerBound
-            let after = String(lowerLem[patternRange.upperBound...]).trimmingCharacters(in: .whitespaces)
-            guard !after.isEmpty else { continue }
-
-            let before = String(lowerLem[beforeRange]).trimmingCharacters(in: .whitespaces)
-            let subject = resolveFigureFromTokens(before)
-            guard let subject else { continue }
-            guard let target = resolveFigure(after) else { continue }
-
-            switch word {
-            case "father":
-                let isRel = isFatherOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) is the father of \(target.name)." : "No, \(subject.name) is not the father of \(target.name).")
-
-            case "mother":
-                let isRel = isMotherOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) is the mother of \(target.name)." : "No, \(subject.name) is not the mother of \(target.name).")
-
-            case "son":
-                if subject.gender != .male {
-                    return .answer("No, \(subject.name) is not a son. \(subject.name) is a daughter.")
-                }
-                let isRel = isChildOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) is a son of \(target.name)." : "No, \(subject.name) is not a son of \(target.name).")
-
-            case "daughter":
-                if subject.gender != .female {
-                    return .answer("No, \(subject.name) is not a daughter. \(subject.name) is a son.")
-                }
-                let isRel = isChildOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) is a daughter of \(target.name)." : "No, \(subject.name) is not a daughter of \(target.name).")
-
-            case "child":
-                let isRel = isChildOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) is a child of \(target.name)." : "No, \(subject.name) is not a child of \(target.name).")
-
-            case "creator":
-                let isRel = isCreatorOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) created \(target.name)." : "No, \(subject.name) did not create \(target.name).")
-
-            case "spouse", "consort":
-                let isRel = isSpouseOf(subject, target)
-                return .answer(isRel ? "Yes, \(subject.name) is a spouse of \(target.name)." : "No, \(subject.name) is not a spouse of \(target.name).")
-
-            case "sibling", "brother", "sister":
-                let isSibling = isSiblingOf(subject, target)
-                if word == "brother" && subject.gender != .male {
-                    return .answer("No, \(subject.name) is not a brother. \(subject.name) is a sister.")
-                }
-                if word == "sister" && subject.gender != .female {
-                    return .answer("No, \(subject.name) is not a sister. \(subject.name) is a brother.")
-                }
-                let label = (word == "sibling" || word == "sister" || word == "brother") ? word : "sibling"
-                return .answer(isSibling ? "Yes, \(subject.name) is a \(label) of \(target.name)." : "No, \(subject.name) is not a \(label) of \(target.name).")
-
-            default:
-                return nil
-            }
-        }
-
-        return nil
-    }
-
-    private func isFatherOf(_ figure: Figure, _ target: Figure) -> Bool {
-        let sid = figure.persistentModelID
-        for rel in target.incomingRelationships {
-            if rel.fromFigure?.persistentModelID == sid && rel.relationshipType?.name == "Father" {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func isMotherOf(_ figure: Figure, _ target: Figure) -> Bool {
-        let sid = figure.persistentModelID
-        for rel in target.incomingRelationships {
-            if rel.fromFigure?.persistentModelID == sid && rel.relationshipType?.name == "Mother" {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func isChildOf(_ figure: Figure, _ target: Figure) -> Bool {
-        let tid = target.persistentModelID
-        for rel in figure.incomingRelationships {
-            if rel.fromFigure?.persistentModelID == tid {
-                if rel.relationshipType?.name == "Father" || rel.relationshipType?.name == "Mother" {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private func isCreatorOf(_ figure: Figure, _ target: Figure) -> Bool {
-        let sid = figure.persistentModelID
-        for rel in target.incomingRelationships {
-            if rel.fromFigure?.persistentModelID == sid && rel.relationshipType?.name == "Creator" {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func isSpouseOf(_ figure: Figure, _ target: Figure) -> Bool {
-        let tid = target.persistentModelID
-        for rel in figure.outgoingRelationships {
-            if rel.toFigure?.persistentModelID == tid {
-                if rel.relationshipType?.name == "Spouse" || rel.relationshipType?.name == "Consort" {
-                    return true
-                }
-            }
-        }
-        for rel in figure.incomingRelationships {
-            if rel.fromFigure?.persistentModelID == tid {
-                if rel.relationshipType?.name == "Spouse" || rel.relationshipType?.name == "Consort" {
-                    return true
-                }
-            }
-        }
-        return false
-    }
-
-    private func isSiblingOf(_ figure: Figure, _ target: Figure) -> Bool {
-        let figureParents = Set(findParents(of: figure).map(\.persistentModelID))
-        let targetParents = Set(findParents(of: target).map(\.persistentModelID))
-        if !figureParents.isDisjoint(with: targetParents) {
-            return true
-        }
-        let relationships = cache!.relationships
-        for rel in relationships {
-            guard rel.relationshipType?.category == "sibling" else { continue }
-            if rel.fromFigure?.persistentModelID == figure.persistentModelID,
-               rel.toFigure?.persistentModelID == target.persistentModelID {
-                return true
-            }
-            if rel.toFigure?.persistentModelID == figure.persistentModelID,
-               rel.fromFigure?.persistentModelID == target.persistentModelID {
-                return true
-            }
-        }
-        return false
-    }
-
-    private func handleEntityTypeCheck(_ clean: String, entityName: String, typeName: String, isChoice: Bool) -> QueryResult? {
-        if isChoice {
-            guard let orRange = clean.range(of: " or ") else { return nil }
-            let first = stripLeadingArticle(String(clean[..<orRange.lowerBound]).trimmingCharacters(in: .whitespaces))
-            let second = stripLeadingArticle(String(clean[orRange.upperBound...]).trimmingCharacters(in: .whitespaces))
-            guard !first.isEmpty, !second.isEmpty else { return nil }
-
-            let matchFirst = typeName == first
-            let matchSecond = typeName == second
-
-            if matchFirst && !matchSecond {
-                return .answer("\(entityName) is a \(first.capitalized), not a \(second.capitalized).")
-            } else if matchSecond && !matchFirst {
-                return .answer("\(entityName) is a \(second.capitalized), not a \(first.capitalized).")
-            } else {
-                return .answer("\(entityName) is a \(typeName.capitalized).")
-            }
-        } else {
-            let first = stripLeadingArticle(clean.trimmingCharacters(in: .whitespaces))
-            guard !first.isEmpty else { return nil }
-
-            if typeName == first {
-                return .answer("Yes, \(entityName) is a \(first.capitalized).")
-            } else {
-                return .answer("No, \(entityName) is a \(typeName.capitalized), not a \(first.capitalized).")
-            }
-        }
-    }
-
-    private func stripLeadingArticle(_ s: String) -> String {
-        let articles = ["a ", "an ", "the "]
-        var result = s
-        for article in articles {
-            if result.hasPrefix(article) {
-                result = String(result.dropFirst(article.count))
-                break
-            }
-        }
-        return result
-    }
-
     // MARK: - Helpers
 
     private func lemmatize(_ text: String) -> String {
@@ -1579,152 +892,4 @@ package class QueryEngine {
         return nil
     }
 
-    // MARK: - Declarative Query Templates
-
-    private enum TemplateIntent { case count, list }
-    private enum AnchorType { case place, era }
-
-    private struct QueryTemplate {
-        let regex: NSRegularExpression
-        let intent: TemplateIntent
-        let anchorType: AnchorType
-        let measureGroup: Int
-        let anchorGroup: Int
-    }
-
-    private lazy var queryTemplates: [QueryTemplate] = {
-        [
-            // Place-anchored: count
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) did (.+?) have\\??$"),
-                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) in (.+?)\\??$"),
-                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) at (.+?)\\??$"),
-                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) ruled in (.+?)\\??$"),
-                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) ruled (.+?)\\??$"),
-                  intent: .count, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-
-            // Place-anchored: list
-            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) ruled in (.+?)\\??$"),
-                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) ruled (.+?)\\??$"),
-                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^which (\\S+) ruled (.+?)\\??$"),
-                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) are in (.+?)\\??$"),
-                  intent: .list, anchorType: .place, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^who ruled (.+?)\\??$"),
-                  intent: .list, anchorType: .place, measureGroup: 0, anchorGroup: 1),
-
-            // Era-anchored: list
-            .init(regex: try! NSRegularExpression(pattern: "^which (\\S+) belonged to (.+?)\\??$"),
-                  intent: .list, anchorType: .era, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^what (\\S+) belonged to (.+?)\\??$"),
-                  intent: .list, anchorType: .era, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^(\\S+) of the (.+?)\\??$"),
-                  intent: .list, anchorType: .era, measureGroup: 1, anchorGroup: 2),
-
-            // Era-anchored: count
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) belonged to (.+?)\\??$"),
-                  intent: .count, anchorType: .era, measureGroup: 1, anchorGroup: 2),
-            .init(regex: try! NSRegularExpression(pattern: "^how many (\\S+) in the (.+?)\\??$"),
-                  intent: .count, anchorType: .era, measureGroup: 1, anchorGroup: 2),
-        ]
-    }()
-
-    private func matchFallbackQuery(_ text: String) -> QueryResult? {
-        for tmpl in queryTemplates {
-            let nsRange = NSRange(text.startIndex..., in: text)
-            guard let match = tmpl.regex.firstMatch(in: text, range: nsRange) else { continue }
-
-            let measureRaw: String
-            if tmpl.measureGroup > 0 {
-                let range = Range(match.range(at: tmpl.measureGroup), in: text)!
-                measureRaw = String(text[range]).lowercased()
-            } else {
-                measureRaw = "ruler"
-            }
-
-            let anchorRange = Range(match.range(at: tmpl.anchorGroup), in: text)!
-            let anchorName = String(text[anchorRange])
-                .trimmingCharacters(in: .punctuationCharacters)
-                .trimmingCharacters(in: .whitespaces)
-
-            switch tmpl.anchorType {
-            case .place:
-                guard let place = resolvePlace(anchorName) else { continue }
-                let figures = place.figureAssociations.compactMap { $0.figure }
-                return executeMeasure(figures, measureRaw: measureRaw, intent: tmpl.intent, anchorDisplayName: place.name)
-            case .era:
-                let figures = figuresInEra(anchorName)
-                let displayName = anchorName
-                    .replacingOccurrences(of: "^the\\s+", with: "", options: .regularExpression)
-                    .trimmingCharacters(in: .whitespaces)
-                return executeMeasure(figures, measureRaw: measureRaw, intent: tmpl.intent, anchorDisplayName: displayName)
-            }
-        }
-        return nil
-    }
-
-    private func executeMeasure(_ figures: [Figure], measureRaw: String, intent: TemplateIntent, anchorDisplayName: String) -> QueryResult? {
-        let singular = singularize(measureRaw)
-        let displayPlural = pluralize(singular)
-        switch singular {
-        case "dynasty":
-            let eras = distinctEras(figures)
-            if eras.isEmpty {
-                return .answer("No dynasties recorded for \(anchorDisplayName).")
-            }
-            let list = eras.joined(separator: ", ")
-            return .answer("\(anchorDisplayName) had \(eras.count) \(displayPlural): \(list).")
-
-        case "king", "ruler":
-            let kings = figures.filter {
-                $0.title.lowercased().contains("king") ||
-                $0.figureDescription.lowercased().contains("king")
-            }
-            if intent == .count {
-                return .answer("\(anchorDisplayName) had \(kings.count) \(displayPlural).")
-            }
-            if kings.isEmpty {
-                return .answer("No known \(displayPlural) of \(anchorDisplayName).")
-            }
-            return .figureList("\(displayPlural.capitalized) of \(anchorDisplayName)", kings)
-
-        default:
-            guard let ft = cache?.figureTypes.first(where: { $0.name.lowercased() == singular }) else { return nil }
-            let matching = figures.filter { $0.figureType?.persistentModelID == ft.persistentModelID }
-            if intent == .count {
-                return .answer("\(anchorDisplayName) had \(matching.count) \(displayPlural).")
-            }
-            if matching.isEmpty {
-                return .answer("No \(displayPlural) found at \(anchorDisplayName).")
-            }
-            return .figureList("\(displayPlural.capitalized) of \(anchorDisplayName)", matching)
-        }
-    }
-
-    private func pluralize(_ word: String) -> String {
-        let lower = word.lowercased()
-        if lower.hasSuffix("y") && !lower.hasSuffix("ey") { return String(lower.dropLast()) + "ies" }
-        if lower.hasSuffix("s") || lower.hasSuffix("sh") || lower.hasSuffix("ch") { return lower + "es" }
-        return lower + "s"
-    }
-
-    private func figuresInEra(_ eraName: String) -> [Figure] {
-        let q = eraName.lowercased()
-            .replacingOccurrences(of: "^the\\s+", with: "", options: .regularExpression)
-            .trimmingCharacters(in: .whitespaces)
-        return cache!.figures.filter { fig in
-            let era = fig.birthDate.era.lowercased()
-            return era == q || era.contains(q) || q.contains(era)
-        }
-    }
-
-    private func distinctEras(_ figures: [Figure]) -> [String] {
-        let eras = figures.map { $0.birthDate.era }.filter { !$0.isEmpty }
-        return Array(Set(eras)).sorted()
-    }
 }

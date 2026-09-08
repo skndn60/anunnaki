@@ -59,6 +59,7 @@ struct QueryView: View {
     @State private var ollamaReachable = false
     @State private var forceLLM = false
     @State private var isProcessing = false
+    @State private var statusMessage: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -125,7 +126,20 @@ struct QueryView: View {
 
             // Results
             ScrollView {
-                if let result {
+                if let statusMessage, isProcessing {
+                    VStack(spacing: 14) {
+                        Spacer(minLength: 60)
+                        ProgressView()
+                            .controlSize(.small)
+                        Text(statusMessage)
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(20)
+                } else if let result {
                     resultView(result)
                         .padding(20)
                 } else {
@@ -176,25 +190,55 @@ struct QueryView: View {
     private func clearQuery() {
         queryText = ""
         result = nil
+        statusMessage = nil
     }
 
     private func runQuery() {
         if forceLLM {
-            isProcessing = true
-            Task {
-                let resolver = OllamaResolver()
-                let modelName = resolver.modelName
-                if let answer = await resolver.resolveAsync(query: queryText, modelContext: modelContext) {
+            askOllama(bootMessage: "Asking Ollama for an answer…")
+        } else {
+            let engine = QueryEngine(context: modelContext)
+            let answer = engine.query(queryText)
+            if case .noMatch = answer {
+                askOllama(bootMessage: "Cannot answer query. Booting Ollama for an answer. Please wait…")
+            } else {
+                result = answer
+                saveQueryState()
+            }
+        }
+    }
+
+    private func askOllama(bootMessage: String) {
+        statusMessage = bootMessage
+        isProcessing = true
+        let query = queryText
+        Task {
+            let resolver = OllamaResolver()
+            let prepared = await resolver.prepare()
+            switch prepared {
+            case .serverUnavailable:
+                statusMessage = nil
+                isProcessing = false
+                result = .answer("Cannot answer query, and Ollama could not be started. Check that Ollama is installed, then try again.")
+                saveQueryState()
+                return
+            case .modelUnavailable(let modelName):
+                statusMessage = nil
+                isProcessing = false
+                result = .answer("Cannot answer query: the model \"\(modelName)\" could not be started. Check that it is downloaded (e.g. `ollama pull llama3.1`) and that Ollama is running on localhost:11434.")
+                saveQueryState()
+                return
+            case .ready(let modelName):
+                statusMessage = "Starting Ollama model (\(modelName)). First answer may take a moment…"
+                if let answer = await resolver.resolveAsync(query: query, modelContext: modelContext) {
                     result = answer
                 } else {
                     result = .answer("Ollama (\(modelName)) returned no response. Check that the model is downloaded and Ollama is serving on localhost:11434.")
                 }
-                isProcessing = false
             }
-        } else {
-            let engine = QueryEngine(context: modelContext)
-            engine.fallbackResolver = OllamaResolver()
-            result = engine.query(queryText)
+            statusMessage = nil
+            isProcessing = false
+            saveQueryState()
         }
     }
 
