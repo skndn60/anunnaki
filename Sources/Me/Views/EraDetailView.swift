@@ -6,6 +6,7 @@ struct EraDetailView: View {
     @Environment(\.openWindow) private var openWindow
     @Query private var allFigures: [Figure]
     @State private var selectedFigure: Figure?
+    @State private var showBoundaryEditor = false
 
     private var eraFigures: [Figure] {
         var seen = Set<String>()
@@ -98,6 +99,46 @@ struct EraDetailView: View {
                     }
                 }
 
+                Divider()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text("Territory")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Spacer()
+                        Button {
+                            showBoundaryEditor = true
+                        } label: {
+                            Label("Edit boundary…", systemImage: "pencil.line")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
+                    }
+
+                    if let boundary = era.boundaryGeoJSON {
+                        HStack(spacing: 12) {
+                            PlaceSilhouetteView(
+                                boundaryGeoJSON: boundary,
+                                color: .orange
+                            )
+                            .frame(width: 120, height: 84)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Image(systemName: "map.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                Text("Drawn territory boundary for this era")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } else {
+                        Text("No territory boundary drawn yet. Use “Edit boundary…” to sketch this era’s territory on the historical map.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
                 Spacer()
             }
             .padding(20)
@@ -108,6 +149,9 @@ struct EraDetailView: View {
                 openWindow(id: "figure-quickview", value: figure.persistentModelID)
                 selectedFigure = nil
             }
+        }
+        .sheet(isPresented: $showBoundaryEditor) {
+            EraBoundaryEditorView(era: era)
         }
     }
 }

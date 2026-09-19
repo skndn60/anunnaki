@@ -9,6 +9,7 @@ struct GroupEraMapView: View {
     let group: FigureGroup
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @AppStorage("dynastyMapHistoricalStartupZoom") private var historicalStartupZoom = 5.0
     @AppStorage("dynastyMapHistoricalTheme") private var historicalThemeRaw = HistoricalMapTheme.historical.rawValue
     @AppStorage("dynastyMapHistoricalLanguage") private var historicalLanguageRaw = HistoricalMapLanguage.english.rawValue
@@ -92,8 +93,15 @@ struct GroupEraMapView: View {
                 language: historicalLanguageRaw,
                 labelSize: (MapLabelSize(rawValue: labelSizeRaw) ?? .medium).basePx,
                 dateString: dateString,
+                boundaryGeoJSON: group.era?.boundaryGeoJSON,
+                previewBoundaryGeoJSON: nil,
+                previewColorHex: "#999999",
                 defaultCenter: (44.4, 33.3),
-                onPlaceSelected: { _ in },
+                onPlaceSelected: { index in
+                    guard mappable.indices.contains(index),
+                          let place = group.directPlaces.first(where: { $0.name == mappable[index].name }) else { return }
+                    openWindow(id: "place-quickview", value: place.persistentModelID)
+                },
                 zoomController: zoomController
             )
             .frame(height: 260)

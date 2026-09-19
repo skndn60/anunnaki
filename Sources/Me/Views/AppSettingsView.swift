@@ -6,13 +6,11 @@ struct AppSettingsView: View {
     @State private var users: [User] = []
     @State private var accountMessage = ""
     @State private var showAddAccountSheet = false
-    @AppStorage("dynastyMapModernStartupZoom") private var modernStartupZoom = 6.0
     @AppStorage("dynastyMapHistoricalStartupZoom") private var historicalStartupZoom = 5.0
-    @AppStorage("dynastyMapModernStyle") private var modernMapStyleRaw = ModernMapStyle.standard.rawValue
-    @AppStorage("dynastyMapModernMuted") private var modernMapMuted = false
     @AppStorage("dynastyMapHistoricalTheme") private var historicalThemeRaw = HistoricalMapTheme.historical.rawValue
     @AppStorage("dynastyMapHistoricalLanguage") private var historicalLanguageRaw = HistoricalMapLanguage.english.rawValue
     @AppStorage("dynastyMapLabelSize") private var labelSizeRaw = MapLabelSize.medium.rawValue
+    @AppStorage("mapLabelRevealZoom") private var labelRevealZoom = 8
     @AppStorage("dynastyMapDateFilter") private var dateFilterEnabled = false
     @AppStorage(ConsistencyCheckSettings.masterKey) private var allChecksEnabled = true
     @AppStorage("skipLogin") private var skipLogin = false
@@ -29,25 +27,10 @@ struct AppSettingsView: View {
             Form {
                 Section {
                     zoomRow(
-                        title: "Modern map startup zoom",
-                        value: $modernStartupZoom,
-                        caption: "Zoom used when the Dynasty Map opens with the Modern (MapKit) style."
-                    )
-                    zoomRow(
                         title: "Historical map startup zoom",
                         value: $historicalStartupZoom,
-                        caption: "Zoom used when the Dynasty Map opens with the Historical (OpenHistoricalMap) style."
+                        caption: "Zoom used when the Dynasty Map opens."
                     )
-                    Divider()
-                    Picker("Modern map style", selection: $modernMapStyleRaw) {
-                        ForEach(ModernMapStyle.allCases) { style in
-                            Text(style.displayName).tag(style.rawValue)
-                        }
-                    }
-                    if modernMapStyleRaw == ModernMapStyle.standard.rawValue {
-                        Toggle("Quiet modern basemap", isOn: $modernMapMuted)
-                            .help("Uses a muted, less colorful standard basemap.")
-                    }
                     Divider()
                     Picker("Historical map theme", selection: $historicalThemeRaw) {
                         ForEach(HistoricalMapTheme.allCases) { theme in
@@ -70,6 +53,16 @@ struct AppSettingsView: View {
                     Text("Dynasty Map")
                 } footer: {
                     Text("Higher zoom numbers show a closer view. The date filter fades features that did not yet exist in the selected dynasty's era.")
+                }
+                Section {
+                    Stepper(value: $labelRevealZoom, in: 0...14) {
+                        Text("Show labels from zoom level \(labelRevealZoom)")
+                    }
+                    .help("Below this zoom only marker dots are shown; labels appear at this zoom or higher.")
+                } header: {
+                    Text("Map Labels")
+                } footer: {
+                    Text("Applies to the Dynasty map and the Mesopotamia atlas. Set to 0 to always show labels.")
                 }
                 Section {
                     Text("Individual checks can be disabled if they don't apply to your workflow.")

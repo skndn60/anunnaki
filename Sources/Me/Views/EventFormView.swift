@@ -31,6 +31,7 @@ struct EventFormView: View {
 
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
+    @State private var createdEventID: PersistentIdentifier?
 
     private struct PlaceSelection: Identifiable {
         let id = UUID()
@@ -57,7 +58,7 @@ struct EventFormView: View {
 
     private var duplicateNameWarning: String? {
         let others = allEvents
-            .filter { $0.persistentModelID != event?.persistentModelID }
+            .filter { $0.persistentModelID != event?.persistentModelID && $0.persistentModelID != createdEventID }
             .map(\.name)
         return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
@@ -398,6 +399,7 @@ struct EventFormView: View {
             newEvent.tags = selectedTags
             newEvent.richDescription = richDescription
             modelContext.insert(newEvent)
+            createdEventID = newEvent.persistentModelID
             let manager = RelationshipManager(context: modelContext)
             for sel in placeSelections {
                 manager.addEventPlaceAssociation(event: newEvent, place: sel.place, roleType: sel.roleType, sourceRef: selectedSource, dedupe: false)

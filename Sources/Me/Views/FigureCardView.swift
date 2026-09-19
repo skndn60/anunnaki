@@ -7,7 +7,6 @@ struct FigureCardView: View {
     var alternatives: [Figure] = []
     var onSelectAlt: ((Figure) -> Void)?
 
-    @State private var showingAlts = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -37,15 +36,21 @@ struct FigureCardView: View {
         .overlay(alignment: .topTrailing) {
             HStack(spacing: 2) {
                 if !alternatives.isEmpty {
-                    Button(action: { showingAlts = true }) {
-                        Text("+\(alternatives.count)")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 3)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(Color.accentColor))
+                    AltSelector(
+                        title: "Alternatives",
+                        items: alternatives,
+                        minWidth: 180,
+                        helpText: "\(alternatives.count) alternative\(alternatives.count == 1 ? "" : "s")",
+                        onSelect: { alt in onSelectAlt?(alt) }
+                    ) { alt in
+                        HStack(spacing: 6) {
+                            Circle().fill(alt.figureType?.color ?? .gray).frame(width: 6, height: 6)
+                            Text(alt.name)
+                                .font(.caption)
+                        }
+                        .background(alt.figureType?.color.opacity(0.08) ?? .gray.opacity(0.08))
+                        .cornerRadius(4)
                     }
-                    .buttonStyle(.plain)
                 }
                 Button(action: { openWindow(id: "figure-detail", value: figure.persistentModelID) }) {
                     Image(systemName: "info.circle")
@@ -55,33 +60,6 @@ struct FigureCardView: View {
                 .buttonStyle(.plain)
             }
             .offset(x: 3, y: -3)
-        }
-        .popover(isPresented: $showingAlts) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Alternatives")
-                    .font(.caption.bold())
-                ForEach(alternatives) { alt in
-                    Button(action: {
-                        showingAlts = false
-                        onSelectAlt?(alt)
-                    }) {
-                        HStack(spacing: 6) {
-                            Circle().fill(alt.figureType?.color ?? .gray).frame(width: 6, height: 6)
-                            Text(alt.name)
-                                .font(.caption)
-                        }
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .background(alt.figureType?.color.opacity(0.08) ?? .gray.opacity(0.08))
-                    .cornerRadius(4)
-                }
-            }
-            .padding(8)
-            .frame(width: 180)
         }
         .mugshotHover(figure, size: 140, arrowEdge: .bottom)
     }

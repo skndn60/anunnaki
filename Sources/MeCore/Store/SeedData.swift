@@ -479,6 +479,13 @@ package struct SeedData {
         }
 
         // Load primary seed data
+        guard let seed = loadRoot() else { return }
+
+        importFrom(root: seed, context: context)
+        Migration.ensureDeitiesImportExist(context: context)
+    }
+
+    package static func loadRoot() -> SeedDataRoot? {
         let seedURL: URL? = {
             if let url = Bundle.module.url(forResource: "seed_data", withExtension: "json") { return url }
             return Bundle.main.url(forResource: "seed_data", withExtension: "json")
@@ -486,11 +493,9 @@ package struct SeedData {
         guard let url = seedURL,
               let data = try? Data(contentsOf: url),
               let seed = try? JSONDecoder().decode(SeedDataRoot.self, from: data) else {
-            return
+            return nil
         }
-
-        importFrom(root: seed, context: context)
-        Migration.ensureDeitiesImportExist(context: context)
+        return seed
     }
 
     package static func importFrom(root: SeedDataRoot, context: ModelContext) {
@@ -657,12 +662,22 @@ package struct SeedData {
         // MARK: - Citations
         for seedCitation in root.citations {
             guard let source = sourcesById[seedCitation.sourceId] else { continue }
+            let entityType = Citation.EntityType(rawValue: seedCitation.entityType) ?? .figure
+            let linkedEntityName: String = {
+                switch entityType {
+                case .figure: return figuresById[seedCitation.entityId]?.name
+                case .place: return placesById[seedCitation.entityId]?.name
+                case .event: return eventsById[seedCitation.entityId]?.name
+                case .era: return erasById[seedCitation.entityId]?.name
+                case .relationship: return nil
+                }
+            }() ?? seedCitation.entityId
             let citation = Citation(
                 source: source,
                 location: seedCitation.location,
                 note: seedCitation.note,
-                entityType: Citation.EntityType(rawValue: seedCitation.entityType) ?? .figure,
-                linkedEntityName: seedCitation.entityId
+                entityType: entityType,
+                linkedEntityName: linkedEntityName
             )
             context.insert(citation)
         }

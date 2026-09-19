@@ -43,39 +43,14 @@ struct AlternateNamesSection: View {
                     .foregroundStyle(.tertiary)
             } else {
                 ForEach(filteredAlternateNames) { altName in
-                    HStack(spacing: 8) {
-                        Text(altName.name)
-                            .font(.callout)
-                            .fontWeight(.medium)
-                        Text(altName.tradition.rawValue)
-                            .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.secondary.opacity(0.1))
-                            )
-                        Text(altName.nameType.rawValue)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                        Spacer()
-                        Button(action: {
+                    AlternateNameCardRow(
+                        altName: altName,
+                        onEdit: { editingAltName = altName },
+                        onDelete: {
                             altToDelete = altName
                             showDeleteAltConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
                         }
-                        .buttonStyle(.plain)
-                        .help("Delete alternate name")
-                    }
-                    if !altName.note.isEmpty {
-                        Text(altName.note)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.leading, 4)
-                    }
+                    )
                 }
             }
         }
@@ -91,9 +66,74 @@ struct AlternateNamesSection: View {
         .sheet(isPresented: $showAddAltSheet) {
             AlternateNameFormView(alternateName: nil, preSelectedFigure: figure)
         }
+        .sheet(item: $editingAltName) { altName in
+            AlternateNameFormView(alternateName: altName)
+        }
     }
 
     @State private var showDeleteAltConfirm = false
     @State private var altToDelete: AlternateName?
     @State private var showAddAltSheet = false
+    @State private var editingAltName: AlternateName?
+}
+
+/// Shared two-line row for an alternate name: identity + actions on the first
+/// line, secondary info (type, note) on the second so narrow widths never
+/// overflow horizontally.
+struct AlternateNameCardRow: View {
+    let altName: AlternateName
+    var onEdit: (() -> Void)?
+    var onDelete: (() -> Void)?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Text(altName.name)
+                    .font(.callout)
+                    .fontWeight(.medium)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Text(altName.tradition.rawValue)
+                    .font(.caption2)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(altName.tradition.color.opacity(0.12))
+                    )
+                Spacer(minLength: 8)
+                if let onEdit {
+                    Button(action: onEdit) {
+                        Image(systemName: "pencil")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Edit alternate name")
+                }
+                if let onDelete {
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Delete alternate name")
+                }
+            }
+            HStack(spacing: 6) {
+                Text(altName.nameType.rawValue)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                if !altName.note.isEmpty {
+                    Text(altName.note)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+            }
+            .padding(.leading, 4)
+        }
+    }
 }

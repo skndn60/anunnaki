@@ -419,75 +419,50 @@ private struct AltCouplesButton: View {
     let figureTypeColor: Color
     let onSelect: (ParentCouple) -> Void
 
-    @State private var showingPopover = false
-
     var body: some View {
-        Button(action: { showingPopover = true }) {
-            Text("+\(couples.count)")
-                .font(.system(size: 8, weight: .bold))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(Color.accentColor))
-        }
-        .buttonStyle(.plain)
-        .help("\(couples.count) alternative couple\(couples.count == 1 ? "" : "s")")
-        .popover(isPresented: $showingPopover) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Alternative Couples")
-                    .font(.caption.bold())
-                    .padding(.bottom, 2)
-                ForEach(couples) { couple in
-                    Button(action: {
-                        showingPopover = false
-                        onSelect(couple)
-                    }) {
-                        HStack(spacing: 6) {
-                            if let father = couple.father {
-                                Text(father.gender.symbol)
-                                    .font(.caption)
-                                Text(father.name)
-                                    .font(.caption)
-                            } else {
-                                Text("?")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            Text("—")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                            if let mother = couple.mother {
-                                Text(mother.gender.symbol)
-                                    .font(.caption)
-                                Text(mother.name)
-                                    .font(.caption)
-                            } else {
-                                Text("?")
-                                    .font(.caption)
-                                    .foregroundStyle(.tertiary)
-                            }
-                            if let source = couple.sourceLabel, !source.isEmpty {
-                                Spacer()
-                                SourceBadgeView(name: source)
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .background(figureTypeColor.opacity(0.08))
-                    .cornerRadius(4)
+        AltSelector(
+            title: "Alternative Couples",
+            items: couples,
+            minWidth: 160,
+            helpText: "\(couples.count) alternative couple\(couples.count == 1 ? "" : "s")",
+            onSelect: onSelect
+        ) { couple in
+            HStack(spacing: 6) {
+                if let father = couple.father {
+                    Text(father.gender.symbol)
+                        .font(.caption)
+                    Text(father.name)
+                        .font(.caption)
+                } else {
+                    Text("?")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                Text("—")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+                if let mother = couple.mother {
+                    Text(mother.gender.symbol)
+                        .font(.caption)
+                    Text(mother.name)
+                        .font(.caption)
+                } else {
+                    Text("?")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                if let source = couple.sourceLabel, !source.isEmpty {
+                    Spacer()
+                    SourceBadgeView(name: source)
                 }
             }
-            .padding(10)
-            .frame(minWidth: 160, minHeight: 40)
+            .background(figureTypeColor.opacity(0.08))
+            .cornerRadius(4)
         }
     }
 }
 
-// MARK: - Parent Chip (with alternative popover)
+// MARK: - Parent Chip (with alternative selector)
 
 private struct ParentChipView: View {
     let name: String
@@ -498,50 +473,25 @@ private struct ParentChipView: View {
     let onSelect: () -> Void
     let onSelectAlt: ((Figure) -> Void)?
 
-    @State private var showingPopover = false
-
     var body: some View {
         HStack(spacing: 2) {
             MiniChip(name: name, symbol: symbol, color: color, isClickable: true, onTap: onSelect)
             if !alternatives.isEmpty {
-                Button(action: { showingPopover = true }) {
-                    Text("+\(alternatives.count)")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(Capsule().fill(Color.accentColor))
-                }
-                .buttonStyle(.plain)
-                .help("\(alternatives.count) alternative\(alternatives.count == 1 ? "" : "s")")
-                .popover(isPresented: $showingPopover) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Alternatives")
-                            .font(.caption.bold())
-                            .padding(.bottom, 2)
-                        ForEach(alternatives) { fig in
-                            Button(action: {
-                                showingPopover = false
-                                onSelectAlt?(fig)
-                            }) {
-                                HStack(spacing: 4) {
-                                    Text(fig.gender.symbol)
-                                        .font(.caption)
-                                    Text(fig.name)
-                                        .font(.caption)
-                                }
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .background(figureTypeColor.opacity(0.08))
-                            .cornerRadius(4)
-                        }
+                AltSelector(
+                    title: "Alternatives",
+                    items: alternatives,
+                    minWidth: 120,
+                    helpText: "\(alternatives.count) alternative\(alternatives.count == 1 ? "" : "s")",
+                    onSelect: { fig in onSelectAlt?(fig) }
+                ) { fig in
+                    HStack(spacing: 4) {
+                        Text(fig.gender.symbol)
+                            .font(.caption)
+                        Text(fig.name)
+                            .font(.caption)
                     }
-                    .padding(10)
-                    .frame(minWidth: 120, minHeight: 40)
+                    .background(figureTypeColor.opacity(0.08))
+                    .cornerRadius(4)
                 }
             }
         }

@@ -31,10 +31,12 @@ final class MeCoreTests: XCTestCase {
             BlockedSource.self, DictionaryEntry.self,
             FigureGroup.self, FigureGroupAssociation.self, GroupTextBlock.self,
             Pantheon.self, FigurePantheonAssociation.self,
+            Timeline.self, TimelineEntry.self,
             PopupTable.self, PopupTableAttribute.self, PopupTableCell.self, PopupTableColumn.self,
             PopupTableColumnLayout.self,
             User.self, ActivityLogEntry.self,
-            IntegrityFinding.self, FindingDismissal.self
+            IntegrityFinding.self, FindingDismissal.self,
+            StickyDismissal.self, ReignVersion.self
         ])
         if isDisk {
             let url = FileManager.default.temporaryDirectory
@@ -59,6 +61,39 @@ final class MeCoreTests: XCTestCase {
         return all.first(where: { $0.name == name })
     }
 
+    func testTimelineEntryBlockWiring() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let timeline = Timeline(name: "The House of Uruk", timelineDescription: "Short intro")
+        context.insert(timeline)
+
+        let event1 = Event(name: "Gilgamesh refuses Ishtar")
+        let event2 = Event(name: "The Bull of Heaven is slain")
+        context.insert(event1)
+        context.insert(event2)
+
+        let entry1 = TimelineEntry(event: event1, note: "The gate is stormed")
+        let entry2 = TimelineEntry(event: event2)
+        context.insert(entry1)
+        context.insert(entry2)
+        timeline.appendEntry(entry1)
+        timeline.appendEntry(entry2)
+
+        let block = GroupTextBlock(title: "Ishtar's wrath", text: "Narrative prose.", richText: nil)
+        context.insert(block)
+        entry1.appendBlock(block)
+
+        XCTAssertEqual(timeline.entries.count, 2)
+        XCTAssertEqual(entry1.orderIndex, 0)
+        XCTAssertEqual(entry2.orderIndex, 1)
+        XCTAssertEqual(entry1.sortedBlocks.map(\.title), ["Ishtar's wrath"])
+        XCTAssertTrue(block.timelineEntry === entry1)
+        XCTAssertTrue(entry1.timeline === timeline)
+
+        Migration.ensureTimelineDefaults(context: context)
+        XCTAssertEqual(timeline.sortedEntries.count, 2)
+    }
+
     func testMythologicalDateDisplayLabel() {
         let approximateBCE = MythologicalDate(year: -445000, era: "Creation", isApproximate: true)
         XCTAssertEqual(approximateBCE.displayLabel, "~445,000 BCE")
@@ -71,6 +106,18 @@ final class MeCoreTests: XCTestCase {
 
         let emptyEra = MythologicalDate(year: nil, era: "", isApproximate: false)
         XCTAssertEqual(emptyEra.displayLabel, "Unknown")
+
+        let singleSignSpan = MythologicalDate(startYear: -2000, endYear: -1750, isApproximate: true)
+        XCTAssertEqual(singleSignSpan.displayLabel, "~2,000 \u{2013} 1,750 BCE")
+
+        let crossingSpan = MythologicalDate(startYear: -129, endYear: 224, isApproximate: true)
+        XCTAssertEqual(crossingSpan.displayLabel, "~129 BCE \u{2013} 224 CE")
+
+        let crossingSpanExact = MythologicalDate(startYear: -63, endYear: 16, isApproximate: false)
+        XCTAssertEqual(crossingSpanExact.displayLabel, "63 BCE \u{2013} 16 CE")
+
+        let forwardPositiveSpan = MythologicalDate(startYear: 70, endYear: 224, isApproximate: false)
+        XCTAssertEqual(forwardPositiveSpan.displayLabel, "70 \u{2013} 224 CE")
     }
 
     func testMythologicalDateSortValue() {
@@ -2050,4 +2097,204 @@ final class MeCoreTests: XCTestCase {
         XCTAssertTrue((parent.subgroups ?? []).contains { $0.persistentModelID == child.persistentModelID })
     }
 
+}
+
+final class BoundaryGeometryTests: XCTestCase {
+    func testBlobRingShape() {
+        let ring = BoundaryGeometry.blobRing(center: (47.0, 30.0), radiusKm: 60, vertices: 24, roughness: 0.4, seed: 7)
+        XCTAssertEqual(ring.count, 24)
+        for point in ring {
+            XCTAssertTrue(point[0].isFinite)
+            XCTAssertTrue(point[1].isFinite)
+            XCTAssertGreaterThan(point[0], 45.0)
+            XCTAssertLessThan(point[0], 49.0)
+            XCTAssertGreaterThan(point[1], 28.5)
+            XCTAssertLessThan(point[1], 31.5)
+        }
+    }
+
+    func testBlobRingDeterministic() {
+        let a = BoundaryGeometry.blobRing(center: (47.0, 30.0), radiusKm: 40, vertices: 20, roughness: 0.5, seed: 99)
+        let b = BoundaryGeometry.blobRing(center: (47.0, 30.0), radiusKm: 40, vertices: 20, roughness: 0.5, seed: 99)
+        XCTAssertEqual(a, b)
+        let c = BoundaryGeometry.blobRing(center: (47.0, 30.0), radiusKm: 40, vertices: 20, roughness: 0.5, seed: 100)
+        XCTAssertNotEqual(a, c)
+    }
+
+    func testBlobRingZeroRoughnessIsEllipse() {
+        let center = (lon: 47.0, lat: 30.0)
+        let radiusKm = 50.0
+        let stretch = 2.0
+        let ring = BoundaryGeometry.blobRing(center: center, radiusKm: radiusKm, lonStretch: stretch, vertices: 24, roughness: 0, seed: 5)
+        let km = 111.32
+        let rLat = radiusKm / km
+        let rLon = (radiusKm * stretch) / (km * cos(center.lat * .pi / 180))
+        for point in ring {
+            let x = (point[0] - center.lon) / rLon
+            let y = (point[1] - center.lat) / rLat
+            XCTAssertEqual(x * x + y * y, 1.0, accuracy: 0.02)
+        }
+    }
+
+    func testBufferPolylineThickness() {
+        let polyline: [[Double]] = [[44, 33], [45, 33], [46, 33], [47, 33]]
+        let widthKm = 10.0
+        let ring = BoundaryGeometry.bufferPolyline(polyline, widthKm: widthKm)
+        XCTAssertEqual(ring.count, 8)
+        let lats = ring.map { $0[1] }
+        let lons = ring.map { $0[0] }
+        let northSouthExtent = (lats.max()! - lats.min()!) * 111.32
+        XCTAssertEqual(northSouthExtent, widthKm, accuracy: 0.5)
+        XCTAssertEqual(lons.max()! - lons.min()!, 3.0, accuracy: 0.5)
+    }
+
+    func testBufferPolylineCorner() {
+        let polyline: [[Double]] = [[44, 33], [45, 33], [45, 34]]
+        let ring = BoundaryGeometry.bufferPolyline(polyline, widthKm: 6)
+        XCTAssertFalse(ring.isEmpty)
+        for point in ring {
+            XCTAssertTrue(point[0].isFinite)
+            XCTAssertTrue(point[1].isFinite)
+        }
+    }
+
+    func testBufferPolylineRejectsTooShort() {
+        XCTAssertEqual(BoundaryGeometry.bufferPolyline([], widthKm: 10).count, 0)
+        XCTAssertEqual(BoundaryGeometry.bufferPolyline([[44, 33]], widthKm: 10).count, 0)
+        XCTAssertEqual(BoundaryGeometry.bufferPolyline([[44, 33], [45, 33]], widthKm: 0).count, 0)
+    }
+}
+
+@MainActor
+final class MapFlagsTests: XCTestCase {
+    func testEnsureMapFlagsBackfillsWaterTypesAndMajorPlaces() throws {
+        let container = MeCoreTests().makeContainer()
+        let context = container.mainContext
+
+        let gulf = PlaceType(name: "Gulf", icon: "water.waves", colorHex: "007AFF")
+        let city = PlaceType(name: "City", icon: "building.2", colorHex: "FF9500")
+        let temple = PlaceType(name: "Temple", icon: "building.columns", colorHex: "FF2D55")
+        context.insert(gulf)
+        context.insert(city)
+        context.insert(temple)
+
+        let ur = Place(name: "Ur", placeType: city, modernLocation: "Tell al-Muqayyar",
+                       placeDescription: "", source: "", isConcept: false, latitude: 30.9, longitude: 46.1)
+        context.insert(ur)
+        let other = Place(name: "Other Place", placeType: temple, modernLocation: "",
+                          placeDescription: "", source: "", isConcept: false, latitude: nil, longitude: nil)
+        context.insert(other)
+        try context.save()
+
+        Migration.ensureMapFlags(context: context)
+
+        XCTAssertEqual(gulf.isWater, true, "water-named type should be flagged")
+        XCTAssertNil(city.isWater)
+        XCTAssertNil(temple.isWater)
+        XCTAssertEqual(ur.isMajor, true, "curated major city should be flagged")
+        XCTAssertEqual(ur.zoomLevel, 0, "major city should be backfilled to overview zoom level")
+        XCTAssertEqual(ur.mapZoomLevel, 0)
+        XCTAssertNil(other.isMajor)
+        XCTAssertNil(other.zoomLevel)
+        XCTAssertEqual(other.mapZoomLevel, 8, "non-major places default to reveal-on-zoom-in level")
+    }
+
+    func testMapZoomLevelExplicitWins() throws {
+        let container = MeCoreTests().makeContainer()
+        let context = container.mainContext
+
+        let city = PlaceType(name: "City", icon: "building.2", colorHex: "FF9500")
+        context.insert(city)
+        let ur = Place(name: "Ur", placeType: city, modernLocation: "",
+                       placeDescription: "", source: "", isConcept: false, latitude: nil, longitude: nil)
+        ur.isMajor = true
+        ur.zoomLevel = 11
+        context.insert(ur)
+        let other = Place(name: "Other", placeType: city, modernLocation: "",
+                          placeDescription: "", source: "", isConcept: false, latitude: nil, longitude: nil)
+        context.insert(other)
+        try context.save()
+
+        XCTAssertEqual(ur.mapZoomLevel, 11, "explicit zoomLevel wins over major default")
+        XCTAssertEqual(other.mapZoomLevel, 8, "non-major with no explicit level uses default")
+    }
+
+    func testEnsureMapFlagsPreservesExplicitUserValues() throws {
+        let container = MeCoreTests().makeContainer()
+        let context = container.mainContext
+
+        let river = PlaceType(name: "River", icon: "water.waves", colorHex: "007AFF")
+        river.isWater = false
+        context.insert(river)
+        let city = PlaceType(name: "City", icon: "building.2", colorHex: "FF9500")
+        context.insert(city)
+        let ur = Place(name: "Ur", placeType: city, modernLocation: "",
+                       placeDescription: "", source: "", isConcept: false, latitude: nil, longitude: nil)
+        ur.isMajor = false
+        ur.zoomLevel = 3
+        context.insert(ur)
+        try context.save()
+
+        Migration.ensureMapFlags(context: context)
+        Migration.ensureMapFlags(context: context)
+
+        XCTAssertEqual(river.isWater, false, "user-set false must not be overwritten")
+        XCTAssertEqual(ur.isMajor, false, "user-set false must not be overwritten")
+        XCTAssertEqual(ur.zoomLevel, 3, "user-set zoom level must not be overwritten")
+    }
+
+    func testReignVersionRoundTripAndCascadeDelete() {
+        let container = MeCoreTests().makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Test King")
+        context.insert(figure)
+        let v1 = ReignVersion(years: 900, tradition: "Some copies")
+        let v2 = ReignVersion(years: 635, tradition: "Some copies")
+        figure.reignVersions.append(v1)
+        figure.reignVersions.append(v2)
+        context.insert(v1)
+        context.insert(v2)
+        try? context.save()
+
+        XCTAssertEqual(figure.reignVersions.count, 2)
+        XCTAssertEqual(figure.reignVersions.first?.figure?.name, "Test King")
+        let fetched = (try? context.fetch(FetchDescriptor<ReignVersion>())) ?? []
+        XCTAssertEqual(fetched.count, 2)
+
+        context.delete(figure)
+        try? context.save()
+
+        let after = (try? context.fetch(FetchDescriptor<ReignVersion>())) ?? []
+        XCTAssertTrue(after.isEmpty, "cascade delete removes reign variants")
+    }
+
+    func testSortedReignVersionsOrdersDurationsThenSpans() {
+        let container = MeCoreTests().makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Test King")
+        context.insert(figure)
+        let span = ReignVersion(startYear: -1700, endYear: -1600, tradition: "Short chronology")
+        let long = ReignVersion(years: 900, tradition: "Some copies")
+        let short = ReignVersion(years: 635, tradition: "Some copies")
+        for version in [span, long, short] {
+            figure.reignVersions.append(version)
+            context.insert(version)
+        }
+        try? context.save()
+
+        let sorted = figure.sortedReignVersions
+        XCTAssertEqual(sorted.map(\.years), [635, 900, nil])
+        XCTAssertEqual(sorted[2].tradition, "Short chronology")
+    }
+
+    func testReignVersionDisplayLabel() {
+        XCTAssertEqual(ReignVersion(years: 900, tradition: "Some copies of the Sumerian King List").displayLabel,
+                       "900 years (Some copies of the Sumerian King List)")
+        XCTAssertEqual(ReignVersion(years: 900).displayLabel, "900 years")
+        XCTAssertEqual(ReignVersion(startYear: -1728, endYear: -1686, tradition: "Short chronology").displayLabel,
+                       "1728\u{2013}1686 BCE (Short chronology)")
+        XCTAssertEqual(ReignVersion(startYear: -1800, tradition: "A").displayLabel, "From 1800 BCE (A)")
+        XCTAssertEqual(ReignVersion(endYear: -1600, tradition: "").displayLabel, "To 1600 BCE")
+        XCTAssertEqual(ReignVersion().displayLabel, "Unknown length")
+    }
 }

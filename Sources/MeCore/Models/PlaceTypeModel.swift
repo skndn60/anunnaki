@@ -8,6 +8,10 @@ package final class PlaceType {
     package var icon: String
     package var colorHex: String
 
+    /// True when the type represents a body of water (sea, gulf, river, lake…).
+    /// Optional for migration safety; nil means unrelated to water.
+    package var isWater: Bool?
+
     @Relationship(deleteRule: .deny, inverse: \Place.placeType)
     package var places: [Place] = []
 

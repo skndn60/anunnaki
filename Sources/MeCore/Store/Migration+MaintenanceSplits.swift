@@ -61,6 +61,8 @@ extension Migration {
             guard let figure = figureByName[existingName.lowercased()] else { continue }
             let alreadyHas = figure.stickies.contains { $0.text.hasPrefix(stickyPrefix) }
             guard !alreadyHas else { continue }
+            let entityKey = DuplicateMerger.normalizationKey(figure.name)
+            guard !isStickyDismissed(textPrefix: stickyPrefix, entityKey: entityKey, context: context) else { continue }
             let note = altName.isEmpty
                 ? stickyPrefix
                 : "\(stickyPrefix) — \(altName) was already an alternate name"
@@ -93,6 +95,8 @@ extension Migration {
         let noteText = "Nergal and Erra are treated as the same deity (syncretism). Historically Erra's cult ran in parallel for centuries (Erra Epic, 8th c. BC) before the name settled as an aspect of Nergal."
         for figure in figures where figure.name.caseInsensitiveCompare("Nergal") == .orderedSame || figure.name.caseInsensitiveCompare("Erra") == .orderedSame {
             guard !figure.stickies.contains(where: { $0.text == noteText }) else { continue }
+            let entityKey = DuplicateMerger.normalizationKey(figure.name)
+            guard !isStickyDismissed(textPrefix: noteText, entityKey: entityKey, context: context) else { continue }
             context.insert(StickyNote(text: noteText, figure: figure))
             changed = true
         }
@@ -573,8 +577,8 @@ package static func ensureDemonsImportExist(context: ModelContext) {
         try? context.save()
     }
 
-    /// Corrects five `childBornBeforeParent` data-integrity complaints by fixing
-    /// the underlying records. Idempotent: each step only fires while the figure
+    /// Corrects `childBornBeforeParent` data-integrity complaints by fixing the
+    /// underlying records. Idempotent: each step only fires while the figure
     /// still holds the stale (pre-fix) value, so a later user edit wins.
     ///  1. Manishtushu (Dynasty of Akkad) was dated -2205 — later than his son
     ///     Naram-Sin's -2280. Rebased to -2305 (reign c. 2269–2255 BC).
@@ -588,8 +592,14 @@ package static func ensureDemonsImportExist(context: ModelContext) {
     ///     are re-derived from those begetting ages and lifespans (962, 365).
     ///  5. The mythical Watcher pair Rashujal/backed by Rachujal keeps its
     ///     invented dates; a FindingDismissal suppresses the finding instead.
-    /// Stale persisted IntegrityFinding rows for the resolved signatures are
-    /// deleted so the queue clears without a manual re-scan.
+    ///  6. The antediluvian SKL king "Dumuzi the Shepherd" was wrongly parented to
+    ///     the Uruk I kings Lugalbanda (Father) and Ninsun (Mother) — a mix-up
+    ///     with "Dumuzid the Fisherman", who is correctly Lugalbanda's son. Both
+    ///     impossible edges are removed so the -132,400 BCE shepherd has no dated
+    ///     Uruk I parent.
+    ///  7. Stale persisted IntegrityFinding rows for the fixed Gilgamesh /
+    ///     Lugalbanda / Dumuzi the Shepherd signatures are dropped with the ones
+    ///     above, so the queue clears without a manual re-scan.
     package static func correctAnomalousGenealogy(context: ModelContext) {
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
         let figureByName = Dictionary(
@@ -661,8 +671,23 @@ package static func ensureDemonsImportExist(context: ModelContext) {
             changed = true
         }
 
+        // 6. Remove the impossible parent edges attaching the antediluvian
+        //    "Dumuzi the Shepherd" to the Uruk I family (Lugalbanda / Ninsun
+        //    belong to the Uruk I "Dumuzid the Fisherman", not to this figure).
+        if let shepherd = figureByName[Self.seedNameKey("Dumuzi the Shepherd")] {
+            let rels = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+            for rel in rels where rel.toFigure?.persistentModelID == shepherd.persistentModelID {
+                guard let from = rel.fromFigure, let typeName = rel.relationshipType?.name,
+                      (typeName == "Father" || typeName == "Mother"),
+                      from.name == "Lugalbanda" || from.name == "Ninsun" else { continue }
+                context.delete(rel)
+                changed = true
+            }
+        }
+
         // Clear stale persisted findings for every resolved signature.
-        let resolved = Set(["Rashujal", "Lipit-Enlil", "Puzur-Suen", "Naram-Sin of Akkad", "Jared"]
+        let resolved = Set(["Rashujal", "Lipit-Enlil", "Puzur-Suen", "Naram-Sin of Akkad", "Jared",
+                            "Gilgamesh", "Lugalbanda", "Dumuzi the Shepherd"]
             .map { Self.seedNameKey($0) })
         let stale = ((try? context.fetch(FetchDescriptor<IntegrityFinding>())) ?? []).filter {
             $0.kindRaw == "childBornBeforeParent" && resolved.contains(Self.seedNameKey($0.entityKey))

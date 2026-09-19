@@ -354,6 +354,7 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
     @State private var name = ""
     @State private var icon = ""
     @State private var color: Color = .gray
+    @State private var isWater = false
 
     private var isEditing: Bool { item != nil }
 
@@ -366,6 +367,10 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
                 TextField("Name", text: $name, prompt: Text("Deity, City, Battle"))
                 TextField("SF Symbol", text: $icon, prompt: Text("star, building.2, bolt"))
                 ColorPicker("Color", selection: $color, supportsOpacity: false)
+                if T.self == PlaceType.self {
+                    Toggle("Water body", isOn: $isWater)
+                        .help("Marks this type as representing a body of water on the Mesopotamia map")
+                }
             }
             .formStyle(.grouped)
             .padding()
@@ -378,7 +383,7 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
             }
             .padding()
         }
-        .frame(width: 380, height: 300)
+        .frame(width: 380, height: T.self == PlaceType.self ? 340 : 300)
         .onAppear { loadIfEditing() }
     }
 
@@ -387,6 +392,9 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
         name = item.name
         icon = item.uiIcon
         color = item.uiColor
+        if T.self == PlaceType.self {
+            isWater = (item as? PlaceType)?.isWater == true
+        }
     }
 
     private func save() {
@@ -394,7 +402,13 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
             existing.name = name
             (existing as? any IconColorSettable)?.setIcon(icon)
             (existing as? any IconColorSettable)?.setColorHex(color.hex)
+            if T.self == PlaceType.self {
+                (existing as? PlaceType)?.isWater = isWater
+            }
         } else if let made = T.make(name: name, icon: icon, colorHex: color.hex) {
+            if T.self == PlaceType.self {
+                (made as? PlaceType)?.isWater = isWater
+            }
             modelContext.insert(made)
         }
         try? modelContext.save()

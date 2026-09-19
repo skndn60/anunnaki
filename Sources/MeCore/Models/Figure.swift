@@ -26,6 +26,30 @@ package final class Figure {
     /// `reignStartYear`/`reignEndYear`, which are a chronological date range.
     package var reignYears: Int?
 
+    /// Competing variant reign lengths and spans (SKL manuscript copies, the
+    /// Ur-Isin king list, differing chronology editions). The scalar reign
+    /// fields above remain the canonical values; these are the alternatives.
+    @Relationship(deleteRule: .cascade, inverse: \ReignVersion.figure)
+    package var reignVersions: [ReignVersion] = []
+
+    /// Variant reigns ordered for display: duration-valued rows first (by
+    /// years), then span-valued rows (by start year). The stored relationship
+    /// array preserves insertion order.
+    package var sortedReignVersions: [ReignVersion] {
+        reignVersions.sorted { lhs, rhs in
+            switch (lhs.years, rhs.years) {
+            case let (ly?, ry?):
+                return ly < ry
+            case (_?, nil):
+                return true
+            case (nil, _?):
+                return false
+            case (nil, nil):
+                return (lhs.startYear ?? .max) < (rhs.startYear ?? .max)
+            }
+        }
+    }
+
     /// An epithet (praise-title) attached to the figure, e.g. Etana's
     /// "the shepherd who ascended to heaven and consolidated all the foreign countries".
     /// A title, not an alias, so it lives on the figure rather than as an AlternateName.

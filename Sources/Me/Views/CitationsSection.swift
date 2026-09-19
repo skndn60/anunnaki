@@ -7,6 +7,11 @@ struct CitationsSection: View {
     let filterText: String
     @Binding var showAddCitation: Bool
 
+    @Environment(\.modelContext) private var modelContext
+    @State private var citationToDelete: Citation?
+    @State private var showDeleteConfirm = false
+    @State private var editingCitation: Citation?
+
     private var figureCitations: [Citation] {
         let all: [Citation] = modelContext.fetchAll()
         return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
@@ -46,19 +51,12 @@ struct CitationsSection: View {
                         .foregroundStyle(.tertiary)
                 } else {
                     ForEach(filteredCitations) { citation in
-                        HStack(alignment: .center, spacing: 4) {
-                            FigureCitationsRow(citation: citation)
-                            Button(action: {
-                                citationToDelete = citation
-                                showDeleteConfirm = true
-                            }) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 10))
-                                    .foregroundStyle(.red.opacity(0.7))
-                            }
-                            .buttonStyle(.plain)
-                            .help("Delete citation")
-                        }
+                        CitationListRow(citation: citation, onEdit: {
+                            editingCitation = citation
+                        }, onDelete: {
+                            citationToDelete = citation
+                            showDeleteConfirm = true
+                        })
                     }
             }
         }
@@ -71,9 +69,8 @@ struct CitationsSection: View {
         } message: { citation in
             Text("Delete the citation from \(citation.source?.name ?? "Unknown")?")
         }
+        .sheet(item: $editingCitation) { citation in
+            CitationFormSheet(citation: citation)
+        }
     }
-
-    @Environment(\.modelContext) private var modelContext
-    @State private var citationToDelete: Citation?
-    @State private var showDeleteConfirm = false
 }

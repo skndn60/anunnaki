@@ -407,11 +407,12 @@ private struct TableCellPreviewPopover: View {
     }
 }
 
-/// Section showing attachments for a source, with ability to add new ones.
+/// Section showing attachments for a source, with ability to add, edit, and delete.
 struct AttachmentsSection: View {
     @Environment(\.modelContext) private var modelContext
     let source: Source
     @State private var showingAddSheet = false
+    @State private var editingAttachment: Attachment?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -447,10 +448,14 @@ struct AttachmentsSection: View {
                                 Text(attachment.title)
                                     .font(.callout)
                                     .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                             } else {
                                 Link(attachment.title, destination: URL(string: attachment.url) ?? URL(string: "about:blank")!)
                                     .font(.callout)
                                     .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                             }
 
                             HStack(spacing: 6) {
@@ -463,6 +468,8 @@ struct AttachmentsSection: View {
                                     Text(note)
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                 }
                             }
 
@@ -475,7 +482,15 @@ struct AttachmentsSection: View {
                             }
                         }
 
-                        Spacer()
+                        Spacer(minLength: 8)
+
+                        Button(action: { editingAttachment = attachment }) {
+                            Image(systemName: "pencil")
+                                .font(.system(size: 10))
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit reference")
 
                         Button(action: { modelContext.delete(attachment) }) {
                             Image(systemName: "xmark")
@@ -483,34 +498,41 @@ struct AttachmentsSection: View {
                                 .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
+                        .help("Delete reference")
                     }
                     .padding(.vertical, 4)
                 }
             }
         }
         .sheet(isPresented: $showingAddSheet) {
-            AttachmentFormView(source: source)
+            AttachmentFormView(attachment: nil, source: source)
+        }
+        .sheet(item: $editingAttachment) { attachment in
+            AttachmentFormView(attachment: attachment, source: nil)
         }
     }
 
     private func attachmentIcon(_ type: Attachment.AttachmentType) -> String { type.icon }
 }
 
-/// Form for adding an attachment to a source.
+/// Form for adding or editing an attachment on a source.
 struct AttachmentFormView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) var dismiss
 
-    let source: Source
+    let attachment: Attachment?
+    let source: Source?
 
     @State private var title = ""
     @State private var url = ""
     @State private var attachmentType: Attachment.AttachmentType = .onlineText
     @State private var note = ""
 
+    private var isEditing: Bool { attachment != nil }
+
     var body: some View {
         VStack(spacing: 0) {
-            Text("Add Reference")
+            Text(isEditing ? "Edit Reference" : "Add Reference")
                 .font(.title3.bold())
                 .padding()
 
@@ -532,22 +554,40 @@ struct AttachmentFormView: View {
                 Button("Cancel") { dismiss() }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Add") { save() }
+                Button(isEditing ? "Save" : "Add") { save() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(title.isEmpty)
             }
             .padding()
         }
         .frame(width: 480, height: 320)
+        .onAppear(perform: loadIfEditing)
+    }
+
+    private func loadIfEditing() {
+        guard let attachment else { return }
+        title = attachment.title
+        url = attachment.url
+        attachmentType = attachment.attachmentType
+        note = attachment.note ?? ""
     }
 
     private func save() {
-        RelationshipManager(context: modelContext).addAttachment(
-            to: source, title: title, url: url,
-            attachmentType: attachmentType,
-            note: note.isEmpty ? nil : note,
-            dedupe: false
-        )
+        if let attachment {
+            attachment.title = title
+            attachment.url = url
+            attachment.attachmentType = attachmentType
+            attachment.note = note.isEmpty ? nil : note
+            try? modelContext.save()
+        } else if let source {
+            RelationshipManager(context: modelContext).addAttachment(
+                to: source, title: title, url: url,
+                attachmentType: attachmentType,
+                note: note.isEmpty ? nil : note,
+                dedupe: false
+            )
+            try? modelContext.save()
+        }
         dismiss()
     }
 }// MARK: - Source Form

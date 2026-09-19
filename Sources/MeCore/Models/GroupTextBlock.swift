@@ -8,6 +8,9 @@ package final class GroupTextBlock: Identifiable {
     /// The group this prose block belongs to.
     package var group: FigureGroup?
 
+    /// The timeline entry this prose block belongs to (reused for timeline narrative).
+    package var timelineEntry: TimelineEntry?
+
     /// Source attributions for this prose block. Set links via this side
     /// (the annotated inverse) per the codebase convention. May be empty —
     /// attribution is optional for the user's own prose.
@@ -73,6 +76,7 @@ package final class GroupTextBlock: Identifiable {
 
     package init(
         group: FigureGroup? = nil,
+        timelineEntry: TimelineEntry? = nil,
         title: String = "",
         text: String = "",
         richText: Data? = nil,
@@ -85,6 +89,7 @@ package final class GroupTextBlock: Identifiable {
         contentAttributions: [ContentAttribution]? = nil
     ) {
         self.group = group
+        self.timelineEntry = timelineEntry
         self.title = title
         self.text = text
         self.richText = richText

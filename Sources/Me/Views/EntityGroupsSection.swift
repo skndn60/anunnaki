@@ -59,37 +59,43 @@ struct EntityGroupsSection: View {
                     .padding(.vertical, 4)
             } else {
                 ForEach(sorted) { assoc in
-                    HStack(spacing: 8) {
-                        if let group = assoc.group {
-                            Image(systemName: group.icon)
-                                .font(.caption)
-                                .foregroundStyle(Color(hex: group.colorHex))
-                                .frame(width: 16)
-                            Text(group.fullDisplayName)
-                                .font(.callout)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            if let group = assoc.group {
+                                Image(systemName: group.icon)
+                                    .font(.caption)
+                                    .foregroundStyle(Color(hex: group.colorHex))
+                                    .frame(width: 16)
+                                Text(group.fullDisplayName)
+                                    .font(.callout)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                            Spacer(minLength: 8)
+                            Button {
+                                if let onRemoveWithDepropagation {
+                                    onRemoveWithDepropagation(assoc)
+                                } else if let onRemove {
+                                    onRemove(assoc)
+                                } else {
+                                    modelContext.delete(assoc)
+                                    try? modelContext.save()
+                                }
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 8, weight: .semibold))
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove from group")
                         }
                         if !assoc.note.isEmpty {
                             Text(assoc.note)
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
+                                .lineLimit(2)
+                                .padding(.leading, 24)
                         }
-                        Spacer()
-                        Button {
-                            if let onRemoveWithDepropagation {
-                                onRemoveWithDepropagation(assoc)
-                            } else if let onRemove {
-                                onRemove(assoc)
-                            } else {
-                                modelContext.delete(assoc)
-                                try? modelContext.save()
-                            }
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 8, weight: .semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Remove from group")
                     }
                     .padding(.vertical, 2)
                 }

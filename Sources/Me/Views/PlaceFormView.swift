@@ -23,9 +23,12 @@ struct PlaceFormView: View {
     @State private var coordinatesUnknown = false
     @State private var selectedTags: [Tag] = []
     @State private var foundedDate: MythologicalDate = .unknown
+    @State private var isMajor = false
+    @State private var zoomLevelInput = 8
 
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
+    @State private var createdPlaceID: PersistentIdentifier?
 
     private let stepLabels = ["Identity", "Location", "Foundation", "Description & Tags"]
 
@@ -46,7 +49,7 @@ struct PlaceFormView: View {
 
     private var duplicateNameWarning: String? {
         let others = allPlaces
-            .filter { $0.persistentModelID != place?.persistentModelID }
+            .filter { $0.persistentModelID != place?.persistentModelID && $0.persistentModelID != createdPlaceID }
             .map(\.name)
         return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
@@ -109,6 +112,23 @@ struct PlaceFormView: View {
                     }
                 }
                 SourcePickerView(selection: $selectedSource, sources: sources)
+                Toggle("Major landmark", isOn: $isMajor)
+                    .help("Marks this place as culturally significant so it appears even when minor places are hidden on the Mesopotamia map")
+                if isMajor {
+                    Text("Visible on the map overview (zoom level 0).")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Stepper(zoomLevelInput <= 0
+                            ? "Always visible"
+                            : "Reveal on map at zoom level \(zoomLevelInput)",
+                            value: $zoomLevelInput, in: 0...14)
+                        .help("The Mesopotamia map shows this pin only once you zoom in to at least this level. Level 0 = overview, 8 = just past the whole-region fit.")
+                }
+                Text("Zoom in for more landmarks: major sites are always visible; other places appear from their set zoom level upward.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .formStyle(.grouped)
@@ -176,6 +196,8 @@ struct PlaceFormView: View {
         coordinatesUnknown = place.coordinatesUnknown ?? false
         selectedTags = place.tags
         foundedDate = place.foundedDate ?? .unknown
+        isMajor = place.isMajor == true
+        zoomLevelInput = place.zoomLevel ?? 8
     }
 
     private func save() {
@@ -193,6 +215,8 @@ struct PlaceFormView: View {
             place.isConcept = false
             place.tags = selectedTags
             place.foundedDate = foundedDate
+            place.isMajor = isMajor
+            place.zoomLevel = isMajor ? 0 : zoomLevelInput
             RecentEditStore.trackEdit(entityType: "Place", entityName: place.name)
             ActivityLogger.record(action: .updated, entityType: "Place", entityName: place.name, context: modelContext, session: userSession)
         } else {
@@ -208,7 +232,10 @@ struct PlaceFormView: View {
             newPlace.tags = selectedTags
             newPlace.foundedDate = foundedDate
             newPlace.coordinatesUnknown = coordinatesUnknown
+            newPlace.isMajor = isMajor
+            newPlace.zoomLevel = isMajor ? 0 : zoomLevelInput
             modelContext.insert(newPlace)
+            createdPlaceID = newPlace.persistentModelID
             RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
             ActivityLogger.record(action: .created, entityType: "Place", entityName: newPlace.name, context: modelContext, session: userSession)
         }

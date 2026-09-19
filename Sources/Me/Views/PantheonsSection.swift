@@ -50,29 +50,37 @@ struct PantheonsSection: View {
                     .padding(.vertical, 4)
             } else {
                 ForEach(figure.pantheons.sorted { $0.name < $1.name }) { pantheon in
-                    HStack(spacing: 8) {
-                        Image(systemName: pantheon.icon)
-                            .font(.caption)
-                            .foregroundStyle(pantheon.color)
-                            .frame(width: 16)
-                        Text(pantheon.name)
-                            .font(.callout)
-                        Text("as")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                        TextField("\(figure.name)", text: pantheonAliasBinding(for: pantheon))
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 160)
-                        Button(action: {
-                            pantheonToRemove = pantheon
-                            showRemoveConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Image(systemName: pantheon.icon)
+                                .font(.caption)
+                                .foregroundStyle(pantheon.color)
+                                .frame(width: 16)
+                            Text(pantheon.name)
+                                .font(.callout)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer(minLength: 8)
+                            Button(action: {
+                                pantheonToRemove = pantheon
+                                showRemoveConfirm = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove from pantheon")
                         }
-                        .buttonStyle(.plain)
-                        .help("Remove from pantheon")
+                        HStack(spacing: 4) {
+                            Text("as")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                            TextField("\(figure.name)", text: pantheonAliasBinding(for: pantheon))
+                                .textFieldStyle(.roundedBorder)
+                                .frame(maxWidth: 160)
+                        }
+                        .padding(.leading, 24)
                     }
                     .padding(.vertical, 2)
                 }

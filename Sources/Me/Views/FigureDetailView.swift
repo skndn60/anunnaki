@@ -329,7 +329,7 @@ struct FigureDetailView: View {
             )
         }
         .sheet(isPresented: $showAddCitation) {
-            AddCitationSheet(figure: self.figure)
+            CitationFormSheet(entityType: .figure, linkedEntityName: figure.name)
         }
         .sheet(isPresented: $showAddAttribution) {
             ContentAttributionFormView(attribution: nil)
@@ -404,6 +404,22 @@ struct FigureDetailView: View {
                 PropertyRow(label: "Source", value: figure.source)
                 if let reignLabel = figure.kingship?.reignSpanLabel {
                     PropertyRow(label: "Reign", value: reignLabel)
+                }
+            }
+
+            // Variant Reigns
+            if !figure.sortedReignVersions.isEmpty {
+                DetailSection(title: "Variant Reigns") {
+                    ForEach(figure.sortedReignVersions, id: \.persistentModelID) { version in
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(version.displayLabel)
+                            if !version.note.isEmpty {
+                                Text(version.note)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                 }
             }
 
@@ -916,66 +932,6 @@ private struct ParentCoupleSheet: View {
             colorHex: "808080",
             category: name == "Father" || name == "Mother" ? "parent" : "other"
         )
-    }
-}
-
-private struct AddCitationSheet: View {
-    let figure: Figure
-    @Environment(\.modelContext) private var modelContext
-    @Environment(\.dismiss) private var dismiss
-    @Query private var sources: [Source]
-
-    @State private var selectedSource: Source?
-    @State private var location = ""
-    @State private var note = ""
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Text("Add Citation")
-                .font(.title3.bold())
-                .padding()
-
-            Form {
-                Section("Source") {
-                    Picker("Source", selection: $selectedSource) {
-                        Text("Select a source").tag(nil as Source?)
-                        ForEach(sources, id: \.persistentModelID) { source in
-                            Text(source.pickerLabel).tag(source as Source?)
-                        }
-                    }
-                }
-
-                TextField("Location", text: $location, prompt: Text("Tablet I, line 15"))
-
-                TextField("Note", text: $note, prompt: Text("Optional note"))
-            }
-            .formStyle(.grouped)
-            .padding(.horizontal)
-
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .keyboardShortcut(.cancelAction)
-                Spacer()
-                Button("Add") {
-                    if let source = selectedSource {
-                        RelationshipManager(context: modelContext).addCitation(
-                            to: source,
-                            location: location,
-                            note: note,
-                            entityType: .figure,
-                            linkedEntityName: figure.name,
-                            dedupe: false
-                        )
-                        try? modelContext.save()
-                    }
-                    dismiss()
-                }
-                .keyboardShortcut(.defaultAction)
-                .disabled(selectedSource == nil)
-            }
-            .padding()
-        }
-        .frame(width: 400, height: 280)
     }
 }
 

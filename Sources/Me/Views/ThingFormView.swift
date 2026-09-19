@@ -20,6 +20,7 @@ struct ThingFormView: View {
 
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
+    @State private var createdThingID: PersistentIdentifier?
 
     private let stepLabels = ["Identity", "Description & Tags", "Source"]
 
@@ -40,7 +41,7 @@ struct ThingFormView: View {
 
     private var duplicateNameWarning: String? {
         let others = allThings
-            .filter { $0.persistentModelID != thing?.persistentModelID }
+            .filter { $0.persistentModelID != thing?.persistentModelID && $0.persistentModelID != createdThingID }
             .map(\.name)
         return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
@@ -160,6 +161,7 @@ struct ThingFormView: View {
             newThing.thingType = selectedThingType
             newThing.tags = selectedTags
             modelContext.insert(newThing)
+            createdThingID = newThing.persistentModelID
             RecentEditStore.trackEdit(entityType: "Thing", entityName: newThing.name)
             ActivityLogger.record(action: .created, entityType: "Thing", entityName: newThing.name, context: modelContext, session: userSession)
         }

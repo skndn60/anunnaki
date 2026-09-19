@@ -12,6 +12,7 @@ struct PlaceDetailView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var altToDelete: AlternateName?
     @State private var showDeleteAltConfirm = false
+    @State private var editingAltName: AlternateName?
     @State private var assocToDelete: PlacePlaceAssociation?
     @State private var showDeleteAssocConfirm = false
     @State private var showAddAltSheet = false
@@ -38,6 +39,7 @@ struct PlaceDetailView: View {
     @State private var showRemoveGroupConfirm = false
     @State private var attributionToDelete: ContentAttribution?
     @State private var showDeleteAttributionConfirm = false
+    @State private var showBoundaryEditor = false
 
     private var relatedEvents: [Event] {
         place.eventAssociations.compactMap { $0.event }
@@ -124,11 +126,17 @@ struct PlaceDetailView: View {
         .sheet(isPresented: $showAddAltSheet) {
             AlternateNameFormView(alternateName: nil, preSelectedPlace: place)
         }
+        .sheet(item: $editingAltName) { altName in
+            AlternateNameFormView(alternateName: altName)
+        }
         .sheet(isPresented: $showAddAttribution) {
             ContentAttributionFormView(attribution: nil)
         }
         .sheet(item: $editingAttribution) { attribution in
             ContentAttributionFormView(attribution: attribution)
+        }
+        .sheet(isPresented: $showBoundaryEditor) {
+            PlaceBoundaryEditorView(place: place)
         }
     }
 
@@ -256,6 +264,51 @@ struct PlaceDetailView: View {
             }
         }
 
+        // Territory section: shown for every map-able place so users can draw a
+        // boundary even before one exists.
+        if place.latitude != nil, place.longitude != nil {
+            Divider()
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Territory")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Button {
+                        showBoundaryEditor = true
+                    } label: {
+                        Label("Edit boundary…", systemImage: "pencil.line")
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                if let boundary = place.boundaryGeoJSON {
+                    HStack(spacing: 12) {
+                        PlaceSilhouetteView(
+                            boundaryGeoJSON: boundary,
+                            color: place.placeType?.color ?? .teal
+                        )
+                        .frame(width: 120, height: 84)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Image(systemName: "map.fill")
+                                .font(.caption)
+                                .foregroundStyle(place.placeType?.color ?? .teal)
+                            Text(place.storedBoundaryGeoJSON == nil
+                                ? "Territory boundary inherited from \(place.boundarySourceEraName ?? "a linked dynasty")"
+                                : "Hand-authored territory boundary")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                } else {
+                    Text("No territory boundary yet. Use “Edit boundary…” to sketch this place’s territory on the historical map.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+
         // Historical map
         Divider()
         VStack(alignment: .leading, spacing: 8) {
@@ -311,39 +364,14 @@ struct PlaceDetailView: View {
                     .foregroundStyle(.tertiary)
             } else {
                 ForEach(place.alternateNames) { altName in
-                    HStack(spacing: 8) {
-                        Text(altName.name)
-                            .font(.callout)
-                            .fontWeight(.medium)
-                        Text(altName.tradition.rawValue)
-                            .font(.caption2)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(Color.secondary.opacity(0.1))
-                            )
-                        Text(altName.nameType.rawValue)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                        Spacer()
-                        Button(action: {
+                    AlternateNameCardRow(
+                        altName: altName,
+                        onEdit: { editingAltName = altName },
+                        onDelete: {
                             altToDelete = altName
                             showDeleteAltConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
                         }
-                        .buttonStyle(.plain)
-                        .help("Delete alternate name")
-                    }
-                    if !altName.note.isEmpty {
-                        Text(altName.note)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .padding(.leading, 4)
-                    }
+                    )
                 }
             }
         }
@@ -354,50 +382,70 @@ struct PlaceDetailView: View {
         if !placeAssociations.isEmpty {
             DetailSection(title: "Related Places") {
                 ForEach(placeAssociations) { assoc in
-                    HStack(spacing: 8) {
-                        if assoc.fromPlace == place {
-                            Text(assoc.toPlace?.name ?? "?")
-                                .font(.callout)
-                                .fontWeight(.medium)
-                            Text(assoc.roleType?.displayName(isReverse: false) ?? "—")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text("←")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                            Text(place.name)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        } else {
-                            Text(place.name)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                            Text("→")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
-                            Text(assoc.roleType?.displayName(isReverse: true) ?? "—")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Text(assoc.fromPlace?.name ?? "?")
-                                .font(.callout)
-                                .fontWeight(.medium)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            if assoc.fromPlace == place {
+                                Text(assoc.toPlace?.name ?? "?")
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                                Text("←")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                Text(place.name)
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text(place.name)
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                Text("→")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                                Text(assoc.fromPlace?.name ?? "?")
+                                    .font(.callout)
+                                    .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
+                            Spacer(minLength: 8)
+                            Button(action: {
+                                assocToDelete = assoc
+                                showDeleteAssocConfirm = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Delete association")
                         }
-                        Spacer()
-                        Text(assoc.source)
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                        Button(action: {
-                            assocToDelete = assoc
-                            showDeleteAssocConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
+                        HStack(spacing: 6) {
+                            if assoc.fromPlace == place {
+                                Text(assoc.roleType?.displayName(isReverse: false) ?? "—")
+                                    .font(.caption2)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.secondary.opacity(0.08)))
+                            } else {
+                                Text(assoc.roleType?.displayName(isReverse: true) ?? "—")
+                                    .font(.caption2)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(RoundedRectangle(cornerRadius: 3).fill(Color.secondary.opacity(0.08)))
+                            }
+                            if !assoc.source.isEmpty {
+                                Text(assoc.source)
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .help("Delete association")
+                        .padding(.leading, 4)
                     }
+                    .padding(.vertical, 2)
                 }
             }
         }

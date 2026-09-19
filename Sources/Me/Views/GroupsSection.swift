@@ -42,29 +42,35 @@ struct GroupsSection: View {
                     .padding(.vertical, 4)
             } else {
                 ForEach(groups) { assoc in
-                    HStack(spacing: 8) {
-                        Image(systemName: assoc.group?.icon ?? "folder")
-                            .font(.caption)
-                            .foregroundStyle(assoc.group.map { Color(hex: $0.colorHex) } ?? .gray)
-                            .frame(width: 16)
-                        Text(assoc.group?.fullDisplayName ?? "?")
-                            .font(.callout)
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 8) {
+                            Image(systemName: assoc.group?.icon ?? "folder")
+                                .font(.caption)
+                                .foregroundStyle(assoc.group.map { Color(hex: $0.colorHex) } ?? .gray)
+                                .frame(width: 16)
+                            Text(assoc.group?.fullDisplayName ?? "?")
+                                .font(.callout)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer(minLength: 8)
+                            Button(action: {
+                                assocToDelete = assoc
+                                showDeleteConfirm = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove from group")
+                        }
                         if !assoc.note.isEmpty {
                             Text(assoc.note)
                                 .font(.caption)
                                 .foregroundStyle(.tertiary)
+                                .lineLimit(2)
+                                .padding(.leading, 24)
                         }
-                        Spacer()
-                        Button(action: {
-                            assocToDelete = assoc
-                            showDeleteConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Remove from group")
                     }
                     .padding(.vertical, 2)
                 }

@@ -31,6 +31,14 @@ final class MapZoomController {
         evaluate("map.zoomOut()")
     }
 
+    func finishRiverStroke() {
+        evaluate("finishRiver()")
+    }
+
+    func fitView() {
+        evaluate("fitView()")
+    }
+
     private func evaluate(_ javaScript: String) {
         webView?.evaluateJavaScript(javaScript, completionHandler: nil)
     }
@@ -189,6 +197,8 @@ struct MapWebView: NSViewRepresentable {
     private static func mapHTML(for place: Place) -> String? {
         guard let lat = place.latitude, let lon = place.longitude else { return nil }
         let name = (try? JSONEncoder().encode(place.name)).flatMap { String(data: $0, encoding: .utf8) } ?? "\"\""
+        let boundaryJSON = (try? JSONEncoder().encode(place.boundaryGeoJSON ?? "")).flatMap { String(data: $0, encoding: .utf8) } ?? "\"\""
+        let boundaryColor = "#\(place.placeType?.color.hex ?? "2A6F97")"
         return """
         <!DOCTYPE html>
         <html>
@@ -212,6 +222,28 @@ struct MapWebView: NSViewRepresentable {
                 attributionControl: false
             });
             map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+            map.on('load', function () {
+                var boundaryStr = \(boundaryJSON);
+                if (boundaryStr) {
+                    var geo = null;
+                    try { geo = JSON.parse(boundaryStr); } catch (e) {}
+                    if (geo && geo.type === 'Polygon' && geo.coordinates && geo.coordinates.length) {
+                        map.addSource('place-boundary', { type: 'geojson', data: geo });
+                        map.addLayer({
+                            id: 'place-boundary-fill',
+                            type: 'fill',
+                            source: 'place-boundary',
+                            paint: { 'fill-color': '\(boundaryColor)', 'fill-opacity': 0.22 }
+                        });
+                        map.addLayer({
+                            id: 'place-boundary-line',
+                            type: 'line',
+                            source: 'place-boundary',
+                            paint: { 'line-color': '\(boundaryColor)', 'line-width': 3, 'line-opacity': 0.95 }
+                        });
+                    }
+                }
+            });
             new maplibregl.Marker()
                 .setLngLat([\(lon), \(lat)])
                 .setPopup(new maplibregl.Popup({ offset: 25 }).setText(\(name)))

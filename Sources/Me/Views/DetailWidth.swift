@@ -11,6 +11,7 @@ enum DetailWidthSlot: String, CaseIterable {
     case skl
     case source
     case thing
+    case timeline
 
     var key: String {
         switch self {
@@ -24,6 +25,7 @@ enum DetailWidthSlot: String, CaseIterable {
         case .skl: "sklDetailWidth"
         case .source: "sourceDetailWidth"
         case .thing: "thingDetailWidth"
+        case .timeline: "timelineDetailWidth"
         }
     }
 
@@ -32,6 +34,7 @@ enum DetailWidthSlot: String, CaseIterable {
         case .dictionary: 380
         case .figure: 390
         case .missionControl: 480
+        case .timeline: 380
         default: 320
         }
     }

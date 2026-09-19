@@ -26,7 +26,12 @@ struct StickyNoteCard: View {
 
             if note.isResolved {
                 Button {
-                    withAnimation { note.modelContext?.delete(note) }
+                    withAnimation {
+                        if let context = note.modelContext {
+                            Migration.recordStickyDismissal(for: note, context: context)
+                            context.delete(note)
+                        }
+                    }
                 } label: {
                     Image(systemName: "trash")
                         .font(.caption)
@@ -213,6 +218,7 @@ struct StickyNoteListView: View {
 
                         if note.isResolved {
                             Button {
+                                Migration.recordStickyDismissal(for: note, context: modelContext)
                                 modelContext.delete(note)
                             } label: {
                                 Image(systemName: "trash")

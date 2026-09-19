@@ -732,6 +732,67 @@ extension MeCoreTests {
         XCTAssertEqual(ninhursag.stickies.count, 1)
     }
 
+    func testMarkPreExistingSyncretismsDeletedStickyStaysDeleted() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let damkina = Figure(name: "Damkina")
+        context.insert(damkina)
+        try? context.save()
+
+        Migration.markPreExistingSyncretisms(context: context)
+        XCTAssertEqual(damkina.stickies.count, 1)
+
+        if let note = damkina.stickies.first {
+            Migration.recordStickyDismissal(for: note, context: context)
+            context.delete(note)
+        }
+        try? context.save()
+
+        Migration.markPreExistingSyncretisms(context: context)
+
+        XCTAssertEqual(damkina.stickies.count, 0)
+        let dismissals = (try? context.fetch(FetchDescriptor<StickyDismissal>())) ?? []
+        XCTAssertEqual(dismissals.count, 1)
+        XCTAssertEqual(dismissals.first?.entityKey, "damkina")
+    }
+
+    func testMarkPreExistingSyncretismsOtherFiguresStillFlagged() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let damkina = Figure(name: "Damkina")
+        let ninhursag = Figure(name: "Ninhursag")
+        context.insert(damkina)
+        context.insert(ninhursag)
+        try? context.save()
+
+        Migration.markPreExistingSyncretisms(context: context)
+        if let note = damkina.stickies.first {
+            Migration.recordStickyDismissal(for: note, context: context)
+            context.delete(note)
+        }
+        try? context.save()
+
+        Migration.markPreExistingSyncretisms(context: context)
+
+        XCTAssertEqual(damkina.stickies.count, 0)
+        XCTAssertEqual(ninhursag.stickies.count, 1)
+    }
+
+    func testRecordStickyDismissalIgnoresUserTypedStickies() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let damkina = Figure(name: "Damkina")
+        context.insert(damkina)
+        let note = StickyNote(text: "Check this cult center", figure: damkina)
+        context.insert(note)
+        try? context.save()
+
+        Migration.recordStickyDismissal(for: note, context: context)
+
+        let dismissals = (try? context.fetch(FetchDescriptor<StickyDismissal>())) ?? []
+        XCTAssertTrue(dismissals.isEmpty)
+    }
+
     // MARK: - Migration.alignNergalErraSyncretism
 
     func testAlignNergalErraSyncretismReTypesIrra() {
@@ -766,6 +827,32 @@ extension MeCoreTests {
         Migration.alignNergalErraSyncretism(context: context)
 
         XCTAssertEqual(nergal.stickies.count, 1)
+        XCTAssertEqual(erra.stickies.count, 1)
+    }
+
+    func testAlignNergalErraDismissedStickyStaysDeleted() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let nergal = Figure(name: "Nergal")
+        let erra = Figure(name: "Erra")
+        context.insert(nergal)
+        context.insert(erra)
+        context.insert(AlternateName(figure: nergal, name: "Irra", tradition: .akkadian, nameType: .syncretism))
+        try? context.save()
+
+        Migration.alignNergalErraSyncretism(context: context)
+        XCTAssertEqual(nergal.stickies.count, 1)
+        XCTAssertEqual(erra.stickies.count, 1)
+
+        if let note = nergal.stickies.first {
+            Migration.recordStickyDismissal(for: note, context: context)
+            context.delete(note)
+        }
+        try? context.save()
+
+        Migration.alignNergalErraSyncretism(context: context)
+
+        XCTAssertEqual(nergal.stickies.count, 0)
         XCTAssertEqual(erra.stickies.count, 1)
     }
 
@@ -864,6 +951,483 @@ extension MeCoreTests {
         let spouses = edges.filter { $0.relationshipType?.name == "Spouse" }
         XCTAssertEqual(spouses.count, 1)
         XCTAssertTrue(spouses.contains { $0.fromFigure === father && $0.toFigure === mother })
+    }
+
+    // MARK: - Migration.ensureMeshKiAngGasherEra
+
+    func testEnsureMeshKiAngGasherEraAssignsCanonicalUrukEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Mesh-ki-ang-gasher")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureMeshKiAngGasherEra(context: context)
+
+        XCTAssertEqual(figure.birthDate.era, "First rulers of Uruk")
+    }
+
+    func testEnsureMeshKiAngGasherEraPreservesExistingEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Mesh-ki-ang-gasher")
+        figure.birthDate = MythologicalDate(year: nil, era: "User Set", isApproximate: true)
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureMeshKiAngGasherEra(context: context)
+
+        XCTAssertEqual(figure.birthDate.era, "User Set", "existing era must not be overwritten")
+    }
+
+    func testEnsureMeshKiAngGasherEraIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Mesh-ki-ang-gasher")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.ensureMeshKiAngGasherEra(context: context)
+        Migration.ensureMeshKiAngGasherEra(context: context)
+
+        XCTAssertEqual(figure.birthDate.era, "First rulers of Uruk")
+    }
+
+    // MARK: - Migration.ensureTimelineMacroEras
+
+    private static let timelineMacroEraConfigs: [(name: String, order: Int)] = [
+        ("Uruk Period", 34),
+        ("Jemdet Nasr Period", 35),
+        ("Mitanni", 36),
+        ("Karduniaš (Kassite Babylonia)", 37),
+        ("Middle Assyrian Period", 38),
+        ("Late Bronze Age Collapse", 39),
+        ("Neo-Babylonian Empire", 40),
+        ("Achaemenid Empire", 41),
+        ("Macedonian Empire", 42),
+        ("Seleucid Empire", 43),
+        ("Parthian Empire", 44),
+        ("Roman and Byzantine Mesopotamia", 45),
+        ("Sassanid Empire", 46),
+    ]
+
+    func testEnsureTimelineMacroErasCreatesAllThirteen() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        Migration.ensureTimelineMacroEras(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(eras.count, 13)
+        let expected = Dictionary(uniqueKeysWithValues: Self.timelineMacroEraConfigs.map { ($0.name, $0.order) })
+        for era in eras {
+            XCTAssertEqual(era.orderIndex, expected[era.name], "\(era.name) must land on its canonical lane")
+            XCTAssertNotNil(era.startDate.startYear, "\(era.name) needs a start year")
+            XCTAssertNotNil(era.endDate.endYear, "\(era.name) needs an end year")
+            XCTAssertFalse(era.eraDescription.isEmpty, "\(era.name) needs a description")
+        }
+    }
+
+    func testEnsureTimelineMacroErasIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        Migration.ensureTimelineMacroEras(context: context)
+        Migration.ensureTimelineMacroEras(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(eras.count, 13, "second run must not duplicate any macro era")
+    }
+
+    func testEnsureTimelineMacroErasLeavesExistingSameNameEraUntouched() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let custom = Era(name: "Seleucid Empire", orderIndex: 5, eraDescription: "user era")
+        context.insert(custom)
+        try? context.save()
+
+        Migration.ensureTimelineMacroEras(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(eras.count, 13, "existing era must not be replaced with a new duplicate")
+        let fetched = eras.first { $0.name == "Seleucid Empire" }
+        XCTAssertEqual(fetched?.orderIndex, 5, "user's existing era keeps its lane")
+        XCTAssertEqual(fetched?.eraDescription, "user era", "user's existing era keeps its data")
+    }
+
+    func testFixEraOrderIndicesPinsMacroEraLanes() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        Migration.ensureTimelineMacroEras(context: context)
+        Migration.fixEraOrderIndices(context: context)
+        Migration.fixEraOrderIndices(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let expected = Dictionary(uniqueKeysWithValues: Self.timelineMacroEraConfigs.map { ($0.name, $0.order) })
+        for era in eras {
+            XCTAssertEqual(era.orderIndex, expected[era.name], "\(era.name) must never drift from its lane")
+        }
+    }
+
+    // MARK: - Legendary dynasty windows (Kish I … Third Kish)
+
+    func testFitLegendaryWindowSingleShareSpansWholeWindow() {
+        let fitted = Migration.fitLegendaryWindow(shares: [900], earliestBCE: -2900, latestBCE: -2550)
+        XCTAssertEqual(fitted.count, 1)
+        XCTAssertEqual(fitted[0].start, -2900)
+        XCTAssertEqual(fitted[0].end, -2550)
+    }
+
+    func testFitLegendaryWindowProportionalSharesWithinWindow() {
+        let shares = [100, 100, 200]   // 25%, 25%, 50% of the 350-year span
+        let fitted = Migration.fitLegendaryWindow(shares: shares, earliestBCE: -2900, latestBCE: -2550)
+        XCTAssertEqual(fitted.count, 3)
+        XCTAssertEqual(fitted[0].start, -2900)
+        XCTAssertEqual(fitted[2].end, -2550)
+        XCTAssertTrue(fitted[0].end > fitted[0].start)
+        XCTAssertEqual(fitted[1].start, fitted[0].end, "slots must be contiguous")
+        XCTAssertEqual(fitted[2].start, fitted[1].end, "slots must be contiguous")
+        let firstSpan = fitted[0].end - fitted[0].start
+        let secondSpan = fitted[1].end - fitted[1].start
+        let thirdSpan = fitted[2].end - fitted[2].start
+        XCTAssertLessThanOrEqual(abs(firstSpan - secondSpan), 1, "equal shares get spans within 1 of each other")
+        XCTAssertLessThanOrEqual(abs(2 * firstSpan - thirdSpan), 2, "double share gets roughly double the span")
+    }
+
+    func testFitLegendaryWindowHandlesZeroSharesWithEqualSplit() {
+        let fitted = Migration.fitLegendaryWindow(shares: [0, 0, 0], earliestBCE: -2500, latestBCE: -2300)
+        XCTAssertEqual(fitted.count, 3)
+        XCTAssertEqual(fitted[0].start, -2500)
+        XCTAssertEqual(fitted[2].end, -2300)
+        XCTAssertEqual(fitted.map { $0.end - $0.start }.reduce(0, +), 200, "slots must exactly tile the window")
+        for slot in fitted {
+            XCTAssertLessThanOrEqual(slot.end - slot.start, 67, "equal split stays within 1 of 200/3")
+            XCTAssertGreaterThanOrEqual(slot.end - slot.start, 66)
+        }
+    }
+
+    func testEnsureLegendaryDynastyWindowsDatesKingsAndMarksComputed() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let kish = ["Jushur", "Kullassina-bel", "Etana", "Enmebaragesi", "Aga of Kish"]
+        for (index, name) in kish.enumerated() {
+            let king = Figure(name: name)
+            king.birthDate = MythologicalDate(year: nil, era: "First dynasty of Kish", isApproximate: true)
+            king.orderIndex = index
+            king.source = "Sumerian King List"
+            king.reignYears = [1200, 960, 1500, 900, 625][index]
+            context.insert(king)
+        }
+        try? context.save()
+
+        Migration.ensureLegendaryDynastyWindows(context: context)
+
+        let jushur = try! context.fetch(FetchDescriptor<Figure>()).first { $0.name == "Jushur" }!
+        let aga = try! context.fetch(FetchDescriptor<Figure>()).first { $0.name == "Aga of Kish" }!
+        XCTAssertEqual(jushur.birthDate.startYear, -2900)
+        XCTAssertEqual(aga.deathDate.startYear, -2550)
+        XCTAssertEqual(jushur.dateSource, Figure.DateSource.computed.rawValue)
+        XCTAssertTrue(jushur.birthDate.isApproximate)
+    }
+
+    func testEnsureLegendaryDynastyWindowsIsIdempotentAndNeverOverwrites() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let king = Figure(name: "Etana")
+        king.birthDate = MythologicalDate(year: -2900, era: "First dynasty of Kish", isApproximate: true)
+        king.source = "Sumerian King List"
+        king.reignYears = 1500
+        context.insert(king)
+        try? context.save()
+
+        Migration.ensureLegendaryDynastyWindows(context: context)
+
+        XCTAssertEqual(king.birthDate.startYear, -2900, "hand-entered dates are never clobbered")
+    }
+
+    func testEnsureLegendaryDynastyWindowsRefitsComputedDatesInRegnalOrder() {
+        let container = makeContainer()
+        let context = container.mainContext
+        // Live-store bug: seed order had Gilgamesh/Lugalbanda before Mesh-ki-ang-gasher,
+        // so fixSKLFigureOrder assigns the scrambled Uruk I orderIndex every launch.
+        let canonical = ["Mesh-ki-ang-gasher", "Enmerkar", "Lugalbanda", "Dumuzid the Fisherman",
+                         "Gilgamesh", "Ur-Nungal", "Udul-kalama", "La-ba'shum",
+                         "En-nun-tarah-ana", "Mesh-he", "Melem-ana", "Lugal-kitun"]
+        let reignYears: [Int?] = [nil, 420, 1200, 100, 126, 30, 15, 9, 8, 36, 6, 36]
+        let scrambledOrder: [Int] = [2, 3, 1, 4, 0, 5, 6, 7, 8, 9, 10, 11]
+        var kings: [Figure] = []
+        for (index, name) in canonical.enumerated() {
+            let king = Figure(name: name)
+            king.birthDate = MythologicalDate(year: nil, era: "First rulers of Uruk", isApproximate: true)
+            king.orderIndex = scrambledOrder[index]
+            king.source = "Sumerian King List"
+            king.reignYears = reignYears[index]
+            context.insert(king)
+            kings.append(king)
+        }
+        try? context.save()
+
+        // First fit reproduces the scrambled layout: Gilgamesh ranked first gets the
+        // earliest window, before his father Lugalbanda.
+        Migration.ensureLegendaryDynastyWindows(context: context)
+        let gilgameshFirst = kings.first { $0.name == "Gilgamesh" }!
+        let lugalbandaFirst = kings.first { $0.name == "Lugalbanda" }!
+        let enmerkarFirst = kings.first { $0.name == "Enmerkar" }!
+        XCTAssertLessThan(gilgameshFirst.birthDate.startYear!, lugalbandaFirst.birthDate.startYear!,
+                          "bug reproduced: scrambled orderIndex yields child-before-parent dates")
+
+        // The seed/order fix (canonical per-era index) lands after the first fit;
+        // a second run must REFIT because every dateSource is now .computed.
+        for (index, king) in kings.enumerated() {
+            king.orderIndex = index
+        }
+        Migration.ensureLegendaryDynastyWindows(context: context)
+
+        let enmerkar = kings.first { $0.name == "Enmerkar" }!
+        let lugalbanda = kings.first { $0.name == "Lugalbanda" }!
+        let gilgamesh = kings.first { $0.name == "Gilgamesh" }!
+        let lugalkitun = kings.first { $0.name == "Lugal-kitun" }!
+        XCTAssertEqual(enmerkar.birthDate.startYear, -2700, "first king clamps to the window start")
+        XCTAssertEqual(lugalbanda.birthDate.startYear, -2668, "first king's reign end contiguously carries forward")
+        XCTAssertGreaterThanOrEqual(lugalbanda.birthDate.startYear!, enmerkar.deathDate.startYear!)
+        XCTAssertGreaterThanOrEqual(gilgamesh.birthDate.startYear!, lugalbanda.deathDate.startYear!,
+                                    "refit resolved the child-before-parent inversion")
+        XCTAssertEqual(lugalkitun.deathDate.startYear, -2550, "last king clamps to the window end")
+        XCTAssertEqual(gilgamesh.reignStartYear, gilgamesh.birthDate.startYear, "reign columns ride the fit")
+        XCTAssertEqual(gilgamesh.reignEndYear, gilgamesh.deathDate.startYear)
+
+        // Idempotent: a third run with the same canonical order rewrites identical values.
+        Migration.ensureLegendaryDynastyWindows(context: context)
+        XCTAssertEqual(gilgamesh.birthDate.startYear, gilgamesh.reignStartYear)
+    }
+
+    func testEnsureLegendaryDynastyWindowsRefitRespectsHandEnteredDates() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let handDated = Figure(name: "Enmerkar")
+        handDated.birthDate = MythologicalDate(year: -2700, era: "First rulers of Uruk", isApproximate: true)
+        handDated.deathDate = MythologicalDate(year: -2600, era: "First rulers of Uruk", isApproximate: true)
+        handDated.source = "Sumerian King List"
+        handDated.dateSource = Figure.DateSource.historical.rawValue
+        context.insert(handDated)
+        try? context.save()
+
+        Migration.ensureLegendaryDynastyWindows(context: context)
+
+        XCTAssertEqual(handDated.birthDate.startYear, -2700, "historical dates are never refit")
+        XCTAssertEqual(handDated.deathDate.startYear, -2600)
+    }
+
+    func testResolveSeedCitationIdsReplacesUUIDsWithEntityNames() {
+        let container = makeContainer()
+        let context = container.mainContext
+        guard let root = SeedData.loadRoot(),
+              let firstFigure = root.figures.first else {
+            XCTFail("seed unavailable in test target")
+            return
+        }
+        let source = Source(name: "Enuma Elish", sourceType: .ancientText)
+        context.insert(source)
+        let uuidCit = Citation(source: source, location: "Tablet I", entityType: .figure, linkedEntityName: firstFigure.id)
+        let plainCit = Citation(source: source, location: "Tablet II", entityType: .event, linkedEntityName: "Not a UUID")
+        context.insert(uuidCit)
+        context.insert(plainCit)
+        try? context.save()
+
+        Migration.resolveSeedCitationIds(context: context)
+
+        XCTAssertEqual(uuidCit.linkedEntityName, firstFigure.name, "seed UUID resolved to the entity name")
+        XCTAssertEqual(plainCit.linkedEntityName, "Not a UUID", "non-UUID values untouched")
+
+        Migration.resolveSeedCitationIds(context: context)
+        XCTAssertEqual(uuidCit.linkedEntityName, firstFigure.name, "idempotent — rerun changes nothing")
+    }
+
+    func testCorrectAnomalousGenealogyRemovesDumuziShepherdUrukParentEdges() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fatherType = makeRelationType("Father", in: context)
+        let motherType = makeRelationType("Mother", in: context)
+        let lugalbanda = Figure(name: "Lugalbanda")
+        lugalbanda.birthDate = MythologicalDate(year: -2668, era: "First rulers of Uruk", isApproximate: true)
+        let ninsun = Figure(name: "Ninsun")
+        let shepherd = Figure(name: "Dumuzi the Shepherd")
+        shepherd.birthDate = MythologicalDate(year: -132400, era: "Antediluvian", isApproximate: true)
+        for figure in [lugalbanda, ninsun, shepherd] {
+            context.insert(figure)
+        }
+        context.insert(Relationship(fromFigure: lugalbanda, toFigure: shepherd, relationshipType: fatherType))
+        context.insert(Relationship(fromFigure: ninsun, toFigure: shepherd, relationshipType: motherType))
+        context.insert(IntegrityFinding(kindRaw: "childBornBeforeParent", severityRaw: "warning",
+                                        entityKind: "Figure", entityKey: "Lugalbanda", detail: "stale"))
+        context.insert(IntegrityFinding(kindRaw: "childBornBeforeParent", severityRaw: "warning",
+                                        entityKind: "Figure", entityKey: "Dumuzi the Shepherd", detail: "stale"))
+        try? context.save()
+
+        Migration.correctAnomalousGenealogy(context: context)
+
+        let shepherdEdges = ((try? context.fetch(FetchDescriptor<Relationship>())) ?? []).filter {
+            $0.toFigure?.name == "Dumuzi the Shepherd"
+        }
+        XCTAssertTrue(shepherdEdges.isEmpty, "antediluvian shepherd no longer parented to Uruk I kings")
+
+        let stale = ((try? context.fetch(FetchDescriptor<IntegrityFinding>())) ?? []).filter {
+            $0.kindRaw == "childBornBeforeParent"
+        }
+        XCTAssertTrue(stale.isEmpty, "stale persisted findings for fixed signatures cleared")
+    }
+
+    // MARK: - Migration: fixEgalmahCoordinates
+
+    func testFixEgalmahCoordinatesCorrectsSeededValue() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "E-galmah", modernLocation: "Isin", latitude: 31.9, longitude: 44.5))
+        let isin = Place(name: "Isin", modernLocation: "Tell Ishan al-Bahriyat, Iraq", latitude: 31.93351, longitude: 45.28521)
+        context.insert(isin)
+        try? context.save()
+
+        Migration.fixEgalmahCoordinates(context: context)
+
+        let egalmah = (try? context.fetch(FetchDescriptor<Place>()))?.first { $0.name == "E-galmah" }
+        XCTAssertEqual(egalmah?.latitude ?? 0, isin.latitude ?? 0, accuracy: 0.00001)
+        XCTAssertEqual(egalmah?.longitude ?? 0, isin.longitude ?? 0, accuracy: 0.00001)
+    }
+
+    func testFixEgalmahCoordinatesFallsBackWhenNoIsinPlace() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "E-galmah", modernLocation: "Isin", latitude: 31.9, longitude: 44.5))
+        try? context.save()
+
+        Migration.fixEgalmahCoordinates(context: context)
+
+        let egalmah = (try? context.fetch(FetchDescriptor<Place>()))?.first { $0.name == "E-galmah" }
+        XCTAssertEqual(egalmah?.latitude ?? 0, 31.93351, accuracy: 0.00001)
+        XCTAssertEqual(egalmah?.longitude ?? 0, 45.28521, accuracy: 0.00001)
+    }
+
+    func testFixEgalmahCoordinatesSkipsUserCorrected() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "E-galmah", modernLocation: "Isin", latitude: 31.933, longitude: 45.267))
+        try? context.save()
+
+        Migration.fixEgalmahCoordinates(context: context)
+
+        let egalmah = (try? context.fetch(FetchDescriptor<Place>()))?.first { $0.name == "E-galmah" }
+        XCTAssertEqual(egalmah?.latitude ?? 0, 31.933, accuracy: 0.00001, "already-corrected coordinates untouched")
+        XCTAssertEqual(egalmah?.longitude ?? 0, 45.267, accuracy: 0.00001)
+    }
+
+    func testFixEgalmahCoordinatesIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "E-galmah", modernLocation: "Isin", latitude: 31.9, longitude: 44.5))
+        let isin = Place(name: "Isin", modernLocation: "Tell Ishan al-Bahriyat, Iraq", latitude: 31.93351, longitude: 45.28521)
+        context.insert(isin)
+        try? context.save()
+
+        Migration.fixEgalmahCoordinates(context: context)
+        Migration.fixEgalmahCoordinates(context: context)
+
+        let egalmah = (try? context.fetch(FetchDescriptor<Place>()))?.first { $0.name == "E-galmah" }
+        XCTAssertEqual(egalmah?.latitude ?? 0, 31.93351, accuracy: 0.00001)
+        XCTAssertEqual(egalmah?.longitude ?? 0, 45.28521, accuracy: 0.00001)
+    }
+
+    func testFixEgalmahCoordinatesNoEgalmahNoCrash() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "Ur", modernLocation: "Tell al-Muqayyar, Iraq", latitude: 30.9626, longitude: 46.1034))
+        try? context.save()
+
+        Migration.fixEgalmahCoordinates(context: context)
+
+        let ur = (try? context.fetch(FetchDescriptor<Place>()))?.first { $0.name == "Ur" }
+        XCTAssertEqual(ur?.latitude ?? 0, 30.9626, accuracy: 0.00001)
+        XCTAssertEqual(ur?.longitude ?? 0, 46.1034, accuracy: 0.00001)
+    }
+
+    // MARK: - Migration: ensureReignVersionBackfill
+
+    private func makeReignBackfillKings(_ context: ModelContext) {
+        for name in ["Kullassina-bel", "Etana", "Bur-Suen", "Iter-pisha", "Ur-du-kuga"] {
+            let figure = Figure(name: name)
+            figure.reignYears = 1
+            context.insert(figure)
+        }
+        try? context.save()
+    }
+
+    func testEnsureReignVersionBackfillCreatesDocumentedVariants() {
+        let container = makeContainer()
+        let context = container.mainContext
+        makeReignBackfillKings(context)
+
+        Migration.ensureReignVersionBackfill(context: context)
+
+        let versions = (try? context.fetch(FetchDescriptor<ReignVersion>())) ?? []
+        XCTAssertEqual(versions.count, 5)
+        let expectedYears: Set<Int?> = [900, 635, 22, 3, 3]
+        XCTAssertEqual(Set(versions.map(\.years)), expectedYears)
+
+        let kullassina = (try? context.fetch(FetchDescriptor<Figure>()))?.first { $0.name == "Kullassina-bel" }
+        XCTAssertEqual(kullassina?.reignVersions.map(\.years), [900])
+        XCTAssertEqual(kullassina?.reignVersions.first?.tradition, "Some copies of the Sumerian King List")
+
+        let etana = (try? context.fetch(FetchDescriptor<Figure>()))?.first { $0.name == "Etana" }
+        XCTAssertEqual(etana?.reignVersions.map(\.years), [635])
+
+        let burSuen = (try? context.fetch(FetchDescriptor<Figure>()))?.first { $0.name == "Bur-Suen" }
+        XCTAssertEqual(burSuen?.reignVersions.map(\.years), [22])
+        XCTAssertEqual(burSuen?.reignVersions.first?.tradition, "Ur-Isin king list")
+
+        let urDuKuga = (try? context.fetch(FetchDescriptor<Figure>()))?.first { $0.name == "Ur-du-kuga" }
+        XCTAssertEqual(urDuKuga?.reignVersions.map(\.years), [3])
+    }
+
+    func testEnsureReignVersionBackfillIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        makeReignBackfillKings(context)
+
+        Migration.ensureReignVersionBackfill(context: context)
+        Migration.ensureReignVersionBackfill(context: context)
+
+        let versions = (try? context.fetch(FetchDescriptor<ReignVersion>())) ?? []
+        XCTAssertEqual(versions.count, 5)
+    }
+
+    func testEnsureReignVersionBackfillSkipsUnknownFigures() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let lugal = Figure(name: "Lugal-zage-si")
+        lugal.reignYears = 25
+        context.insert(lugal)
+        try? context.save()
+
+        Migration.ensureReignVersionBackfill(context: context)
+
+        let versions = (try? context.fetch(FetchDescriptor<ReignVersion>())) ?? []
+        XCTAssertTrue(versions.isEmpty)
+    }
+
+    func testEnsureReignVersionBackfillDoesNotDuplicateUserVariant() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Kullassina-bel")
+        context.insert(figure)
+        let userVariant = ReignVersion(years: 900, tradition: "Some copies of the Sumerian King List", note: "User-entered note")
+        figure.reignVersions.append(userVariant)
+        context.insert(userVariant)
+        try? context.save()
+
+        Migration.ensureReignVersionBackfill(context: context)
+
+        XCTAssertEqual(figure.reignVersions.count, 1, "matched user variant must not be duplicated")
+        XCTAssertEqual(figure.reignVersions.first?.note, "User-entered note")
     }
 
 }

@@ -19,9 +19,15 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case networkGraph = "Object Graph"
     case lineage = "Lineage Tree"
     case timeline = "Timeline"
+    case pantheonPower = "Pantheon Power"
+    case eventTrail = "Event Trail Map"
+    case causalChain = "Causal Chain"
+    case knowledgeGap = "Knowledge Gap Heatmap"
+    case mesopotamiaMap = "Mesopotamia Map"
     case figures = "Figures"
     case places = "Places"
     case events = "Events"
+    case timelines = "Timelines"
     case things = "Things"
     case figureGroups = "Groups"
     case dictionary = "Dictionary"
@@ -34,7 +40,8 @@ enum NavigationItem: String, CaseIterable, Hashable {
     case images = "Gallery"
     case sources = "Sources"
     case versions = "Versions"
-    case sklMap = "Dynasty Map"
+    case sklMap = "Map"
+    case dynastyEvolution = "Animation"
     case theMes = "The Me’s"
     case appSettings = "App Settings"
     case dataIntegrity = "Data Integrity"
@@ -51,9 +58,15 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .networkGraph: return "arrow.triangle.branch"
         case .lineage: return "tree"
         case .timeline: return "calendar.day.timeline.left"
+        case .pantheonPower: return "circle.hexagongrid.fill"
+        case .eventTrail: return "arrow.triangle.2.circlepath"
+        case .causalChain: return "arrow.triangle.merge"
+        case .knowledgeGap: return "square.grid.3x3.fill"
+        case .mesopotamiaMap: return "mappin.and.ellipse"
         case .figures: return "person.3"
         case .places: return "building.columns"
         case .events: return "bolt.fill"
+        case .timelines: return "calendar.badge.clock"
         case .relationships: return "link"
         case .associations: return "point.3.connected.trianglepath.dotted"
         case .typeSettings: return "gearshape.2"
@@ -64,6 +77,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .sources: return "books.vertical"
         case .versions: return "clock.arrow.circlepath"
         case .sklMap: return "map"
+        case .dynastyEvolution: return "film.stack"
         case .theMes: return "rectangle.3.group"
         case .things: return "cube.box"
         case .figureGroups: return "folder"
@@ -79,9 +93,9 @@ enum NavigationItem: String, CaseIterable, Hashable {
         switch self {
         case .dashboard: return .overview
         case .missionControl, .importWiki, .versions: return .tools
-        case .query, .tagCloud, .networkGraph, .lineage, .timeline: return .visualizations
-        case .figures, .places, .events, .relationships, .associations, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary, .popupTables: return .data
-        case .sklMap, .theMes: return .history
+        case .query, .tagCloud, .networkGraph, .lineage, .timeline, .pantheonPower, .eventTrail, .causalChain, .knowledgeGap, .mesopotamiaMap: return .visualizations
+        case .figures, .places, .events, .timelines, .relationships, .associations, .alternateNames, .eras, .stickies, .images, .sources, .things, .figureGroups, .dictionary, .popupTables: return .data
+        case .sklMap, .theMes, .dynastyEvolution: return .history
         case .typeSettings, .appSettings, .dataIntegrity, .activityLog: return .housekeeping
         }
     }
@@ -97,9 +111,15 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .networkGraph: NetworkGraphView()
         case .lineage: LineageTreeView()
         case .timeline: TimelineContainerView()
+        case .pantheonPower: PantheonPowerMapView()
+        case .eventTrail: EventTrailMapView()
+        case .causalChain: CausalChainDiagramView()
+        case .knowledgeGap: KnowledgeGapHeatmapView()
+        case .mesopotamiaMap: MesopotamiaMapView()
         case .figures: FigureListView()
         case .places: PlaceListView()
         case .events: EventListView()
+        case .timelines: TimelineListView()
         case .things: ThingListView()
         case .figureGroups: FigureGroupListView()
         case .dictionary: DictionaryListView()
@@ -113,6 +133,7 @@ enum NavigationItem: String, CaseIterable, Hashable {
         case .sources: SourceListView()
         case .versions: VersionListView()
         case .sklMap: SumerianDynastyMapView()
+        case .dynastyEvolution: DynastyEvolutionMapView()
         case .theMes: ComingSoonView(title: "The Me’s")
         case .appSettings: AppSettingsView()
         case .dataIntegrity: DataIntegrityView()
@@ -174,9 +195,15 @@ struct ContentView: View {
             .map { CustomSidebarSection(title: $0.key, groups: $0.value.sorted { $0.orderIndex < $1.orderIndex }) }
     }
 
+    /// The "Dynasties" group (kind `.skl`) rendered inside the sidebar's top-level
+    /// "Dynasties" disclosure as "List and rulers".
+    private var dynastyListGroup: FigureGroup? {
+        topLevelFigureGroups.first { $0.isPublished && $0.rendersInHistory && $0.name == "Dynasties" }
+    }
+
     @ViewBuilder
     private var sidebarHistoryGroupRows: some View {
-        ForEach(topLevelFigureGroups.filter { $0.isPublished && $0.rendersInHistory }) { group in
+        ForEach(topLevelFigureGroups.filter { $0.isPublished && $0.rendersInHistory && $0.name != "Dynasties" }) { group in
             SidebarGroupRow(
                 group: group,
                 type: .figure,
@@ -234,9 +261,11 @@ struct ContentView: View {
                 Migration.ensureMissingCitiesAndAssociations(context: modelContext)
                 Migration.ensureImportedDeityRelationships(context: modelContext)
                 Migration.ensureEventCitations(context: modelContext)
+                Migration.resolveSeedCitationIds(context: modelContext)
                 Migration.ensureSKLEventsAndFigures(context: modelContext)
                 Migration.ensureSKLGutianReignLengths(context: modelContext)
                 Migration.ensureReignYears(context: modelContext)
+                Migration.ensureReignVersionBackfill(context: modelContext)
                 Migration.ensureEpithets(context: modelContext)
                 Migration.ensureDivineCollectives(context: modelContext)
                 Migration.ensureCollectives(context: modelContext)
@@ -268,7 +297,9 @@ struct ContentView: View {
                 Migration.ensureSKLRegnalOrder(context: modelContext)
                 Migration.fixSKLFigureOrder(context: modelContext)
                 Migration.enrichSKLData(context: modelContext)
+                Migration.ensureMeshKiAngGasherEra(context: modelContext)
                 Migration.ensureComputedSKLDates(context: modelContext)
+                Migration.ensureLegendaryDynastyWindows(context: modelContext)
                 Migration.ensureAntediluvianChronology(context: modelContext)
                 Migration.correctAnomalousGenealogy(context: modelContext)
                 Migration.ensureEverydayLifeEpisodes(context: modelContext)
@@ -277,9 +308,17 @@ struct ContentView: View {
                 Migration.repairInvolvedFiguresFromAssociations(context: modelContext)
                 Migration.ensureConsistentParentRoles(context: modelContext)
                 Migration.ensureHistoricalPeriodEras(context: modelContext)
+                Migration.ensureTimelineMacroEras(context: modelContext)
                 Migration.ensureDynastyGroups(context: modelContext)
 
                 Migration.ensureDynastyBoundaries(context: modelContext)
+                Migration.ensurePlaceBoundaries(context: modelContext)
+                Migration.upgradeSeededMarshesBoundary(context: modelContext)
+                Migration.upgradeSeededCedarForestBoundary(context: modelContext)
+                Migration.ensureRiverPlaces(context: modelContext)
+                Migration.ensureRiverBoundaries(context: modelContext)
+                Migration.ensureMapFlags(context: modelContext)
+                Migration.fixEgalmahCoordinates(context: modelContext)
                 Migration.ensureActivityLogUserLinks(context: modelContext)
                 Migration.ensureFirstUserIsAdmin(context: modelContext)
                 Migration.removeOrphanedGroupAssociations(context: modelContext)
@@ -291,8 +330,11 @@ struct ContentView: View {
                 Migration.ensureAssociationSources(context: modelContext)
                 Migration.ensureRoleReverseNames(context: modelContext)
                 Migration.backfillBuziDescription(context: modelContext)
+                Migration.removeJunkPunctuationTags(context: modelContext)
                 Migration.ensureAutoTags(context: modelContext)
                 Migration.ensureRefinedDomainTags(context: modelContext)
+
+                Migration.ensureTimelineDefaults(context: modelContext)
 
                 try? modelContext.save()
             }
@@ -442,9 +484,24 @@ struct ContentView: View {
                 }
             }
             Section("History") {
-                ForEach(NavigationItem.allCases.filter { $0.section == .history }, id: \.self) { item in
+                ForEach(NavigationItem.allCases.filter { $0.section == .history && $0 != .sklMap && $0 != .dynastyEvolution }, id: \.self) { item in
                     Label(item.rawValue, systemImage: item.icon)
                         .tag(SidebarSelection.item(item))
+                }
+                DisclosureGroup("Dynasties") {
+                    if let dynastyListGroup {
+                        SidebarGroupRow(
+                            group: dynastyListGroup,
+                            type: .figure,
+                            path: "figure/Dynasties",
+                            displayName: "List and rulers",
+                            expandedPaths: expandedGroupPathsBinding
+                        )
+                    }
+                    ForEach([NavigationItem.sklMap, .dynastyEvolution], id: \.self) { item in
+                        Label(item.rawValue, systemImage: item.icon)
+                            .tag(SidebarSelection.item(item))
+                    }
                 }
                 sidebarHistoryGroupRows
             }
@@ -608,6 +665,7 @@ private struct SidebarGroupRow: View {
     let group: FigureGroup
     let type: GroupEntityType
     let path: String
+    var displayName: String? = nil
     @Binding var expandedPaths: Set<String>
 
     private var subgroups: [FigureGroup] {
@@ -617,7 +675,7 @@ private struct SidebarGroupRow: View {
 
     var body: some View {
         if subgroups.isEmpty {
-            Label(group.name, systemImage: group.icon)
+            Label(displayName ?? group.name, systemImage: group.icon)
                 .tag(SidebarSelection.group(group.persistentModelID))
         } else {
             DisclosureGroup(isExpanded: isExpanded) {
@@ -630,7 +688,7 @@ private struct SidebarGroupRow: View {
                     )
                 }
             } label: {
-                Label(group.name, systemImage: group.icon)
+                Label(displayName ?? group.name, systemImage: group.icon)
             }
             .tag(SidebarSelection.group(group.persistentModelID))
         }

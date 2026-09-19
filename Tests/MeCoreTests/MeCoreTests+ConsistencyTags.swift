@@ -1356,7 +1356,7 @@ extension MeCoreTests {
         let tags = TagEngine.tags(for: figure)
         XCTAssertTrue(tags.contains("goddess"))
         XCTAssertFalse(tags.contains("god"))
-        XCTAssertTrue(tags.contains("inanna's descent"))
+        XCTAssertTrue(tags.contains("inanna descent"))
         XCTAssertTrue(tags.contains("love"))
         XCTAssertTrue(tags.contains("venus"))
     }
@@ -1563,6 +1563,53 @@ extension MeCoreTests {
         let allTags: [Tag] = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
         XCTAssertEqual(allTags.filter { $0.name == "steward" }.count, 1, "one Tag row per refined name")
         XCTAssertEqual(allTags.filter { $0.name == "scribe" }.count, 1)
+    }
+
+    func testRemoveJunkPunctuationTagsDeletesJunkRows() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let figure = Figure(name: "Inanna", domain: "Water (Wisdom)", figureDescription: "")
+        context.insert(figure)
+        for name in ["(enki)", "(mari)", "god/king", "'daughters", "adad'", "\"the", "queen"] {
+            let tag = Tag(name: name)
+            context.insert(tag)
+            figure.tags.append(tag)
+        }
+        try? context.save()
+
+        Migration.removeJunkPunctuationTags(context: context)
+
+        let allTags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        XCTAssertEqual(allTags.map(\.name), ["queen"], "only the punctuated rows are deleted")
+        Migration.removeJunkPunctuationTags(context: context)
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Tag>())) ?? []).map(\.name), ["queen"], "idempotent")
+    }
+
+    func testCleanTokenizerStripsParenthesesAndSlashes() {
+        XCTAssertEqual(TagEngine.cleanedToken("(Mesopotamian) deity"), "mesopotamian deity")
+        XCTAssertEqual(TagEngine.cleanedToken("god/king"), "god king")
+        XCTAssertEqual(TagEngine.cleanedToken("Kish (First dynasty)"), "kish first dynasty")
+        XCTAssertEqual(TagEngine.cleanedToken("'daughters"), "daughters")
+        XCTAssertEqual(TagEngine.cleanedToken("Marduk's") , "marduks")
+        XCTAssertEqual(TagEngine.domainTags("Water (Chaos), Kingship"), ["water", "chaos", "kingship"])
+    }
+
+    func testRemoveJunkPunctuationTagsThenAutoTagsStaysClean() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let deityType = FigureType(name: "Deity", icon: "star", colorHex: "FF9500")
+        let figure = Figure(name: "Ninurta", figureType: deityType, gender: .male, domain: "Water (Wisdom), Kingship", figureDescription: "", source: "Enuma Elish")
+        context.insert(figure)
+        try? context.save()
+
+        Migration.removeJunkPunctuationTags(context: context)
+        Migration.ensureAutoTags(context: context)
+
+        XCTAssertFalse(figure.tags.contains { $0.name.contains("(") || $0.name.contains(")") || $0.name.contains("/") || $0.name.contains("'") || $0.name.contains("\"") },
+                       "auto-tags must never resurrect punctuated fragments")
+        let names = Set(figure.tags.map(\.name))
+        XCTAssertTrue(names.contains("wisdom"))
+        XCTAssertTrue(names.contains("water"))
     }
 
     func testEnsureDynastyGroupsCreatesSubgroupsWithFiguresAndEvents() {

@@ -41,6 +41,9 @@ package struct MythologicalDate: Codable, Hashable {
         let prefix = isApproximate ? "~" : ""
 
         if let start = startYear, let end = endYear, start != end {
+            if start < 0 && end > 0 {
+                return "\(prefix)\(formatYearAbs(start)) BCE \u{2013} \(formatYearAbs(end)) CE"
+            }
             let startStr = formatYearAbs(start)
             let endStr = formatYearAbs(end)
             let suffix = start < 0 ? " BCE" : " CE"

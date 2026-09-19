@@ -1049,26 +1049,49 @@
    "disambiguation": ""
   },
   {
-   "name": "Gilgamesh",
+   "name": "Mesh-ki-ang-gasher",
    "title": "King of First rulers of Uruk",
-   "figureType": "Semi-Divine",
+   "figureType": "Human",
    "gender": "Male",
-   "domain": "Kingship, Heroism, Quest for Immortality",
-   "figureDescription": "Two-thirds divine, one-third human. King of Uruk who sought eternal life after the death of Enkidu. According to the Sumerian King List, ruled for 126 years.",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Ruler from the First rulers of Uruk. Reigned 324 years (mythological length). Late Uruk Period (Listed reign: 324 years.)",
    "birthDate": {
     "era": "First rulers of Uruk",
     "isApproximate": true,
-    "startYear": -2700,
-    "endYear": -2700
+    "startYear": null,
+    "endYear": null
    },
    "deathDate": {
     "era": "First rulers of Uruk",
     "isApproximate": true,
-    "startYear": -2600,
-    "endYear": -2600
+    "startYear": null,
+    "endYear": null
    },
-   "source": "Epic of Gilgamesh, Sumerian King List",
-   "id": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+   "source": "Sumerian King List",
+   "id": "99f3c136-97b9-5e83-8ad8-a187ebbc1778",
+   "disambiguation": ""
+  },
+  {
+   "name": "Enmerkar",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Enmerkar (fl. c. 2750 BC) was an ancient Sumerian ruler to whom the construction of the city of Uruk and a 420-year reign was attributed. (Listed reign: 420 years.)",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "42e850fd-bd44-5bd5-9bc9-eb96ba637132",
    "disambiguation": ""
   },
   {
@@ -1092,6 +1115,213 @@
    },
    "source": "Lugalbanda poems, Sumerian King List",
    "id": "f5402631-c60a-566e-b129-5be7daf07a86",
+   "disambiguation": ""
+  },
+  {
+   "name": "Dumuzid the Fisherman",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Dumuzid, titled the Fisherman, was a legendary Sumerian king of Uruk listed originating from Kuara. According to legend, in the 100th year of his reign, he was captured by Enmebaragesi.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "d957f249-e9b2-549e-a739-34e5404a3933",
+   "disambiguation": ""
+  },
+  {
+   "name": "Gilgamesh",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Semi-Divine",
+   "gender": "Male",
+   "domain": "Kingship, Heroism, Quest for Immortality",
+   "figureDescription": "Two-thirds divine, one-third human. King of Uruk who sought eternal life after the death of Enkidu. According to the Sumerian King List, ruled for 126 years.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": -2700,
+    "endYear": -2700
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": -2600,
+    "endYear": -2600
+   },
+   "source": "Epic of Gilgamesh, Sumerian King List",
+   "id": "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9",
+   "disambiguation": ""
+  },
+  {
+   "name": "Ur-Nungal",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Ur-Nungal (died c. 2620 BC) was the sixth Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List, which also claims he ruled 30 years. Both the Sumerian King List and the Tummal Chronicle state he was the son of Gilgamesh, but only the Sumerian King List records he was the father of Udul-kalama.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "66afae89-070d-5b99-85c9-ff96da4b0b30",
+   "disambiguation": ""
+  },
+  {
+   "name": "Udul-kalama",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Udul-kalama (died c. 2605 BC) was the seventh Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List. He may have been a son of Ur-Nungal and grandson of Gilgamesh.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "858bf7ca-112e-5564-ac28-3dec496e44a3",
+   "disambiguation": ""
+  },
+  {
+   "name": "La-ba'shum",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "La-ba'shum (died c. 2596 BC) was the eighth Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List. He was described as ruling for nine years.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "9193d77a-2f13-5ac7-b1a0-e963bcc07535",
+   "disambiguation": ""
+  },
+  {
+   "name": "En-nun-tarah-ana",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "En-nun-tarah-ana (died c. 2588 BC) was the ninth Sumerian ruler in the First Dynasty of Uruk. According to the Sumerian King List, he reigned for 8 years.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "046df76e-d78c-5bd9-b10d-49b011e5473b",
+   "disambiguation": ""
+  },
+  {
+   "name": "Mesh-he",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Mesh-He (died c. 2552 BC), described as \"the smith\", is the 10th lugal of the first dynasty of Uruk. He ruled in modern-day Iraq.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "9792b28b-5b6d-5a51-8d81-13b5e49d900a",
+   "disambiguation": ""
+  },
+  {
+   "name": "Melem-ana",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Melem-Ana of Unug (died c. 2546 BC) was the 11th lugal of the First Dynasty of Uruk. He ruled in Mesopotamia in what is now Iraq.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "cd0c82d8-72b6-5c64-bf2e-72eac236806b",
+   "disambiguation": ""
+  },
+  {
+   "name": "Lugal-kitun",
+   "title": "King of First rulers of Uruk",
+   "figureType": "Human",
+   "gender": "Male",
+   "domain": "Kingship of Uruk",
+   "figureDescription": "Lugal-kitun (Sumerian: 𒈗𒆠𒂅, lugal-ki-tun₃; (died c. 2510 BC) was the 12th and last lugal of the first Dynasty of Uruk. He ruled in Mesopotamia in what is now Iraq.",
+   "birthDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "deathDate": {
+    "era": "First rulers of Uruk",
+    "isApproximate": true,
+    "startYear": null,
+    "endYear": null
+   },
+   "source": "Sumerian King List",
+   "id": "4c7c1124-848d-53d6-9b95-c93f70b0bdcd",
    "disambiguation": ""
   },
   {
@@ -1874,236 +2104,6 @@
    },
    "source": "Sumerian King List",
    "id": "17876b42-c48d-5607-9c83-d10fd1f3b1f9",
-   "disambiguation": ""
-  },
-  {
-   "name": "Mesh-ki-ang-gasher",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Ruler from the First rulers of Uruk. Reigned 324 years (mythological length). Late Uruk Period (Listed reign: 324 years.)",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "99f3c136-97b9-5e83-8ad8-a187ebbc1778",
-   "disambiguation": ""
-  },
-  {
-   "name": "Enmerkar",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Enmerkar (fl. c. 2750 BC) was an ancient Sumerian ruler to whom the construction of the city of Uruk and a 420-year reign was attributed. (Listed reign: 420 years.)",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "42e850fd-bd44-5bd5-9bc9-eb96ba637132",
-   "disambiguation": ""
-  },
-  {
-   "name": "Dumuzid the Fisherman",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Dumuzid, titled the Fisherman, was a legendary Sumerian king of Uruk listed originating from Kuara. According to legend, in the 100th year of his reign, he was captured by Enmebaragesi.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "d957f249-e9b2-549e-a739-34e5404a3933",
-   "disambiguation": ""
-  },
-  {
-   "name": "Ur-Nungal",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Ur-Nungal (died c. 2620 BC) was the sixth Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List, which also claims he ruled 30 years. Both the Sumerian King List and the Tummal Chronicle state he was the son of Gilgamesh, but only the Sumerian King List records he was the father of Udul-kalama.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "66afae89-070d-5b99-85c9-ff96da4b0b30",
-   "disambiguation": ""
-  },
-  {
-   "name": "Udul-kalama",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Udul-kalama (died c. 2605 BC) was the seventh Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List. He may have been a son of Ur-Nungal and grandson of Gilgamesh.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "858bf7ca-112e-5564-ac28-3dec496e44a3",
-   "disambiguation": ""
-  },
-  {
-   "name": "La-ba'shum",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "La-ba'shum (died c. 2596 BC) was the eighth Sumerian ruler in the First Dynasty of Uruk, according to the Sumerian King List. He was described as ruling for nine years.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "9193d77a-2f13-5ac7-b1a0-e963bcc07535",
-   "disambiguation": ""
-  },
-  {
-   "name": "En-nun-tarah-ana",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "En-nun-tarah-ana (died c. 2588 BC) was the ninth Sumerian ruler in the First Dynasty of Uruk. According to the Sumerian King List, he reigned for 8 years.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "046df76e-d78c-5bd9-b10d-49b011e5473b",
-   "disambiguation": ""
-  },
-  {
-   "name": "Mesh-he",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Mesh-He (died c. 2552 BC), described as \"the smith\", is the 10th lugal of the first dynasty of Uruk. He ruled in modern-day Iraq.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "9792b28b-5b6d-5a51-8d81-13b5e49d900a",
-   "disambiguation": ""
-  },
-  {
-   "name": "Melem-ana",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Melem-Ana of Unug (died c. 2546 BC) was the 11th lugal of the First Dynasty of Uruk. He ruled in Mesopotamia in what is now Iraq.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "cd0c82d8-72b6-5c64-bf2e-72eac236806b",
-   "disambiguation": ""
-  },
-  {
-   "name": "Lugal-kitun",
-   "title": "King of First rulers of Uruk",
-   "figureType": "Human",
-   "gender": "Male",
-   "domain": "Kingship of Uruk",
-   "figureDescription": "Lugal-kitun (Sumerian: 𒈗𒆠𒂅, lugal-ki-tun₃; (died c. 2510 BC) was the 12th and last lugal of the first Dynasty of Uruk. He ruled in Mesopotamia in what is now Iraq.",
-   "birthDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "deathDate": {
-    "era": "First rulers of Uruk",
-    "isApproximate": true,
-    "startYear": null,
-    "endYear": null
-   },
-   "source": "Sumerian King List",
-   "id": "4c7c1124-848d-53d6-9b95-c93f70b0bdcd",
    "disambiguation": ""
   },
   {
@@ -6521,8 +6521,8 @@
    "modernLocation": "Isin, Al-Qadisiyyah Governorate, Iraq",
    "placeDescription": "Temple of Gula/Ninisinna in Isin. 'Great House' (Sumerian: 𒂍𒃲𒈤 e₂-galmah) was the primary temple of Gula, the goddess of healing, and the center of a major healing cult in ancient Mesopotamia.",
    "source": "Sumerian texts",
-   "latitude": 31.9,
-   "longitude": 44.5,
+   "latitude": 31.93351,
+   "longitude": 45.28521,
    "id": "2d65d318-6b74-5933-aec3-a2977ad8d214"
   }
  ],

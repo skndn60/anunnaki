@@ -391,6 +391,24 @@ extension Migration {
         if changed { try? context.save() }
     }
 
+    /// Removes `Tag` rows whose names carry punctuation that older tokenizers let
+    /// through (parentheses, slashes, stray single/double quotes): `"(enki)"`,
+    /// `"'daughters"`, `"adad'"`, `"god/king"`. Runs before the auto-tag
+    /// migrations so the now-clean `TagEngine.cleanedToken` cannot resurrect them.
+    /// Idempotent — deleting the shared row nullifies the tag off every entity
+    /// that carried it.
+    package static func removeJunkPunctuationTags(context: ModelContext) {
+        let tags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        var changed = false
+        for tag in tags where tag.name.contains("/")
+            || tag.name.contains("(") || tag.name.contains(")")
+            || tag.name.contains("'") || tag.name.contains("\"") {
+            context.delete(tag)
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
     package static func legacyDomainTagPhrases(_ domain: String) -> [String] {
         let phrases = domain.split(whereSeparator: { $0 == "," || $0 == ";" })
         var result: [String] = []

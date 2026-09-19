@@ -12,6 +12,12 @@ struct TagCloudView: View {
     @State private var segment: CloudSegment = .tags
     @State private var detailItem: DetailItem?
     @State private var detailEntity: DetailEntity?
+    @State private var sheetTag: Tag?
+    @State private var tagRenameText = ""
+    @State private var tagPendingDelete: Tag?
+    @State private var showDeleteConfirm = false
+    @State private var filterText = ""
+    @State private var sortAlphabetical = false
 
     enum CloudSegment: String, CaseIterable {
         case tags = "Tags"
@@ -45,11 +51,37 @@ struct TagCloudView: View {
             .pickerStyle(.segmented)
             .padding()
 
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Filter tags, domains, types\u{2026}", text: $filterText)
+                    .textFieldStyle(.roundedBorder)
+                if !filterText.isEmpty {
+                    Button {
+                        filterText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer(minLength: 8)
+                Toggle(isOn: $sortAlphabetical) {
+                    Text("A–Z")
+                        .font(.caption)
+                }
+                .toggleStyle(.switch)
+                .controlSize(.small)
+                .help("Sort alphabetically instead of by occurrence count")
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 8)
+
             ScrollView {
                 switch segment {
-                case .tags: cloudContent(items: tagItems)
-                case .domains: cloudContent(items: domainItems)
-                case .types: cloudContent(items: typeItems)
+                case .tags: cloudContent(items: displayed(tagItems), emptyTitle: "No matching tags")
+                case .domains: cloudContent(items: displayed(domainItems), emptyTitle: "No matching domains")
+                case .types: cloudContent(items: displayed(typeItems), emptyTitle: "No matching types")
                 }
             }
             .padding()
@@ -57,39 +89,53 @@ struct TagCloudView: View {
         .sheet(item: $detailItem) { item in
             detailSheet(item)
         }
+        .alert("Delete Tag?", isPresented: $showDeleteConfirm, presenting: tagPendingDelete) { tag in
+            Button("Delete", role: .destructive) { deleteTag(tag) }
+            Button("Cancel", role: .cancel) {}
+        } message: { tag in
+            Text("Delete the tag \"\(tag.name)\"? It will be removed from every figure, place, event, thing, and image that carries it.")
+        }
     }
 
     private var tagItems: [CloudItem] {
         allTags
             .filter { $0.figureCount + $0.eventCount + $0.placeCount > 0 }
             .map { tag in
-                let total = tag.figures.count + tag.events.count + tag.places.count
-                var sections: [(String, [DetailEntity])] = []
-                if !tag.figures.isEmpty {
-                    sections.append(("Figures", tag.figures.map { f in
-                        DetailEntity(id: f.persistentModelID, name: f.name, kind: .figure)
-                    }))
-                }
-                if !tag.events.isEmpty {
-                    sections.append(("Events", tag.events.map { e in
-                        DetailEntity(id: e.persistentModelID, name: e.name, kind: .event)
-                    }))
-                }
-                if !tag.places.isEmpty {
-                    sections.append(("Places", tag.places.map { p in
-                        DetailEntity(id: p.persistentModelID, name: p.name, kind: .place)
-                    }))
-                }
-                return CloudItem(
+                CloudItem(
                     id: tag.persistentModelID.hashValue.description,
                     label: tag.name,
-                    count: total,
+                    count: tag.figureCount + tag.eventCount + tag.placeCount,
                     color: tag.displayColor,
                     icon: nil,
-                    detail: DetailItem(id: tag.persistentModelID.hashValue.description, label: tag.name, sections: sections)
+                    detail: tagDetailItem(tag),
+                    tag: tag
                 )
             }
             .sorted { $0.count > $1.count }
+    }
+
+    private func tagDetailItem(_ tag: Tag) -> DetailItem {
+        var sections: [(String, [DetailEntity])] = []
+        if !tag.figures.isEmpty {
+            sections.append(("Figures", tag.figures.map { f in
+                DetailEntity(id: f.persistentModelID, name: f.name, kind: .figure)
+            }))
+        }
+        if !tag.events.isEmpty {
+            sections.append(("Events", tag.events.map { e in
+                DetailEntity(id: e.persistentModelID, name: e.name, kind: .event)
+            }))
+        }
+        if !tag.places.isEmpty {
+            sections.append(("Places", tag.places.map { p in
+                DetailEntity(id: p.persistentModelID, name: p.name, kind: .place)
+            }))
+        }
+        return DetailItem(
+            id: tag.persistentModelID.hashValue.description,
+            label: tag.name,
+            sections: sections
+        )
     }
 
     private var domainItems: [CloudItem] {
@@ -163,9 +209,18 @@ struct TagCloudView: View {
         return items.sorted { $0.count > $1.count }
     }
 
-    private func cloudContent(items: [CloudItem]) -> some View {
+    private func displayed(_ items: [CloudItem]) -> [CloudItem] {
+        let query = filterText.trimmingCharacters(in: .whitespacesAndNewlines)
+        var result = query.isEmpty ? items : items.filter { $0.label.localizedCaseInsensitiveContains(query) }
+        if sortAlphabetical {
+            result.sort { $0.label.localizedCaseInsensitiveCompare($1.label) == .orderedAscending }
+        }
+        return result
+    }
+
+    private func cloudContent(items: [CloudItem], emptyTitle: String) -> some View {
         guard !items.isEmpty else {
-            return AnyView(Text("No data yet")
+            return AnyView(Text(emptyTitle)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .padding(.top, 40))
@@ -179,17 +234,19 @@ struct TagCloudView: View {
                 ForEach(items) { item in
                     Button {
                         detailItem = item.detail
+                        sheetTag = item.tag
+                        tagRenameText = item.tag?.name ?? ""
                     } label: {
                         HStack(spacing: 4) {
                             if let icon = item.icon {
                                 Image(systemName: icon)
-                                    .font(.system(size: fontSize(for: item.count, minVal: minCount, maxVal: maxCount) * 0.7))
+                                    .font(.system(size: itemFontSize(item.count, minVal: minCount, maxVal: maxCount) * 0.7))
                             }
                             Text(item.label)
-                                .font(.system(size: fontSize(for: item.count, minVal: minCount, maxVal: maxCount)))
+                                .font(.system(size: itemFontSize(item.count, minVal: minCount, maxVal: maxCount)))
                                 .lineLimit(1)
                             Text("\(item.count)")
-                                .font(.system(size: fontSize(for: item.count, minVal: minCount, maxVal: maxCount) * 0.65))
+                                .font(.system(size: itemFontSize(item.count, minVal: minCount, maxVal: maxCount) * 0.65))
                                 .foregroundStyle(.secondary)
                         }
                         .foregroundStyle(item.color)
@@ -203,6 +260,11 @@ struct TagCloudView: View {
             }
             .padding()
         )
+    }
+
+    private func itemFontSize(_ count: Int, minVal: Int, maxVal: Int) -> CGFloat {
+        if sortAlphabetical { return 14 }
+        return fontSize(for: count, minVal: minVal, maxVal: maxVal)
     }
 
     private func fontSize(for count: Int, minVal: Int, maxVal: Int) -> CGFloat {
@@ -244,6 +306,28 @@ struct TagCloudView: View {
             }
             .padding()
 
+            if let tag = sheetTag {
+                HStack(spacing: 8) {
+                    Image(systemName: "tag")
+                        .foregroundStyle(.secondary)
+                    TextField("Tag name", text: $tagRenameText)
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { commitRename() }
+                    Button("Rename") { commitRename() }
+                        .disabled(renameDisabled(tag))
+                    Button {
+                        tagPendingDelete = tag
+                        showDeleteConfirm = true
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .buttonStyle(.bordered)
+                    .help("Delete Tag")
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+            }
+
             if let entity = detailEntity {
                 entityDetailView(entity)
             } else {
@@ -251,6 +335,77 @@ struct TagCloudView: View {
             }
         }
         .frame(width: 440, height: 520)
+    }
+
+    private func renameDisabled(_ tag: Tag) -> Bool {
+        let trimmed = tagRenameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty || trimmed.compare(tag.name, options: [.caseInsensitive]) == .orderedSame
+    }
+
+    private func commitRename() {
+        guard let tag = sheetTag else { return }
+        let newName = tagRenameText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !newName.isEmpty else { return }
+        if newName.compare(tag.name, options: [.caseInsensitive]) == .orderedSame { return }
+        let target: Tag
+        if let other = allTags.first(where: {
+            $0.persistentModelID != tag.persistentModelID &&
+            $0.name.compare(newName, options: [.caseInsensitive]) == .orderedSame
+        }) {
+            repoint(from: tag, to: other)
+            modelContext.delete(tag)
+            target = other
+        } else {
+            tag.name = newName
+            target = tag
+        }
+        try? modelContext.save()
+        sheetTag = target
+        tagRenameText = target.name
+        detailItem = tagDetailItem(target)
+    }
+
+    private func repoint(from old: Tag, to new: Tag) {
+        for figure in Array(old.figures) {
+            figure.tags.removeAll { $0.persistentModelID == old.persistentModelID }
+            if !figure.tags.contains(where: { $0.persistentModelID == new.persistentModelID }) {
+                figure.tags.append(new)
+            }
+        }
+        for event in Array(old.events) {
+            event.tags.removeAll { $0.persistentModelID == old.persistentModelID }
+            if !event.tags.contains(where: { $0.persistentModelID == new.persistentModelID }) {
+                event.tags.append(new)
+            }
+        }
+        for place in Array(old.places) {
+            place.tags.removeAll { $0.persistentModelID == old.persistentModelID }
+            if !place.tags.contains(where: { $0.persistentModelID == new.persistentModelID }) {
+                place.tags.append(new)
+            }
+        }
+        for thing in Array(old.things) {
+            thing.tags.removeAll { $0.persistentModelID == old.persistentModelID }
+            if !thing.tags.contains(where: { $0.persistentModelID == new.persistentModelID }) {
+                thing.tags.append(new)
+            }
+        }
+        for image in Array(old.images) {
+            image.tags.removeAll { $0.persistentModelID == old.persistentModelID }
+            if !image.tags.contains(where: { $0.persistentModelID == new.persistentModelID }) {
+                image.tags.append(new)
+            }
+        }
+    }
+
+    private func deleteTag(_ tag: Tag) {
+        modelContext.delete(tag)
+        try? modelContext.save()
+        if sheetTag?.persistentModelID == tag.persistentModelID {
+            sheetTag = nil
+            detailItem = nil
+            detailEntity = nil
+        }
     }
 
     @ViewBuilder
@@ -357,6 +512,7 @@ struct CloudItem: Identifiable {
     let color: Color
     let icon: String?
     let detail: TagCloudView.DetailItem
+    var tag: Tag? = nil
 }
 
 extension Tag {

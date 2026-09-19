@@ -13,7 +13,7 @@ package enum TagEngine {
         ("Atra-Hasis", "atrahasis"),
         ("Atrahasis", "atrahasis"),
         ("Epic of Gilgamesh", "epic of gilgamesh"),
-        ("Inanna's Descent", "inanna's descent"),
+        ("Inanna's Descent", "inanna descent"),
         ("Enlil and Ninlil", "enlil and ninlil"),
         ("Sumerian", "sumerian tradition"),
         ("Babylonian", "babylonian tradition"),
@@ -285,11 +285,15 @@ package enum TagEngine {
     }
 
     /// Normalizes a phrase into a tag token: lowercase, trimmed, single spaces,
-    /// trailing periods removed.
+    /// trailing periods removed. Slashes become spaces (word separators) and
+    /// quotes/parentheses are dropped so source prose like `"'daughters"`,
+    /// `"(Enki)"`, or `"god/king"` never yields a punctuated tag fragment.
     package static func cleanedToken(_ raw: String) -> String {
         var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         while s.hasSuffix(".") { s.removeLast() }
         s = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        s = s.replacingOccurrences(of: "/", with: " ")
+        s = String(s.filter { $0 != "(" && $0 != ")" && $0 != "'" && $0 != "\"" })
         let parts = s.split(whereSeparator: { $0.isWhitespace })
         return parts.joined(separator: " ").lowercased()
     }

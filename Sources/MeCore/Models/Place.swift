@@ -24,6 +24,17 @@ package final class Place {
 
     package var sortName: String?
 
+    /// True when the place is a culturally significant landmark worth showing in
+    /// overview maps even when minor places are hidden. Optional for migration
+    /// safety; nil behaves as "not marked major".
+    package var isMajor: Bool?
+
+    /// MapLibre zoom threshold (0–14) at which this pin appears on the
+    /// Mesopotamia map. Level 0 = always visible on the overview; higher levels
+    /// reveal only as you zoom deeper. Optional for migration safety; nil falls
+    /// back to `mapZoomLevel` defaults (major→0, minor→5).
+    package var zoomLevel: Int?
+
     package var foundedDate: MythologicalDate?
 
     /// Figures associated with this place
@@ -60,6 +71,44 @@ package final class Place {
 
     @Relationship(inverse: \ContentAttribution.place)
     package var contentAttributions: [ContentAttribution]? = nil
+
+    /// Hand-authored territory silhouette (GeoJSON Polygon string) for region
+    /// places that have no dynasty era to inherit from (Mesopotamia, Cedar Forest,
+    /// Dilmun, Lebanon…), backfilled by `Migration.ensurePlaceBoundaries`.
+    /// Wins over the inherited dynasty-era boundary. Optional for migration safety.
+    package var storedBoundaryGeoJSON: String?
+
+    /// Effective territory silhouette (GeoJSON Polygon string): a stored
+    /// hand-authored boundary wins over the dynasty boundary inherited from the
+    /// era of a linked dynasty group.
+    package var boundaryGeoJSON: String? {
+        if let stored = storedBoundaryGeoJSON, !stored.isEmpty { return stored }
+        return boundarySilhouette?.geoJSON
+    }
+
+    /// Name of the era the territory silhouette came from (nil when the boundary
+    /// is hand-authored or no silhouette exists).
+    package var boundarySourceEraName: String? {
+        boundarySilhouette?.eraName
+    }
+
+    private var boundarySilhouette: (geoJSON: String, eraName: String)? {
+        groupAssociations.lazy
+            .compactMap { assoc in
+                guard let group = assoc.group, let era = group.era,
+                      let geo = era.boundaryGeoJSON, !geo.isEmpty else { return nil }
+                return (geo, era.name)
+            }
+            .first
+    }
+
+    /// Effective zoom threshold: explicit stored `zoomLevel` wins; otherwise
+    /// majors are always visible (level 0) and other places default to level 8
+    /// (hidden on the whole-region overview, revealed on the first zoom-in).
+    package var mapZoomLevel: Int {
+        if let zoomLevel { return zoomLevel }
+        return (isMajor ?? false) ? 0 : 8
+    }
 
     package init(
         name: String = "",

@@ -69,62 +69,47 @@ package struct Migration {
     ]
 
     package static func ensureRelationTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<RelationshipType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultRelationTypes {
-            let type = RelationshipType(name: config.name, icon: config.icon, colorHex: config.colorHex, category: config.category)
-            context.insert(type)
+        let existing = Set((try? context.fetch(FetchDescriptor<RelationshipType>()))?.map(\.name) ?? [])
+        for config in defaultRelationTypes where !existing.contains(config.name) {
+            context.insert(RelationshipType(name: config.name, icon: config.icon, colorHex: config.colorHex, category: config.category))
         }
         try? context.save()
     }
 
     package static func ensurePlacePlaceRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<PlacePlaceRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultPlacePlaceRoleTypes {
-            let type = PlacePlaceRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: PlacePlaceRoleType.self,
+                         configs: defaultPlacePlaceRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { PlacePlaceRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     package static func ensureEventEventRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<EventEventRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultEventEventRoleTypes {
-            let type = EventEventRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: EventEventRoleType.self,
+                         configs: defaultEventEventRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { EventEventRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     package static func ensureEventPlaceRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<EventPlaceRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultEventPlaceRoleTypes {
-            let type = EventPlaceRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: EventPlaceRoleType.self,
+                         configs: defaultEventPlaceRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { EventPlaceRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     package static func ensureFigurePlaceRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<FigurePlaceRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultFigurePlaceRoleTypes {
-            let type = FigurePlaceRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: FigurePlaceRoleType.self,
+                         configs: defaultFigurePlaceRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { FigurePlaceRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     /// Ensure Demon FigureType exists (flame.fill, red-orange) for monsters/demons.
     package static func ensureDemonFigureTypeExists(context: ModelContext) {
-        let allTypes = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
-        guard !allTypes.contains(where: { $0.name == "Demon" }) else { return }
-        let demonType = FigureType(name: "Demon", icon: "flame.fill", colorHex: "DC2626")
-        context.insert(demonType)
-        try? context.save()
+        ensureTypesExist(context: context, type: FigureType.self,
+                         configs: [RoleTypeConfig("Demon", "flame.fill", "DC2626")],
+                         create: { FigureType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     /// Backfill Commander FigureType + reassign 23 Watcher chiefs from Igigi to Commander.
@@ -362,33 +347,24 @@ package struct Migration {
     ]
 
     package static func ensureThingFigureRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<ThingFigureRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultThingFigureRoleTypes {
-            let type = ThingFigureRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: ThingFigureRoleType.self,
+                         configs: defaultThingFigureRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { ThingFigureRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     package static func ensureThingPlaceRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<ThingPlaceRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultThingPlaceRoleTypes {
-            let type = ThingPlaceRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: ThingPlaceRoleType.self,
+                         configs: defaultThingPlaceRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { ThingPlaceRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     package static func ensureThingEventRoleTypesExist(context: ModelContext) {
-        let count = (try? context.fetchCount(FetchDescriptor<ThingEventRoleType>())) ?? 0
-        guard count == 0 else { return }
-        for config in defaultThingEventRoleTypes {
-            let type = ThingEventRoleType(name: config.name, icon: config.icon, colorHex: config.colorHex)
-            context.insert(type)
-        }
-        try? context.save()
+        ensureTypesExist(context: context, type: ThingEventRoleType.self,
+                         configs: defaultThingEventRoleTypes.map { .init($0.name, $0.icon, $0.colorHex) },
+                         create: { ThingEventRoleType(name: $0.name, icon: $0.icon, colorHex: $0.colorHex) },
+                         nameKeyPath: \.name)
     }
 
     // MARK: - Role Type Reverse Names

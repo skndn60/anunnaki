@@ -4,7 +4,7 @@ final class MainThreadWatchdog: @unchecked Sendable {
     static let shared = MainThreadWatchdog()
 
     private let lock = NSLock()
-    private var lastHeartbeat = Date()
+    private var lastHeartbeatUptime = ProcessInfo.processInfo.systemUptime
     private var heartbeats = 0
     private var lastCapture = Date.distantPast
     private var task: Task<Void, Never>?
@@ -32,14 +32,14 @@ final class MainThreadWatchdog: @unchecked Sendable {
 
     private func respondedToPing() {
         lock.lock()
-        lastHeartbeat = Date()
+        lastHeartbeatUptime = ProcessInfo.processInfo.systemUptime
         heartbeats += 1
         lock.unlock()
     }
 
     private func checkStall() {
         lock.lock()
-        let gap = Date().timeIntervalSince(lastHeartbeat)
+        let gap = ProcessInfo.processInfo.systemUptime - lastHeartbeatUptime
         let beatCount = heartbeats
         let cooldownRemaining = captureCooldown - Date().timeIntervalSince(lastCapture)
         lock.unlock()

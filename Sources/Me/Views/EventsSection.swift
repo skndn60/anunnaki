@@ -31,7 +31,7 @@ struct EventsSection: View {
                     .textCase(.uppercase)
 
                 ForEach(figureEvents) { event in
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: 3) {
                         HStack(spacing: 8) {
                             Image(systemName: event.eventType?.icon ?? "bolt")
                                 .font(.caption)
@@ -43,19 +43,38 @@ struct EventsSection: View {
                                     .fontWeight(.medium)
                                     .foregroundStyle(Color.accentColor)
                                     .underline()
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                             }
                             .buttonStyle(.plain)
                             .pointingHand()
-                            Text(event.eventType?.name ?? "Other")
-                                .font(.caption2)
-                                .foregroundStyle(event.eventType?.color ?? .gray)
-                Spacer()
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             Text(event.date.displayLabel)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Button(action: {
+                                eventToRemove = event
+                                showRemoveConfirm = true
+                            }) {
+                                Image(systemName: "trash")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.red.opacity(0.7))
+                            }
+                            .buttonStyle(.plain)
+                            .help("Remove \(figure.name) from this event")
                         }
-                        if !event.placeAssociations.isEmpty {
-                            HStack(spacing: 4) {
+                        HStack(spacing: 6) {
+                            Text(event.eventType?.name ?? "Other")
+                                .font(.caption2)
+                                .foregroundStyle(event.eventType?.color ?? .gray)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill((event.eventType?.color ?? .gray).opacity(0.12))
+                                )
+                            if !event.placeAssociations.isEmpty {
                                 Image(systemName: "mappin")
                                     .font(.caption2)
                                     .foregroundStyle(.teal)
@@ -67,6 +86,7 @@ struct EventsSection: View {
                                             .font(.caption)
                                             .foregroundStyle(Color.accentColor)
                                             .underline()
+                                            .lineLimit(1)
                                     }
                                     .buttonStyle(.plain)
                                     .pointingHand()
@@ -76,18 +96,8 @@ struct EventsSection: View {
                                     }
                                 }
                             }
-                            .padding(.leading, 22)
                         }
-                        Button(action: {
-                            eventToRemove = event
-                            showRemoveConfirm = true
-                        }) {
-                            Image(systemName: "trash")
-                                .font(.system(size: 10))
-                                .foregroundStyle(.red.opacity(0.7))
-                        }
-                        .buttonStyle(.plain)
-                        .help("Remove \(figure.name) from this event")
+                        .padding(.leading, 22)
                     }
                     .padding(.vertical, 4)
                 }

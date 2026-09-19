@@ -41,6 +41,19 @@ extension Migration {
             "Old Assyrian Period": 31,
             "Old Babylonian Period": 32,
             "Neo-Assyrian Period": 33,
+            "Uruk Period": 34,
+            "Jemdet Nasr Period": 35,
+            "Mitanni": 36,
+            "Karduniaš (Kassite Babylonia)": 37,
+            "Middle Assyrian Period": 38,
+            "Late Bronze Age Collapse": 39,
+            "Neo-Babylonian Empire": 40,
+            "Achaemenid Empire": 41,
+            "Macedonian Empire": 42,
+            "Seleucid Empire": 43,
+            "Parthian Empire": 44,
+            "Roman and Byzantine Mesopotamia": 45,
+            "Sassanid Empire": 46,
         ]
         var changed = false
         for era in eras {
@@ -157,6 +170,92 @@ extension Migration {
         }
 
         if changed { try? context.save() }
+    }
+
+    /// Fit a list of reign-duration shares into an absolute BCE window, returning a
+    /// contiguous (start, end) slot per share. Each share keeps its proportional
+    /// fraction of the window — the SKL's mythological multi-millennium reigns are
+    /// thereby compressed onto a conventional archaeological span. Pure and testable.
+    package static func fitLegendaryWindow(shares: [Int], earliestBCE: Int, latestBCE: Int) -> [(start: Int, end: Int)] {
+        guard !shares.isEmpty else { return [] }
+        let span = max(0, latestBCE - earliestBCE)
+        let normalized = shares.map { max(1, $0) }
+        let total = normalized.reduce(0, +)
+        var out: [(start: Int, end: Int)] = []
+        out.reserveCapacity(normalized.count)
+        var cumulative = 0
+        for (index, share) in normalized.enumerated() {
+            cumulative += share
+            let startFrac = Double(cumulative - share) / Double(total)
+            let endFrac = Double(cumulative) / Double(total)
+            var start = earliestBCE + Int((Double(span) * startFrac).rounded())
+            var end = earliestBCE + Int((Double(span) * endFrac).rounded())
+            if index == 0 { start = earliestBCE }
+            if index == normalized.count - 1 { end = latestBCE }
+            if end < start { end = start }
+            out.append((start, end))
+        }
+        for index in 1..<out.count where out[index].start < out[index - 1].end {
+            out[index].start = out[index - 1].end
+        }
+        return out
+    }
+
+    /// Date the ten legendary SKL dynasties (Kish I, Uruk I, Ur I, Awan, Kish II,
+    /// Hamazi, Uruk II, Ur II, Adab, Kish III) that have territory but no dated
+    /// kings, so they participate in the Dynasty Evolution playback. Each dynasty is
+    /// pinned to a conventional archaeological window (~2900–2400 BCE, SKL order);
+    /// `fitLegendaryWindow` compresses each dynasty's listed mythological reigns onto
+    /// that window and writes per-king `birthDate`/`deathDate` (marked `.computed`).
+    /// Additive + idempotent: an era is only (re-)fitted while it is deemed derived
+    /// data — either NO king carries a date yet (first fit), or every king's dates
+    /// are `.computed` (safe to re-derive after a seed/order correction). Any
+    /// hand-entered (`historical`) date blocks the fit forever, so a user's
+    /// hand-entered dates are never clobbered. Reign columns ride along so the
+    /// `reignOutsideLifespan` check never sees a reign span that disagrees with the
+    /// fitted lifetime.
+    package static func ensureLegendaryDynastyWindows(context: ModelContext) {
+        let windows: [String: (earliest: Int, latest: Int)] = [
+            "First dynasty of Kish": (-2900, -2550),
+            "First rulers of Uruk": (-2700, -2550),
+            "First dynasty of Ur": (-2560, -2430),
+            "Dynasty of Awan": (-2550, -2470),
+            "Second dynasty of Kish": (-2500, -2430),
+            "Dynasty of Hamazi": (-2470, -2410),
+            "Second dynasty of Uruk": (-2450, -2400),
+            "Second dynasty of Ur": (-2430, -2395),
+            "Dynasty of Adab": (-2410, -2394),
+            "Third dynasty of Kish": (-2400, -2393),
+        ]
+        let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for (eraName, window) in windows {
+            let kings = allFigures
+                .filter { $0.source.contains("Sumerian King List") && $0.birthDate.era == eraName }
+                .sorted { $0.orderIndex < $1.orderIndex }
+            guard !kings.isEmpty else { continue }
+            guard Self.legendaryEraReadyForFit(kings) else { continue }
+            let shares = kings.map { $0.kingship?.effectiveReignYears ?? 1 }
+            let fitted = fitLegendaryWindow(shares: shares, earliestBCE: window.earliest, latestBCE: window.latest)
+            for (king, slot) in zip(kings, fitted) {
+                king.birthDate = MythologicalDate(startYear: slot.start, era: eraName, isApproximate: true)
+                king.deathDate = MythologicalDate(startYear: slot.end, era: eraName, isApproximate: true)
+                king.dateSource = Figure.DateSource.computed.rawValue
+                king.updateKingship(reignStartYear: slot.start, reignEndYear: slot.end, reignYears: king.reignYears)
+            }
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
+    /// True when a legendary dynasty is fit-eligible: undated (first fit) or fully
+    /// `.computed` (re-fit after a seed/order correction). A single hand-entered date
+    /// (`historical`/nil source) blocks the whole era.
+    package static func legendaryEraReadyForFit(_ kings: [Figure]) -> Bool {
+        guard !kings.isEmpty else { return false }
+        let anyDated = kings.contains { $0.birthDate.startYear != nil }
+        if !anyDated { return true }
+        return kings.allSatisfy { $0.dateSource == Figure.DateSource.computed.rawValue }
     }
 
     /// Remove all auto-generated "Missing father/mother — look up on Wikipedia" stickies.

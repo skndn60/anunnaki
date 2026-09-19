@@ -1536,6 +1536,459 @@ func testRegnalKeyOrdersEventsByDate() {
         XCTAssertGreaterThan(lats.max()! - lats.min()!, 4.0, "closed horizontal sliver replaced with a real territory")
     }
 
+    func testPlaceBoundaryInheritsEraFromGroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        era.boundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[44.4,33.3],[45.0,33.5],[44.8,32.9],[44.4,33.3]]]}"
+        context.insert(era)
+        let group = FigureGroup(name: "Dynasty of Akkad", kind: .skl)
+        group.era = era
+        context.insert(group)
+        let place = Place(name: "Akkad", modernLocation: "Central Iraq")
+        context.insert(place)
+        let assoc = FigureGroupAssociation(place: place)
+        context.insert(assoc)
+        group.figureAssociations.append(assoc)
+        place.groupAssociations.append(assoc)
+        try? context.save()
+
+        XCTAssertEqual(place.boundaryGeoJSON, era.boundaryGeoJSON, "place inherits the dynasty boundary from its group's era")
+        XCTAssertEqual(place.boundarySourceEraName, "Dynasty of Akkad")
+    }
+
+    func testPlaceBoundaryNilWithoutDynastyGroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Aratta", modernLocation: "Unknown")
+        context.insert(place)
+        let plainGroup = FigureGroup(name: "Cities")
+        context.insert(plainGroup)
+        let assoc = FigureGroupAssociation(place: place)
+        context.insert(assoc)
+        plainGroup.figureAssociations.append(assoc)
+        place.groupAssociations.append(assoc)
+        try? context.save()
+
+        XCTAssertNil(place.boundaryGeoJSON, "group without an era has no silhhouette")
+        XCTAssertNil(place.boundarySourceEraName)
+    }
+
+    func testStoredPlaceBoundaryWinsOverInherited() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Dynasty of Akkad", orderIndex: 1)
+        era.boundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[44.4,33.3],[45.0,33.5],[44.8,32.9],[44.4,33.3]]]}"
+        context.insert(era)
+        let group = FigureGroup(name: "Dynasty of Akkad", kind: .skl)
+        group.era = era
+        context.insert(group)
+        let place = Place(name: "Akkad", modernLocation: "Central Iraq")
+        place.storedBoundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[40.0,35.0],[41.0,35.0],[41.0,34.0],[40.0,35.0]]]}"
+        context.insert(place)
+        let assoc = FigureGroupAssociation(place: place)
+        context.insert(assoc)
+        group.figureAssociations.append(assoc)
+        place.groupAssociations.append(assoc)
+        try? context.save()
+
+        XCTAssertEqual(place.boundaryGeoJSON, place.storedBoundaryGeoJSON, "stored boundary wins over the inherited dynasty boundary")
+    }
+
+    func testEnsurePlaceBoundariesBackfillsRegions() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let centers: [String: (Double, Double)] = [
+            "Mesopotamia": (44.42, 32.54),
+            "Cedar Forest": (36.05, 34.27),
+            "Dilmun": (50.5, 26.1),
+            "Dudael": (35.25, 31.56),
+            "Lebanon": (35.5, 33.89),
+            "Upper Mesopotamia": (39.03, 36.86),
+            "The Southern Mesopotamian Marshes (Hawizeh / Hammar System)": (47.0, 31.0),
+            "Gutium": (45.43, 35.56),
+            "Kassite homeland": (48.33, 33.5),
+            "Magan": (58.41, 23.61),
+            "Meluhha": (68.14, 27.33),
+            "Elam": (48.26, 32.19),
+            "Subartu": (40.74, 37.31),
+            "Hurri": (41.0, 36.8),
+            "Amurru": (38.28, 34.56),
+            "Assyria": (43.26, 35.46),
+            "Persian Gulf (The Lower Sea)": (50.5, 27.0),
+            "The Mediterranean Sea (The Upper Sea)": (33.0, 34.5),
+        ]
+        for name in [
+            "Mesopotamia", "Cedar Forest", "Dilmun", "Dudael", "Lebanon",
+            "Upper Mesopotamia", "The Southern Mesopotamian Marshes (Hawizeh / Hammar System)",
+            "Gutium", "Magan", "Meluhha", "Elam", "Subartu", "Hurri", "Amurru", "Assyria",
+            "Kassite homeland",
+            "Persian Gulf (The Lower Sea)", "The Mediterranean Sea (The Upper Sea)",
+            "Aratta",
+        ] {
+            context.insert(Place(name: name, modernLocation: "test"))
+        }
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        for place in places {
+            guard let center = centers[place.name] else {
+                XCTAssertNil(place.storedBoundaryGeoJSON, "unlisted place untouched")
+                continue
+            }
+            XCTAssertNotNil(place.storedBoundaryGeoJSON, "\(place.name) got a boundary")
+            guard let data = place.storedBoundaryGeoJSON?.data(using: .utf8),
+                  let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let coordinates = object["coordinates"] as? [[[Double]]],
+                  let ring = coordinates.first else {
+                XCTFail("\(place.name) boundary not a Polygon")
+                continue
+            }
+            XCTAssertEqual(ring.first!, ring.last!, "\(place.name) ring closed")
+            XCTAssertTrue(pointInRing(center, ring), "\(place.name) contains its landmark")
+        }
+    }
+
+    func testUpgradeSeededMarshesBoundaryReplacesLegacyRing() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "The Southern Mesopotamian Marshes (Hawizeh / Hammar System)", modernLocation: "Iraq")
+        place.storedBoundaryGeoJSON = Migration.polygonGeoJSON(ring: Migration.legacySeededMarshesRing)
+        context.insert(place)
+        try? context.save()
+
+        Migration.upgradeSeededMarshesBoundary(context: context)
+
+        let fetched: Place? = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        let authored = Migration.polygonGeoJSON(
+            ring: Migration.placeBoundaryRings["southern mesopotamian marshes (hawizeh / hammar system)"]!
+        )
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, authored, "legacy seeded ring upgraded to the refined ring")
+        let refined = Migration.decodedRing(from: authored ?? "") ?? []
+        XCTAssertTrue(pointInRing((47.0, 31.0), refined), "refined ring contains a mid-marsh landmark")
+    }
+
+    func testUpgradeSeededMarshesBoundaryLeavesUserRing() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "The Southern Mesopotamian Marshes (Hawizeh / Hammar System)", modernLocation: "Iraq")
+        let userJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[46.0,30.5],[48.0,30.5],[48.4,31.5],[47.0,32.0],[46.0,30.5]]]}"
+        place.storedBoundaryGeoJSON = userJSON
+        context.insert(place)
+        try? context.save()
+
+        Migration.upgradeSeededMarshesBoundary(context: context)
+
+        let fetched: Place? = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, userJSON, "user-drawn boundary untouched")
+    }
+
+    func testUpgradeSeededCedarForestBoundaryReplacesLegacyRing() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Cedar Forest", modernLocation: "Lebanon / Syria")
+        place.storedBoundaryGeoJSON = Migration.polygonGeoJSON(ring: Migration.legacySeededCedarForestRing)
+        context.insert(place)
+        try? context.save()
+
+        Migration.upgradeSeededCedarForestBoundary(context: context)
+
+        let fetched: Place? = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        let authored = Migration.polygonGeoJSON(ring: Migration.placeBoundaryRings["cedar forest"]!)
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, authored, "legacy corridor upgraded to the Mount-Lebanon ring")
+    }
+
+    func testUpgradeSeededCedarForestBoundaryLeavesUserRing() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Cedar Forest", modernLocation: "Lebanon / Syria")
+        let userJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[35.9,34.6],[36.3,34.6],[36.3,34.2],[35.9,34.6]]]}"
+        place.storedBoundaryGeoJSON = userJSON
+        context.insert(place)
+        try? context.save()
+
+        Migration.upgradeSeededCedarForestBoundary(context: context)
+
+        let fetched: Place? = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, userJSON, "user-drawn boundary untouched")
+    }
+
+    func testRefinedCedarForestRingGeoreferenced() {
+        let geo = Migration.polygonGeoJSON(ring: Migration.placeBoundaryRings["cedar forest"]!)
+        let decoded = Migration.decodedRing(from: geo ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Cedar Forest ring closed")
+        for grove in [(36.052, 34.243), (35.99, 34.31), (35.72, 33.70), (36.0, 34.2)] {
+            XCTAssertTrue(pointInRing(grove, decoded), "grove \(grove) within Cedar Forest")
+        }
+        for outside in [(36.21, 34.01), (35.50, 33.89), (35.84, 34.44), (36.29, 33.51), (36.32, 36.70)] {
+            XCTAssertFalse(pointInRing(outside, decoded), "\(outside) outside Cedar Forest")
+        }
+    }
+
+    func testAmurruBoundaryGeoreferenced() {
+        let geo = Migration.polygonGeoJSON(ring: Migration.placeBoundaryRings["amurru"]!)
+        let decoded = Migration.decodedRing(from: geo ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Amurru ring closed")
+        for inside in [(36.231944, 34.569722), (38.27, 34.56), (40.19, 35.06), (36.52, 34.55), (36.72, 34.73), (35.98, 34.71), (40.74, 34.75)] {
+            XCTAssertTrue(pointInRing(inside, decoded), "\(inside) within Amurru")
+        }
+        for outside in [(37.16, 36.20), (36.29, 33.51), (35.50, 33.89), (35.84, 34.44), (36.21, 34.01), (44.36, 33.34), (39.02, 35.95)] {
+            XCTAssertFalse(pointInRing(outside, decoded), "\(outside) outside Amurru")
+        }
+    }
+
+    func testRefinedElamRingGeoreferenced() {
+        let geo = Migration.polygonGeoJSON(ring: Migration.placeBoundaryRings["elam"]!)
+        let decoded = Migration.decodedRing(from: geo ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Elam ring closed")
+        for inside in [(52.4,29.9),(52.355,30.012),(52.89,29.93),(52.95,29.90),(52.53,29.60),(48.258,32.19),(48.531,32.011),(48.33,32.08),(48.40,32.38),(48.67,31.32),(48.85,32.05),(50.83,28.92),(49.87,31.83),(49.60,31.28),(51.25,31.0)] {
+            XCTAssertTrue(pointInRing(inside, decoded), "\(inside) within Elam")
+        }
+        for outside in [(47.14,31.84),(47.79,30.51),(44.36,33.34),(51.67,32.65),(57.06,30.29),(48.35,33.49),(53.98,26.50),(56.26,27.18)] {
+            XCTAssertFalse(pointInRing(outside, decoded), "\(outside) outside Elam")
+        }
+    }
+
+    func testHurriBoundaryBackfilledAndGeoreferenced() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Hurri", modernLocation: "Syria / Turkey / Iraq")
+        context.insert(place)
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let fetched = ((try? context.fetch(FetchDescriptor<Place>())) ?? []).first { $0.name == "Hurri" }
+        XCTAssertNotNil(fetched?.storedBoundaryGeoJSON, "Hurri got a kingdom boundary")
+        let decoded = Migration.decodedRing(from: fetched?.storedBoundaryGeoJSON ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Hurri ring closed")
+        for inside in [(41.0,36.8),(40.00,36.90),(40.97,37.06),(41.06,36.67),(41.50,36.96),(41.19,36.85),(41.22,37.08),(40.74,37.31),(39.03,36.87),(40.24,37.91),(41.88,36.32)] {
+            XCTAssertTrue(pointInRing(inside, decoded), "\(inside) within Hurri")
+        }
+        for outside in [(38.28,37.76),(42.11,38.40),(43.13,36.36),(43.26,35.46),(40.92,34.55),(40.57,34.92)] {
+            XCTAssertFalse(pointInRing(outside, decoded), "\(outside) outside Hurri")
+        }
+    }
+
+    func testKassiteHomelandBoundaryBackfilledAndGeoreferenced() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Kassite homeland", modernLocation: "Iran")
+        context.insert(place)
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let fetched = ((try? context.fetch(FetchDescriptor<Place>())) ?? []).first { $0.name == "Kassite homeland" }
+        XCTAssertNotNil(fetched?.storedBoundaryGeoJSON, "Kassite homeland got a boundary")
+        let decoded = Migration.decodedRing(from: fetched?.storedBoundaryGeoJSON ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Kassite homeland ring closed")
+        for inside in [(48.3333,33.5),(48.51,34.80),(47.08,34.32),(46.99,35.31),(48.77,33.90),(48.83,34.30),(46.43,33.64),(47.80,35.17)] {
+            XCTAssertTrue(pointInRing(inside, decoded), "\(inside) within Kassite homeland")
+        }
+        for outside in [(44.39,35.47),(49.70,34.09),(48.48,36.67),(47.27,32.68),(46.17,33.11),(45.55,33.74),(44.36,33.34)] {
+            XCTAssertFalse(pointInRing(outside, decoded), "\(outside) outside Kassite homeland")
+        }
+    }
+
+    func testEnsureRiverBoundariesBackfillsRivers() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "Tigris river", modernLocation: "Iraq"))
+        context.insert(Place(name: "Euphrates river", modernLocation: "Iraq"))
+        context.insert(Place(name: "The Balikh River", modernLocation: "Syria"))
+        context.insert(Place(name: "The Diyala River", modernLocation: "Iraq"))
+        context.insert(Place(name: "The Irnina Canal", modernLocation: "Iraq"))
+        context.insert(Place(name: "The Karkheh River", modernLocation: "Iran"))
+        context.insert(Place(name: "The Karun River", modernLocation: "Iran"))
+        context.insert(Place(name: "The Khabur River", modernLocation: "Syria"))
+        context.insert(Place(name: "The Greater Zab River", modernLocation: "Iraq"))
+        context.insert(Place(name: "The Lesser Zab River", modernLocation: "Iraq"))
+        context.insert(Place(name: "The Shatt al-Nil (ancient Iturungal)", modernLocation: "Iraq"))
+        context.insert(Place(name: "Zagros river", modernLocation: "Iran"))
+        try? context.save()
+
+        Migration.ensureRiverBoundaries(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let tigris = places.first { $0.name == "Tigris river" }
+        let euphrates = places.first { $0.name == "Euphrates river" }
+        let balikh = places.first { $0.name == "The Balikh River" }
+        let diyala = places.first { $0.name == "The Diyala River" }
+        let irnina = places.first { $0.name == "The Irnina Canal" }
+        let karkheh = places.first { $0.name == "The Karkheh River" }
+        let karun = places.first { $0.name == "The Karun River" }
+        let khabur = places.first { $0.name == "The Khabur River" }
+        let greaterZab = places.first { $0.name == "The Greater Zab River" }
+        let lesserZab = places.first { $0.name == "The Lesser Zab River" }
+        let shattNil = places.first { $0.name == "The Shatt al-Nil (ancient Iturungal)" }
+        let zagros = places.first { $0.name == "Zagros river" }
+
+        let reachChecks: [(Place?, (Double, Double))] = [
+            (tigris, (44.3499559, 33.3604274)),
+            (tigris, (43.8151395, 34.2265645)),
+            (euphrates, (40.1527833, 35.3436015)),
+            (euphrates, (43.284148, 33.438219)),
+            (euphrates, (44.3915302, 32.0496843)),
+            (balikh, (39.0808251, 35.9404161)),
+            (balikh, (39.0173324, 36.289192)),
+            (diyala, (44.6094527, 33.760634)),
+            (diyala, (45.2106668, 34.3948031)),
+            (diyala, (44.5066559, 33.2210595)),
+            (irnina, (43.40, 33.35)),
+            (irnina, (43.60, 33.30)),
+            (irnina, (43.90, 33.22)),
+            (irnina, (44.15, 33.28)),
+            (irnina, (44.28, 33.31)),
+            (karkheh, (48.2258499, 32.179036)),
+            (karkheh, (47.5066637, 33.8279668)),
+            (karkheh, (48.4428191, 31.5562171)),
+            (karun, (49.261, 32.1786)),
+            (karun, (48.9594, 32.2625)),
+            (karun, (48.6705, 31.3128)),
+            (karun, (48.2894, 30.4927)),
+            (khabur, (39.716, 37.1181)),
+            (khabur, (40.0502, 36.8296)),
+            (khabur, (40.7492, 36.4979)),
+            (khabur, (40.4316482, 35.1546396)),
+            (greaterZab, (43.5396561, 36.1668395)),
+            (greaterZab, (43.9453855, 36.9617936)),
+            (greaterZab, (43.8771328, 37.6353371)),
+            (lesserZab, (43.4965038, 35.2601629)),
+            (lesserZab, (44.1103574, 35.6907544)),
+            (lesserZab, (45.2435556, 36.0694496)),
+            (shattNil, (45.231, 32.127)),
+            (shattNil, (45.685, 31.951)),
+            (shattNil, (44.63, 32.54)),
+            (shattNil, (45.05, 32.31)),
+        ]
+        let rivers = [(tigris, "Tigris river"), (euphrates, "Euphrates river"), (balikh, "The Balikh River"), (diyala, "The Diyala River"), (irnina, "The Irnina Canal"), (karkheh, "The Karkheh River"), (karun, "The Karun River"), (khabur, "The Khabur River"), (greaterZab, "The Greater Zab River"), (lesserZab, "The Lesser Zab River"), (shattNil, "The Shatt al-Nil (ancient Iturungal)")]
+        for (place, name) in rivers {
+            XCTAssertNotNil(place?.storedBoundaryGeoJSON, "\(name) got a corridor boundary")
+        }
+        XCTAssertNil(zagros?.storedBoundaryGeoJSON, "unlisted river untouched")
+
+        for (place, reach) in reachChecks {
+            guard place != nil else { continue }
+            let name = rivers.first(where: { $0.0 === place })?.1 ?? "river"
+            guard let data = place?.storedBoundaryGeoJSON?.data(using: .utf8),
+                  let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let coordinates = object["coordinates"] as? [[[Double]]],
+                  let ring = coordinates.first else {
+                XCTFail("\(name) boundary not a Polygon")
+                continue
+            }
+            XCTAssertEqual(object["type"] as? String, "Polygon")
+            XCTAssertEqual(ring.first!, ring.last!, "\(name) ring closed")
+            XCTAssertGreaterThanOrEqual(ring.count, 4, "\(name) corridor is a closed, non-degenerate ring")
+            XCTAssertTrue(pointInRing(reach, ring), "\(name) corridor contains its on-river reach")
+        }
+    }
+
+    func testEnsureRiverPlacesCreatesAbsentZabs() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let riverType = PlaceType(name: "River, canal", icon: "water.waves", colorHex: "2E7D9C")
+        context.insert(riverType)
+        context.insert(Place(name: "Tigris river", placeType: riverType, modernLocation: "Iraq"))
+        try? context.save()
+
+        Migration.ensureRiverPlaces(context: context)
+        Migration.ensureRiverBoundaries(context: context)
+
+        var places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        let greaterZab = places.first { $0.name == "The Greater Zab River" }
+        let lesserZab = places.first { $0.name == "The Lesser Zab River" }
+        XCTAssertNotNil(greaterZab, "Greater Zab created by migration")
+        XCTAssertNotNil(lesserZab, "Lesser Zab created by migration")
+        XCTAssertEqual(greaterZab?.placeType?.name, "River, canal")
+        XCTAssertEqual(lesserZab?.placeType?.name, "River, canal")
+        XCTAssertNotNil(greaterZab?.storedBoundaryGeoJSON, "Greater Zab got its corridor")
+        XCTAssertNotNil(lesserZab?.storedBoundaryGeoJSON, "Lesser Zab got its corridor")
+
+        Migration.ensureRiverPlaces(context: context)
+        places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.count, 3, "migration never duplicates places")
+        XCTAssertNotNil(places.first { $0.name == "Tigris river" }, "existing places untouched")
+    }
+
+    func testEnsureRiverBoundariesNeverOverwrites() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Tigris river", modernLocation: "Iraq")
+        place.storedBoundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[43.0,33.0],[44.0,33.0],[44.0,34.0],[43.0,33.0]]]}"
+        context.insert(place)
+        try? context.save()
+
+        Migration.ensureRiverBoundaries(context: context)
+
+        let fetched: Place? = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, place.storedBoundaryGeoJSON, "existing stored boundary untouched")
+    }
+
+    func testEnsureRiverBoundariesIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "Tigris river", modernLocation: "Iraq"))
+        try? context.save()
+
+        Migration.ensureRiverBoundaries(context: context)
+        let first = (try? context.fetch(FetchDescriptor<Place>()))?.first?.storedBoundaryGeoJSON
+        Migration.ensureRiverBoundaries(context: context)
+        let second = (try? context.fetch(FetchDescriptor<Place>()))?.first?.storedBoundaryGeoJSON
+        XCTAssertNotNil(first)
+        XCTAssertEqual(first, second, "second run leaves the boundary identical")
+    }
+
+    func testEnsurePlaceBoundariesNeverOverwrites() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Mesopotamia", modernLocation: "test")
+        place.storedBoundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[33.0,44.0],[34.0,44.0],[34.0,45.0],[33.0,44.0]]]}"
+        context.insert(place)
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let fetched = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, place.storedBoundaryGeoJSON, "existing stored boundary untouched")
+    }
+
+    func testAssyriaBoundaryBackfilledAndGeoreferenced() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "Assyria", modernLocation: "Iraq"))
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let assyria = ((try? context.fetch(FetchDescriptor<Place>())) ?? []).first { $0.name == "Assyria" }
+        XCTAssertNotNil(assyria?.storedBoundaryGeoJSON, "Assyria got a kingdom boundary")
+        let decoded = Migration.decodedRing(from: assyria?.storedBoundaryGeoJSON ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Assyria ring closed")
+        XCTAssertTrue(pointInRing((43.26, 35.46), decoded), "Assur within Assyria")
+        XCTAssertTrue(pointInRing((43.13, 36.27), decoded), "Nineveh within Assyria")
+        XCTAssertTrue(pointInRing((44.01, 36.19), decoded), "Erbil within Assyria")
+        XCTAssertFalse(pointInRing((33.34, 44.36), decoded), "Baghdad outside Assyria")
+        XCTAssertFalse(pointInRing((36.5, 40.7), decoded), "Hasakah outside Assyria")
+    }
+
+    func testAssyriaBoundaryNeverOverwritesUserRing() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let place = Place(name: "Assyria", modernLocation: "Iraq")
+        place.storedBoundaryGeoJSON = "{\"type\":\"Polygon\",\"coordinates\":[[[39.0,34.0],[45.0,34.0],[45.0,38.0],[39.0,34.0]]]}"
+        context.insert(place)
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let fetched = (try? context.fetch(FetchDescriptor<Place>()))?.first
+        XCTAssertEqual(fetched?.storedBoundaryGeoJSON, place.storedBoundaryGeoJSON, "user-drawn Assyria boundary untouched")
+    }
+
     func pointInRing(_ point: (Double, Double), _ ring: [[Double]]) -> Bool {
         var inside = false
         let n = ring.count

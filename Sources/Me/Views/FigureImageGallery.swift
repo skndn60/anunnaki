@@ -629,9 +629,10 @@ struct ImageDetailContent: View {
             TextField("Search \(title.lowercased())", text: searchText)
                 .textFieldStyle(.roundedBorder)
             if !searchText.wrappedValue.isEmpty {
+                let query = searchText.wrappedValue
                 let filtered = allEntities.filter { e in
                     !alreadyLinked.contains(where: { $0.persistentModelID == e.persistentModelID })
-                        && entityName(e).localizedCaseInsensitiveContains(searchText.wrappedValue)
+                        && matchesSearch(e, query: query)
                 }
                 if filtered.isEmpty {
                     Text("No matches")
@@ -643,7 +644,7 @@ struct ImageDetailContent: View {
                             onLink(entity)
                             searchText.wrappedValue = ""
                         } label: {
-                            Label(entityName(entity), systemImage: icon)
+                            Label(entityLabel(entity, query: query), systemImage: icon)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                         .buttonStyle(.plain)
@@ -651,6 +652,22 @@ struct ImageDetailContent: View {
                 }
             }
         }
+    }
+
+    private func matchesSearch(_ entity: some Any, query: String) -> Bool {
+        if (entity as? Figure)?.matchedAlternateName(for: query) != nil { return true }
+        if (entity as? Place)?.matchedAlternateName(for: query) != nil { return true }
+        return entityName(entity).localizedCaseInsensitiveContains(query)
+    }
+
+    private func entityLabel(_ entity: some Any, query: String) -> String {
+        if let fig = entity as? Figure, let alt = fig.matchedAlternateName(for: query) {
+            return "\(fig.name) as \(alt)"
+        }
+        if let place = entity as? Place, let alt = place.matchedAlternateName(for: query) {
+            return "\(place.name) as \(alt)"
+        }
+        return entityName(entity)
     }
 
     private func entityName(_ entity: some Any) -> String {

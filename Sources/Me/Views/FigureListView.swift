@@ -33,6 +33,7 @@ struct FigureListView: View {
     @Query private var figureTypes: [FigureType]
     @Query private var allGroups: [FigureGroup]
     @Query(sort: \PopupTable.name) private var popupTables: [PopupTable]
+    @Query private var stickies: [StickyNote]
     @State private var showingAddSheet = false
     @State private var editingFigure: Figure?
     @State private var selectedFigureID: PersistentIdentifier?
@@ -47,6 +48,7 @@ struct FigureListView: View {
     @State private var rows: [FigureRowDisplay] = []
     @State private var openTable: PopupTable?
     @State private var showCompareSheet = false
+    @State private var showMergeSheet = false
     @DetailWidth(.figure) private var detailWidth
 
     enum FigureSortOrder: String, CaseIterable {
@@ -55,11 +57,13 @@ struct FigureListView: View {
         case domain = "Domain"
     }
 
-    /// The dynasties available in the dropdown: the direct subgroups of the Sumerian King List group(s).
+    /// The dynasties available in the dropdown: the direct subgroups of the canonical
+    /// "Dynasties" group, falling back to the legacy Sumerian King List top group for
+    /// databases that predate `ensureDynastyGroups`.
     private var dynasties: [FigureGroup] {
-        allGroups
-            .filter { $0.kind == .skl }
-            .flatMap { $0.subgroups ?? [] }
+        let sklTops = allGroups.filter { $0.kind == .skl }
+        guard let top = sklTops.first(where: { $0.name == "Dynasties" }) ?? sklTops.first else { return [] }
+        return (top.subgroups ?? [])
             .sorted { ($0.orderIndex, $0.name) < ($1.orderIndex, $1.name) }
     }
 
@@ -98,6 +102,11 @@ struct FigureListView: View {
         selectedFigureID = id
     }
 
+    private var stickyChangeSignature: [Int: Bool] {
+        Dictionary(stickies.map { ($0.persistentModelID.hashValue, $0.isResolved) },
+                   uniquingKeysWith: { first, _ in first })
+    }
+
     var body: some View {
         HStack(spacing: 0) {
             leftPane
@@ -131,6 +140,13 @@ struct FigureListView: View {
                 FigureCompareView(figure: figure)
             }
         }
+        .sheet(isPresented: $showMergeSheet) {
+            if let figure = selectedFigure {
+                FigureMergeSheetView(duplicate: figure) { keeperID in
+                    selectedFigureID = keeperID
+                }
+            }
+        }
 
         .onChange(of: imageDetailImage) { _, newValue in
             if let image = newValue {
@@ -157,6 +173,9 @@ struct FigureListView: View {
             rebuildRows()
         }
         .onChange(of: popupTables.map(\.persistentModelID)) { _, _ in
+            rebuildRows()
+        }
+        .onChange(of: stickyChangeSignature) { _, _ in
             rebuildRows()
         }
         .onChange(of: selectedDynastyGroup?.persistentModelID) { _, _ in
@@ -292,6 +311,9 @@ struct FigureListView: View {
                             },
                             ToolbarButton(icon: "rectangle.split.2x1", color: .accentColor, help: "Compare with another figure") {
                                 showCompareSheet = true
+                            },
+                            ToolbarButton(icon: "arrow.triangle.merge", color: .orange, help: "Merge this figure into another one") {
+                                showMergeSheet = true
                             }
                         ],
                         copyName: figure.name

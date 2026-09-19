@@ -112,6 +112,7 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 ### SwiftUI & SwiftData pitfalls
 
 - **Never fault a `@Model` property inside a SwiftUI `body`** — macOS 26 asserts (`EXC_BREAKPOINT` / `_assertionFailure` inside SwiftData), especially during `ForEach` render/layout passes. Precompute display values into plain value structs off the render path (`.task`, `.onChange`, button actions); keep bodies pure value-driven.
+- **Keep test/scratch `ModelContainer`s alive with a `let`** — `ModelContext` holds its container weakly, so `let context = makeContainer().mainContext` can leave the container deallocated while the context lives. Inserting into such a context intermittently traps with a silent `brk #0x1` (EXC_BREAKPOINT, sig 5) inside SwiftData (`___lldb_unnamed_symbol_...`, no stderr message) — passes in some builds/runs, crashes in others. Always `let container = makeContainer(); let context = container.mainContext`.
 - **Deleting a parent whose cascade children are observed live**: empty the observed child arrays first, then delete inside `modelContext.transaction { }` — otherwise SwiftData's cascade faults deleted children mid-render (see group deletion, DuplicateMerger).
 - **`.onChange` triggers compare ID collections** (`figures.map(\.persistentModelID)`), not model arrays: identity-preserving edits don't rebuild, structural changes do, and comparing IDs never faults deleted models.
 - **Views placed with `.position()` inside a ZStack must render unconditionally** — no `if`/`if let` wrapping and no `.opacity()` on the whole sub-view (they render at zero visual presence). Per-element checks inside are fine.
@@ -119,6 +120,7 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - **Extract complex `body` fragments** into computed properties or helper views when the Swift compiler times out type-checking.
 - **Avoid `NSCursor.push()/pop()`** in SwiftUI contexts — unbalances the AppKit cursor stack.
 - **Search fields use `.textFieldStyle(.roundedBorder)`**; inline editing/comment fields may be `.plain` inside a visible background container.
+- **Row/item deletion is always a small red trash icon** — `Image(systemName: "trash")` with `.font(.system(size: 10))`, `.foregroundStyle(.red.opacity(0.7))`, `.buttonStyle(.plain)`, `.help("...")`, placed at the trailing edge of the row. Do not invent other delete glyphs (e.g. `minus.circle.fill`); check an existing list row (AlternateNamesSection, PantheonsSection, CitationListSection) before writing a new one.
 - **Unit tests can't reproduce SwiftUI + SwiftData coexistence crashes** (no live `@Query` observation in MeCoreTests) — crash reports in `~/Library/Logs/DiagnosticReports/*.ips` are ground truth for those.
 - **macOS 26 SDK rename**: `ModelConfiguration`'s autosave parameter is `allowsSave:` (was `isAutosaveEnabled:`).
 - **Snap any Grid/frame dimension from a live drag to whole points** (`.rounded()`) — feeding SwiftUI `Grid` raw fractional `translation.width` causes subpixel pixel-alignment flip between frames on retina (the classic "jittery/jerky" resize).

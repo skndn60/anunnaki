@@ -216,6 +216,36 @@ extension Migration {
         try? context.save()
     }
 
+    /// Citations seeded before this migration copied the seed's `entityId` (a UUID)
+    /// into `linkedEntityName` instead of the entity's display name, so Source lists
+    /// showed long hex strings like "abb395fd-a9c1-5d4a-9cd6-73d0c27c3ff9" instead of
+    /// "Gilgamesh". Rewrites any citation whose linked name is a resolvable seed UUID
+    /// (figure/place/event/era) back to the entity name, scoped by entityType.
+    /// Additive + idempotent: rewritten names are never UUIDs, so a rerun is a no-op.
+    package static func resolveSeedCitationIds(context: ModelContext) {
+        guard let root = SeedData.loadRoot() else { return }
+        let figureNames = Dictionary(root.figures.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        let placeNames = Dictionary(root.places.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        let eventNames = Dictionary(root.events.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        let eraNames = Dictionary(root.eras.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        let citations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        var changed = false
+        for citation in citations {
+            let lookup: [String: String]
+            switch citation.entityType ?? .figure {
+            case .figure: lookup = figureNames
+            case .place: lookup = placeNames
+            case .event: lookup = eventNames
+            case .era: lookup = eraNames
+            case .relationship: continue
+            }
+            guard let name = lookup[citation.linkedEntityName], name != citation.linkedEntityName else { continue }
+            citation.linkedEntityName = name
+            changed = true
+        }
+        if changed { try? context.save() }
+    }
+
     package static func ensureSKLEventTypesExist(context: ModelContext) {
         let foundationPredicate = #Predicate<EventType> { $0.name == "Foundation" }
         let foundationExists = (try? context.fetch(FetchDescriptor<EventType>(predicate: foundationPredicate)).first) != nil
@@ -422,6 +452,22 @@ extension Migration {
         }
 
         try? context.save()
+    }
+
+    /// SKL founder of the "First rulers of Uruk" block whose `birthDate.era` was
+    /// seeded empty. An empty era string buckets him into the fallback
+    /// "Antediluvian" group in timeline/lineage views (phantom 1-king dynasty).
+    /// Assign the canonical era string once. Additive + idempotent: an existing
+    /// era (user-edited or repaired) is never overwritten.
+    package static func ensureMeshKiAngGasherEra(context: ModelContext) {
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var changed = false
+        for fig in figures where Self.seedNameKey(fig.name) == "meshkianggasher" {
+            guard fig.birthDate.era.isEmpty else { continue }
+            fig.birthDate.era = "First rulers of Uruk"
+            changed = true
+        }
+        if changed { try? context.save() }
     }
 
 }

@@ -6,8 +6,61 @@ struct CityMapView: View {
     let cityName: String
     let places: [Place]
 
+    private struct MapPin: Identifiable {
+        let id: PersistentIdentifier
+        let name: String
+        let coordinate: CLLocationCoordinate2D
+        let isCity: Bool
+        let tint: Color
+    }
+
     private var mappablePlaces: [Place] {
         places.filter { $0.latitude != nil && $0.longitude != nil }
+    }
+
+    private var pins: [MapPin] {
+        let eps = 0.0005
+        let offsetMeters: Double = 280
+        var clusters: [[Place]] = []
+        for place in mappablePlaces {
+            if let index = clusters.firstIndex(where: { cluster in
+                guard let ref = cluster.first else { return false }
+                return abs(place.latitude! - ref.latitude!) < eps && abs(place.longitude! - ref.longitude!) < eps
+            }) {
+                clusters[index].append(place)
+            } else {
+                clusters.append([place])
+            }
+        }
+        var result: [MapPin] = []
+        for cluster in clusters {
+            guard cluster.count > 1, let ref = cluster.first else {
+                for place in cluster {
+                    result.append(MapPin(
+                        id: place.persistentModelID,
+                        name: place.name,
+                        coordinate: CLLocationCoordinate2D(latitude: place.latitude!, longitude: place.longitude!),
+                        isCity: place.name == cityName,
+                        tint: place.placeType?.color ?? Color(white: 0.6)
+                    ))
+                }
+                continue
+            }
+            for (index, place) in cluster.enumerated() {
+                let count = cluster.count
+                let angle = (2 * Double.pi * Double(index) / Double(count)) - Double.pi / 2
+                let dLat = offsetMeters * cos(angle) / 111320
+                let dLon = offsetMeters * sin(angle) / (111320 * cos(ref.latitude! * .pi / 180))
+                result.append(MapPin(
+                    id: place.persistentModelID,
+                    name: place.name,
+                    coordinate: CLLocationCoordinate2D(latitude: ref.latitude! + dLat, longitude: ref.longitude! + dLon),
+                    isCity: place.name == cityName,
+                    tint: place.placeType?.color ?? Color(white: 0.6)
+                ))
+            }
+        }
+        return result
     }
 
     private var initialRegion: MKCoordinateRegion {
@@ -32,18 +85,9 @@ struct CityMapView: View {
 
     var body: some View {
         Map(position: $position, interactionModes: [.pan, .zoom]) {
-            ForEach(mappablePlaces, id: \.persistentModelID) { place in
-                let coord = CLLocationCoordinate2D(
-                    latitude: place.latitude!,
-                    longitude: place.longitude!
-                )
-                if place.name == cityName {
-                    Marker(place.name, coordinate: coord)
-                        .tint(.orange)
-                } else {
-                    Marker(place.name, coordinate: coord)
-                        .tint(place.placeType?.color ?? Color(white: 0.6))
-                }
+            ForEach(pins) { pin in
+                Marker(pin.name, coordinate: pin.coordinate)
+                    .tint(pin.isCity ? .orange : pin.tint)
             }
         }
         .mapStyle(.standard)

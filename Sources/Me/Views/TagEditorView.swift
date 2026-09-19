@@ -32,6 +32,7 @@ struct TagEditorView: View {
 
             TextField("Add tag\u{2026}", text: $tagInputText)
                 .textFieldStyle(.roundedBorder)
+                .onSubmit { commitTag() }
 
             if !tagInputText.isEmpty {
                 let matching = allTags.filter { !tags.contains($0) && $0.name.localizedCaseInsensitiveContains(tagInputText) }
@@ -97,6 +98,25 @@ struct TagEditorView: View {
                 .font(.caption)
             }
         }
+    }
+
+    private func commitTag() {
+        let text = tagInputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        if tags.contains(where: { $0.name.compare(text, options: [.caseInsensitive]) == .orderedSame }) {
+            tagInputText = ""
+            return
+        }
+        if let existing = allTags.first(where: {
+            !tags.contains($0) && $0.name.compare(text, options: [.caseInsensitive]) == .orderedSame
+        }) {
+            tags.append(existing)
+        } else {
+            let tag = Tag(name: text)
+            modelContext.insert(tag)
+            tags.append(tag)
+        }
+        tagInputText = ""
     }
 
     private func tagLabel(_ tag: Tag) -> some View {

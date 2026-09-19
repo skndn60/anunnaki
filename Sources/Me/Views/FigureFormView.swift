@@ -31,8 +31,11 @@ struct FigureFormView: View {
     @State private var reignYearsText = ""
     @State private var selectedTags: [Tag] = []
 
+    @State private var variantDrafts: [ReignVariantDraft] = []
+
     @State private var currentStep = 0
     @State private var showSuccessAlert = false
+    @State private var createdFigureID: PersistentIdentifier?
 
     private let stepLabels = ["Identity", "Reign", "Birth", "Death", "Description", "Source & Tags"]
 
@@ -53,7 +56,7 @@ struct FigureFormView: View {
 
     private var duplicateNameWarning: String? {
         let others = allFigures
-            .filter { $0.persistentModelID != figure?.persistentModelID }
+            .filter { $0.persistentModelID != figure?.persistentModelID && $0.persistentModelID != createdFigureID }
             .map(\.name)
         return NameDuplicateCheck.warning(candidate: name, existingNames: others)
     }
@@ -183,6 +186,27 @@ struct FigureFormView: View {
                     .textFieldStyle(.roundedBorder)
                     .help("Listed reign length in years (such as the SKL\u{2019}s own figure). Leave empty if unknown.")
             }
+
+            Section("Variant Reigns") {
+                if variantDrafts.isEmpty {
+                    Text("No variant reigns recorded. Add alternatives such as \u{201C}or 900 in some copies\u{201D} or \u{201C}3 years per the Ur-Isin kinglist\u{201D}.")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                ForEach($variantDrafts) { $draft in
+                    ReignVariantRow(
+                        draft: $draft,
+                        index: (variantDrafts.firstIndex { $0.id == draft.id } ?? 0),
+                        isLast: draft.id == variantDrafts.last?.id,
+                        onRemove: { variantDrafts.removeAll { $0.id == draft.id } }
+                    )
+                }
+                Button {
+                    variantDrafts.append(ReignVariantDraft())
+                } label: {
+                    Label("Add Variant", systemImage: "plus.circle")
+                }
+            }
         }
         .formStyle(.grouped)
     }
@@ -293,6 +317,16 @@ struct FigureFormView: View {
         reignStartText = figure.reignStartYear.map(String.init) ?? ""
         reignEndText = figure.reignEndYear.map(String.init) ?? ""
         reignYearsText = figure.reignYears.map(String.init) ?? ""
+        variantDrafts = figure.sortedReignVersions.map { version in
+            ReignVariantDraft(
+                original: version,
+                yearsText: version.years.map(String.init) ?? "",
+                startYearText: version.startYear.map(String.init) ?? "",
+                endYearText: version.endYear.map(String.init) ?? "",
+                tradition: version.tradition,
+                note: version.note
+            )
+        }
         selectedTags = figure.tags
         selectedPantheons = figure.pantheons
     }
@@ -319,6 +353,7 @@ struct FigureFormView: View {
                 reignEndYear: Int(reignEndText),
                 reignYears: Int(reignYearsText)
             )
+            syncReignVariants(for: figure)
             figure.tags = selectedTags
             figure.pantheons = selectedPantheons
             pruneOrphanedPantheonAssociations(figure)
@@ -342,6 +377,8 @@ struct FigureFormView: View {
             newFigure.pantheons = selectedPantheons
             newFigure.era = Migration.era(named: birthDate.era, context: modelContext)
             modelContext.insert(newFigure)
+            syncReignVariants(for: newFigure)
+            createdFigureID = newFigure.persistentModelID
             RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
             ActivityLogger.record(action: .created, entityType: "Figure", entityName: newFigure.name, context: modelContext, session: userSession)
         }
@@ -359,5 +396,105 @@ struct FigureFormView: View {
             figure.pantheonAssociations?.removeAll { $0.persistentModelID == assoc.persistentModelID }
             modelContext.delete(assoc)
         }
+    }
+
+    private func syncReignVariants(for figure: Figure) {
+        let originals = figure.sortedReignVersions
+        let draftsByOriginal = Dictionary(
+            uniqueKeysWithValues: variantDrafts.compactMap { draft in
+                draft.original.map { ($0.persistentModelID, draft) }
+            }
+        )
+        for version in originals {
+            guard let draft = draftsByOriginal[version.persistentModelID] else { continue }
+            version.years = Int(draft.yearsText)
+            version.startYear = Int(draft.startYearText)
+            version.endYear = Int(draft.endYearText)
+            version.tradition = draft.tradition
+            version.note = draft.note
+        }
+        let retainedIDs = Set(draftsByOriginal.keys)
+        for version in originals where !retainedIDs.contains(version.persistentModelID) {
+            figure.reignVersions.removeAll { $0.persistentModelID == version.persistentModelID }
+            modelContext.delete(version)
+        }
+        for draft in variantDrafts where draft.original == nil {
+            let version = ReignVersion(
+                years: Int(draft.yearsText),
+                startYear: Int(draft.startYearText),
+                endYear: Int(draft.endYearText),
+                tradition: draft.tradition,
+                note: draft.note
+            )
+            figure.reignVersions.append(version)
+            modelContext.insert(version)
+        }
+    }
+}
+
+private struct ReignVariantDraft: Identifiable {
+    let id = UUID()
+    var original: ReignVersion?
+    var yearsText = ""
+    var startYearText = ""
+    var endYearText = ""
+    var tradition = ""
+    var note = ""
+}
+
+private struct ReignVariantRow: View {
+    @Binding var draft: ReignVariantDraft
+    let index: Int
+    let isLast: Bool
+    let onRemove: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Variant \(index + 1)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Button(action: onRemove) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.7))
+                    }
+                    .buttonStyle(.plain)
+                    .help("Remove this variant")
+                }
+                LabeledContent("Duration") {
+                    TextField("", text: $draft.yearsText, prompt: Text("900"))
+                        .textFieldStyle(.roundedBorder)
+                        .help("Variant reign length in years. Leave empty for a span-only variant.")
+                }
+                LabeledContent("Start Year") {
+                    TextField("", text: $draft.startYearText, prompt: Text("-1700"))
+                        .textFieldStyle(.roundedBorder)
+                        .help("Negative = BCE, positive = CE")
+                }
+                LabeledContent("End Year") {
+                    TextField("", text: $draft.endYearText, prompt: Text("-1600"))
+                        .textFieldStyle(.roundedBorder)
+                        .help("Negative = BCE, positive = CE")
+                }
+                LabeledContent("Tradition") {
+                    TextField("", text: $draft.tradition, prompt: Text("Some copies of the SKL, Ur-Isin king list\u{2026}"))
+                        .textFieldStyle(.roundedBorder)
+                        .help("Which source records this variant")
+                }
+                LabeledContent("Note") {
+                    TextField("", text: $draft.note, prompt: Text("Optional detail, e.g. where the figure is attested"))
+                        .textFieldStyle(.roundedBorder)
+                }
+            }
+            if !isLast {
+                Divider()
+                    .padding(.vertical, 8)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }

@@ -8,6 +8,884 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-19 — Variant reign lengths (ReignVersion): SKL manuscript copies and the Ur-Isin king list
+
+**Context:** The user reported encountering kings with two or more competing reign figures and asked whether the app can model them. It could not: `Figure` carries a single `reignYears` plus a single `reignStartYear`/`reignEndYear` span, `ReignLength.parse` takes only the first prose match, and every alternative lived as free-text inside `figureDescription` — invisible to queries, the timeline, and the date propagator. Documented instances in the seed: Kullassina-bel "960 years (or 900 in some copies)", Etana "1,500 years (some copies read 635)", and three SKL-vs-Ur-Isin splits (Bur-Suen 21 vs 22, Iter-pisha 4 vs 3, Ur-du-kuga 4 vs 3). A second axis exists beyond durations: competing chronological spans between chronology editions (e.g. Middle vs Short) that the scalar span columns cannot express either. User approved building it.
+
+**Decision:** Add a `ReignVersion` `@Model` child of `Figure` (migration-safe optional to-many, `.cascade`). Each row = `years` (variant duration) and/or `startYear`/`endYear` (variant span) + free-text `tradition` (attribution, display-only) + `note` + `isApproximate`. The canonical scalars stay untouched so `SKLDatePropagator`, aggregations, and the `Kingship` accessor never change semantics. Backfilled additively by `Migration.ensureReignVersionBackfill` for the five documented kings (check-by-figure via `DuplicateMerger.normalizationKey`, dedupe on `(years, tradition)`). Note the seed's figure for the Isin king is named **Bur-Suen** (not the macron form Būr-Sîn from the prose), so the config targets the stored name.
+
+**Changes:**
+- `Sources/MeCore/Models/ReignVersion.swift` — NEW `@Model`; `displayLabel` mirrors `Kingship.reignSpanLabel`'s BCE styling ("900 years (Some copies of the Sumerian King List)" / "1728–1686 BCE (Short chronology)").
+- `Figure.swift` — `@Relationship(deleteRule: .cascade, inverse: \ReignVersion.figure) reignVersions: [ReignVersion] = []` + `sortedReignVersions` (duration rows by years first, then span rows by start year).
+- `Sources/MeCore/Store/Migration+ReignVersions.swift` — NEW `Migration.ensureReignVersionBackfill(context:)`: 5 configs, only applies when the normalized figure name exists and no `(years, tradition)` row already present; saves once if anything was created.
+- `ContentView.swift` — wired `ensureReignVersionBackfill` right after `ensureReignYears`.
+- Schemas: `ReignVersion.self` registered in `MeApp.sharedContainer` and the test container.
+- `FigureDetailView.swift` — "Variant Reigns" detail section listing `displayLabel` + note when present.
+- `FigureFormView.swift` — Reign step gains a "Variant Reigns" editor (add/remove/edit drafts, `ReignVariantDraft` tracks its `original` model); `syncReignVariants(for:)` reconciles drafts against stored rows on save in both create and edit paths (update kept, delete removed, create new).
+- Tests: round-trip + cascade delete, `sortedReignVersions` ordering, `displayLabel` cases; migration creates all 5 with correct years/traditions, idempotent, skips unknown figures, does not duplicate a matching user-entered variant.
+
+**Verification:** `swift build` clean (pre-existing unrelated warnings only); `swift test` 607 passed, 0 failures (7 new, up from 600). Purely additive — no scalar reign field behavior or seeding changed.
+
+Same-day follow-up: the variant editor originally exposed only the duration field. Asked whether variants could be entered as a start/end-year span (the model's second axis), the form's Reign step now shows Duration + Start Year + End Year per variant row; `ReignVariantDraft` gained `startYearText`/`endYearText` and `syncReignVariants` round-trips them (empty text → nil) for both created and edited rows. `displayLabel` renders a span variant as "1728–1686 BCE (Short chronology)". `swift build` clean.
+
+Second follow-up (same day): user called the variant layout messy — the first pass packed three label-less boxes (Duration/Start/End) plus the remove glyph elbow-to-elbow in one HStack under a grouped form. Extracted the row into a `ReignVariantRow` subview: each variant is now a vertical stack with a caption header ("Variant N" + a trailing remove button) above five aligned `LabeledContent` rows (Duration / Start Year / End Year / Tradition / Note) and a `Divider` between rows — the standard grouped-form look. `variantDrafts` index for the caption derived via `firstIndex` inside the bindings-based `ForEach($variantDrafts)` (no index-based iteration, so add/remove stays animation/id-stable). `swift build` clean.
+
+Third follow-up (same day): two more form complaints — (1) the delete affordance was a red circle "traffic-light" `minus.circle.fill` next to the variant title; replaced with the app's standard small red trash (`Image(systemName: "trash")`, `.font(.system(size: 10))`, `.foregroundStyle(.red.opacity(0.7))`, `.buttonStyle(.plain)`) used consistently across AlternateNames/Pantheons/Sections. (2) The sample numbers ("900", "-1700", "1,600") and example phrases rendered OUTSIDE the fields: the strings were being passed as the TextField *title* parameter, which macOS promotes to a visible label rather than an in-field placeholder when the field sits inside a `LabeledContent`. Switched to `TextField("", text:prompt:)` so the sample data now renders only as in-field placeholders. `swift build` clean.
+
+---
+
+### 2026-09-19 — Mesopotamian macro-period eras from the Wikipedia timeline
+
+**Context:** The user asked whether the *Timeline of Mesopotamia* Wikipedia template (https://en.wikipedia.org/wiki/Template:Timeline_of_Mesopotamia) could feed the app's `Era` entities. It is a clean structured table — each band is a `(date-range, region(s), name)` row, already read from the raw wikitext. Cross-checking the 19 bands against the store: the Uruk/Jemdet Nasr/Early Dynastic split, the SKL doctrine eras (Dynasty of Akkad, Gutian rule, Third Dynasty of Ur, etc.), and the three historical period labels (Old Assyrian 31 / Old Babylonian 32 / Neo-Assyrian 33) were all present; the genuinely new macro-periods were the second-millennium northern powers and the first-millennium+ imperial sequence. User approved adding them.
+
+**Decision:** Add 13 macro-eras as lanes 34–46 (skipping the SKL/historical eras already present): Uruk Period (34), Jemdet Nasr Period (35), Mitanni (36), Karduniaš (Kassite Babylonia) (37), Middle Assyrian Period (38), Late Bronze Age Collapse (39), Neo-Babylonian Empire (40), Achaemenid Empire (41), Macedonian Empire (42), Seleucid Empire (43), Parthian Empire (44, −129→224 CE), Roman and Byzantine Mesopotamia (45, −63→700 CE), Sassanid Empire (46, 224–651). Ranges follow the template's bands (Sassanid trimmed from "mid-700s" to the historical 651 fall). Appended after the existing periods per the established convention (no renumbering of seed lanes). Checklist before writing:
+- No name collisions in `seed_data.json` or migration-created eras.
+- No test asserts a global era count.
+- `TimelinePostView` renders only eras *with figures* (`postFloodErasWithFigures`), so the new empty eras don't widen the BCE window or inject swimlanes; `DynastyEvolutionMapView` iterates `DynastyRun`s (eras with boundaries), `MesopotamiaMapView` filters `boundaryGeoJSON != nil` — all safe.
+- Era date display quirk noted: `MythologicalDate.displayLabel` mislabels BCE→CE spans (e.g. Parthian −129…224 shows "~129 – 224 BCE") — pre-existing, endpoint points only, not touched.
+- `fixEraOrderIndices`'s catch-all bumps any *unlisted* post-flood era by +1 on every launch, so every new name is registered in its name map at the canonical lane — otherwise these lanes would drift +1/launch.
+
+**Changes:**
+- `Sources/MeCore/Store/Migration+TimelineMacroEras.swift` — NEW `Migration.ensureTimelineMacroEras(context:)`: check-by-name creation (via `NameDuplicateCheck.normalizedKey`), 13 configs with date bands and one-line descriptions, inserts only absent names, saves once if any created.
+- `Migration+EraChronology.swift` — `fixEraOrderIndices` newOrder map gains the 13 names at lanes 34–46 so the catch-all can never drift them.
+- `ContentView.swift` — wired `Migration.ensureTimelineMacroEras` right after `ensureHistoricalPeriodEras` in the launch migration sequence.
+- Tests in `MeCoreTests+Migration.swift`: all-13-created-with-lanes/dates/descriptions, idempotency (second run adds none), a pre-existing same-name era is left untouched (lanes/data preserved), and two consecutive `fixEraOrderIndices` runs pin lanes (no drift).
+
+**Verification:** `swift build` clean; `swift test` 600 passed, 0 failures (4 new tests, up from 596). Additive only — no existing era modified, no re-sequencing of user data; the new eras become available to the era pickers (Figure/Event/MythologicalDate) immediately.
+
+Same-day follow-up: the newly visible crossing spans exposed the pre-existing `MythologicalDate.displayLabel` range bug — a BCE→CE range (e.g. Parthian −129…224 CE) rendered as "~129 – 224 BCE" with a single BCE suffix. Fixed in `MythologicalDate.swift`: crossing ranges now label each endpoint with its own era sign ("~129 BCE – 224 CE"); same-sign ranges keep the compact form ("~2,000 – 1,750 BCE"). All downstream consumers read `displayLabel` or separate per-endpoint labels, so the single fix covers every view. `testMythologicalDateDisplayLabel` extended with crossing + same-sign + forward-CE span cases. `swift build` clean; `swift test` 600 passed, 0 failures.
+
+---
+
+### 2026-09-19 — Sticky-note dismissals: deleted migration review flags stop coming back
+
+**Context:** The user deleted the yellow "FROM 26-08-2026 IMPORT" sticky on Damkina and it reappeared after every restart. Root cause: `Migration.markPreExistingSyncretisms` re-runs on every launch and treats "figure no longer carries the sticky" as "needs the sticky again" — the idempotency guard is the sticky's own existence. `Migration.alignNergalErraSyncretism` has the same shape. Every other auto-sticky (`"IMPORTED — needs review"`, `"IMPORTED FROM ORACC"`, `"Import daily life events"`, …) is creation-coupled (only inserted inside the create-if-absent loops), so those never re-add after deletion — only these two "flag a pre-existing entity" migrations loop.
+
+**Decision:** Follow the existing `FindingDismissal` precedent — the app already models "user reviewed this, don't flag again" with a signature + tombstone row for integrity findings that are recomputed on every scan. Same problem, same shape, same answer: a `StickyDismissal` tombstone keyed by `(textPrefix, entity normalized name)`.
+
+**Changes:**
+- `Sources/MeCore/Models/StickyDismissal.swift` — NEW `@Model` (`textPrefix`, `entityKey`, `createdAt`, `signature`), a direct analogue of `FindingDismissal`.
+- `Sources/MeCore/Store/Migration+StickyDismissals.swift` — NEW: `Migration.autoStickyPrefixes` (the six known review-flag prefixes), `isStickyDismissed(textPrefix:entityKey:context:)`, `recordStickyDismissal(for:context:)` (prefix-matches a deleted note, derives the entity key via `DuplicateMerger.normalizationKey`, no-op for user-typed stickies).
+- `Migration+MaintenanceSplits.swift` — `markPreExistingSyncretisms` and `alignNergalErraSyncretism` now skip re-adding a sticky whose `(prefix, figure)` is dismissed.
+- `StickyNoteListView.swift` — both trash buttons (card + global list) call `recordStickyDismissal` before deleting.
+- Schema: `StickyDismissal.self` registered in `MeApp` (app) and the test container. New table, no migration-safety issues.
+- Tests: deleted-sticky-stays-deleted (Damkina), dismissal scoped per-figure (Ninhursag still flagged), Nergal/Erra dismissal (Erra's twin note survives), user-typed stickies record nothing.
+
+**Verification:** `swift build` clean; `swift test` 596 passed, 0 failures (7 focused migration tests added). The user's next launch will still run `markPreExistingSyncretisms` once — if Damkina's sticky is still present it stays (no behavior change); once deleted it records the tombstone and never returns.
+
+Same-day follow-up: deleting/resolving a sticky left the yellow `hasUnresolvedSticky` dot in the Figures list stuck on — the list draws the dot from the `FigureRowDisplay` snapshot, which only rebuilt on figure/popup-table/dynasty/sheet triggers. Fix: `FigureListView` adds `@Query private var stickies: [StickyNote]` + a `stickyChangeSignature` (id-hash → `isResolved`) `.onChange` trigger that calls `rebuildRows()`; dot now updates live on add/delete/resolve. Place/event lists were unaffected (they read live `stickies` in `body`). View-layer fix, not covered by MeCoreTests.
+
+---
+
+**Context:** After the boundary-hover prototype, the user reported three issues in quick succession. (1) The highlight and tooltip "stuck" on a region after leaving to empty map space — the exit path ran a rAF re-query at the last hovered point that re-affirmed the old highlight. (2) Sweeping over rivers "lost tracking" for seconds — rivers are thin elongated boundary polygons, so each sweep hammers the leave→re-enter cycle; every crossing reset the whole water layer's paints (3 `setPaintProperty` calls) and re-added the popup DOM, piling up MapLibre's render backlog. (3) The highlight could claim a river while the cursor sat over a kingdom territory — layer-bound events query each layer independently, so overlapping features raced and last-registered won.
+
+**Changes:** `MesopotamiaMapView.swift`:
+- Removed the exit-path re-query (`lastLayerPoint`, the `boundaryFillLayerIds.push` that re-registered the dyn layer) so `mouseleave` clears immediately — leave-to-empty now snaps off in the same frame.
+- Added a 50 ms hover lease: exit defers the clear (`scheduleClear` / `cancelPendingClear`, `pendingClearTimer`), and re-entering any boundary within the window cancels it. River sweeps therefore never reset paints or rebuild the popup; exit to empty still clears within a few frames.
+- Replaced the per-layer `mousemove`/`mouseenter`/`mouseleave` handlers with one global `map.on('mousemove', onMapMouseMove)` that runs a single `queryRenderedFeatures(e.point, {layers: boundaryFillLayerIds})` and highlights the topmost (paint-ordered) feature — the canonical MapLibre pattern — so overlaps resolve deterministically by what is actually drawn on top. Each `l-<key>-fill` and `l-dyn-fill` registers itself into `boundaryFillLayerIds` at setup; per-layer `click` popups kept. Map-level `mouseleave` hard-clears (cursor + highlight). Old `handleHoverLeave` removed.
+
+**Verification:** `swift build` clean; `swift test` 592 passed, 0 failures. User confirmed exit-to-empty clearing is immediate, river lag is gone, the river/kingdom overlap resolves, and the map "performs pretty snappy" given the layer count.
+
+**Next-up (map enhancement suggestions from the 2026-09-17 conversation; user to pick up on a future session):** 1) figure markers on their associated places via `FigurePlaceAssociation` (patronDeity/ruler/worshippedAt; icon from FigureType, colored; click → figure quickview via the `placeClicked` bridge) — agreed to be the first priority; 2) a time slider combining dynasty-era spans + figures' `MythologicalDate`s to dim territories inactive at the selected year; 3) click-through on boundaries to the era/place quickview (currently popup-only); 4) relationship arcs (spouse/alliance/creator) between the cities of related figures via a toggleable GeoJSON line layer; 5) nested regions from `PlacePlaceAssociation` (.locatedWithin) instead of flat per-type layers; 6) overlaying the EventTrail layer onto this atlas for a consolidated geography story. Order settled: figure associations first, then time.
+
+**Files:** `Sources/Me/Views/MesopotamiaMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-17 — Boundary hover highlight on the Mesopotamia map
+
+**Context:** After the basemap-city-label work, the user asked whether drawn layer geometry could detect mouse-over. MapLibre already provides per-layer `mousemove`/`mouseenter`/`mouseleave`; the Mesopotamia map used only the latter two for a pointer cursor. User asked for a prototype: hover over the southern marshes territory → thicken its outline + tooltip with the name.
+
+**Changes:** `MesopotamiaMapView.swift` — new `highlightBoundary(name, lngLat)` + a dedicated `hoverPopup` (no close button). On `mousemove` over any `l-<key>-fill` or `l-dyn-fill` layer it sets data-driven `line-width` (2.5→4.6, dyn 2.2→4.2) and `fill-opacity` bump via `['case', ['==', ['get','name'], hoverName], …]` on every boundary line/fill layer, and moves the popup to the cursor; `mouseleave` resets paints and removes the popup. Keyed on feature `name` (matches the existing click-popup convention). Highlights key on name, so duplicate names across layers would both light up (accepted, matches existing name-based identification).
+
+**Verification:** `swift build` clean; `swift test` 592 passed, 0 failures. User ran the prototype and confirmed "Works great!".
+
+**Files:** `Sources/Me/Views/MesopotamiaMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-17 — Basemap city labels hidden (no more duplicate pins)
+
+**Context:** The user noticed the OHM basemap draws its own city/place label layers (IDs starting with `city_` — `city_labels_*`, `city_capital_labels_*`, `city_locality_labels_*`) underneath the app's own place markers, producing visible duplicates on the Mesopotamia Map and both dynasty maps. Asked if they could be turned off; chose a UI toggle, default off (hidden), applied to all maps.
+
+**Changes:** shared `@AppStorage("mapHideBasemapCities")` flag (default `true` = hidden) surfaced as a toggle in each map's existing chrome: a new sidebar row in Mesopotamia Map, a caption switch next to the Sumer palette in Dynasty Map, and a dedicated switch in the Dynasty Evolution header. Wired to a JS `applyBasemapCityLabels()` / `applyBasemapCities()` pass that sets `layout.visibility = 'none'` on every basemap layer whose id starts with `city_` (theme-agnostic across all four OHM themes), re-applied on `styledata` so it survives style reloads and the OHM date-plugin filter cycle — the dynasty `snapshotAndApply()` gained the call, and Mesopotamia registered a `styledata` listener plus a call inside `setLayerState`. `DynastyHistoricalMapView` gained an `hideBasemapCities` property (default `true`) threaded through `mapHTML(for:)` and diff-checked in `updateNSView` like `labelMinZoom`.
+
+**Verification:** `swift build` clean; `swift test` 592 passed, 0 failures.
+
+**Files:** `Sources/Me/Views/MesopotamiaMapView.swift`, `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/DynastyEvolutionMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** The user has been curating region "territory" polygons one kingdom at a time (latest: Amurru, Elam, Hurri, Kassite homeland), placing a Kingdom-type pin then asking me to author the bound. Each new place has `storedBoundaryGeoJSON` NULL when created, so adding/updating a key in `placeBoundaryRings` (plus nothing else) lets `ensurePlaceBoundaries` backfill at next launch — no upgrade migration needed unless a place already holds a seed ring (cf. Cedar Forest/marshes, which *did* need `upgradeSeeded…Boundary`).
+
+**Amurru (was already a seed key, but wrong):** the old ring (a steppe blob, 36.4–41.5E) excluded the user's new pin at Qadesh/Homs and even swallowed Aleppo (Yamhad). Refined to the Amorite land = Syrian steppe + middle Euphrates (Jebel Bishri, Palmyra, Dura-Europos, Sinjar-side) + the Orontes valley up to Qadesh/Homs and the port Sumur/Tell Kazel. OUT: Aleppo, Damascus, Beirut, Tripoli, Baalbek, Baghdad, Raqqa.
+
+**Elam (seed key was also wrong):** the old ring hung a lobe onto the Mesopotamian alluvium (Amara, Basra — not Elam) and swallowed Isfahan, while dropping the Elamite Gulf port Liyan/Bushehr. Refined to Susiana + Anshan/Fars highlands + the Gulf coast: IN Susa, Choga Zanbil, Haft Tepe, Madaktu, Ahvaz, Shushtar, Anshan, Persepolis, Shiraz, Firuzabad, Liyan; OUT Amara, Basra, Isfahan, Khorramabad, Baghdad, Kerman.
+
+**Hurri (new key):** user pin 36.8/41.0 in the Khabur triangle (correct heartland). Ring = Khabur triangle + Tur Abdin + upper Tigris basin: IN Washukanni, Urkesh/Tell Mozan, Brak, Leilan, Hamoukar, Nisibis, Mardin, Tell Halaf, Harran, Urfa, Diyarbakır, Sinjar; OUT Nineveh, Assur, Mosul (Assyrian Tigris), Mari, Terqa, Bitlis/Van, Adiyaman. (Deliberately excluded Nuzi/Arrapha east of the Tigris — keeping Arrapha in would also pull in Assur, which sits at the same latitude 1° west.)
+
+**Kassite homeland (new key):** user called it "Kassite homeland" since the Kassite kingdom had no formal name (Karduniaš only while ruling Babylon). Pin 48.33/33.5 = Lorestan, matching the scholarly central-Zagros homeland. Ring covers Lorestan + Kermanshah + Hamadan + Ilam: IN Khorramabad, Hamadan, Kermanshah, Sanandaj, Kangavar, Borujerd, Malayer, Ilam; OUT Kirkuk, Arak, Zanjan, Deh Luran, Mehran, Baghdad, Isfahan. Known partial overlap with the Gutium ring — accepted (both are Zagros peoples; ranges genuinely overlap in scholarship).
+
+**Method:** every ring point-edited then verified with a Python point-in-polygon battery of the architecturally decisive landmarks *before* touching Swift; each target gets its own `test…BoundaryGeoreferenced` (pip assertions) plus entries in the all-rings test's `centers` dict and place list. None of the live places (pk 114 Amurru, 115 Elam, 117 Hurri, 118 Kassite homeland) hold a stored boundary, so fresh-keys/updated-keys backfill cleanly.
+
+**Verification:** `swift build` clean; `swift test` 592 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+PlaceBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-16 — Cedar Forest boundary refined to Mount Lebanon
+
+**Context:** User asked me to double-check the Cedar Forest territory. The stored boundary (pk 17) was the seed-authored corridor: 33.9°–37.2°N × 35.4°–36.8°E, a ~370 km Levantine swath covering both the Lebanon and Amanus cedar ranges. Verdict: right region but over-generous — it swept in Tripoli/Antakya, dropped the southern Chouf/Barouk groves, and swallowed the Amanus (the alternative scholarly location). User approved replacing with a tighter Mount Lebanon ring.
+
+**Refined ring (10 pts, ~110×115 km):** hugs the Mount Lebanon cedar belt only. Verified by point-in-polygon battery: Cedars of God (Bsharri 36.052,34.243), Ehden (35.99,34.31), Barouk/Chouf (35.72,33.70), and the app's own pin (36.0,34.2) all inside; Tripoli, Beirut, Sidon, Byblos, Baalbek, Damascus, Ugarit, Latakia, Antakya, and the Amanus range all out.
+
+**Migration design (mirrors the marshes upgrade):** `placeBoundaryRings["cedar forest"]` updated for fresh installs; new `legacySeededCedarForestRing` constant + `upgradeSeededCedarForestBoundary(context:)` that replaces the stored ring only when it decodes exactly to the legacy seeded corridor (user-drawn boundaries never touched). Wired in `ContentView.swift` right after `upgradeSeededMarshesBoundary`. 3 new tests: legacy→refined replacement, user ring untouched, refined-ring georeference battery.
+
+**Verification:** live-store probe confirmed the stored ring equals the legacy constant (upgrade fires on next launch); `swift build` clean; `swift test` 588 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+PlaceBoundaries.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-16 — E-galmah coordinate fix (was mid-Euphrates on the map)
+
+**Context:** User noticed E-galmah's pin rendered in the middle of the Euphrates on the Mesopotamian map and asked whether that was correct. It is not: the seed carries longitude 44.5, but the true site (E-galmah temple at Isin, on the ancient Isinnitum Canal branch of the Euphrates) is ~45.27E. The app's own "Isin" place entry had the correct coordinates (31.93351, 45.28521); E-galmah never inherited them.
+
+**Changes:** new `Migration+CoordinateFixes.swift` → `fixEgalmahCoordinates(context:)`: corrects the place named "E-galmah" only when it still holds the known-bad seed value (31.9/44.5, ±0.0001) — user-corrected coordinates are never overwritten. Uses the live "Isin" place as the coordinate source (falls back to the hardcoded value 31.93351/45.28521). Wired in `ContentView.swift` right after `ensureMapFlags`. Also corrected the seeded value in both `seed_data.json` copies (Me and MeCore) so fresh installs get it right. 5 new tests (seeded-value → Isin copy, fallback without Isin place, user-corrected untouched, idempotent, missing-E-galmah no-op).
+
+**Verification:** live-store probe confirmed the E-galmah row holds 31.9/44.5 (migration will fire on next launch); `jq --exit-status` on both seed files; `swift build` clean; `swift test` 583 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+CoordinateFixes.swift`, `Sources/Me/Views/ContentView.swift`, `Sources/MeCore/Resources/seed_data.json`, `Sources/Me/Resources/seed_data.json`, `Tests/MeCoreTests/MeCoreTests+Migration.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-16 — Shatt al-Nil (ancient Iturungal) corridor boundary
+
+**Context:** User asked to fill a missing waterway: "The Shatt al-Nil (ancient Iturungal)" (store pk 73, PlaceType "Body of water" — the user's own typing, left as-is). No stored boundary.
+
+**Identity:** Shatt al-Nil = **Naru Kabari** = the ancient **Iturungal canal** (Wikidata Q10362464, pin 32.127N 45.231E at Nippur/Afak) — arguably an early course of the Euphrates that carried the old Sippar–Kish–Nippur–Adab line south toward the marshes, per the Iturungal scholarship (Wikipedia/Nippur/Iturungal articles; UNESCO Nippur "Shatt al-Nil" canal bed bisecting the site).
+
+**OSM situation:** Nominatim finds only a ~1.5 km named "Shatt al-Nil" waterway stretch at Afak (ways 962835081/962835080, 45.46–45.48E 32.08–32.10N); no relation; a name-based way-walker and a full flood-fill both failed (the latter ballooned into the irrigation network + thousands of node/ways API calls, too slow). Overpass 504s on this region. Decided: hand-authorized corridor along the documented ancient line, anchored on the OSM fragment and the Wikidata pin — house "fuzzy ancient geography" convention, same as Irnina.
+
+**Corridor (10-pt centerline, 4 km buffer):** Sippar/Euphrates flank (44.42,32.72) → Kish (44.63,32.54) → Nippur (45.231,32.127) → Afak stretch (OSM) → Adab (45.685,31.951) → south to the marsh fringe (46.02,31.35). Buffered with the `BoundaryGeometry.bufferPolyline` mirror at 4 km (canal width, matching Irnina) → ~891 km², 21-pt ring. pip-validated: Sippar/Kish/Nippur/Adab/mid anchors in; Najaf, Baghdad, Kut, Diwaniya out.
+
+**Changes:** new resource `Sources/MeCore/Resources/shatt_al_nil_boundary.geojson` (ODbL provenance in properties); `riverBoundaryResources` + `"shatt al-nil (ancient iturungal)"` entry; backfill test + place + 4 reach checks (Nippur, Adab, Kish, mid-segment). `ensureRiverBoundaries` matches by normalized name only (no PlaceType filter), so the "Body of water" place gets its corridor without the type being touched.
+
+**Verification:** live-store probe confirmed pk 73 has no stored boundary and its normalized name equals the dict key (backfill fires next launch); `swift build` clean; `swift test` 578 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/shatt_al_nil_boundary.geojson`, `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-16 — Southern Mesopotamian Marshes (Hawizeh / Hammar System) boundary upgrade
+
+**Context:** User flagged that "The Southern Mesopotamian Marshes (Hawizeh / Hammar System)" (store pk 72) had a coarse placeholder boundary and asked to fill it properly. The DB held the original seeded 10-point oval (verified: 11 stored pts closed, byte-decode-equal to `legacySeededMarshesRing`).
+
+**Ground truth attempt:** Overpass (both mirrors) 504s on this region even for minimal queries; Nominatim has no Hammar object and 404s the Hawizeh relation polygon. Fell back to hand-authoring against known geography, consistent with the app's "intentionally fuzzy" region style.
+
+**Ring (16 pts):** hourglass wetland belt across both systems — Hawizeh lobe (Iraq + Hur al-Azim/Iran side) east of the Tigris, the Hammar lobe south of the Euphrates bracketing Basra-ward, connected through the Central marshes belt; south edge hugs the Shatt corridor. Iterated with a 21-target pip battery until green:
+- Inside: Hawizeh Iraq/Hur al-Azim/Hawizeh S+W, Hammar mid/W/E, Central + W, the Basra-plain belt, and the existing test landmark (47.0,31.0).
+- Outside: Amara, Kut, Ahvaz, Susangerd (first revision swallowed it — indent the NE corner), Shadegan, Khoramshahr, Al-Faw, Kuwait City, Baghdad-area. Basra stays inside the corridor lobe (the Shatt delta *is* marshland; the old placeholder also covered it) — deliberate.
+
+**Migration design (new pattern):** `ensurePlaceBoundaries` never overwrites a stored non-degenerate ring, so the seeded placeholder would survive forever. Added a targeted `upgradeSeededMarshesBoundary(context:)` that replaces `storedBoundaryGeoJSON` only when the stored ring decodes exactly (1e-9 tolerance, closed-ring drop-last) to `legacySeededMarshesRing` — i.e. only our own seeded placeholder, never a user-drawn/edited boundary. Idempotent after one run. Wired in `ContentView.swift` right after `ensurePlaceBoundaries`.
+
+**Changes:** `Migration+PlaceBoundaries.swift` (new `legacySeededMarshesRing` constant, marsh dict ring → 16-pt refined ring, new `upgradeSeededMarshesBoundary`), `ContentView.swift` (call site), `MeCoreTests+Groups.swift` (2 new tests: legacy→refined replacement incl. landmark containment; user-drawn ring left untouched).
+
+**Verification:** real-store probe confirmed stored ring == legacy constant (upgrade will fire on launch); `swift build` clean; `swift test` 578 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+PlaceBoundaries.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-15 — Mediterranean Sea (The Upper Sea) region boundary
+
+**Context:** User's follow-up to the Persian Gulf: add its twin, "The Mediterranean Sea (The Upper Sea)" (store pk 66, "Body of water"). Same region pattern: hand-authored ring in `placeBoundaryRings`.
+
+**Scope decision:** Covers the eastern Mediterranean basin — the "Upper Sea" Mesopotamians actually knew (Levant/Aegean-coast to the Nile delta, incl. Cyprus) — rather than the full Gibraltar-to-Levant sea. The app's atlas is Mesopotamia-focused so a full-Med polygon would be a mostly off-frame blob.
+
+**Ring design (~17 pts):** Gulf of Iskenderun arm at the NE, coastal-faithful Levant edge (Beirut/Antalya/Mersin/Haifa/Damascus all verified outside), south edge off Sinai/Nile delta, western edge toward Crete. pip-tested: land points out (incl. Iskenderun bay's *coast* — (35.60,36.60) is actually land, the bay's water is more like (35.85,36.35)). Nicosia ends up inside the water region — accepted (a mid-sea island inside an ocean region is normal; same reasoning as the Gulf).
+
+**Changes:** `Migration+PlaceBoundaries.swift` added `"mediterranean sea (the upper sea)"` → 17-pt ring; `testEnsurePlaceBoundariesBackfillsRegions` extended with landmark (33.0, 34.5) (SW of Cyprus).
+
+**Verification:** `swift build` clean; `swift test` 576 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+PlaceBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-15 — Persian Gulf (The Lower Sea) region boundary
+
+**Context:** User asked for the Persian Gulf. Unlike rivers (corridor pattern via buffered OSM centerlines), this is a water-body *region*, so it fits the hand-authored `placeBoundaryRings` region pattern in `Migration+PlaceBoundaries`. The store already has "Persian Gulf (The Lower Sea)" (pk 65, PlaceType "Body of water"); its ancient epithet "The Lower Sea" is preserved in the name.
+
+**Process:** Pulled OSM relation 9326283 (the Persian Gulf bay polygon, 68 MB, 949 outer ways, outer ring 169,574 pts, bbox lon 47.7–55.8, lat 24.0–30.5) purely as a coastline *guide* — note OSM's polygon includes the Shatt/Haffar arm up to Basra and Kuwait Bay. Extracted + RDP-simplified the outer rim, then hand-authored a ~26-point region ring that keeps the app's coarse "intentionally fuzzy" house style while remaining geographically faithful:
+- Notches around the Qatar peninsula (east-of-Qatar leg → north strait → Salwa arm on the west) so Doha/mainland stays outside (the naive ~20-pt simplification visibly swallowed Qatar — caught by pip-testing).
+- Keeps the Gulf proper only: excludes Iranian/UAE/Saudi/Qatar mainland, Basra, Ahvaz, Kuwait City, Riyadh.
+- The authoring ring's validity checkpointed with a point-in-polygon probe over 7 water + 7 land targets before committing (verified 51.3,26.1 = NW Qatar land and 49.9,26.2 = interior Saudi are correctly outside — spots first mistaken as water).
+
+**Changes:**
+- `Migration+PlaceBoundaries.swift`: added `"persian gulf (the lower sea"` → 26-pt ring to `placeBoundaryRings`.
+- `testEnsurePlaceBoundariesBackfillsRegions`: added the gulf with central-gulf landmark (50.5, 27.0).
+
+**Noted for later:** "The Mediterranean Sea (The Upper Sea)" (pk 66, same type, the Gulf's sibling) still has no boundary — identical pattern if the user wants symmetry.
+
+**Verification:** `swift build` clean; `swift test` 576 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+PlaceBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Three river asks: Karun (store pk 67) and Khabur (store pk 70, the *Syrian* Khabur per user decision) exist in the user's curated data; the Zab did not exist at all (only the city "Zabala"). User approved adding both Zabs as two separate places via migration and both Khabur options. Hubur (mythological, pk 77) stays untouched.
+
+**Pipeline hardening (`chain_river.py` scratch):**
+- Discovered greedy nearest-tip chaining can finish with a **trailing backtracking spur**: after the walker reaches the river's mouth it can still bridge small backtracking fragments upstream and stall mid-river (Greater Zab: walked 39 ways head→south, ended with a spur at 43.51,36.10 though the chain already reached lat 35.99 near the confluence). Added a **southmost-point trim**: cut the chain at the *last* occurrence of the minimum latitude (the natural terminus for south-flowing systems).
+- Bridge cap raised 0.2° → 0.35° (fragmented lower Zab fragments celebrated gaps ~0.13–0.24°).
+- Fixed an empty-generator crash when all member ways are consumed.
+- Karun (relation 2397367): 26/27 ways, 867 km; tail now at the Shatt mouth (48.166,30.428). Leftover way is a 188 km-disconnected fragment (dropped).
+- Khabur/Syria (r 9735745): 40/40, 598 km. Greater Zab (r 368962): 39-line mainstem, 542 km after trim, ends at the mapped lower Zab (43.339,35.994). Lesser Zab (r 367790): 46/46, 570 km.
+
+**Data changes (all additive, check-by-name):**
+- `Sources/MeCore/Resources/{karun,khabur,greater_zab,lesser_zab}_boundary.geojson` (new): 6 km corridors, ODbL provenance per file. Ring sizes: 3103 / 7471 / 10607 / 4793 pts.
+- `Migration+RiverBoundaries.swift`: four dict entries; new **`ensureRiverPlaces(context:)`** that creates "The Greater Zab River" and "The Lesser Zab River" as `River, canal` only if absent (never overwrites/duplicates) — user data otherwise untouched.
+- `ContentView.swift`: `ensureRiverPlaces` runs just before `ensureRiverBoundaries` so the new places get corridors the same launch.
+
+**Bugs caught by tests:** zab dict keys were "the greater zab river" — `normalizedGroupName` strips "the", so keys had to be "greater zab river". Karun/Khabur first reaches landed in self-overlapping meander rings (pointInRing edge case); swapped for validated straight stretches.
+
+**Verification:** `swift build` clean; `swift test` 576 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/{karun,khabur,greater_zab,lesser_zab}_boundary.geojson` (new), `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Karkheh (store name "The Karkheh River", normalized `karkheh river`) is a real Iranian river (Khuzestan). OSM relation **2390658**, 26 ways / 777 km.
+
+**Pipeline hardening (scratch `chain_river.py`):** the first run chained only 1 of 26 segments — a latent bug: after laying the first segment `cur` was set to the headwater **tip** instead of its **far end**, so the very first step looked for a neighbor at the dangling source and stopped. Fixed to start walking from the far end. Also replaced the bucket-based matcher with a global **nearest-tip walk** (shared junctions are distance ~0, ≤0.2° bridges heal gaps). Executes all 26 ways → 777 km mainstem (Zagros → Hawizeh/Khuzestan, lon 46.8–48.6, lat 31.5–34.2). Re-verified the Diyala with the fixed script: unchanged 63/83, 463 km.
+
+**Changes:**
+- `Sources/MeCore/Resources/karkheh_boundary.geojson` (new, ~125 KB): 6 km corridor → 3,071-pt closed ring (~4,170 km²), ODbL provenance in `properties`.
+- `Migration+RiverBoundaries.swift`: added `"karkheh river": "karkheh_boundary"`.
+- `testEnsureRiverBoundariesBackfillsRivers`: asserts Karkheh Susa / mid / lower reaches.
+
+**Verification:** `swift build` clean; `swift test` 575 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/karkheh_boundary.geojson` (new), `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** The Irnina Canal ("The Irnina Canal", store pn 74, PlaceType "River, canal") is a historically attested ancient canal — "linking the Tigris and Euphrates north of Kish and Akkad" — with only an approximate stored pin (33.2°N, 43.9°E). No modern mapping exists (OSM/Nominatim: nothing), and the Hubur-style skip didn't apply — user chose to author a fuzzy corridor per the app's existing "intentionally fuzzy where ancient borders are poorly known" convention.
+
+**Changes:**
+- `Sources/MeCore/Resources/irnina_boundary.geojson` (new, ~1 KB): hand-drawn 5-point centerline on the Fallujah→Baghdad inter-river axis (~33.3°N, dipping through the stored 33.2°N/43.9°E pin), buffered via the `bufferPolyline` mirror at **4 km** so a canal reads slimmer than river corridors; 11-pt closed ring (~399 km²). `properties` explicitly flag it as hand-authored from textual geography, not survey data.
+- `Migration+RiverBoundaries.swift`: added `"irnina canal": "irnina_boundary"`.
+- Tests: `testEnsureRiverBoundariesBackfillsRivers` asserts five on-centerline reaches; the ring-fidelity assert relaxed from `> 100` to `>= 4` points (a corridor can legitimately be coarse). First test run caught that a buffer endpoint sits exactly on the polygon boundary (pip edge-case) — nudged the east-terminus reach to an interior point.
+
+**Notable:** Hubur (mythological underworld river) was skipped by user request. The "given its name" pipeline now supports three sources: OSM relations (real rivers), OSM-style gap-bridged chains (Diyala), and hand-authored fuzzy corridors (canals/ancient features) — selected per feature.
+
+**Verification:** `swift build` clean; `swift test` 575 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/irnina_boundary.geojson` (new), `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Diyala (store name "The Diyala River", normalized `diyala river`; OSM relation **368541**). First two chaining attempts failed: the relation's 83 member ways are NOT id-connected — junctions use duplicated node ids and there's a real ~1.7 km topological split in the Khanaqin reach (upper Zagros half and lower Baghdad half).
+
+**Pipeline hardening (scratch tool, `/tmp/opencode/chain_river.py`):** replaced the endpoint-node-id walker with a **coordinate-aware** chainer: match segment tips by rounded coordinate buckets (1e-3°), prefer exact-touch joins, walk downstream (lowest lat) at branches, and **bridge** small gaps (≤0.2°) to the nearest unused tip when the walk stalls. Result: 63/83 segments, ~463 km mainstem (Tigris confluence at Baghdad → Zagros/Iran), bridging the two halves.
+
+**Changes:**
+- `Sources/MeCore/Resources/diyala_boundary.geojson` (new, ~109 KB): 6 km corridor → 2,685-pt closed ring (~2,560 km²), ODbL provenance in `properties`.
+- `Migration+RiverBoundaries.swift`: added `"diyala river": "diyala_boundary"`.
+- `testEnsureRiverBoundariesBackfillsRivers`: asserts Diyala Baqubah / Khanaqin / confluence reaches.
+
+**Verification:** `swift build` clean; `swift test` 575 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/diyala_boundary.geojson` (new), `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Third river, the Balikh (Syrian tributary of the Euphrates). OSM relation **17712188** (البليخ) is a single way, ~113 km (Harran plain → Raqqa confluence, lat 35.9–36.7, lon ~39.0); buffered to a 6 km corridor → 353-pt ring (~596 km²). Store name is "The Balikh River" → normalized key `balikh river` (the "the " stripping in `normalizedGroupName`).
+
+**Changes:**
+- `Sources/MeCore/Resources/balikh_boundary.geojson` (new, ~14.6 KB, ODbL provenance in `properties`).
+- `Migration+RiverBoundaries.swift`: added `"balikh river": "balikh_boundary"`.
+- `testEnsureRiverBoundariesBackfillsRivers`: now inserts "The Balikh River" and asserts its confluence + mid-course reaches.
+
+**Verification:** `swift build` clean; `swift test` 575 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/balikh_boundary.geojson` (new), `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Re-ran the Tigris pipeline for the Euphrates. OSM relation **10106318** (الفرات), 7.4 MB full, 156 member ways → 81 chained into a ~2,496 km centerline (Turkey→Gulf, lon 37.8–47.4, lat 30.9–39.8); buffered to a 6 km corridor → 13,239-pt ring (~14,400 km²).
+
+**Changes:**
+- `Sources/MeCore/Resources/euphrates_boundary.geojson` (new, ~536 KB, ODbL provenance in `properties`).
+- `Migration+RiverBoundaries.swift`: added `"euphrates river": "euphrates_boundary"`.
+- Tests: `testEnsureRiverBoundariesBackfillsRivers` now asserts both rivers (on-river reaches: Tigris Baghdad/Samarra, Euphrates Deir ez-Zor/Ramadi/Kufa) and uses an unlisted "Zagros river" as the untouched control.
+
+**Verification:** `swift build` clean; `swift test` 575 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Resources/euphrates_boundary.geojson` (new), `Sources/MeCore/Store/Migration+RiverBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** The prototype Tigris corridor was generated; the place already exists in the live store as "Tigris river" (PlaceType "River, canal", ZPLACE pk 64) — not in seed_data. Wired the boundary in so the atlas draws it on the river layer without touching the sacred DB destructively.
+
+**Changes:**
+- `Sources/MeCore/Store/Migration+RiverBoundaries.swift` (new): `riverBoundaryResources` map (normalized place name → bundled GeoJSON resource) + `ensureRiverBoundaries(context:)` which re-serializes the GeoJSON through the canonical `polygonGeoJSON` writer and backfills `Place.storedBoundaryGeoJSON` for each listed river. Same never-overwrite guard as `ensurePlaceBoundaries` (user-drawn/edited boundaries are left alone); additive + idempotent.
+- `Sources/MeCore/Resources/tigris_boundary.geojson`: full-fidelity ring (12,717 pts, ~515 KB) with ODbL provenance in `properties`; stored raw but re-canonicalized at seed time.
+- `ContentView.swift:314`: invoked `Migration.ensureRiverBoundaries(context:)` right after `ensurePlaceBoundaries`.
+- Tests in `MeCoreTests+Groups.swift`: initial Tiger backfill (baghdad/Samarra reaches on-river, unlisted river untouched), never-overwrite, idempotency. Note: Baghdad city-center coordinates sit ~5 km off the OSM centerline, so the "contains" assertions use on-river points extracted from the relation itself.
+
+**Verification:** `swift test` — 575 passed, 0 failures; `swift build` clean.
+
+**Files:** `Sources/MeCore/Store/Migration+RiverBoundaries.swift` (new), `Sources/MeCore/Resources/tigris_boundary.geojson`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Curiosity question — could a boundary territory be auto-created for a named river? Answer proven with the Tigris. The app already has the corridor-buffering machinery (`BoundaryGeometry.bufferPolyline`, `Migration.polygonGeoJSON`); the only missing link was sourcing the centerline.
+
+**Pipeline (reusable):**
+1. Resolve name → OSM relation: Nominatim search "Tigris river" → relation **2188548** ("نهر دجلة").
+2. Fetch geometry: `GET /api/0.6/relation/2188548/full` (6.8 MB OSM XML, 109 member ways, 32,928 nodes).
+3. Chain by shared endpoints into one ordered centerline (`/tmp` python) — key correctness fix: relation member order is NOT topological; naive in-order chaining gave a bogus 4,622 km; endpoint-chaining gave the true **1,918 km**. 84/109 members used (rest are braids/side channels), downsample 5× → 6,359 pts.
+4. Buffer with a 1:1 mirror of `BoundaryGeometry.bufferPolyline(... widthKm: 6)` (the boundary editor's default river width) → 12,716-point ring, ~11,117 km², closed `Polygon` GeoJSON.
+5. Artifact: `Sources/MeCore/Resources/tigris_boundary.geojson` (514 KB, `[lon,lat]`, provenance in `properties` — **OSM data is ODbL; attribution kept in-file**).
+
+**Not done:** no app wiring yet — would need a "Tigris" `Place` (type River) with `storedBoundaryGeoJSON` or an `Era` polygon for the atlas layers; that touches the sacred DB (additive, check-by-name) so it's deferred pending user choice.
+
+**Verification:** `jq --exit-status` round-trip valid JSON; ring closed; axis order and extent (lon 39.4–47.5, lat 31.0–38.5) sane for the Tigris.
+
+**Files:** `Sources/MeCore/Resources/tigris_boundary.geojson` (new), `docs/SESSION_LOG.md`. Scratch pipeline in `/var/folders/dl/l_wpv_yn6m55_9jz8zq2fjy80000gn/T/opencode/`.
+
+---
+
+**Context:** After wiring marker clicks, two nits: (1) the MapLibre territory/centroid popup on the Mesopotamia atlas had no close button (`closeButton: false`), leaving users unable to dismiss it; (2) the Place/Event quicklook windows' compact `VStack` content rendered centered in the window.
+
+**Changes:**
+- `MesopotamiaMapView`: `new maplibregl.Popup({ closeButton: true, offset: 16 })` — the ✕ is back on territory/centroid-name popups.
+- `AnunnakiApp.swift`: `PlaceQuicklookContent` and `EventQuicklookContent` now use `.padding(.horizontal 20 / .top 24 / .bottom 16)` + `.frame(maxWidth/Height: .infinity, alignment: .top)` so the content pins to the top with a top margin instead of floating centered.
+
+**Verification:** `swift build` clean.
+
+**Files:** `Sources/Me/Views/MesopotamiaMapView.swift`, `Sources/Me/AnunnakiApp.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Cursor changed to a pointer over markers but clicks were a dead-end on three surfaces (atlas landmark markers only popped a name; GroupEraMapView and the boundary editor had no-op `onPlaceSelected` handlers). User asked to make clicking do something.
+
+**Changes:** Reused the app's existing `place-quickview` window (`@Environment(\.openWindow)`), matching `EntityGroupCollectionView`.
+- `MesopotamiaMapView`: JS `makeMarker` now takes `isPlace`; landmark markers post the place name via a new `placeClicked` webkit handler instead of the popup (territory/dynasty centroid markers keep the popup). Coordinator handles `placeClicked` → `onPlaceSelected(name)` → `openPlace(named:)` matches `@Query places` case-insensitively → opens the quickview window. `MesopotamiaMapWebView` registers the extra script-message handler and threads the closure through.
+- `GroupEraMapView`: `onPlaceSelected` looks up the tapped `Place` via `group.directPlaces` and opens the quickview window.
+- `BoundaryDrawEditorView` (place + era flavors): `onPlaceSelected` fetches the `Place` by name from `modelContext` (`#Predicate { $0.name == name }`) and opens the quickview window — guarded by `!drawMode` so drawing gestures are never hijacked by the marker click.
+
+**Verification:** `swift build` clean.
+
+**Files:** `Sources/Me/Views/MesopotamiaMapView.swift`, `Sources/Me/Views/GroupEraMapView.swift`, `Sources/Me/Views/PlaceBoundaryEditorView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Following the co-located-marker spread, further decluttering: below a zoom threshold only marker dots are shown; labels fade in at the threshold and above. User asked for it configurable in App Settings.
+
+**Changes:**
+- New shared setting `"mapLabelRevealZoom"` (Int 0–14, default 8) read via `@AppStorage` in App Settings (new "Map Labels" section with a `Stepper`).
+- `DynastyHistoricalMapView`: `mapHTML(for:)` gains `labelMinZoom: Int = 8`; JS adds `labelMinZoom`, `applyLabelReveal()` (toggles `.place-label` display by `map.getZoom() >= labelMinZoom`), `setLabelMinZoom(z)`, hooked to `map.on('zoom', …)` and `snapshotAndApply`. Coordinator tracks `lastLabelMinZoom`; a settings change without a full reload propagates live via `setLabelMinZoom`; full reloads bake it into the HTML.
+- `MesopotamiaMapView`: `stateJSON` now carries `labelZoom`; JS `state` defaults to `{ hidden: [], labelZoom: 8 }`, `makeMarker` returns `{ el, label }`, markers store the label element, and `applyZoomReveal()` hides a marker's label when zoom is below `state.labelZoom` (still honoring group-hide and per-place `level`). No HTML reload needed — `setLayerState` re-applies on toggle/ready.
+
+**Verification:** `swift build` clean.
+
+**Files:** `Sources/Me/Views/AppSettingsView.swift`, `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/MesopotamiaMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** Temples (E-kur, E-anna, Esagila, …) share near-identical coordinates with their host cities (Nippur, Uruk, Babylon, …), so on all three maps their markers stacked pixel-on-pixel into an unreadable blob.
+
+**Changes:** Added a spread step before markers are placed: group markers whose lat/lon are within `EPS = 0.0005°`, and for clusters of 2+ offset each member around a circle of `OFFSET_METERS = 280` (~100× loosely arbitrary but human-scale; ~2× the 12 px dot at dynasty zoom). Applied in all three map implementations:
+- `SumerianDynastyMapView` (JS `spreadOverlapping`) — computed against the `places` array; marker indices/tap routing unchanged.
+- `MesopotamiaMapView` (JS `spreadOverlapping`) — point markers are now collected into `pointItems` across all place-type layers first, spread globally (so a temple layer and its city layer de-overlap), then created; `group`/`level`/`minor` preserved for zoom-reveal/toggling.
+- `CityMapView` (Swift `pins`) — same clustering math in Swift, rendering `Marker`s from a `MapPin` value struct (builds a raw `Place` array so no faulting in render).
+
+**Verification:** `spreadOverlapping` logic exercised in `node` (Nippur/E-kur & Uruk/E-anna split ~280 m apart at same lat, isolated Akkad untouched); `swift build` clean.
+
+**Files:** `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/MesopotamiaMapView.swift`, `Sources/Me/Views/CityMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**Context:** During idle (display off) the Mac runs a ~15–16 min maintenance DarkWake cycle. The watchdog's heartbeat clock used `Date()` (wall-clock), so every wake saw a gap of the full sleep interval (>3 s) and wrote a `.spin` hang report every ~15 min — all showing a perfectly idle main thread. Correlated to the second with `pmset -g log` wake/DarkWake entries going back to Sep 8.
+
+**Changes:** Swapped the heartbeat clock from `Date()` to `ProcessInfo.processInfo.systemUptime` (`lastHeartbeatUptime: TimeInterval`). Uptime does not advance while the machine sleeps, so machine-sleep gaps no longer register as stalls. Wall-clock `Date()` is still used only for the `captureCooldown` to limit report frequency.
+
+**Verification:** `swift build` clean; full suite green — 572 tests, 0 failures.
+
+**Files:** `Sources/Me/MainThreadWatchdog.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-14 — Mesopotamia Map: zoom-revealed landmarks (per-place zoom levels)
+
+**Context:** "Wild thought: show more landmarks on the map as the zoom level goes up." Agreed design: drop the coarse "Major landmarks only" toggle for a per-place reveal ladder — each `Place` carries a MapLibre zoom threshold (`zoomLevel`, 0–14) and its pin appears only once the map crosses it. Level 0 = shown on the overview; higher levels appear progressively as you zoom in.
+
+**Changes:**
+- Data model (migration-safe optional): `Place.zoomLevel: Int?`; computed `Place.mapZoomLevel` (stored wins; else major→0, minor→8 — 8 sits just past the whole-region fit at ~7.5 so the overview stays majors-only and the first zoom step reveals the rest). Backfill in `Migration.ensureMapFlags`: existing majors get `zoomLevel = 0` when nil (idempotent, user-set values untouched).
+- `PlaceFormView`: "Major landmark" toggle is now a shortcut for level 0; otherwise a `Stepper` (0–14) "Reveal on map at zoom level N" on the Identity step, saved on add & edit.
+- `MesopotamiaMapView`: `pointFeature` carries `zoomLevel` via `mapZoomLevel`; "Major landmarks only" toggle + `@AppStorage("mesopotamiaMapMajorOnly")` + `state.majorOnly` removed (replaced by the reveal ladder); header now shows a hint "More landmarks appear as you zoom in". JS: markers track `level`, `applyZoomReveal()` shows a marker when `map.getZoom() >= level` (group-hidden markers stay hidden), run on `map.on('zoom', …)`, after `fitView()`, and from `setLayerState`; dynasty centroid labels fixed at level 0.
+
+**Verification:** `swift build` clean; full suite green — 572 tests (2 new/updated `MapFlagsTests`: major zoom-level backfill + `mapZoomLevel` defaults, explicit-level preservation).
+
+**Files:** `Sources/MeCore/Models/Place.swift`, `Sources/MeCore/Store/Migration+MapFlags.swift`, `Sources/Me/Views/PlaceFormView.swift`, `Sources/Me/Views/MesopotamiaMapView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Mesopotamia Map polish: zoom churn, dynasty default, readable labels
+
+**Context:** User feedback after the first atlas build: (1) the map "nervously" zoomed in/out when checkboxes were ticked, (2) switch dynasties off by default, (3) no clear text labels — couldn't tell what they were looking at.
+
+**Changes:**
+- **Zoom churn root cause:** `updateNSView` compared the *generated HTML string* to decide reloads; Swift `Dictionary` iteration order is not stable across separately-built dictionaries, so the embedded ATLAS JSON intermittently differed on nothing → spurious full page reloads → camera reset to `fitView()` on every toggle. Fixed by comparing a canonical snapshot key instead: `MesopotamiaMapHTMLBuilder.atlasJSON` now serializes with `.sortedKeys` and the WebView only reloads when that key changes. Toggles mutate JS state only (`setLayerState`) and never touch the camera.
+- **Dynasties off by default:** `defaultHidden` now always includes `"dyn"`. Bumped the hidden-layers AppStorage key to `mesopotamiaMapHiddenLayersV2` so the new default isn't overridden by a previously-persisted toggle string (the user had already clicked checkboxes).
+- **Clear labels:** replaced the MapLibre symbol/circle layers (silently no-op rendering if the style lacks the glyph font) with DOM markers in the proven dynasty-map style — every pin is a colored dot + always-on text label (minor pins smaller/lighter), dynasty eras get a centroid marker labeled with the era name, all markers honor layer-visibility and major-only toggles via `display`. Added a bottom-left "Visible" legend panel listing the currently shown layers with their colors, so the color scheme is self-explanatory even with the sidebar collapsed. Fill/line boundary layers kept (clickable → name popup).
+
+**Verification:** `swift build` clean; full suite green (571 tests).
+
+**Files:** `Sources/Me/Views/MesopotamiaMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Mesopotamia Map: layered atlas of all places, dynasties & bodies of water
+
+**Context:** The user wanted a single map of Mesopotamia showing "basically all places" — first major cities, then user-added ones, plus dynasties and bodies of water, each switched on/off with checkboxes. Agreed design: per-place-type checkboxes (dynamic, not fixed curated buckets), `isWater` on `PlaceType` for recognising wet stuff, `isMajor` on `Place` for the "major landmarks only" filter, dynasties from existing `Era.boundaryGeoJSON`, and kingdoms/empires (Hittites, Assyria) later as `Place` rows drawn with the existing boundary editor.
+
+**Changes:**
+- Data model (migration-safe optionals): `PlaceType.isWater: Bool?`, `Place.isMajor: Bool?`.
+- New backfill `Migration.ensureMapFlags` (`Sources/MeCore/Store/Migration+MapFlags.swift`): flags `isWater = true` for any place type whose lowercased name contains a water token (sea/gulf/river/lake/ocean/marsh/swamp/water) and `isMajor = true` for a curated list of ~22 famous sites (Ur, Uruk, Babylon, Akkad, Eridu, Kish, Nippur, Lagash, Larsa, Sippar, Girsu, Umma, Assur, Nineveh, Susa, Mari, Ebla…). Only writes nil values — user-set `false`/`true` never overwritten. Wired into ContentView seeding task after `ensurePlaceBoundaries`.
+- UI wiring: `EntityTypeEditSheetView` shows a "Water body" toggle only when `T is PlaceType` (sheet height 300→340); `PlaceFormView` gains a "Major landmark" toggle on the Identity step, saved on both add and edit paths.
+- New `Sources/Me/Views/MesopotamiaMapView.swift`:
+  - Sidebar: one toggle row per place type (color dot, SF symbol, flag icons for water — shows `water.waves`, place/boundary counts) plus a fixed "Dynasties" toggle; "Major landmarks only" switch; Fit button. Visibility + majorOnly persisted via `@AppStorage` (`mesopotamiaMapHiddenLayers`, `mesopotamiaMapMajorOnly`); default shows City + water types + Dynasties.
+  - Map: single MapLibre canvas (OHM style) with a GeoJSON source per type — Point features split major (`pin`) vs minor (`pin-minor`) plus boundary Polygons as `boundary` features; per-type layers fill/line/dots/dots-minor/labels (symbol labels only on major pins, `text-allow-overlap: false`); one `dyn` source with per-feature dynasty colors (palette indexed by era order) + fill/line; popup on pin/area click; `fitView()` bounds every coordinate at load.
+  - Reload safety: HTML is built from a pure value snapshot (no `@Model` faulting in render paths); toggles never rebuild the HTML (state applied via JS `setLayerState`, delivered after a `ready` message-handler handshake so visibility isn't lost on the first load).
+- Sidebar entry `.mesopotamiaMap` (icon `mappin.and.ellipse`, Visualizations section) in `ContentView.swift`.
+- `MapZoomController.fitView()` added.
+
+**Verification:** `swift build` clean; full suite green — 571 tests (569 + 2 new `MapFlagsTests`: water-type/major-place backfill, user-value preservation).
+
+**Files:** `Sources/MeCore/Models/PlaceTypeModel.swift`, `Sources/MeCore/Models/Place.swift`, `Sources/MeCore/Store/Migration+MapFlags.swift` (new), `Sources/Me/Views/MesopotamiaMapView.swift` (new), `Sources/Me/Views/TypeSettingsView.swift`, `Sources/Me/Views/PlaceFormView.swift`, `Sources/Me/Views/MapPreview.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Boundary editor: vertex drag editing for existing boundaries
+
+**Context:** After tracing the Persian Gulf with the blob tool, the user wanted to come back to the boundary and nudge the few lines that were off — rather than redrawing the whole shape. Asked for drag-and-drop of individual vertices.
+
+**Changes:**
+- `BoundaryDrawStyle.edit` (displayName "Edit") in `SumerianDynastyMapView.swift`.
+- Map JS: edit mode shows the existing ring's vertices (closing duplicate excluded) as enlarged draggable dots in the existing `boundary-vertices` layer (radius 5→7 / stroke 2→3 while editing, reset on mode leave). `mousedown` grabs the nearest vertex within `CLOSE_PX`, `mousemove` drags it live (first vertex keeps the closing point in sync), `mouseup` posts the full unclosed ring via `boundaryDrawn`. Hover shows a `grab` cursor near vertices, `grabbing` while dragging.
+- `setBoundary()` now also keeps `boundaryData` in sync so edit mode always reads the current on-map ring (previously only the load-time copy was tracked).
+- `BoundaryDrawEditorView`: edit-mode hint row ("Drag a dot to nudge that vertex…") plus a "Re-trace as blob" button that regenerates a fresh parametric silhouette from the current blob sliders, and a dedicated `drawModeHelp` string.
+- Reuses the existing `pendingRing`/`onBoundaryDrawn`/Save pipeline — every drag updates `pendingRing`; saving persists to `storedBoundaryGeoJSON` as before (inherited bounds become stored on save).
+
+**Verification:** `swift build` clean; full suite green (569 tests, 0 failures).
+
+**Files:** `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/PlaceBoundaryEditorView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Water-body boundary tools: Blob generator + River buffer in the boundary editor
+
+**Context:** User asked how to display rough contours for bodies of water (hard to hand-trace a fuzzy coastline). Suggested reusing the polygon boundary machinery (`Place.storedBoundaryGeoJSON`, freehand editor) with two authoring tools: a parametric wavy "blob" for lakes/seas/gulfs and an auto-buffered corridor for rivers. User: "Yes, both please."
+
+**Changes:**
+- New `Sources/MeCore/Store/BoundaryGeometry.swift` — pure geometry helpers:
+  - `blobRing(center:radiusKm:lonStretch:vertices:roughness:seed:)` — deterministic (seeded) wavy polar ring around a centroid; roughness warps a sum-of-harmonics outline from perfect ellipse to jagged.
+  - `bufferPolyline(_:widthKm:)` — offsets a clicked river centerline by half-width per vertex (bisector normals at corners) into a closed corridor ring.
+- `BoundaryDrawStyle` gained `.blob` and `.river` (displayNames "Blob"/"River") in `SumerianDynastyMapView.swift`.
+- Map JS: `setDrawStyle` now passes `blob`/`river` through; river drops click points like line (no near-first snap); new `finishRiver()` posts the unclosed polyline via `boundaryDrawn`; blob mode is inert to pointer events (slider-driven).
+- `DynastyHistoricalMapView` gained `minBoundaryPoints` (default 3; editor passes 2 for river so a 2-point polyline isn't dropped by the message guard).
+- `updateNSView` pushes boundary changes live (`lastBoundaryStr` compare → `setBoundaryStr`), so blob slider edits preview on the map.
+- `MapZoomController.finishRiverStroke()` added.
+- `BoundaryDrawEditorView` (Place + Era flavors share it): Blob panel (radius, wobble, elongate, contour points, dice re-roll) and River panel (width slider + Finish stroke button); river strokes are buffered at the current width, `onChange(of: riverWidthKm)` re-buffers the stored polyline; Discard resets both; footer picker widened to 260, sheet grown to 680×600.
+
+**Verification:** `swift build` clean; full suite green — 569 tests (563 + 6 new `BoundaryGeometryTests`: blob shape/determinism/ellipse-when-roughness-0, buffer thickness/corner/min-input rejection).
+
+**Files:** `Sources/MeCore/Store/BoundaryGeometry.swift` (new), `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/MapPreview.swift`, `Sources/Me/Views/PlaceBoundaryEditorView.swift`, `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Timeline feature: sidebar item + list/detail/entry/narrative UI
+
+**Context:** Follow-up to the Timeline models sketch — the user asked where the new Timeline entity lived in the sidebar; it didn't exist yet (pure model + migration scaffold). Asked, got "yes please": wire up a full list-detail surface.
+
+**Changes:**
+- `NavigationItem.timelines = "Timelines"` (icon `calendar.badge.clock`, section `.data`, destination `TimelineListView()`) in `ContentView.swift`; sits in the Data sidebar section alongside Events/Places/etc. (No clash with the existing `.timeline` "Timeline" visualization item.)
+- `DetailWidthSlot.timeline` added (key `timelineDetailWidth`, default 380).
+- New `TimelineListView.swift` (all-in-one like `EraListView.swift`):
+  - `TimelineListView` — list-detail split; row shows name + entry count + description; context-menu Add Entry / Edit / Delete.
+  - `TimelineDetailView` — header, description, entries in `sortedEntries` order; per-entry Up/Down reorder (via `Timeline.moveEntry`), Edit / Remove, and per-entry **Narrative** blocks (title + prose) added through `TimelineEntry.appendBlock`; blocks deletable.
+  - `TimelineFormView` — add/edit (name via `NameDuplicateCheck`, order stepper, description).
+  - `TimelineEntrySheet` — event picker over all events (empty guard) + optional note.
+  - `TimelineBlockSheet` — title + prose narrative block.
+- Delete cascade: timeline → entries → blocks (both `@Relationship(.cascade)`), handled by SwiftData; alert wording reflects it.
+
+**Verification:** `swift build` clean; full suite green (563 tests, 0 failures).
+
+**Files:** `Sources/Me/Views/TimelineListView.swift` (new), `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/DetailWidth.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Timeline feature: Timeline + TimelineEntry models with GroupTextBlock narrative reuse
+
+**Context:** User proposed a Timeline entity as a first-class model (not a group) collecting events in presentation order (by placement, not date), with rich-narrative prose per event. Requested scope was a code sketch: both models, reuse of `GroupTextBlock` for blocks, and an additive `Migration.ensureTimeline...` scaffold.
+
+**Design decisions (user):**
+- Timeline is a first-class `@Model`, not a group; ordering is by `orderIndex` (placement/narrative flow), not by date.
+- Narrative lives as rich text blocks on the **association record** (`TimelineEntry`) — reuse `GroupTextBlock` (pro-reuse as long as practical); `eventDescription`/`richDescription` stay short/clinical.
+
+**Changes:**
+- **`Timeline.swift`** (new): `name`, `timelineDescription`, `orderIndex`, `createdAt`, `entries` (`[TimelineEntry]?`) with `@Relationship(deleteRule: .cascade, inverse: \TimelineEntry.timeline)`; `sortedEntries` (orderIndex, then event name tie-break); `appendEntry`, `moveEntry`.
+- **`TimelineEntry.swift`** (new): `timeline`, `event`, `orderIndex`, `note`, `blocks` (`[GroupTextBlock]?`) cascade inverse `\GroupTextBlock.timelineEntry`; `sortedBlocks` (orderIndex, then title); `appendBlock`.
+- **`GroupTextBlock.swift`**: added optional `timelineEntry: TimelineEntry?` (no `@Relationship`, mirroring the existing `group`) + init param — enables the block reuse.
+- **Schema**: `Timeline.self, TimelineEntry.self` registered in `AnunnakiApp.swift` and in the main test container schema (live-store diagnostic schemas left untouched).
+- **Migration**: `Migration+Timelines.swift` with `ensureTimelineDefaults(context:)` (fetch/guard no-op scaffold); called from the `ContentView` launch chain after `ensureRefinedDomainTags`.
+- **Test**: `testTimelineEntryBlockWiring` verifies timeline→entries→block wiring, inverse links, order indices, and the migration call.
+
+**Verification:** `swift build` clean; full suite green (563 tests, 0 failures).
+
+**Container-lifetime lesson (candidate for AGENTS.md):** `let context = makeContainer().mainContext` (discarding the container) leads to a SwiftData `brk #0x1` trap (EXC_BREAKPOINT, sig 5) at `context.insert(...)` **intermittently** — it passed in some builds/runs and crashed in others (offset-468 trap in SwiftData, no stderr message). Keeping the container strongly referenced (`let container = makeContainer(); let context = container.mainContext`) makes the crash deterministic-to-green across the full suite. Added `Migration.ensureTimelineDefaults` test call — must guard line numbers/counts.
+
+**Files:** `Sources/MeCore/Models/Timeline.swift`, `Sources/MeCore/Models/TimelineEntry.swift`, `Sources/MeCore/Models/GroupTextBlock.swift` (timelineEntry reuse), `Sources/MeCore/Store/Migration+Timelines.swift` (new), `Sources/Me/AnunnakiApp.swift` (schema), `Sources/Me/Views/ContentView.swift` (launch chain), `Tests/MeCoreTests/MeCoreTests.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-13 — Sidebar reorganisation: "Dynasties" top-level group with three sub items
+
+**Context:** User asked to reorganize the sidebar History grouping so the dynasty tools live under one top-level "Dynasties" entry instead of a "Dynasty Maps" disclosure plus a separate "Dynasties" group row.
+
+**Changes:**
+- Sidebar History section: `DisclosureGroup("Dynasty Maps")` → `DisclosureGroup("Dynasties")` (top-level item).
+- The old "Dynasties" FigureGroup row moved inside the new disclosure, relabeled **"List and rulers"** (still navigates to the Dynasties group page and expands into the 20 dynasty subgroups). Added a `displayName` override to `SidebarGroupRow` so the row label can differ from `group.name`; `sidebarHistoryGroupRows` now excludes the "Dynasties" group.
+- `.sklMap` raw value "Dynasty Map" → **"Map"** (SumerianDynastyMapView).
+- `.dynastyEvolution` raw value "Dynasty Evolution" → **"Animation"** (DynastyEvolutionMapView).
+- Result: one "Dynasties" item in the sidebar with three sub items — List and rulers, Map, Animation.
+
+**Verification:** `swift build` clean (pre-existing warnings only). View-internal headings ("Dynasty Map", "Dynasty Evolution", "Dynasties") and App Settings labels left untouched — scope was the sidebar navigation only.
+
+**Files:** `Sources/Me/Views/ContentView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Fix stale-snap bug in line drawing preview
+
+**Context:** With the new Line mode, clicking a vertex right after hovering near the start point drew the preview segment back to the start instead of to the clicked vertex — "the last line is not drawn; it snaps to the departure point".
+
+**Cause:** `nearStart` was set on `mousemove` and then *read* by `updateLinePreview`. If it was still `true` from an earlier hover (cursor had been near the start), the click-to-add-vertex path pushed the start vertex into the preview instead of the newly clicked vertex.
+
+**Fix (`SumerianDynastyMapView.swift` JS):** removed the shared `nearStart` state entirely; `updateLinePreview(cursorLngLat)` now computes snap distance from the passed pointer location on every call (mousemove *and* click), so each render uses the true current position. Verified: extraction + `node --check` on the emitted `<script>`, `swift build` clean, 558/558 tests pass.
+
+**Files:** `Sources/Me/Views/SumerianDynastyMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Boundary editor add "Line" (point-click) drawing mode
+
+**Context:** The user liked the boundary editor but wanted a second, alternative gesture: click to drop corner points, with the polygon auto-closing when the cursor nears the first point — and a selector to choose between "Freehand" and "Line based polygon" (not replacing the existing freehand stroke).
+
+**Changes:**
+- **Map JS (`SumerianDynastyMapView.mapHTML`)**: added `drawStyle` (`'freehand'`/`'line'`) + `setDrawStyle()`; line mode tracks `lineVertices`; `click` drops vertices, and when ≥3 vertices exist and the click lands within `CLOSE_PX` (24 px) of the first vertex the polygon auto-closes and posts via `boundaryDrawn` (`finishLine`). `mousemove` in line mode renders a live polyline preview to the cursor and snaps it visually closed (preview includes the first vertex) while near the start; a new `boundary-vertices` GeoJSON source + circle layer draws red/white dots at each placed vertex. `setDrawMode(false)` and switching style clear line state. Freehand mousedown now guards `drawStyle !== 'freehand'`.
+- **Map representable**: new `drawStyle: BoundaryDrawStyle` prop (default `.freehand`, so the dynasty page is unaffected) with `Coordinator.lastDrawStyle` diffing → `setDrawStyle(...)`; reload branch resets both. `BoundaryDrawStyle` enum (freehand/line, `displayName`) defined in `SumerianDynastyMapView.swift`.
+- **Editor (`PlaceBoundaryEditorView.swift`)**: segmented Picker (Freehand | Line, 150 pt, disabled until Draw mode on) in the footer; style flows into the map; Draw-mode help text adapts to the selected style.
+- Verified: the emitted `<script>` was extracted and `node --check` passed (Swift interpolation lines neutralized via balanced-paren scan); 558/558 tests pass, build clean.
+
+**Notes:** auto-close requires a click while hovering near the first vertex (preview snaps closed as a hint) rather than closing on mere proximity — avoids accidental closes while passing near the start. A mid-stroke draft can be abandoned by toggling Draw mode off (clears vertices/preview).
+
+**Files:** `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/PlaceBoundaryEditorView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Dudael territory ring authored
+
+**Context:** Following the "no territory yet" workflow fix, the user asked for a pre-authored Dudael ring.
+
+**Change (`Migration+PlaceBoundaries.swift` + test):** added a coarse `"dudael"` ring — the Enoch wilderness east of the Dead Sea — spanning the Jordan rift + Moab desert plateau (lon 34.8–36.9, lat 30.6–32.4; contains Dudael's stored center (35.25, 31.56), the Dead Sea, Amman, Jerusalem, Hebron; Petra south of the wilderness correctly excluded). Landmark added to `testEnsurePlaceBoundariesBackfillsRegions`. 558/558 pass.
+
+**Files:** `Sources/MeCore/Store/Migration+PlaceBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Territory card shows for boundary-less places
+
+**Context:** The user asked what to do with places that have no territory yet (e.g. Dudael) — the Territory card (and its "Edit boundary…" button) only rendered once a boundary existed, so there was no way to reach the editor for a boundary-less place.
+
+**Change (`PlaceDetailView.swift`):** the Territory card now renders for every place that has stored coordinates — if a boundary exists it shows the silhouette + source caption as before; otherwise it shows an "No territory boundary yet. Use Edit boundary…" hint. The Edit button is always present (coordinates only). Places without coordinates (cosmic/legendary, stored 0,0) keep the existing NoCoordinates map view and still can't be drawn, since drawing needs a map vantage point.
+
+**Files:** `Sources/Me/Views/PlaceDetailView.swift`, `docs/SESSION_LOG.md`. Build clean, 558/558 tests pass.
+
+---
+
+### 2026-09-11 — Era territory boundary editor (dynasty boundaries), shared with places
+
+**State:** `swift build` clean, **558/558** tests pass. No store/schema change.
+
+**Context:** Following the place boundary editor, the user asked for the same draw-save editor for dynasty `Era.boundaryGeoJSON`.
+
+**Changes:**
+- **`PlaceBoundaryEditorView.swift`** refactored into three pieces: generic `BoundaryDrawEditorView` (all shared UI/state — header, OHM map in draw mode, zoom buttons, Draw/Discard/Clear/Cancel/Save footer, AppStorage prefs) driven by content-agnostic props (`title`, `subtitle`, `mappable`, `capitalIndex`, `boundaryColorHex`, `currentBoundaryGeoJSON`, `canClear`, `mapID`, `onSave`, `onClear`); a thin `PlaceBoundaryEditorView` wrapper (place marker, place-type color, persists to `storedBoundaryGeoJSON`); and new `EraBoundaryEditorView` wrapper (orange color, members of the era's dynasty group marked via `@Query` → `group.directPlaces`, persists to `era.boundaryGeoJSON`). `Color(hex:)` reused for the header accent (not re-declared).
+- **`EraDetailView.swift`**: new "Territory" card — "Edit boundary…" button (always), `PlaceSilhouetteView` when a boundary exists, hint text when none — plus `.sheet` presenting `EraBoundaryEditorView`.
+
+**Notes:** Era drawings replace the authored dynasty territory for that era; `ensureDynastyBoundaries` preserves closed, non-degenerate stored boundaries (drawings win, slivers/dots repaired), and Clear restores the authored default on next launch. Both editors share one code path, so future entity flavors (e.g. group boundaries) are thin wrappers.
+
+**Files:** `Sources/Me/Views/PlaceBoundaryEditorView.swift`, `Sources/Me/Views/EraDetailView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — In-app place boundary draw-save editor
+
+**State:** `swift build` clean, **558/558** tests pass. No store/schema change — writes the existing `Place.storedBoundaryGeoJSON` via the launch-migration-safe mechanism.
+
+**Context:** The dynasty map's draw mode already existed but was inert: the JS captured rings and posted `boundaryDrawn`, yet Swift registered only `placeClicked`, so every stroke was silently discarded. This session wired it up and built a focused sheet editor for place territories.
+
+**Changes:**
+- **`SumerianDynastyMapView.swift`** (`DynastyHistoricalMapView`): added `drawMode: Bool = false` + `onBoundaryDrawn: (([[Double]]) -> Void)?` (both defaulted → existing call sites unaffected). `makeNSView` now also registers a `boundaryDrawn` message handler; `Coordinator` decodes the `[[lon,lat]]` ring body (defensive `[NSNumber]` bridging, ≥3 points) and forwards it. `updateNSView` diffs `drawMode` against the coordinator's `lastDrawMode` and pushes `setDrawMode(true/false)`; the reload branch resets `lastDrawMode = false` so a post-reload re-enable is safe.
+- **New `PlaceBoundaryEditorView.swift`**: a 640×560 sheet wrapping `DynastyHistoricalMapView` (single place, capitalized marker, its place-type color as boundary color, no era/date filter, no Sumer ring, animations off). Toggle "Draw mode" (`.toggleStyle(.button)`) enables freehand capture; the drawn ring is mirrored into `displayGeoJSON` immediately (the JS already `setBoundary()`s the live polygon + shows dashed preview). Footer: Discard stroke (resets pending ring), Clear (nils `storedBoundaryGeoJSON`), Cancel, Save boundary (closes the ring via `Migration.polygonGeoJSON`, writes `place.storedBoundaryGeoJSON`, saves, dismisses). Header notes whether the current boundary is inherited (from an era) or hand-drawn. Only reachable for places with coordinates (nil `capitalIndex`/marker handling avoided).
+- **`PlaceDetailView.swift`**: Territory card header gained an "Edit boundary…" button (coordinate-guarded) + `.sheet(isPresented: $showBoundaryEditor)`.
+
+**Notes:** The editor reuses the OHM historical engine with the user's dynasty-map AppStorage prefs (theme/language/label size), so it feels like the rest of the app; the drawn ring is honored verbatim (never repaired) — closing is done at serialization, matching the `saveBoundary` closing behavior. A follow-up could add the same editor to `Era.boundaryGeoJSON` (dynasty boundaries) with a per-era map.
+
+**Files:** `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/PlaceBoundaryEditorView.swift` (new), `Sources/Me/Views/PlaceDetailView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Region place boundary profiles (Mesopotamia, Cedar Forest, Dilmun, Lebanon + a broader region set)
+
+**State:** `swift build` clean, **558/558** tests pass (+5 for region boundaries). Additive only — no reseeding, no schema-affecting change beyond an optional stored column added by lightweight migration.
+
+**Context:** User asked whether the dynasty-boundary silhouette mechanism could cover region-type places (Mesopotamia, Cedar Forest, Dilmun, Lebanon) whose borders are fuzzy. Chose "Plumbing + author the 4". Verified all four actually exist in the live store (`~/Library/Application Support/Me/Me.store` — only "Cedar Forest" is in `seed_data.json`; Mesopotamia/Dilmun/Lebanon are user-created). Drawing a region can't ride the derived group→era chain (regions aren't dynasties), so it needed a stored override. There is **no in-app boundary editor**: the dynasty map's draw mode posts `boundaryDrawn` but Swift registers only `placeClicked` — the JS handler silently no-ops (drawings were always discarded).
+
+**Changes:**
+- **`Place` model** (`Place.swift`): new migration-safe optional `storedBoundaryGeoJSON` (hand-authored override). `boundaryGeoJSON` (unchanged API) is now **effective**: stored wins, else the inherited dynasty wing from a linked group's era. `boundarySourceEraName` still reports the era for the inherited case; nil when hand-authored.
+- **New `Migration+PlaceBoundaries.swift`**: `placeBoundaryRings` — coarse hand-authored `[[lon,lat]]` polygons for the four regions, georeferenced to known landmarks, intentionally fuzzy: Mesopotamia (outer ring touching Assur/Nineveh north, Zagros foothills east, Shatt al-Arab + Persian Gulf head south, Syrian-steppe edge west — verified to contain Babylon, Baghdad, Ur, Uruk, Nippur, Mari, Assur, Nineveh), Cedar Forest (Lebanon/Amanus cedar belt, contains the Cedars of God), Dilmun (Bahrain island + the Gulf's SW shore/Al-Hasa), Lebanon (rough modern bounds containing Beirut + Baalbek). `ensurePlaceBoundaries(context:)` mirrors `ensureDynastyBoundaries`: backfills once, additive + idempotent, honors valid closed non-degenerate existing boundaries (`decodedRing`/`ringAreaSq`/`ringMinAxisDegrees`/`sliverMinAxisDegrees` reuse), repairs slivers. **Ring convention is `[lon, lat]`** (same as dynasty rings) — first draft was `[lat,lon]`, caught by `pointInRing` tests.
+- **`ContentView`**: `Migration.ensurePlaceBoundaries(context:)` runs in the launch migration chain right after `ensureDynastyBoundaries`.
+- **`PlaceDetailView`**: Territory card caption now distinguishes "Hand-authored territory boundary" (stored) from "Territory boundary inherited from {era}". Silhouette + map overlay read the effective `boundaryGeoJSON` and are unchanged.
+- **Tests** (+3): `testStoredPlaceBoundaryWinsOverInherited`, `testEnsurePlaceBoundariesBackfillsRegions` (each ring closed + contains its landmark via `pointInRing`, unlisted place untouched), `testEnsurePlaceBoundariesNeverOverwrites`.
+- **Expansion pass (user: "yes please do…")**: authored 8 more region rings — Upper Mesopotamia (Jezirah/Assyria tier, contains Harran), The Southern Mesopotamian Marshes (Hawizeh/Hammar), Gutium (Zagros zone, contains Sulaymaniyah), Magan (Oman peninsula, contains Muscat), Meluhha (Indus, contains Mohenjo-daro), Elam (Susiana, contains Susa), Subartu (northern highland arc, contains Mardin), Amurru (western highlands/Syrian steppe, contains Palmyra). Elam/Subartu/Amurru places don't exist in the store yet — the migration keys are forward-compatible and backfill automatically once such a place is created. Skipped as unbounded/mythical: Gu-Edin, Dudael, Aratta, Mesopotamian canals. Landmark set in the backfill test extended to all 12.
+
+**Follow-ups (open):** same mechanism could cover other vague-region places already in the store — Upper Mesopotamia, The Southern Mesopotamian Marshes (Hawizeh/Hammar), Elam, Gutium, Subartu, Amurru, Magan, Meluhha — and an in-app place-map editor (wire the existing draw mode) that writes `storedBoundaryGeoJSON`.
+
+**Files:** `Sources/MeCore/Models/Place.swift`, `Sources/MeCore/Store/Migration+PlaceBoundaries.swift` (new), `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/PlaceDetailView.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Place territory silhouettes (featured: dynasty borders on places) + association-card work (above)
+
+**State:** `swift build` clean, **555/555** tests pass (+2 new). No schema change — the silhouette is a **derived** attribute, resolved through the existing group→era chain.
+
+**Context:** User asked whether the dynasty border silhouettes (drawn GeoJSON territory rings first added for `Era.boundaryGeoJSON`) could become a Place attribute. Chose: **auto-inherit** from the era of a linked dynasty group (no manual authoring), displayed **on the place's map overlay AND in a plain (non-map) view**.
+
+**Changes:**
+- **`Place` model** (`Place.swift`): computed `boundaryGeoJSON` + `boundarySourceEraName`, both through a private `boundarySilhouette` helper that walks `place.groupAssociations → group.era.boundaryGeoJSON`, returning the first non-empty polygon (+ that era's name). No stored field, zero migration risk.
+- **Map overlay** (`MapPreview.swift`): `mapHTML(for:)` now injects `place.boundaryGeoJSON`; a `map.on('load')` block adds `place-boundary` GeoJSON source + fill (0.22) + line (3px) layers in the place-type color (`.hex` extension). Reuses exactly the layer pattern from `SumerianDynastyMapView`.
+- **Plain-view silhouette** (`PlaceSilhouetteView.swift`, new): SwiftUI `Canvas` drawing the exterior ring equirectangularly (fit-to-box, padded), filled 0.18 + stroked, given a plain `String` input + `Color` — usable in any non-map context.
+- **`PlaceDetailView`**: new "Territory" section (shown only when a boundary resolves) — 120×84 silhouette beside a caption "Territory boundary inherited from {era name}", placed just above the "Map" card.
+- **Tests** (+2): `testPlaceBoundaryInheritsEraFromGroup` (era→group→place chain resolves; source era name correct) and `testPlaceBoundaryNilWithoutDynastyGroup` (group without era → nil).
+
+**Note for the user:** silhouettes appear for a place only once it's a member of a group whose era has a boundary (the seeded dynasty groups currently contain kings+events, not places). Adding a place to such a group via the Groups card or event propagation immediately gives it a silhouette + map overlay. Follow-up if wanted: a capital-based migration linking dynasty capitals to their era groups.
+
+**Files:** `Sources/MeCore/Models/Place.swift`, `Sources/Me/Views/MapPreview.swift`, `Sources/Me/Views/PlaceSilhouetteView.swift` (new), `Sources/Me/Views/PlaceDetailView.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-11 — Association cards: edit buttons + two-line wide-width-safe rows
+
+**State:** `swift build` clean (pre-existing warnings only), **553/553** tests pass. No schema change.
+
+**Context:** User noticed two issues in the detail-view association cards: (1) they were effectively delete-only with near-zero editing — a typo in an alias meant delete-and-re-add; (2) rows were flat single-line `HStack`s with no `lineLimit`/truncation, so narrow window widths overflowed instead of reflowing.
+
+**Why it was inconsistent:** the standalone management views (`AlternateNameListView`, `AssociationsView`, `RelationshipListView`) already had full CRUD with edit forms (e.g. `AlternateNameFormView` took an optional `AlternateName?` for edit mode). The section cards just never surfaced the edit action; `ContentAttributionSection` was the sole card with `onAdd`/`onEdit`/`onDelete` callbacks.
+
+**Changes — shared 2-line row pattern (identity + actions on line 1, metadata on line 2, `.lineLimit(1)`+`.truncationMode(.tail)` on primary text):**
+- **Aliases** (`AlternateNamesSection.swift`): new shared `AlternateNameCardRow` (name + tradition + pencil + trash on L1; nameType + note on L2). Added pencil → `AlternateNameFormView(alternateName:)`. PlaceDetailView inline alias block switched to the same shared row + own `editingAltName`/sheet.
+- **Citations** (`CitationListSection.swift`): new shared `CitationFormSheet` (add/edit, used for figure/place/event); `CitationListRow` upgraded to 2-line + pencil (source on L1, location + note below); `CitationListSection` + `CitationsSection` (figure) both own edit state + `.sheet(item:)`. FigureDetailView's private `AddCitationSheet` deleted, replaced by `CitationFormSheet(entityType: .figure, linkedEntityName:)`.
+- **Attachments** (`SourceListView.swift`): `AttachmentFormView` now takes `attachment: Attachment?` + `source: Source?` (edit mode loads + writes back), rows 2-line (title L1, type badge + note + url below) with pencil + delete.
+- **Places** (`FigurePlaceAssociationRow` in `FigureDetailInfoView.swift`): role badge + source moved to L2 with icon indent; place name truncates. Existing inline comments editing untouched.
+- **Groups** (`GroupsSection.swift`, `EntityGroupsSection.swift`): group name L1 + note L2 indented under icon.
+- **Pantheons** (`PantheonsSection.swift`): name L1, "as `<alias>`" TextField moved to L2.
+- **Place↔Place** (`PlaceDetailView.swift` relatedPlacesSection): direction words L1 (truncated), role badge + source L2.
+- **ContentAttribution**: tightened source-line texts with `lineLimit(1)` + tail truncation.
+
+**Files:** `Sources/Me/Views/AlternateNamesSection.swift`, `Sources/Me/Views/PlaceDetailView.swift`, `Sources/Me/Views/CitationListSection.swift`, `Sources/Me/Views/CitationsSection.swift`, `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/SourceListView.swift`, `Sources/Me/Views/FigureDetailInfoView.swift`, `Sources/Me/Views/GroupsSection.swift`, `Sources/Me/Views/EntityGroupsSection.swift`, `Sources/Me/Views/PantheonsSection.swift`, `Sources/Me/Views/ContentAttributionFormView.swift`, `docs/SESSION_LOG.md`.
+
+**Deferred** (edit forms for these remain in `AssociationsView`/`RelationshipListView`, cards still delete-only): figure↔place role/confidence/source full-form edit, place↔place, event↔place, thing associations, figure↔figure relationship rows (detail card), event-entity group note editing. Same 2-line + pencil treatment can be applied when their edit forms are wanted inline.
+
+---
+
+### 2026-09-10 — Causal Chain Diagram + Knowledge Gap Heatmap (queue complete) + viz polish + hang hardening
+
+**State:** `swift build` clean (one pre-existing `PlaceListView` `as?` cast warning, untouched), **553/553** tests pass. No schema change. The five-idea visualization queue from 2026-09-09 is now fully shipped (Pantheon Power, Dynasty Evolution, Event Trail, Causal Chain, Knowledge Gap Heatmap).
+
+**Pantheon Power Map polish** (`PantheonPowerMapView.swift`): user approved growing the sunburst; radii scaled 29% to `SunburstRadii(101, 191, 194, 271, 273, 351)` (was `78,148,150,210,212,272`) for iteration. Fixed the deprecated `.onChange(of:perform:)` to the macOS 14 two-parameter closure (`{ _, newSize in … }`). **Sheet close-button convention** applied to `PantheonFigureSheet`: content wrapped in `NavigationStack`, `ToolbarItem(placement: .cancellationAction)` `Button("Close") { dismiss() }`, fixed 840×680 frame.
+
+**Event Trail sidebar icon:** `"route"` didn't render visibly → `NavigationItem.eventTrail.icon` = `"arrow.triangle.2.circlepath"`.
+
+**History sidebar grouping:** Dynasty Map + Dynasty Evolution nested under `DisclosureGroup("Dynasties")` in the History section (The Me's stays standalone).
+
+**Causal Chain Diagram** (`CausalChainDiagramView.swift`, new): Event↔Event associations (caused/motivated/precedes/contradicts/parallels) drawn as a layered left-to-right DAG on a `Canvas`. Layout = longest-path ranks (≤ node-count iterations), barycenter column ordering ("previous column's row" otherwise sortName), 6 smoothing passes clamping to column row slots; bezier edges with arrowheads + role labels (only when dx ≥ 130, parallel duplicates offset 7 pt), hover dims non-neighbors. Node cards = era-color fill/rail, event-type icon, date·era subline. Role filter chips toggle `hiddenRoles`; unlinked events render as a side-panel list (never drawn on canvas). Chains assembled via union-find + Kahn topological order (sortName tiebreak, DAG leftover appended). Clicking a node or a row opens a details pane; "Open Detail" → `CausalChainEventSheet` (fetch by `PersistentIdentifier`, `EventDetailView` in NavigationStack + Close button). **Live-store quirk:** all 5 seeded associations have NULL role type → falls back to `"Related To"`/gray.
+
+**Main-thread hang investigation (user-reported beach ball, 12:56):** all hang reports (`…-123943`, `…-125620`, Sep 5–9) sample the main thread **idle** — the ≥3 s stall always recovered before the 5 s `sample` ran, so no capture holds the guilty stack. The stall is transient/recurring and predates today's views, so it is not provably the Causal Chain. Even so, `CausalChainDiagramView` was hardened against the exact stall class this project has fixed twice already: `CausalCanvasView` was extracted to **own `hoveredID` + canvas size**, so hover no longer invalidates the parent's 160-row side panel; both side lists switched to `LazyVStack`; the dead `@Query allEventTypes` was removed. Follow-up: if a future capture connects with a busy main thread, the real stack will finally be visible.
+
+**Knowledge Gap Heatmap** (`KnowledgeGapHeatmapView.swift`, new, closing the queue): entity-coverage matrix — Figures / Places / Events / Sources sections, rows = entities, columns = per-kind data fields (figure: description/domain/type/birth/death/parents/children/events/places/images/alt-names/pantheon/attributions; place: +modern-loc/coords honouring `coordinatesUnknown`; event: +date/figures/places; source: +author/language/period/publication/url/attachments/citations), cells green = filled / red = gap. Column headers carry a live coverage bar + `n/N` count and sort on click (gap-first ⇄ filled-first toggle). Top bar: search filter, kind chips, **"Include exempt"** toggle (legendary/SKL auto-exempted rows are dimmed with a badge, matching `DashboardView` semantics), overall gaps/fields + %-complete pill. Click a row → the entity's detail sheet via fetch-by-`PersistentIdentifier` wrappers (`KGFigureSheet`/`KGPlaceSheet`/`KGEventSheet`/`KGSourceSheet`). Heavy derivation (`rebuild()`) runs once off the render path behind `.task` + ID-collection `.onChange` (project convention); body is pure value math. Registered as `NavigationItem.knowledgeGap` ("Knowledge Gap Heatmap", `square.grid.3x3.fill`) in `.visualizations` alongside `.pantheonPower`/`.eventTrail`/`.causalChain`.
+
+**Files:** `Sources/Me/Views/PantheonPowerMapView.swift`, `Sources/Me/Views/ContentView.swift` (`.eventTrail` icon, `DisclosureGroup("Dynasties")`, `.knowledgeGap` case/icon/section/destination), `Sources/Me/Views/CausalChainDiagramView.swift` (new + hardening), `Sources/Me/Views/KnowledgeGapHeatmapView.swift` (new), `Sources/Me/MainThreadWatchdog.swift` (read-only: 1 s ping / 3 s threshold / 300 s cooldown — explains report cadence), `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-09 — Legendary SKL dynasties join Dynasty Evolution + territory watermark
+
+**State:** `swift build` clean, **553/553** tests pass (5 new). No schema change.
+
+**Context:** User noticed the Dynasties list shows 20 territory dynasties but the Evolution playback only plays ~9–10, and asked what happened to the rest.
+
+**Root cause:** `rebuildRuns` needs a `startBCE`/`endBCE` per dynasty (from `SKLDatePropagator`, which requires ≥1 dated king as anchor). The ten "missing" dynasties (Kish I, Uruk I, Ur I, Awan, Kish II, Hamazi, Uruk II, Ur II, Adab, Kish III) are the legendary early dynasties — every king carries a listed *mythological* reign (Kish I alone sums ~18,000 yrs) and **zero** BCE dates, so they were dropped despite having territory. Not a drawing failure.
+
+**Decision (user approved "Compress to real windows"):** New migration `ensureLegendaryDynastyWindows` pins each dynasty to a conventional archaeological window (~2900–2393 BCE, SKL order) and compresses its kings onto that span proportionally to their listed reigns via pure helper `fitLegendaryWindow(shares:earliestBCE:latestBCE:)`. Writes per-king `birthDate`/`deathDate` (`MythologicalDate`, `.computed`, approximate); era only touched while none of its kings carry a date (additive, never clobbers user data). Windows: Kish I −2900…−2550, Uruk I −2700…−2550, Ur I −2560…−2430, Awan −2550…−2470, Kish II −2500…−2430, Hamazi −2470…−2410, Uruk II −2450…−2400, Ur II −2430…−2395, Adab −2410…−2394, Kish III −2400…−2393. Axis grows to ~2900–1790 BCE. Wired in ContentView after `ensureComputedSKLDates`.
+- **Info-panel "N yrs" now shows the dynasty's actual span** (`spanYears = abs(start−end)`), not the sum of listed mythological reigns (Kish I would have shown "18,000 yrs" beside a 350-year bar). `DynastyRun.totalYears` removed.
+- **Right-pane territory watermark (earlier request):** Territory canvas in `infoPanel` was a fixed 110 pt box hugging the top; now fills the panel (ring scales + centers) with an XXL (88 pt, 10% opacity, rounded black) dynasty-name watermark behind the silhouette. Build clean, no warnings.
+- **Follow-up visual tweaks (same day, all in the info-panel territory box):**
+  1. Watermark opacity 0.10 → 0.16 ("just a tad" clearer).
+  2. **Zoom pulse on dynasty change**: `@State territoryZoom` (0.86 → 1.0 spring) triggered from `.onChange(of: currentRun?.id)` via a 60 ms delayed `withAnimation` — silhouette pulls back then settles onto the new territory whenever the ruling dynasty changes (playback, scrub, filmstrip). Scoped to the Canvas only (name steady); panel `.clipShape` keeps overshoot inside the rounded rect.
+  3. **Shape resized/shifted**: `drawRing` gained `shrink`/`upShift` params (0.8, +40 px up) — silhouette smaller and higher, watermark untouched.
+  4. **Capital pin**: `capitalName(for:)` → `capitalPin(for:)` returns name + lat/lon (prefers the city after "of " so "First rulers of Uruk" pins Uruk, not the substring Ur). `DynastyRun` carries `capitalLat`/`capitalLon`. `drawRing` refactored onto a shared `RingProjection` so `drawCapitalPin` geo-projects the capital onto the shrunken shape: 25 px dynasty-color dot (white ring) + 22 pt heavy rounded city name beside it, flipping side/under based on available room.
+
+**Pre-existing anomaly flagged (NOT touched):** "Dynasty of Mari" has inverted dates — first five kings (Anbu → Limer) are dated −1927…−1820 while the last king (Sharrum-iter) is −2350…−2341 — so its run bar renders as a ~0.004 sliver. This predates this session; needs a separate data-reconciliation decision.
+
+**Files:** `Sources/MeCore/Store/Migration+EraChronology.swift` (migration + `fitLegendaryWindow`), `Sources/Me/Views/ContentView.swift` (call site), `Sources/Me/Views/DynastyEvolutionMapView.swift` (watermark panel, `spanYears`), `Tests/MeCoreTests/MeCoreTests+Migration.swift` (5 tests), `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-09 — Event Trail Map (new viz) + dynasty playhead desync fix
+
+**State:** `swift build` clean, **548/548** tests pass. No schema change.
+
+**Context:** User loved the Dynasty Evolution playback; picked the next queued viz — Event Trail Map.
+
+**Playhead desync fix (prelude):** In `timelineStrip` the playhead `<Rect>.offset(x: fraction*width)` sat inside a **centered** ZStack, so its center was `w/2 + fraction*width` — past the halfway point it slid off the strip entirely ("slider completely disappears"). Fixed with the same coordinate math as the year pill and drag scrub: `.frame(width: 2, height: 22).position(x: fraction*width, y: 15)` so playhead, pill, and drag all share `fraction*width`.
+
+**Event Trail Map** (`Sources/Me/Views/EventTrailMapView.swift`, new). Concept from data reconnaissance (sqlite on `Me.store`): per-*figure* journeys are empty here — every figure joins exactly 1 mapped event — so the "trail" is a **chronological thread through events grouped by era**. Data: 114 events have mapped places, 107 have numeric years; the dated+mapped set forms era clusters (Neo-Assyrian 13, Old Babylonian 9, Ur III 5, Akkad 5, …).
+- **MapKit SwiftUI `Map`** (reuses the `CityMapView` pattern, not OHM): per-era `MapPolyline` connecting each era's events in year order (consecutive duplicate stops deduped), event `Annotation` markers (small colored dots with bolt glyph, tinted by era color, deduped by place ~3dp), `.annotationTitles(.hidden)`.
+- **Sweep playback**: chronologically reveals events+trails as the playhead advances (`.task(id: isPlaying)`, 100 ms tick = ~1/240th of the year axis). Default playhead = max year → full map up front; play button restarts from min. Slider scrubs; selecting a list row or marker jumps the playhead *and* pans the camera (`MapCameraPosition` region).
+- **Era chips** in the top bar (colored, count badges) toggle a single-era focus; an "All" chip restores. Right pane = 320 pt chronological event list (year / name / era dot), selected row highlighted.
+- Data is precomputed into plain `TrailEvent`/`TrailStop` value structs in `rebuild()` from `.task` + `.onChange(of: events.map(\.persistentModelID))` — no `@Model` faulting in the render path (per convention), so all derived trails/markers are cheap value math in `body`.
+- **Follow-up (same day): swapped the Apple Maps renderer for the OHM/MapLibre historical basemap** (user: "Yes, I want the OHM map"). `EventTrailMapView.swift` no longer imports MapKit. It now hosts a self-contained `EventTrailOHMMapView` (`NSViewRepresentable`): same maplibre-gl 4.7.1 CDN + OHM `main.json` style as the dynasty maps, with the scene sent as one GeoJSON bundle over a `setScene(json)` hook. Era trails = per-era `LineString` features (colored via `['get','color']`), event markers = a `circle`-layer `Point` source (era-colored dot, white stroke, click → `eventClicked` message → selects the list row). Reveal-by-playhead and era filtering are computed Swift-side each render and pushed as a fresh scene (≤ ~10 Hz during playback; scene JSON compared in the coordinator to skip no-op updates). List/marker selection flies the camera via a `focus(lon,lat,zoom)` request (seq-incremented `TrailMapFocus`, buffered pre-load). Duplicates the maplibre bootstrap template (deliberately scoped; the dynasty template's boundary/draw/grow JS is irrelevant here) but reuses shared `HistoricalMapTheme`/enums from `SumerianDynastyMapView.swift`.
+
+**Files:** `Sources/Me/Views/EventTrailMapView.swift` (new), `Sources/Me/Views/DynastyEvolutionMapView.swift`, `Sources/Me/Views/ContentView.swift` (new `.eventTrail` nav item, icon `route`, visualizations section, destination), `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-09 — Dynasty Evolution beach-ball fix (perf)
+
+**State:** `swift build` clean (warning-free), **548/548** tests pass. No schema change.
+
+**Context:** On first exploration the user reported continuous beach balls in the Dynast Evolution view during playback/scrubbing.
+
+**Root cause:** `SKLDatePropagator.compute(...)` was a computed property re-invoked **8-10× per body pass** (`runs`, `currentRun`, `infoPanel`'s king count/years, `currentRuler` each touched `timeline`, and `ForEach(runs)` in strip + filmstrip rebuilt it again). Each call re-runs `ReignLength.parse` (3 regexes compiled **per figure** from scratch) over ~134 SKL figures. During playback the view re-rendered ~10×/s and ~60×/s while dragging the playhead → essentially 100% main-thread block → beach balls. Bonus: when the playhead crossed a dynasty boundary, `boundaryGeoJSON` was part of `DynastyHistoricalMapView`'s reload signature, so each transition threw away the WKWebView and did a full MapLibre/HTML re-init (network + JS bootstrap).
+
+**Fixes:**
+1. **Memoize the heavy derivation.** In `DynastyEvolutionMapView`, replaced the `timeline`/`runs` computed props with `@State cachedRuns`, built once in `rebuildRuns()` from `.task` (initial) and `.onChange(of: dataSignature)` (data edits). `DataSignature = skl figure PersistentIdentifiers + eraOrder`, so live edits still refresh. Render path now reads only plain value structs.
+2. **Precompute per-run aggregates off the render path.** `DynastyRun` now carries `reigns`, `kingCount`, `totalYears` (from `DynastyTimeline.reigns/totalYears`) so body never faults `figure.kingship` or re-computes totals.
+3. **`rebuildRuns()` also snaps `currentYear` into the new bounds** (replaces the old `onAppear` clamp).
+4. **No full map reloads on boundary change.** `updateNSView` sig now covers only `places` (+ nullable `defaultCenter`); boundary/color/selection changes flow through the existing lightweight `focusToken` JS path (`setCapital` + `setBoundaryStr` + `focus` + `setDate`). Also added `setBoundaryStr(\"\")` to the nil-capital branch so interregnum/overview clears a stale boundary overlay.
+5. **Idle timer removed.** Playback is now a `.task(id: isPlaying)` loop (100 ms tick, `Task.isCancelled`-guarded) that only runs while playing.
+6. Added a `ProgressView("Computing dynasty chronology…")` placeholder for the one-time initial compute (no more "No map data" flash while `cachedRuns` populates).
+
+**Files:** `Sources/Me/Views/DynastyEvolutionMapView.swift`, `Sources/Me/Views/SumerianDynastyMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-09 — Fun data visualizations: Pantheon Power Map + Dynasty Evolution Timeline
+
+**State:** `swift build` clean. Two new visualizations registered in the sidebar. No schema change.
+
+**Context:** User asked for 5 fun, data-driven ideas in the spirit of the dynasty map borders; picked #4 (Pantheon Power Map) and #5 (Dynasty Evolution Timeline) in that order, and queued #1 (Event Trail Map), #2 (Causal Chain Diagram), #3 (Knowledge Gap Heatmap) on the todo list.
+
+**Pantheon Power Map** (`Sources/Me/Views/PantheonPowerMapView.swift`):
+- Sunburst: 3 rings center→out = Pantheons → Domains → Figures, slice area proportional to a "power" weight, 3 metrics (`Power` = 1 + 2×relationships + events + places + aliases + images; `Relationships`; `Balanced`).
+- Value tree (`PowerPantheon`/`PowerDomain`/`PowerFigure`) built off the render path from `@Query` (same pattern as `TagCloudView`); `Canvas` draws parametric annular sectors with centroid labels auto-hidden when a slice is too thin to fit.
+- Hover → brighter fill + tooltip (name, type, breakdown); tap a figure → `FigureDetailView` sheet by `PersistentIdentifier`; tap a pantheon → focus it (re-layout to full circle); side panel = pantheon legend (click to focus) + figure-type legend.
+- Registered as `NavigationItem.pantheonPower` ("Pantheon Power", `circle.hexagongrid.fill`) in `.visualizations`.
+
+**Dynasty Evolution Timeline** (`Sources/Me/Views/DynastyEvolutionMapView.swift`):
+- Play/pause playback over the BCE year axis (slow/normal/fast) reusing `DynastyHistoricalMapView`; the playhead drives both the map and the OHM date filter so the basemap itself changes as you scrub.
+- Reuses existing app settings keys (`dynastyMapHistoricalStartupZoom/Theme/Language/LabelSize`); new `dynastyEvolutionDateFilter` toggle.
+- **Dynasty strip** below the map: color-coded per-dynasty bars proportional to reign span with a draggable playhead + tap/drag scrubbing + live "c. X BCE" pill.
+- **Territory filmstrip**: horizontal row of mini boundary-polygon thumbnails (parsed from `Era.boundaryGeoJSON`), current dynasty highlighted, click to jump; info panel shows ruling king at the playhead (opens quicklook).
+- Registered as `NavigationItem.dynastyEvolution` ("Dynasty Evolution", `film.stack`) in `.history` next to `sklMap`.
+- Enhanced `DynastyHistoricalMapView`: `dateString` changes now apply incrementally via `setDate(...)` in `updateNSView` (tracked in `Coordinator.lastDateString`) instead of requiring a full HTML reload — enables live basemap evolution during playback.
+
+**Gotcha worth remembering:** `Era.boundaryGeoJSON` rings are `[Double]` pairs, not tuples — use `$0[0]`/`$0[1]`, not `\.0`/`\.1` (compiler refused the key path form).
+
+**Follow-up (same day), user feedback once it actually played:** three more issues surfaced:
+1. **Antediluvian mega-bar.** The dated antediluvian kings carry fixed BCE years (−269,200…−46,600), so the `Antediluvian Period` run owned ~222,000 of the ~224,000-year axis; every real dynasty was a 1-2px sliver and the playhead parked in a territory-less bar (hence "the map is static / No territory drawn"). Fix: `rebuildRuns` now skips any run without a `boundaryGeoJSON` territory — only territorial dynasties (the 12 dated SKL dynasties) appear, and the map/territory panel are populated from the very first frame.
+2. **Strip vs. playhead misalignment.** The strip was an `HStack` that concatenated run bars in era-order (∑spans ≈ 2.3× the width → overflow/clip), while the playhead positions by absolute year — so after the first dynasty every bar was off-screen or misaligned and playback "zipped past" invisible dynasties. Fixed by positioning each bar absolutely: `startFrac…endFrac` years → x/width, with a base layer so interregnum gaps read as a subtle shade instead of white void; run names hidden below ~46px.
+3. **Overlap disambiguation.** Because Mari (−2350…−1820) chronologically overlaps every later dynasty, first-index matching always resolved to Mari → the map showed Mari's border for 88% of playback. `currentRunIndex` now picks the *most recently established* dynasty covering the year (`max startBCE` among covering runs): Akshak → Uruk III → Kish IV → Akkad → Gutian → Uruk IV → Ur III → Isin…
+4. Also fixed: `setBoundaryStr` now renders in the nil-capital JS branch (so a dynasty with a territory but no matched capital place, e.g. "Gutian rule", still draws its border on the map when you scrub into it).
+
+**Follow-up (same day):** playback recalibration + custom numeric speed. Speeds were ~2-3× too fast for the ~600-year axis; recalibrated Slow 20 / Normal 60 / Fast 150 yr/s (old "Slow" ≈ new Normal). Added a `Custom` segment to the speed picker that reveals an inline `yrs/s` numeric field (`@AppStorage dynastyEvolutionCustomSpeed`, clamped 5…2000, applied live during playback via `playRate`). `playSpeed` moved from `@State` to `@AppStorage`-backed computed property (`nonmutating set` + explicit `Binding` for the `Picker`).
+
+**Follow-up (same day):** territory grow-from-center animation. `DynastyHistoricalMapView` gained `animateBoundaryTransitions` (default true); the JS boundary swap now calls `animateBoundaryTo(geojson, 650)` which grows the polygon from its centroid outward with cubic ease-out (`growRing`, rAF per-frame `setData`). Boundary updates are buffered (`pendingBoundary`/`pendingBoundaryAnimate`) if they arrive before `boundaryReady` and flushed in `onLoad()` — this also fixes a latent race where a pre-load transition could be silently dropped. Evolution view has a persisted "Grow borders" toggle (`dynastyEvolutionAnimateBoundaries`).
+
+**Files:** `Sources/Me/Views/DynastyEvolutionMapView.swift`, `Sources/Me/Views/SumerianDynastyMapView.swift`, `docs/SESSION_LOG.md`.
+
+**Files:** `Sources/Me/Views/PantheonPowerMapView.swift` (new), `Sources/Me/Views/DynastyEvolutionMapView.swift` (new), `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/ContentView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-09 — Dating-investigation + phantom "Antediluvian" dynasty fix
+
+**State:** `swift build` clean, **548/548** tests (545 baseline + 3 new). No schema change.
+
+**Context:** Following the overview-mode work, the user asked why some dynasties lack from–to years. Investigation (throwaway Python replica of `SKLDatePropagator` against a copy of the real store in `/var/folders/.../T/opencode/Me.store`) showed it's a data-coverage gap, not a rendering bug: the pre-2450 BCE mythological dynasties (Kish I, Uruk I, Ur I, Awan, Hamazi, Kish II, Uruk II, Ur II, Adab, Kish III, Kish IV) have *no king* with an explicit date — every king carries only a mythological reign length ("Reigned 1,200 years (mythological length)") and empty `ZSTARTYEAR`/`ZENDYEAR1`. `SKLDatePropagator` needs at least one anchored king per dynasty to walk the reign-length chain; the first anchored block starts at the Dynasty of Akshak (−2392) / Akkad (Sargon −2360). Verified concretely: Kubaba, Gilgamesh, Jushur all have empty date columns.
+
+**The bug found along the way:** a stray 1-king "Antediluvian" dynasty row (Mesh-ki-ang-gasher). His `birthDate.era` was seeded empty, so the null-era fallback bucket swallowed him even though the SKL lists him as the founder of the *First rulers of Uruk* block.
+
+**Change:**
+- New `Migration.ensureMeshKiAngGasherEra(context:)` in `Migration+SKLAndGenealogy.swift`: assigns `birthDate.era = "First rulers of Uruk"` when the key matches and the era string is empty (additive + idempotent; never overwrites an existing/user-set era).
+- Registered in the `ContentView` seeding chain *between* `enrichSKLData` and `ensureComputedSKLDates` so the timeline recomputation in the same launch no longer produces the phantom dynasty.
+- Distinct-era-preservation test + idempotency test + happy-path test added to `MeCoreTests+Migration.swift`.
+
+**Gotcha worth remembering:** `seedNameKey("Mesh-ki-ang-gasher")` is `"meshkianggasher"` — the hyphen-strip concatenates "ang"+"gasher" into a *doubled `g`*. First draft compared against `"meshkiangasher"` and silently matched nothing (2 test failures caught it).
+
+**Files:** `Sources/MeCore/Store/Migration+SKLAndGenealogy.swift`, `Sources/Me/Views/ContentView.swift`, `Tests/MeCoreTests/MeCoreTests+Migration.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-09 — "Dynasties" living-map feature: authored territory polygons + overview-with-hover
+
+**State:** `swift build` clean, **545/545** tests. No schema change.
+
+**Context:** User wanted the "Dynasties" History page (and the Dynasty Map) to "bring the data to life". Investigation found a gap: the authored SKL territory rings (`Migration.ensureDynastyBoundaries` → `Era.boundaryGeoJSON`) and the engraving JS boundary renderer already existed, but nothing threaded them together — the map showed cities but no territories.
+
+**Changes (all in the shared `DynastyHistoricalMapView` engine + two call sites):**
+- **Territory rendering**: new `boundaryGeoJSON` param; filled territory + solid 4px outline drawn in the dynasty color. Wired from `SumerianDynastyMapView` (selected dynasty) and `GroupEraMapView` (the group's era). `Era.boundaryGeoJSON` initial fill is embedded in the HTML; dynasty switches repaint via `setBoundaryStr` + recolor via `setCapital` paint update (no page reload).
+- **"No dynasty selected" overview**: `selectedDynastyIndex` became `Int?` (dropdown gains a nil entry). In overview mode the info panel lists all dynasties in SKL ruling order with color swatch + date span; clicking one selects it (detail panel). Camera flies back to the Mesopotamia home region when nothing is selected (`focusDefault`, `INITIAL_INDEX === -1` path on reload).
+- **Hover preview**: hovering an overview row draws that dynasty's territory border in the same **solid width-4** style as a selected dynasty's border (via the long-dormant `boundary-preview` layer, `setPreviewBoundaryStr` + `pendingPreview` replay on load), colored per dynasty. The first iteration used a dashed 3px outline, which users read as "the border became thin and dotted" — the preview now matches the committed border styling exactly.
+
+**Regression hunt:** a stale hover could bleed a preview line over a committed territory's border when a hover survived into selected mode. Fix contributed two rules: `hoveredBoundaryGeoJSON` is gated to overview mode (`selectedDynastyIndex == nil`), and the row's `Button` clears the hover before selecting. The preview update block no longer short-circuits the focus path. Border is back to solid dynasty-color 4px.
+
+**Key decisions:**
+- Preview reuses the existing `boundary-preview` source/line layer (dashed) instead of a new layer; `boundaryGeoJSON` overloads the main `boundary` source.
+- Boundary switches intentionally trigger a full HTML reload when signature changes (fresh `capitalIndex`/`capitalColorHex`/center/date all rebuild together); per-dynasty-day-territory paints the *lightweight* path is JS-only for the common picker case.
+- Default startup state is now overview (nil selection) — discovery-first.
+
+**Files:** `Sources/Me/Views/SumerianDynastyMapView.swift`, `Sources/Me/Views/GroupEraMapView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+**State:** No code change (working tree clean at `c7ac653`). 542/542 tests from the prior entry stand.
+
+**Context:** Follow-up to the cold-boot timeout / truncation fixes. User rebooted the Mac, then asked the app "what was the population of Babylon" as the very first question against a freshly loaded Ollama.
+
+**Result:** The first query returned a full, complete answer — an honest refusal ("the database does not provide information on the population of Babylon") followed by the DB-adjacent events summary and a general-knowledge caveat — instead of the pre-fix behavior (URLError timeout, or a truncated answer stopping at the refusal boilerplate). Warm-up → stream → retry pipeline held on a genuine cold boot; no throwaway first question.
+
+**Files:** `docs/SESSION_LOG.md`.
+
+---
+
 ### 2026-09-08 — Ollama cold-boot timeout: long-timeout session + retry for the real query
 
 **State:** `swift build` clean, **542/542** tests. No schema change.

@@ -165,56 +165,72 @@ struct FigurePlaceAssociationRow: View {
     var onDelete: (() -> Void)?
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: association.place?.placeType?.icon ?? "mappin")
-                .font(.caption)
-                .foregroundStyle(.teal)
-                .frame(width: 14)
-            Text(association.roleType?.name ?? "—")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            if let place = association.place {
-                if let onSelectPlace {
-                    Button(action: { onSelectPlace(place) }) {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 8) {
+                Image(systemName: association.place?.placeType?.icon ?? "mappin")
+                    .font(.caption)
+                    .foregroundStyle(.teal)
+                    .frame(width: 14)
+                if let place = association.place {
+                    if let onSelectPlace {
+                        Button(action: { onSelectPlace(place) }) {
+                            Text(place.name)
+                                .font(.callout)
+                                .fontWeight(.medium)
+                                .foregroundStyle(Color.accentColor)
+                                .underline()
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                        .buttonStyle(.plain)
+                        .pointingHand()
+                    } else {
                         Text(place.name)
                             .font(.callout)
                             .fontWeight(.medium)
-                            .foregroundStyle(Color.accentColor)
-                            .underline()
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                } else {
+                    Text("?")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                }
+                if let confidence = association.confidence {
+                    Text("(\(confidence.label))")
+                        .font(.caption2)
+                        .italic()
+                        .foregroundStyle(confidence == .disputed ? Color.orange : Color.secondary)
+                }
+                Spacer(minLength: 8)
+                if let onDelete {
+                    Button(action: onDelete) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red.opacity(0.7))
                     }
                     .buttonStyle(.plain)
-                    .pointingHand()
-                } else {
-                    Text(place.name)
-                        .font(.callout)
-                        .fontWeight(.medium)
+                    .help("Delete association")
                 }
-            } else {
-                Text("?")
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
             }
-            if let confidence = association.confidence {
-                Text("(\(confidence.label))")
+            HStack(spacing: 6) {
+                Text(association.roleType?.name ?? "—")
                     .font(.caption2)
-                    .italic()
-                    .foregroundStyle(confidence == .disputed ? Color.orange : Color.secondary)
-            }
-            Spacer()
-            if !association.source.isEmpty {
-                Text(association.source)
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
-            if let onDelete {
-                Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.red.opacity(0.7))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.teal.opacity(0.1))
+                    )
+                if !association.source.isEmpty {
+                    Text(association.source)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
                 }
-                .buttonStyle(.plain)
-                .help("Delete association")
             }
+            .padding(.leading, 22)
         }
     }
 }

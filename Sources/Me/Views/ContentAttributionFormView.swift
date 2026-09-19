@@ -400,6 +400,8 @@ struct ContentAttributionSection: View {
                                 Text(attribution.source?.name ?? "Unknown source")
                                     .font(.caption)
                                     .fontWeight(.medium)
+                                    .lineLimit(1)
+                                    .truncationMode(.tail)
                                 if let prop = attribution.propertyName, !prop.isEmpty {
                                     Text("\u{2192}")
                                         .font(.caption2)
@@ -407,6 +409,8 @@ struct ContentAttributionSection: View {
                                     Text(propertyDisplayLabel(prop))
                                         .font(.caption2)
                                         .foregroundStyle(.teal)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                 }
                                 if !attribution.note.isEmpty {
                                     Text("\u{2022}")
@@ -415,6 +419,8 @@ struct ContentAttributionSection: View {
                                     Text(attribution.note)
                                         .font(.caption2)
                                         .foregroundStyle(.tertiary)
+                                        .lineLimit(1)
+                                        .truncationMode(.tail)
                                 }
                             }
                             Text(attribution.contentPreview)
