@@ -10,8 +10,28 @@ struct EntityReportRequest: Codable, Hashable {
 }
 
 class AppDelegate: NSObject, NSApplicationDelegate {
+    private var splashPanel: NSWindow?
+    private var mainWindow: NSWindow?
+    private var isSplashDone = false
+    private var visibleObserver: NSObjectProtocol?
+    private var didUpdateObserver: NSObjectProtocol?
+
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.regular)
+        visibleObserver = NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("NSWindowDidBecomeVisibleNotification"),
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hideNonSplashWindows()
+        }
+        didUpdateObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didUpdateNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.hideNonSplashWindows()
+        }
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -27,6 +47,91 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         NSApplication.shared.activate(ignoringOtherApps: true)
+
+        MainActor.assumeIsolated {
+            presentSplashScreen()
+            DispatchQueue.main.async { [weak self] in
+                self?.hideNonSplashWindows()
+            }
+        }
+    }
+
+    @MainActor
+    private func presentSplashScreen() {
+        let splashView = SplashScreenView(onContinue: { [weak self] in
+            self?.finishSplash()
+        })
+        .environment(\.modelContext, MeApp.sharedContainer.mainContext)
+        let host = NSHostingController(rootView: splashView)
+        host.sizingOptions = []
+        let panel = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 350, height: 300),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        panel.isReleasedWhenClosed = false
+        panel.isOpaque = true
+        panel.backgroundColor = NSColor(red: 0.07, green: 0.14, blue: 0.32, alpha: 1)
+        panel.level = .floating
+        panel.contentViewController = host
+        panel.setContentSize(NSSize(width: 350, height: 300))
+        panel.center()
+        splashPanel = panel
+        hideNonSplashWindows()
+        panel.orderFrontRegardless()
+
+        #if DEBUG
+        if CommandLine.arguments.contains("--autodismiss-splash") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) { [weak self] in
+                self?.finishSplash()
+            }
+        }
+        #endif
+    }
+
+    private func hideNonSplashWindows() {
+        guard !isSplashDone else { return }
+        let candidates = NSApp.windows.filter { $0 !== splashPanel && $0.isVisible }
+        guard !candidates.isEmpty else { return }
+        if mainWindow == nil {
+            mainWindow = candidates.first(where: isMainContentWindow) ?? candidates.first
+        }
+        for window in candidates {
+            window.alphaValue = 0
+            window.orderOut(nil)
+        }
+        splashPanel?.makeKeyAndOrderFront(nil)
+    }
+
+    private func isMainContentWindow(_ window: NSWindow) -> Bool {
+        if window.contentViewController is NSHostingController<ContentView> { return true }
+        return window.title == "Me"
+    }
+
+    private func finishSplash() {
+        isSplashDone = true
+        if let visibleObserver {
+            NotificationCenter.default.removeObserver(visibleObserver)
+            self.visibleObserver = nil
+        }
+        if let didUpdateObserver {
+            NotificationCenter.default.removeObserver(didUpdateObserver)
+            self.didUpdateObserver = nil
+        }
+        splashPanel?.orderOut(nil)
+        splashPanel = nil
+        let target = mainWindow ?? NSApp.windows.first(where: isMainContentWindow)
+        mainWindow = target
+        for window in NSApp.windows where window.alphaValue == 0 {
+            window.alphaValue = 1
+        }
+        target?.makeKeyAndOrderFront(nil)
+        NSApplication.shared.activate(ignoringOtherApps: true)
+    }
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        isSplashDone
     }
 }
 
