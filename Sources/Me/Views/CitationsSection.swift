@@ -4,7 +4,6 @@ import SwiftData
 /// Section showing citations for a figure.
 struct CitationsSection: View {
     let figure: Figure
-    let filterText: String
     @Binding var showAddCitation: Bool
 
     @Environment(\.modelContext) private var modelContext
@@ -15,17 +14,6 @@ struct CitationsSection: View {
     private var figureCitations: [Citation] {
         let all: [Citation] = modelContext.fetchAll()
         return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
-    }
-
-    private var filteredCitations: [Citation] {
-        filterText.isEmpty ? figureCitations : figureCitations.filter {
-            matchesFilter($0.source?.name ?? "") || matchesFilter($0.safeLocation) || matchesFilter($0.safeNote)
-        }
-    }
-
-    private func matchesFilter(_ text: String) -> Bool {
-        guard !filterText.isEmpty else { return true }
-        return text.localizedCaseInsensitiveContains(filterText)
     }
 
     var body: some View {
@@ -45,19 +33,19 @@ struct CitationsSection: View {
                 .help("Add citation")
             }
 
-            if filteredCitations.isEmpty {
-                    Text("No matching citations found")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                } else {
-                    ForEach(filteredCitations) { citation in
-                        CitationListRow(citation: citation, onEdit: {
-                            editingCitation = citation
-                        }, onDelete: {
-                            citationToDelete = citation
-                            showDeleteConfirm = true
-                        })
-                    }
+            if figureCitations.isEmpty {
+                Text("No citations yet")
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            } else {
+                ForEach(figureCitations) { citation in
+                    CitationListRow(citation: citation, onEdit: {
+                        editingCitation = citation
+                    }, onDelete: {
+                        citationToDelete = citation
+                        showDeleteConfirm = true
+                    })
+                }
             }
         }
         .alert("Delete Citation?", isPresented: $showDeleteConfirm, presenting: citationToDelete) { citation in

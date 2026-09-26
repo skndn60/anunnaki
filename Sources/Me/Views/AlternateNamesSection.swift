@@ -4,18 +4,10 @@ import SwiftData
 /// Section showing alternate names for a figure.
 struct AlternateNamesSection: View {
     let figure: Figure
-    let filterText: String
     @Environment(\.modelContext) private var modelContext
 
-    private var filteredAlternateNames: [AlternateName] {
-        (filterText.isEmpty ? figure.alternateNames : figure.alternateNames.filter {
-            matchesFilter($0.name) || matchesFilter($0.tradition.rawValue) || matchesFilter($0.nameType.rawValue) || matchesFilter($0.note)
-        }).sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
-    }
-
-    private func matchesFilter(_ text: String) -> Bool {
-        guard !filterText.isEmpty else { return true }
-        return text.localizedCaseInsensitiveContains(filterText)
+    private var sortedAlternateNames: [AlternateName] {
+        figure.alternateNames.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
     var body: some View {
@@ -42,7 +34,7 @@ struct AlternateNamesSection: View {
                     .font(.caption)
                     .foregroundStyle(.tertiary)
             } else {
-                ForEach(filteredAlternateNames) { altName in
+                ForEach(sortedAlternateNames) { altName in
                     AlternateNameCardRow(
                         altName: altName,
                         onEdit: { editingAltName = altName },

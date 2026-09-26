@@ -4,15 +4,9 @@ import SwiftData
 /// Section showing associated places for a figure with comments editing.
 struct PlacesSection: View {
     let figure: Figure
-    let filterText: String
     var onSelectPlace: ((Place) -> Void)?
 
     @Environment(\.modelContext) private var modelContext
-
-    private func matchesFilter(_ text: String) -> Bool {
-        guard !filterText.isEmpty else { return true }
-        return text.localizedCaseInsensitiveContains(filterText)
-    }
 
     var body: some View {
         Divider()
@@ -47,10 +41,7 @@ struct PlacesSection: View {
                     .foregroundStyle(.tertiary)
                     .padding(.vertical, 4)
             } else {
-                let filteredPlaces = filterText.isEmpty ? figure.placeAssociations : figure.placeAssociations.filter {
-                    matchesFilter($0.place?.name ?? "") || matchesFilter($0.roleType?.name ?? "") || matchesFilter($0.source)
-                }
-                ForEach(filteredPlaces) { assoc in
+                ForEach(figure.placeAssociations) { assoc in
                     VStack(alignment: .leading, spacing: 2) {
                         FigurePlaceAssociationRow(association: assoc, onSelectPlace: onSelectPlace, onDelete: {
                             assocToDelete = assoc

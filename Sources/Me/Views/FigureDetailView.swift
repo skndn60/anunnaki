@@ -27,7 +27,6 @@ struct FigureDetailView: View {
 
 
 
-    @State private var filterText = ""
     @State private var showAddCitation = false
     @State private var showAddAttribution = false
     @State private var editingAttribution: ContentAttribution?
@@ -115,13 +114,8 @@ struct FigureDetailView: View {
         return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
     }
 
-    private var filteredRelationships: [Relationship] {
-        let filtered = matchingRelationships.filter {
-            matchesFilter($0.fromFigure?.name ?? "") ||
-            matchesFilter($0.toFigure?.name ?? "") ||
-            matchesFilter($0.relationshipType?.name ?? "")
-        }
-        return filtered.sorted {
+    private var sortedRelationships: [Relationship] {
+        matchingRelationships.sorted {
             let l0 = displayedLabelPrefix(of: $0)
             let l1 = displayedLabelPrefix(of: $1)
             if l0 != l1 { return l0 < l1 }
@@ -139,11 +133,6 @@ struct FigureDetailView: View {
     private func otherFigureName(in relationship: Relationship) -> String {
         let isFrom = relationship.fromFigure?.persistentModelID == figure.persistentModelID
         return (isFrom ? relationship.toFigure?.name : relationship.fromFigure?.name) ?? ""
-    }
-
-    private func matchesFilter(_ text: String) -> Bool {
-        guard !filterText.isEmpty else { return true }
-        return text.localizedCaseInsensitiveContains(filterText)
     }
 
     @ViewBuilder
@@ -367,27 +356,6 @@ struct FigureDetailView: View {
         VStack(alignment: .leading, spacing: 20) {
             headerView
 
-            // Filter
-            HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                TextField("Filter relationships, places, events, names\u{2026}", text: $filterText)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.caption)
-                if !filterText.isEmpty {
-                    Button(action: { filterText = "" }) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(8)
-            .background(Color(.textBackgroundColor))
-            .cornerRadius(8)
-
             // Stickies
             StickyNoteSection(stickies: figure.stickies) { text in
                 RelationshipManager(context: modelContext).addStickyNote(to: figure, text: text)
@@ -462,12 +430,12 @@ struct FigureDetailView: View {
             )
 
             // Alternate Names
-            AlternateNamesSection(figure: figure, filterText: filterText)
+            AlternateNamesSection(figure: figure)
 
             // Relationships
-            if !filteredRelationships.isEmpty {
+            if !sortedRelationships.isEmpty {
                 DetailSection(title: "Relationships") {
-                    ForEach(filteredRelationships, id: \.persistentModelID) { rel in
+                    ForEach(sortedRelationships, id: \.persistentModelID) { rel in
                         RelationshipGroupRow(
                             relationship: rel,
                             alternatives: [],
@@ -479,7 +447,7 @@ struct FigureDetailView: View {
             }
 
             // Place Associations
-            PlacesSection(figure: figure, filterText: filterText, onSelectPlace: onSelectPlace)
+            PlacesSection(figure: figure, onSelectPlace: onSelectPlace)
 
             // Associated Things
             ThingsSection(figure: figure)
@@ -496,7 +464,7 @@ struct FigureDetailView: View {
             ComparisonTablesSection(figure: figure, showingPopupTableGrid: $showingPopupTableGrid)
 
             // Associated Events
-            EventsSection(figure: figure, filterText: filterText, onSelectEvent: onSelectEvent, onSelectPlace: onSelectPlace)
+            EventsSection(figure: figure, onSelectEvent: onSelectEvent, onSelectPlace: onSelectPlace)
 
             // Images
             Divider()
@@ -524,7 +492,7 @@ struct FigureDetailView: View {
             }
 
             // Citations
-            CitationsSection(figure: figure, filterText: filterText, showAddCitation: $showAddCitation)
+            CitationsSection(figure: figure, showAddCitation: $showAddCitation)
 
             Spacer()
         }

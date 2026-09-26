@@ -4,23 +4,14 @@ import SwiftData
 /// Section showing events a figure is involved in.
 struct EventsSection: View {
     let figure: Figure
-    let filterText: String
     var onSelectEvent: ((Event) -> Void)?
     var onSelectPlace: ((Place) -> Void)?
 
     @Environment(\.modelContext) private var modelContext
 
-    private func matchesFilter(_ text: String) -> Bool {
-        guard !filterText.isEmpty else { return true }
-        return text.localizedCaseInsensitiveContains(filterText)
-    }
-
     var body: some View {
-        let allFigureEvents: [Event] = modelContext.fetchAll().filter {
+        let figureEvents: [Event] = modelContext.fetchAll().filter {
             $0.involvedFigures.contains(where: { $0.persistentModelID == figure.persistentModelID })
-        }
-        let figureEvents = filterText.isEmpty ? allFigureEvents : allFigureEvents.filter {
-            matchesFilter($0.name) || matchesFilter($0.eventType?.name ?? "") || matchesFilter($0.date.displayLabel)
         }
         if !figureEvents.isEmpty {
             Divider()
