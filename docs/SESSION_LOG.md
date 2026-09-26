@@ -8,6 +8,167 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-26 — Figure-detail filter field removed (unintended feature, no data value)
+
+**Context:** The user asked what the "Filter relationships, places, events, names…" field at the top of the figure detail panel does, then said they did not remember putting it there. Provenance confirmed they were right: `git log -S` pins it to **`9a4a9ea`** (2026-07-22, *"Timeline swimlane fix, new views/models, query engine enhancements"*) — a 58-file, +4878-line kitchen-sink commit whose message covers era bars, timelines, five new models, a 403-line QueryEngine expansion and migrations, and never mentions a filter. The corresponding SESSION_LOG entry for that day covers only the post-flood era bars. The field arrived incidentally with a +460-line rewrite of `FigureDetailView`; the section views were extracted later in `105a43a`, carrying `filterText` in as a parameter. It was also the only content filter of its kind in the app — the search fields in `PlaceDetailView`/`EventDetailView` belong to link-picker popovers, not the detail panel.
+
+**Why removed (measured on a read-only copy of the live store, 629 figures):** counting the rows it could filter (relationships + alternate names + places + events + citations) the average figure has **2.7**; **179 of 629 (28%) have zero**, making the field dead UI; only **30 figures exceed 10** rows and only **14 exceed 12** (2.2%). Only **9 figures have more than 10 relationships**. The one real beneficiary was a handful of hub figures — Enki's 35 relationships split 14 spouse / 14 father / 2 creator / 2 consort, so typing "father" genuinely narrowed it.
+
+**Quirks this removed:**
+- **Sticky across figures.** No host keys the view by identity (no `.id(...)` at any of the nine `FigureDetailView` call sites; `FigureListView` holds it in `if let figure = selectedFigure`), so `@State filterText` survived switching figures — type "father" in Enki, click a linked figure, and the next figure's lists were silently filtered too.
+- **Sections vanished rather than emptying.** Relationships and Events hid entirely on no-match, while Places and Also Known As kept a heading over an empty body because their emptiness guards checked the *unfiltered* array — so the same query produced two different-looking pages.
+- **The mini lineage tree ignored the filter**, receiving `matchingRelationships` rather than the filtered set, so rows disappeared while the tree above still drew all of them.
+- Single substring match with no tokenizing (`"father enki"` matched nothing), and a placeholder that omitted citations entirely.
+
+**Changes:** `FigureDetailView` — removed the field, its `HStack` chrome, `matchesFilter`, and the `filterText` argument at all four section call sites; `filteredRelationships` → `sortedRelationships` (filter dropped, the type-prefix + name sort kept, since that grouping is what makes a 35-row list scannable). `AlternateNamesSection` (`sortedAlternateNames`), `PlacesSection`, `EventsSection`, `CitationsSection` — dropped the `filterText` property, `matchesFilter` and the filtered collections, each with exactly one call site. `CitationsSection`'s empty state reworded from "No matching citations found" to "No citations yet" and its `if/else` re-indented (it had been left misaligned by an earlier edit). Pure view-layer deletion: no model, migration or seed change, and the store was never written. The separate `filterText` fields in `TagCloudView` and `AssociationsView` are different screens and were left alone.
+
+**Accepted trade-off:** Enki, Samyaza and An (35/29/25 relationship rows) are now fully expanded with no way to narrow them, mitigated by the existing type-prefix sort. If that proves annoying, the cheaper follow-up is type sub-grouping or `.searchable` on that one section — not a whole-panel filter.
+
+**Verification:** `grep` confirms no `filterText`/`matchesFilter` references remain in the five touched files. `swift build` clean. `swift test` 618 passed, 0 failures. Runtime check still owed from the user: Enki (worst case, 35 relationships), a figure with no linked rows (empty states should read correctly, not blank), and a figure with citations.
+
+**Files:** `Sources/Me/Views/FigureDetailView.swift`, `Sources/Me/Views/AlternateNamesSection.swift`, `Sources/Me/Views/PlacesSection.swift`, `Sources/Me/Views/EventsSection.swift`, `Sources/Me/Views/CitationsSection.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-25 — macOS 27: arrow-key selection restored across all lists
+
+**Context:** On macOS 27 the user lost Up/Down arrow-key navigation in every list view (figures, places, events, sources, … *and* the sidebar). Diagnosis via targeted questions: both the sidebar and detail lists were affected, and clicking a row did **not** help — so the regression is that a SwiftUI `List(selection:)` no longer takes keyboard focus at all (the click selects a row but never makes the list first responder), leaving arrow keys with nowhere to go. This is distinct from the 2026-08-07 keyboard work, which was about a `ScrollView` replacement, not an OS change.
+
+**Changes:**
+- **New `Sources/Me/Views/ListArrowKeyNavigation.swift`** — reusable `listArrowKeyNavigation(selection:orderedIDs:)` modifier: `.focusable()` puts the list back in the key view loop, `.focusEffectDisabled()` suppresses the focus ring that made the earlier `.focusable()`/`.focused()` attempt unacceptable, `.focused(...)` + `.onAppear` focuses it on appear, and `onKeyPress(.upArrow/.downArrow)` moves `selection` through `orderedIDs` (rows in on-screen order) as a fallback if native handling is gone.
+- Applied to the sidebar (`ContentView`) and the selectable detail lists: `FigureListView`, `PlaceListView`, `EventListView`, `SourceListView`, `ThingListView`, `SumerianKingListView`, `FigureGroupListView`, `AlternateNameListView`, `DictionaryListView`.
+- `ContentView.swift` — sidebar loses its `.focusable(false)`; new `sidebarOrderedSelections` mirrors the sidebar's section/group order (subgroup children included only while expanded) so arrow navigation can walk it. The "Dynasties" disclosure gained tracked state (`dynastiesSidebarExpanded`) so its children are included in the order only when visible.
+
+**Key decisions:** Native arrow handling on a focused `List` was assumed to be the causal path, so the fix restores focus first and only supplies explicit `onKeyPress` movement as a safety net (native consumption, when it happens, pre-empts the fallback rather than double-moving). `focusEffectDisabled()` is the missing piece versus the rejected 2026-08-07 approach.
+
+**Verification:** `swift build` clean; `swift test` 618 passed, 0 failures. **Runtime confirmed by the user:** arrow keys work again in both the sidebar and the detail lists.
+
+**Files:** `Sources/Me/Views/ListArrowKeyNavigation.swift` (new), `Sources/Me/Views/ContentView.swift`, `Sources/Me/Views/FigureListView.swift`, `Sources/Me/Views/PlaceListView.swift`, `Sources/Me/Views/EventListView.swift`, `Sources/Me/Views/SourceListView.swift`, `Sources/Me/Views/ThingListView.swift`, `Sources/Me/Views/SumerianKingListView.swift`, `Sources/Me/Views/FigureGroupListView.swift`, `Sources/Me/Views/AlternateNameListView.swift`, `Sources/Me/Views/DictionaryListView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-25 — First Dynasty of Babylon added as first-class data
+
+**Context:** The database modelled the SKL dynasties but had no first-class entity for Babylon's First Dynasty: rulers (Sumu-abum → Samsu-ditana) existed as stray Human figures (some only in the live store), tagged to the flat "Old Babylonian Period", with no dynasty era/group, and every Human figure had an auto-generated SKL citation. Scope was narrowed to Sumerian/Mesopotamian dynasties; the immediate target was the Amorite First Dynasty of Babylon, with Lagash/Sealand/Kassite deferred.
+
+**Changes:**
+- **New `Sources/MeCore/Store/Migration+FirstBabylonianDynasty.swift`** — `ensureFirstBabylonianDynasty(context:)`, additive + idempotent:
+  - Creates/reuses `Era "First Dynasty of Babylon"` (lane 31, c. −1894…−1595) and fills blank fields only.
+  - Roster of the eleven BKL rulers (Hammurabi is **sixth**, not fourth) matched to existing figures by `NameDuplicateCheck.normalizedKey`, so spelling variants ("Sin-muballit" vs "Sin-Muballit") don't duplicate. Missing rulers (Sabium, Apil-Sin, Ammisaduqa) are created as Human figures with Middle Chronology reign spans written through `Figure.updateKingship`.
+  - Moves a ruler to the new era only when its birth-era string is empty, "Old Babylonian Period", or already the dynasty; a ruler the user filed under a custom era is left alone (the birth/death era strings move with the relationship so `ensureFigureEraLinks` can't revert it).
+  - Creates `Source "Babylonian King List A"` (`.kingList`) for succession/lineage and `Source "The Ancient Near East"` (Kuhrt, `.scholarlyWork`) for the conventional absolute dates; deduped figure citations plus one era citation.
+  - Adds the ten father→son `Relationship`s attested by the king list, via `RelationshipManager.addRelationship` on the annotated side.
+- **`Sources/Me/Views/SeedRunner.swift`** — calls the migration early (after `ensureParentRelationshipsExist`, before `fixEraOrderIndices`) so the new lane is pinned in the same launch and the figures exist before `ensureCollectiveMembers`.
+- **`Sources/MeCore/Store/Migration+EraChronology.swift`** — `fixEraOrderIndices`: inserts `First Dynasty of Babylon` at 31 and shifts Old Assyrian→32 … Sassanid→47.
+- **`Sources/MeCore/Store/Migration+OraccEpisodes.swift`** / **`Migration+TimelineMacroEras.swift`** — historical era configs 32–34 and macro configs 35–47 (so a fresh store doesn't collide before the order fixer runs). Corrected the Old Babylonian description to credit Sumu-abum as founder.
+- **`Sources/MeCore/Store/Migration+SKLAndGenealogy.swift`** — `enrichSKLData` step 4 now backfills SKL citations only for Humans whose era is inside the SKL block (< lane 31); figures in the new dynasty (and later periods) no longer inherit a false "Sumerian King List" citation.
+- **`Sources/MeCore/Store/Migration+DynastyBoundaries.swift`** — added the authored territory ring for `"first dynasty of babylon"` (core Babylonia: Sippar/Kish/Nippur in the north through Isin/Uruk/Larsa/Ur in the south, Babylon inside), so `ensureDynastyBoundaries` backfills `Era.boundaryGeoJSON` on the next launch.
+- **Tests** — seven new focused tests in `Tests/MeCoreTests/MeCoreTests+Migration.swift` (roster/era/sources/lineage, idempotency, spelling-variant match + user-data preservation, lane pinning/shift, no SKL citation for non-SKL kings, dynasty subgroup, territory boundary contains Babylon); updated `timelineMacroEraConfigs` lanes and the historical-era lane assertions in `MeCoreTests+ConsistencyTags.swift`.
+
+**Key decisions:** No schema change — the existing `Era` + auto `FigureGroup` machinery carries the dynasty, and `ensureDynastyGroups` builds the mixed subgroup from the new era. Absolute dates use the Middle Chronology and are labelled approximate; the king list supplies succession, not absolute years. Existing (incorrect) live SKL citations are left in place per the additive-only rule — the correct BKL/Kuhrt citations are added alongside; a separate cleanup can remove them if the user wants.
+
+**Verification:** `swift build` clean; `swift test` 618 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+FirstBabylonianDynasty.swift` (new), `Sources/Me/Views/SeedRunner.swift`, `Sources/MeCore/Store/Migration+EraChronology.swift`, `Sources/MeCore/Store/Migration+OraccEpisodes.swift`, `Sources/MeCore/Store/Migration+TimelineMacroEras.swift`, `Sources/MeCore/Store/Migration+SKLAndGenealogy.swift`, `Sources/MeCore/Store/Migration+DynastyBoundaries.swift`, `Tests/MeCoreTests/MeCoreTests+Migration.swift`, `Tests/MeCoreTests/MeCoreTests+ConsistencyTags.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-24 — Retire era-territory Place records (map de-clutter)
+
+**Context:** User noticed "Late Bronze Age Collapse" in the Places list — an era-shadow that felt like an event, not a place — and reported the map cluttered with "regions here, there and everywhere." Root cause: `Migration.ensureEraTerritoryPlaces` (drawn from `eraTerritoryPlaces`, added with the dynasty-boundary work) auto-created a **Place** for every non-SKL macro-era that had an authored territory ring ("Old Assyrian Kingdom", "Mitanni", "Karduniaš", "Neo-Assyrian Empire", "Late Bronze Age Collapse", "Roman Mesopotamia", … — 16 in all, none in the seed). Each drew its huge polygon in the Region/Kingdom layer AND a labeled pin at its anchor — on top of the same ring already drawn by the atlas's "Dynasties" layer from `Era.boundaryGeoJSON`. The dynasty maps (`SumerianDynastyMapView`/`DynastyEvolutionMapView`/`GroupEraMapView`) never read these Places — they all use `era.boundaryGeoJSON` directly.
+
+**Decision (user-approved):** Stop creating them + delete the existing artifacts. The eras always keep their rings. Only the deferred auto-created records go.
+
+**Changes:**
+- `Sources/MeCore/Store/Migration+DynastyBoundaries.swift` — replaced `ensureEraTerritoryPlaces(context:)` with `removeEraTerritoryPlaces(context:)`: deletes only records whose name matches a retired artifact AND whose description has the migration's exact `"<era.name> territory"` signature (era resolved via normalized key), so a user-authored place sharing a name (e.g. a hand-made "Mitanni") is never touched. `eraTerritoryPlaces` doc comment updated to its new role as the canonical retired-artifact list.
+- `Sources/Me/Views/SeedRunner.swift` — the chain now calls `removeEraTerritoryPlaces` in place of `ensureEraTerritoryPlaces`.
+- `Tests/MeCoreTests/MeCoreTests+Groups.swift` — replaced `testEnsureEraTerritoryPlacesCreatesRegionPlaces` with `testRemoveEraTerritoryPlacesRemovesOnlyArtifacts` + `testRemoveEraTerritoryPlacesLeavesNonArtifactPlacesAlone`, asserting all 16 artifacts are removed while a same-named user place is preserved.
+
+**Verification:** `swift build` clean; targeted filter run plus full `swift test` — 611 passed, 0 failures.
+
+**Files:** `Sources/MeCore/Store/Migration+DynastyBoundaries.swift`, `Sources/Me/Views/SeedRunner.swift`, `Tests/MeCoreTests/MeCoreTests+Groups.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-22 — Splash review + hardening (borderless app-delegate panel)
+
+**Context:** User asked for a review of the shipped startup splash (borderless 350×300 app-delegate `NSWindow`, `SplashScreenView` + `SeedRunner`). The working tree holds the *borderless hide/reveal* design — this contradicts the entry directly below, which claims a full-screen "veil/cover" rewrite landed and that `hideNonSplashWindows`, `mainWindow`, the `didUpdate` observer and `--autodismiss-splash` were "all gone." None of that full-screen code exists (`presentVeil`, `veilWindows`, `autosavedMainWindowFrame` are absent), so treat that entry as not-landed until reconciled.
+
+**Changes:**
+- `Sources/Me/AnunnakiApp.swift`:
+  - Removed the `logProbe` diagnostic (`/tmp/me_visprobe.txt`) and the two log-only `NSWindowDidBecomeKey/Main` observers.
+  - `hideNonSplashWindows()` now prefers a window matching `isMainContentWindow` (an `NSHostingController<ContentView>` or title `"Me"`) when capturing the main window, keeping the first-visible fallback so a capture is always guaranteed (a nil `mainWindow` would strand the hidden main window).
+  - `finishSplash()` falls back to `NSApp.windows.first(where: isMainContentWindow)` when no main window was captured.
+  - `--autodismiss-splash` gated behind `#if DEBUG`.
+  - Splash panel: dropped `isMovableByWindowBackground`; set `isOpaque = true` and `backgroundColor` to the splash blue so no default (light) window background can show through during first layout. (A `collectionBehavior` change was tried and reverted — see below.)
+- `Sources/Me/Views/SplashScreenView.swift`: minimum 0.6s display so an already-seeded launch doesn't flash; "Seeding database" → "Preparing database"; the ready state is now a `Button` (`.keyboardShortcut(.defaultAction)`) plus `.onExitCommand` for Esc, so dismissal is keyboard/VoiceOver accessible rather than tap-only.
+- **Main-window flash diagnosed and fixed (pre-existing, not a review regression).** User reported the main window flashing just before the splash. A `CGWindowList` probe (rebuilt `winwatch`, now printing `kCGWindowAlpha`) showed the big main window (`Me[L0] 1475×1297`) and the small splash (`Me[L3] 350×300`) appearing in the *same* sample and coexisting for ~400 ms before `hideNonSplashWindows`'s `orderOut` finally landed — while SwiftUI was still creating/activating the main window and re-showing it. The pre-change run `winwatch11.out` shows the identical pattern, confirming it long predates this review; the small splash simply cannot cover the much larger main window. Fix: `hideNonSplashWindows()` now sets `window.alphaValue = 0` (which SwiftUI's re-show cannot undo) in addition to `orderOut`, is invoked synchronously in `presentSplashScreen` before the splash is ordered front, and `finishSplash()` restores `alphaValue = 1` on every zeroed window by matching the captured (or identified) main window. Probe after the fix: only `Me[L3,a1.00]` present for the splash's lifetime, `Me[L0]` absent, then `Me[L0,a1.00]` returns at its saved size the instant the splash closes.
+- Also reverted a cosmetic `.frame(width: 350, height: 300)` and `collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]` change while isolating the flash; the window stays pinned by `sizingOptions = []` + `setContentSize`, and its `backgroundColor` is the splash blue so no default light background can peek through.
+
+**Key decision — `applicationShouldHandleReopen` was correct as written.** The review initially flagged `return isSplashDone` as inverted; Apple's docs settle it: returning **true** = "proceed as normal", **false** = "do nothing". Suppressing reopen during the splash (false) and allowing normal reactivation after (true) is exactly the intent. Left unchanged.
+
+**Verification:** `swift build` clean; `swift test` 610 passed, 0 failures. Not headless-launched this session.
+
+**Files:** `Sources/Me/AnunnakiApp.swift`, `Sources/Me/Views/SplashScreenView.swift`, `docs/SESSION_LOG.md`.
+
+---
+
+### 2026-09-22 — Startup flash fix (full-screen veil) + seeding-slowness diagnosis
+
+**Context:** After the splash work, the user saw the big main window flash on screen for ~0.4s just before the splash appeared. CGWindowList traces (`winwatch`, a temp poller in the opencode scratch dir) showed the main window on-screen from **t=21ms**, before `applicationDidFinishLaunching`, with the splash arriving ~469ms and hiding only possible at first idle ~916ms — the main thread is blocked during SwiftUI bootstrap, so no observer can preempt the window's initial display.
+
+**Changes:**
+- `Sources/Me/AnunnakiApp.swift` — `ApplicationDelegate` gained `presentVeil()`: called from `applicationWillFinishLaunching`, creates one full-screen borderless `.floating` NSWindow per `NSScreen.screens` entry, dark-blue (same 0.07/0.14/0.32 theme), `collectionBehavior = [.canJoinAllSpaces]`, `orderFrontRegardless()`, retained in `veilWindows`. The splash (same level, ordered later) sits above it. `finishSplash()` orderOuts and clears `veilWindows` before revealing the main window.
+
+**Diagnosis:** An in-process file-based `diag()` timeline showed the full launch sequence without any hang; the main thread was not deadlocked. A `sample` of the process pinned the 2–4s stall to `runSeeding` → `Migration.ensureEventCitations` (Migration+EraChronology.swift:398): a `contains(where:)` over Citations faulting `Citation.linkedEntityName` per element on the main thread. The queued `hideMainWindowUntilSplashDone` sweep just runs late — expected backward-burn, not a bug. Longer cold-launch seeding also explains the initial "main window visible during splash" symptom: the main thread is blocked through the whole migration, so the hiding sweep and the `didUpdate` observer cannot fire until seeding completes.
+
+**Second follow-up (same day, user: "utter mess"):** two user-reported failures on the veil attempts — (1) solid blue wall after the main window opened, (2) the main window never appearing. Both traced to structural flaws in the veil/hide/reveal machinery; the architecture was scrapped. Final design is the standard **full-screen splash window** (created in `applicationDidFinishLaunching`; the whole screen is the splash content — logo + title centered, status + click-to-continue pinned bottom; opaque, `.floating`, dark blue) that Covers the real main window from frame one; `finishSplash()` just orderOuts it. The main window is never hidden, never re-framed, never captured — it keeps its autosaved size untouched. Two hard-won lessons made this stick:
+- **NEVER create/order ANY NSWindow in `applicationWillFinishLaunching`** — an empty 350×300 borderless window (_or_ a hosting window, or a veil) ordered there suppresses SwiftUI WindowGroup's main-window creation entirely (it simply never enters `NSApp.windows`; verified headless + real world). Register observers there if needed, but create no windows. Observers/window-visible callbacks also proved unreliable for hiding the big window (the window is created mid-bootstrap before the observers the app can install, and `didUpdateNotification` doesn't fire while the main thread is in seeding). Covering, not hiding, is the robust strategy.
+- **Move seeding off the main thread.** `runSeeding` (now `SeedRunner`, a new `Sources/Me/Views/SeedRunner.swift`) runs the ~100-migration chain on a `DispatchQueue(label: "me.seed", qos: .userInitiated)` with its own background `ModelContext(container)`, keeping the main thread free: the UI stays responsive, the spinner animates, the click-to-continue lands, and no accelerator-timing machinery is needed. All `Migration.*`/`SeedData.*` funcs are nonisolated `package static func(context:)`, and the 610 test-suite already exercised them off the main thread, so this is safe.
+- `hideMainWindowUntilSplashDone`, the `didUpdate` observer, `mainWindow` capture, `autosavedMainWindowFrame()`, the veil array, and the `--autodismiss-splash` hook are all gone. `applicationDidFinishLaunching` = watchdog + icon + activate + full-screen splash; `finishSplash` = orderOut splash + activate.
+
+**Verification:** headless CGWindowList run with a temporary auto-dismiss: `splash+main` state (full-screen 2560×1440 L3 splash covering the 1473×1295 L0 main window) from first sample → transition to `main-only` (1473×1295) the instant the splash closes; the main window was never absent nor re-sized. `swift build` clean, `swift test` 610 passed, 0 failures. Remaining known trade-offs: the whole display is covered (menu bar hidden) while the splash is up — that IS the splash; and a ~300–400 ms window early in bootstrap exists where the main window may appear before the full-screen splash mounts (acceptable; closing it would require window creation in `applicationWillFinishLaunching`, which breaks window creation — see the lesson above).
+
+**Note for the user:** the blue screen at launch is now the splash itself (logo + "Seeding database…" + click-to-continue), and the main window appears only when you click, at its saved size.
+
+---
+
+### 2026-09-22 — Launch splash screen (borderless 350×300 NSWindow owned by AppDelegate)
+
+**Context:** At launch the app's big main window showed immediately and seeding finished behind it (~1s), often with a "Seeding database…" progress view that completed almost instantly. User asked for a proper startup splash: small borderless 350×300 window showing "Seeding database, please wait…" while seeding runs, then "Initialisation complete. Click to continue", click dismisses and reveals the main app window.
+
+**Changes:**
+- `Sources/Me/Views/SplashScreenView.swift` — NEW. Dark-blue splash UI (logo 150×150 centered, title, status message pinned low) plus `runSeeding(context:)` — the full migration/seed block moved verbatim out of `ContentView` (Theme: `Color(red: 0.07, green: 0.14, blue: 0.32)`, white text). Root view is a FIXED `.frame(width: 350, height: 300)` so the hosting controller's ideal size can never distort the window. Tap dismisses only when seeding finished (`onContinue` closure).
+- `Sources/Me/AnunnakiApp.swift` — `AppDelegate` now owns the splash: `presentSplashScreen()` builds a borderless `.floating` NSWindow (350×300, `isMovableByWindowBackground`, `NSHostingController` with `sizingOptions = []`), hosts the splash on `MeApp.sharedContainer.mainContext`, `.orderFrontRegardless()`. `hideMainWindowUntilSplashDone()` hides every visible non-splash window (grabbing the main window reference) — driven by an `NSApplication.didUpdateNotification` observer (AppKit has no `NSWindow.didBecomeVisibleNotification`) plus one initial `.async` sweep. `finishSplash()` removes the observer, closes the panel, reveals the stored main window.
+- `Sources/Me/Views/ContentView.swift` — removed the old in-window splash machinery: `hasSeededThisLaunch`, `isSeeding`, `splashDismissed`, `selfWindow`, `launchFrame`, `splashView`, `appLogo`, `splashStatus`, `configureSplashWindow`, `configureMainWindow`, `SplashWindowConfig`. `body` is now just the login/main gate; skipLogin auto-select stays in the root `.task`.
+
+**Key decisions:**
+- The earlier main-window-injection approach failed structurally: seeding runs synchronously on the main actor, starving deferred (main-queue) window restyling, so the titled window stayed fully visible and the `.task` kept restarting. Separate app-delegate-owned borderless panel is the established pattern: it is on screen from the first frame and the main window stays hidden until seeding completes.
+- `NSHostingController`'s default `sizingOptions` resizes a borderless window to the content's ideal size (observed: 350×348 and 150×348). Two-part fix: `sizingOptions = []` AND a fixed 350×300 SwiftUI frame — the frame is required because `.frame(maxWidth:.infinity, maxHeight:.infinity)` reports an ideal height larger than 300, which still widened the window by 48pt even with sizing disabled.
+
+**Verification:** `swift build` clean. Headless launch runs confirmed: only the 350×300 splash visible (main "Me" window hidden), seeding completes, click → splash closes and main window revealed (a temporary `--autodismiss-splash` hook exercised the real `onContinue → finishSplash` path, then removed). `swift test` 610 passed, 0 failures.
+
+Same-day follow-up: user reported the revealed main window was tiny (~815×348). Root cause: our very-early `orderOut` in `hideMainWindowUntilSplashDone` fires during SwiftUI's window-creation/reveal race, and AppKit's `NSWindow Frame Me.ContentView-1-AppWindow-1` autosave (user's real window: ~1506×1185 on a 2560×1410 screen) is never re-applied by SwiftUI on our `makeKeyAndOrderFront`. Fix: in `finishSplash`, deterministically restore the autosaved frame via `autosavedMainWindowFrame()` — parses the `UserDefaults` "NSWindow Frame …" string, matches the saved screen record (falling back to `NSScreen.main` when the saved screen size is stale — observed 1410 saved vs 1440 actual), converts the top-left-origin record into an AppKit bottom-left rect, and sanity-clamps to 800…6000×600…6000 before `setFrame(display: false)`. Verified reveal at 1473×1295, close to the user's pre-splash setting. If the autosave key ever changes the restore silently no-ops and the window opens at the WindowGroup `.defaultSize(width: 1200, height: 800)` — acceptable degradation. Clean `swift build`, crash-free launch, 610 tests pass. (Also discovered en route: `NSScreen.screens.first` frame-width/height must be compared against the *saved* screen record — a strict match silently fails when the display resolution changed between sessions.)
+
+---
+
+**Context:** Continuing the 2026-09-19 macro-period work (`orderIndex` 31–46), the 16 historical eras had been imported but had no territory: `Era.boundaryGeoJSON` was nil (the `Dynasties` atlas overlay draws nothing for them) and `ensureDynastyGroups` deliberately skips them (not dynasty-named, outside the SKL block), so they inherited no group silhouette either. Two-part ask: (1) author territory rings so the eras render on the map, (2) create `Place` records for the territories so they appear in Atlas/Places with the silhouette.
+
+**Changes:**
+- `Migration+DynastyBoundaries.swift` — restored/re-added the 16 authored `dynastyBoundaryRings` entries covering the historical eras: Old Assyrian Period, Old Babylonian Period, Neo-Assyrian Period, Uruk Period, Jemdet Nasr Period, Mitanni, Karduniaš (Kassite Babylonia), Middle Assyrian Period, Late Bronze Age Collapse, Neo-Babylonian Empire, Achaemenid Empire, Macedonian Empire, Seleucid Empire, Parthian Empire, Roman and Byzantine Mesopotamia, Sassanid Empire. `ensureDynastyBoundaries` backfills `era.boundaryGeoJSON` on next launch (additive, gated on missing/degenerate only, never overwrites).
+- `Migration+DynastyBoundaries.swift` — NEW `eraTerritoryPlaces` seed + `ensureEraTerritoryPlaces(context:)`: for each era with an authored ring, create (if absent) a territory `Place` ("Old Assyrian Kingdom", "Mitanni", "Karduniaš", "Neo-Assyrian Empire", …) typed Region or Kingdom (created on demand), anchored at a capital/modern coordinate with a modern-location string, and given the same authored ring as its stored boundary. Same never-overwrite guard as `ensurePlaceBoundaries`.
+- `ContentView.swift` — wired `ensureEraTerritoryPlaces` right after `ensureDynastyBoundaries`.
+- `MeCoreTests+Groups.swift` — NEW `testEnsureEraTerritoryPlacesCreatesRegionPlaces` (all 16 places created, each with a closed Polygon stored boundary + anchor coords), `testEnsureDynastyBoundariesBackfillsHistoricalEras` (16 eras get boundaries, always closed), `testEnsureDynastyBoundariesContainsHistoricalCapitals` (Assur/Babylon/Nineveh/Uruk/Washukanni/Susa/Ctesiphon/Nisibis etc. all fall inside their era ring).
+
+**Key decisions:**
+- Territory rings keyed by normalized era name so era backfill and place creation share one source of truth (`dynastyBoundaryRings`).
+- Places get a *stored* boundary (not group inheritance) — matching `ensurePlaceBoundaries` precedent for region places, since these eras have no dynasty groups to inherit from.
+- Ring ≤ orderIndex 30 (SKL dynasties) was already present; only the 16 non-SKL eras were re-authored. Middle Assyrian ring initially failed its capital-containment test (Assur sat just south of the ring's bottom edge at 35.46°N) — south edge lowered from ~35.20 to ~35.15°N to enclose Assur.
+
+**Verification:** live `Me.store` confirms all 16 eras exist at `orderIndex` 31–46 with names that normalize exactly to the ring/place keys (including the `š` in Karduniaš). `swift build` clean; `swift test` 610 passed, 0 failures (12 new present in the +Groups suite). Purely additive — no existing era/place boundaries touched.
+
+---
+
 ### 2026-09-19 — Variant reign lengths (ReignVersion): SKL manuscript copies and the Ur-Isin king list
 
 **Context:** The user reported encountering kings with two or more competing reign figures and asked whether the app can model them. It could not: `Figure` carries a single `reignYears` plus a single `reignStartYear`/`reignEndYear` span, `ReignLength.parse` takes only the first prose match, and every alternative lived as free-text inside `figureDescription` — invisible to queries, the timeline, and the date propagator. Documented instances in the seed: Kullassina-bel "960 years (or 900 in some copies)", Etana "1,500 years (some copies read 635)", and three SKL-vs-Ur-Isin splits (Bur-Suen 21 vs 22, Iter-pisha 4 vs 3, Ur-du-kuga 4 vs 3). A second axis exists beyond durations: competing chronological spans between chronology editions (e.g. Middle vs Short) that the scalar span columns cannot express either. User approved building it.
