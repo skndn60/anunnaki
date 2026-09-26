@@ -136,6 +136,10 @@ struct EventListView: View {
                             }
                         }
                         .listStyle(.inset(alternatesRowBackgrounds: true))
+                        .listArrowKeyNavigation(
+                            selection: $selectedEventID,
+                            orderedIDs: groupedEvents.flatMap { $0.events.map(\.persistentModelID) }
+                        )
                         .onChange(of: selectedEventID) { _, newValue in
                             if let id = newValue {
                                 DispatchQueue.main.async {

@@ -137,6 +137,10 @@ struct PlaceListView: View {
                             }
                         }
                         .listStyle(.inset(alternatesRowBackgrounds: true))
+                        .listArrowKeyNavigation(
+                            selection: $selectedPlaceID,
+                            orderedIDs: groupedPlaces.flatMap { $0.places.map(\.persistentModelID) }
+                        )
                         .onChange(of: selectedPlaceID) { _, newValue in
                             if let id = newValue {
                                 DispatchQueue.main.async {

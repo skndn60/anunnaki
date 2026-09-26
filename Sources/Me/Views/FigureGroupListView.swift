@@ -87,6 +87,10 @@ struct FigureGroupListView: View {
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .listArrowKeyNavigation(
+                        selection: $selectedGroupID,
+                        orderedIDs: managerRows().map(\.group.persistentModelID)
+                    )
                 }
             }
             .frame(minWidth: 350, maxWidth: .infinity)

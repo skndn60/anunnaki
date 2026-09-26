@@ -123,6 +123,10 @@ struct DictionaryListView: View {
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .listArrowKeyNavigation(
+                        selection: $selectedEntryID,
+                        orderedIDs: groupedEntries.flatMap { $0.entries.map(\.persistentModelID) }
+                    )
                 }
             }
             .frame(minWidth: 450, maxWidth: .infinity)

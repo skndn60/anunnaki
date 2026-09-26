@@ -83,6 +83,10 @@ struct SourceListView: View {
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .listArrowKeyNavigation(
+                        selection: $selectedSourceID,
+                        orderedIDs: groupedSources.flatMap { $0.sources.map(\.persistentModelID) }
+                    )
                 }
             }
             .frame(minWidth: 450, maxWidth: .infinity)

@@ -170,6 +170,10 @@ struct AlternateNameListView: View {
                     }
                 }
                 .listStyle(.inset(alternatesRowBackgrounds: true))
+                .listArrowKeyNavigation(
+                    selection: $selectedAltNameID,
+                    orderedIDs: groupedNames.flatMap { $0.names.map(\.persistentModelID) }
+                )
             }
         }
         .sheet(isPresented: $showingAddSheet) {

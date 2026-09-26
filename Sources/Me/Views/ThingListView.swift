@@ -143,6 +143,10 @@ struct ThingListView: View {
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .listArrowKeyNavigation(
+                        selection: $selectedThingID,
+                        orderedIDs: groupedThings.flatMap { $0.things.map(\.persistentModelID) }
+                    )
                     .frame(minWidth: 450, maxWidth: .infinity)
                 }
             }

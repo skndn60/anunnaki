@@ -277,6 +277,10 @@ struct FigureListView: View {
                         }
                     }
                     .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .listArrowKeyNavigation(
+                        selection: $selectedFigureID,
+                        orderedIDs: groupedRows.flatMap { $0.rows.map(\.id) }
+                    )
                     .onChange(of: selectedFigureID) { _, newValue in
                         if let id = newValue {
                             DispatchQueue.main.async {

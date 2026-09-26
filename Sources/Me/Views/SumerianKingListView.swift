@@ -160,6 +160,10 @@ struct SumerianKingListView: View {
             }
         }
         .listStyle(.inset(alternatesRowBackgrounds: true))
+        .listArrowKeyNavigation(
+            selection: $selectedFigureID,
+            orderedIDs: timeline.flatMap { $0.reigns.map(\.figure.persistentModelID) }
+        )
     }
 
     // MARK: - Detail Panel
