@@ -1,5 +1,15 @@
 # TODO
 
+## HIGH: 274 unchecked `try? context.save()` sites (found 2026-09-26, never previously flagged)
+
+- [ ] **Audit `try? (context|modelContext).save()` — 274 occurrences across 71 files, zero of which inspect the result.** `try?` discards the error, so a failed write is invisible and the in-memory context silently diverges from the store. This is the defect class that most directly violates the "the database is sacred" hard constraint, and it is not hypothetical: three migrations once failed silently this exact way (`docs/SESSION_LOG.md`, 2026-07-20). Scope it in two tiers:
+  - **Tier 1 — MeCore/Store first (highest value, ~40 sites):** migrations, importers, mergers, `DuplicateMerger`. A save here is a commit with no undo path. Wrap in `do/catch`, log via `Logger(subsystem:category:)`, continue to the next migration rather than aborting the chain. Consider a `Migration` helper like `commit(_ context: ModelContext, _ what: String)` that centralises this so call sites read as one-liners.
+  - **Tier 2 — view layer (~234 sites):** acceptable where the mutation is trivially reproducible and the UI already shows the result, but the save must never be the *only* signal. Do not blanket-`try?`→`try!` — a crash on a failed save is worse than a logged error.
+- [ ] **Do not touch the 409 `try? …fetch` sites** — `?? []` degradation there is idiomatic and safe. The temptation to "clean up" `try?` wholesale will make this worse, not better.
+- [ ] **Add a build-time guard:** a lint that fails the build on `try? *context.save()` so the count cannot regress. The count only fell from 274 to 0 by hand; nothing prevents it climbing again.
+
+---
+
 ## HIGH: Diagnose launch-time cost of the migration chain (2026-09-16)
 
 - [ ] **Trace the ~70 `Migration.*` calls that run in `ContentView.swift` on every launch** (each launch, regardless of whether the DB already has data, they all execute). Identify which ones do heavy work (full fetches, guarded loops, saves) and which are cheap no-ops. Goal: prove (with timing or fetch-count evidence) which migrations dominate, then make the heavy ones run only when needed (version-gated / idempotent-once guards) so repeated launches stop doing redundant work. The seed import itself is already skipped when figures exist (`SeedData.seedIfEmpty` guard); the ongoing cost lives in the migration backfill chain.

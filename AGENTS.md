@@ -105,6 +105,7 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 - **SwiftData**: Inverse relationships specified with `@Relationship(deleteRule: .cascade, inverse: ...)`.
 - **SwiftData relationship setting**: Always set relationships via the side that HAS `@Relationship(inverse:)`. For example, `type.relationships.append(rel)` works but `rel.relationshipType = type` silently fails (leaves property nil). This is because the forward side (`Relationship.relationshipType`) lacks `@Relationship` while the inverse side (`RelationshipType.relationships`) has it. Always use the annotated side to establish links.
 - **SwiftData migration safety**: Every new property added to an existing `@Model` must be **optional** (`Type?`), not non-optional with a default. SwiftData lightweight migration fails on non-optional new attributes — existing rows have no value and CoreData rejects the mandatory column. Use `?? defaultValue` in computed properties or at call sites instead.
+- **Never write a bare `try? context.save()`.** As of 2026-09-26 there were **274 such call sites across 71 files, none of which inspect the result** — `try?` discards the error by definition, so a failed write is invisible and the in-memory state silently diverges from the store. This is the one defect class that directly violates the "the database is sacred" hard constraint, and it has already bitten for real: three migrations silently failed to decode null non-optional strings until a temporary `do/catch` was added to find out why (`docs/SESSION_LOG.md`, 2026-07-20 entry). Rules: (1) in **MeCore/Store** (migrations, importers, mergers) a save is a commit — wrap it in `do/catch`, log with `Logger`, and continue; never `try?`. (2) In **view-layer** edits, a save that discards a user action is acceptable only when the mutation is trivially reproducible, and must not be the only signal — pair it with the visible state change. (3) `try?` on **`fetch`** is fine and idiomatic (`?? []` degradation) — do not "fix" those; the 409 fetch sites are not the problem. When you touch a file that saves, fix that file's saves.
 - **Shared container**: `MeApp.sharedContainer` is a static property on the `@main` App struct, allowing direct access to the `ModelContainer` from anywhere (useful for debugging or bypassing environment inheritance issues).
 - **Mock data**: `SeedData` uses private Codable structs mirroring the entities (e.g., `SeedFigure`, `SeedEvent`).
 - **No external packages** — all dependencies are Apple SDKs.
@@ -131,6 +132,7 @@ Package.swift                      # Me executable + MeCore library + MeCoreTest
 
 ## Important Files
 
+- `docs/QUALITY_RISKS.md` — **Read first, every session.** Standing quality tripwires with current baselines; the user is not told about these unless a tripwire moves, and a finding that stays in a doc has not been delivered.
 - `Sources/Me/AnunnakiApp.swift` — App entry, schema setup
 - `Sources/MeCore/Store/SeedData.swift` — JSON deserialization + DB insertion, includes `clearAll()` for reseeding
 - `Sources/MeCore/Resources/seed_data.json` — Canonical Mesopotamian data (28 deities + 134 SKL kings)

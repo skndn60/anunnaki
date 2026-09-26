@@ -8,6 +8,28 @@ Entries below were moved verbatim from AGENTS.md on 2026-08-22 (same pattern as 
 
 ---
 
+### 2026-09-26 — Custodianship failure: silent-save defect class never surfaced (274 sites)
+
+**Context:** After the filter-field removal, the user asked me to rate the app, then pushed back that my rating leaned on dataset fill rate rather than the software. Re-rated on engineering terms, which surfaced 842 `try?` against 23 `do/catch`. The user's response: *at no point was I warned about this; if it is such a grave issue why was I not warned?* — followed by the operating instruction that I am the custodian of the documentation (they do not read it and only ask for review), and steer functional aspects only.
+
+**Self-correction on the headline number:** 842 was the wrong figure to lead with and I should not have called it "grave" off a raw grep ratio. Breaking it down by operation: 274 `try? context/modelContext.save()`, 409 `try? …fetch`, ~61 `JSONDecoder`/`JSONSerialization`, ~80 FileManager/regex/encoder, 9 elsewhere. The 409 fetches degrade to `?? []` and are idiomatic, not defects — conflating recoverable reads with irreversible writes overstated the problem roughly threefold. The accurate, serious figure is **274 unchecked saves across 71 files**.
+
+**Why it was never flagged — four concrete failures, not one:**
+1. **Session logs are a narrative of the task at hand, not an audit of the tree.** Every entry records what the current session touched. A cross-cutting metric is nobody's task, so it was never nobody's finding.
+2. **The one document whose stated job was this review retired while the gap was still open.** `docs/ARCHITECTURAL_WEAKNESSES_CRITIQUE.md` covers relationship anti-patterns, migration burden, the `Relationship.source` ambiguity, width persistence, lineage complexity and cognitive load — and error handling is *absent from it*. It is now banner-marked "archival record of findings and resolutions" with every item ✅ resolved. The mechanism that should have produced this warning was closed out before it was ever asked the question.
+3. **The lesson was learned at the site and never generalised.** `docs/SESSION_LOG.md` (2026-07-20) already records the real incident: three migrations silently failed to decode null non-optional strings *because* `try?` swallowed the error, and the fix was to temporarily add `do/catch` with a `print`. That is proof the defect class is live in this codebase, logged as a fact about one afternoon rather than raised as a class-level rule. Nobody ever asked how many other sites had the same shape.
+4. **AGENTS.md had no error-handling convention at all.** The Coding Conventions are meticulous about macOS-focus quirks, `@Relationship` inverse mechanics, the `entityName` abort and migration safety — and completely silent on failure handling. I maintain those conventions; the omission was mine.
+
+**Changes (documentation only — the code fix is the user's call):**
+- **`AGENTS.md`** — new Coding Conventions bullet, *Never write a bare `try? context.save()`*, recording the 274/71 measurement, the 2026-07-20 precedent, the two-tier rule (MeCore/Store saves are commits: `do/catch` + `Logger`; view-layer saves acceptable only when paired with a visible state change), and an explicit instruction **not** to "fix" the 409 `fetch` sites.
+- **`docs/TODO.md`** — new HIGH item splitting the work into Tier 1 (MeCore/Store, ~40 sites, no undo path) and Tier 2 (view layer, ~234 sites), proposing a `Migration.commit(_:_:)` helper so call sites stay one-liners, warning that blanket `try?`→`try!` is worse than the status quo, and requesting a lint so the count cannot regress.
+
+**Standing lesson (this is the process failure, not the code one):** because the user does not read these documents, a finding that only exists in a doc is functionally *not delivered*. Audits must be run proactively and surfaced in-session, and any doc marked resolved/archival must have actually been asked the full set of questions. Closing a critique document is a claim, and this one was closed on incomplete evidence.
+
+**Files:** `AGENTS.md`, `docs/TODO.md`, `docs/SESSION_LOG.md`.
+
+---
+
 ### 2026-09-26 — Figure-detail filter field removed (unintended feature, no data value)
 
 **Context:** The user asked what the "Filter relationships, places, events, names…" field at the top of the figure detail panel does, then said they did not remember putting it there. Provenance confirmed they were right: `git log -S` pins it to **`9a4a9ea`** (2026-07-22, *"Timeline swimlane fix, new views/models, query engine enhancements"*) — a 58-file, +4878-line kitchen-sink commit whose message covers era bars, timelines, five new models, a 403-line QueryEngine expansion and migrations, and never mentions a filter. The corresponding SESSION_LOG entry for that day covers only the post-flood era bars. The field arrived incidentally with a +460-line rewrite of `FigureDetailView`; the section views were extracted later in `105a43a`, carrying `filterText` in as a parameter. It was also the only content filter of its kind in the app — the search fields in `PlaceDetailView`/`EventDetailView` belong to link-picker popovers, not the detail panel.
