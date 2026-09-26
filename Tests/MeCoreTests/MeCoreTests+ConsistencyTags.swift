@@ -666,9 +666,9 @@ extension MeCoreTests {
         let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
         XCTAssertEqual(eras.count, 3)
         let byName = Dictionary(eras.map { ($0.name, $0) }, uniquingKeysWith: { first, _ in first })
-        XCTAssertEqual(byName["Old Assyrian Period"]?.orderIndex, 31)
-        XCTAssertEqual(byName["Old Babylonian Period"]?.orderIndex, 32)
-        XCTAssertEqual(byName["Neo-Assyrian Period"]?.orderIndex, 33)
+        XCTAssertEqual(byName["Old Assyrian Period"]?.orderIndex, 32)
+        XCTAssertEqual(byName["Old Babylonian Period"]?.orderIndex, 33)
+        XCTAssertEqual(byName["Neo-Assyrian Period"]?.orderIndex, 34)
         XCTAssertEqual(byName["Old Babylonian Period"]?.startDate.startYear, -1894)
         XCTAssertEqual(byName["Neo-Assyrian Period"]?.endDate.endYear, -609)
 

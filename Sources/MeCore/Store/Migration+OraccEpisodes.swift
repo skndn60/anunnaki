@@ -559,13 +559,13 @@ extension Migration {
         let existingKeys = Set(((try? context.fetch(FetchDescriptor<Era>())) ?? [])
             .map { NameDuplicateCheck.normalizedKey($0.name) })
         let configs: [(name: String, order: Int, description: String, start: Int, end: Int)] = [
-            ("Old Assyrian Period", 31,
+            ("Old Assyrian Period", 32,
              "Period of the Assyrian merchant colonies (kārum) in Anatolia, best known from the Kültepe letter archives.",
              -2000, -1750),
-            ("Old Babylonian Period", 32,
-             "Amorite-led era opening with Hammurabi's dynasty at Babylon; the language of its cuneiform records became the classical Babylonian of scribal training.",
+            ("Old Babylonian Period", 33,
+             "Amorite-led era whose First Dynasty at Babylon was founded by Sumu-abum and ended with the Hittite sack of the city; the language of its cuneiform records became the classical Babylonian of scribal training.",
              -1894, -1595),
-            ("Neo-Assyrian Period", 33,
+            ("Neo-Assyrian Period", 34,
              "The last great Assyrian empire, from Ashurnasirpal II's refoundation of Kalhu to the fall of Nineveh.",
              -911, -609),
         ]

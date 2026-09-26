@@ -996,19 +996,19 @@ extension MeCoreTests {
     // MARK: - Migration.ensureTimelineMacroEras
 
     private static let timelineMacroEraConfigs: [(name: String, order: Int)] = [
-        ("Uruk Period", 34),
-        ("Jemdet Nasr Period", 35),
-        ("Mitanni", 36),
-        ("Karduniaš (Kassite Babylonia)", 37),
-        ("Middle Assyrian Period", 38),
-        ("Late Bronze Age Collapse", 39),
-        ("Neo-Babylonian Empire", 40),
-        ("Achaemenid Empire", 41),
-        ("Macedonian Empire", 42),
-        ("Seleucid Empire", 43),
-        ("Parthian Empire", 44),
-        ("Roman and Byzantine Mesopotamia", 45),
-        ("Sassanid Empire", 46),
+        ("Uruk Period", 35),
+        ("Jemdet Nasr Period", 36),
+        ("Mitanni", 37),
+        ("Karduniaš (Kassite Babylonia)", 38),
+        ("Middle Assyrian Period", 39),
+        ("Late Bronze Age Collapse", 40),
+        ("Neo-Babylonian Empire", 41),
+        ("Achaemenid Empire", 42),
+        ("Macedonian Empire", 43),
+        ("Seleucid Empire", 44),
+        ("Parthian Empire", 45),
+        ("Roman and Byzantine Mesopotamia", 46),
+        ("Sassanid Empire", 47),
     ]
 
     func testEnsureTimelineMacroErasCreatesAllThirteen() {
@@ -1068,6 +1068,182 @@ extension MeCoreTests {
         for era in eras {
             XCTAssertEqual(era.orderIndex, expected[era.name], "\(era.name) must never drift from its lane")
         }
+    }
+
+    // MARK: - Migration.ensureFirstBabylonianDynasty
+
+    func testEnsureFirstBabylonianDynastyCreatesEraRosterSourcesAndLineage() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let era = eras.first { $0.name == Migration.firstBabylonianEraName }
+        XCTAssertNotNil(era)
+        XCTAssertEqual(era?.orderIndex, 31)
+        XCTAssertEqual(era?.startDate.startYear, -1894)
+        XCTAssertEqual(era?.endDate.endYear, -1595)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let roster = figures
+            .filter { $0.era?.persistentModelID == era?.persistentModelID }
+            .sorted { $0.orderIndex < $1.orderIndex }
+        XCTAssertEqual(roster.count, 11)
+        XCTAssertEqual(roster.map(\.name), Migration.firstBabylonianRulers.map(\.name))
+        XCTAssertEqual(roster[5].name, "Hammurabi", "Hammurabi must be the sixth ruler, not the fourth")
+        XCTAssertEqual(roster.first?.reignStartYear, -1894)
+        XCTAssertEqual(roster.last?.reignEndYear, -1595)
+        XCTAssertTrue(roster.allSatisfy { $0.birthDate.era == Migration.firstBabylonianEraName })
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let kingList = sources.first { $0.name == "Babylonian King List A" }
+        XCTAssertNotNil(kingList)
+        XCTAssertEqual(kingList?.sourceType, .kingList)
+
+        let citations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        let figureCitations = citations.filter { $0.source?.persistentModelID == kingList?.persistentModelID && $0.entityType == .figure }
+        XCTAssertEqual(figureCitations.count, 11)
+        XCTAssertTrue(citations.contains { $0.source?.persistentModelID == kingList?.persistentModelID && $0.entityType == .era })
+
+        let relationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let fatherLinks = relationships.filter { $0.relationshipType?.name == "Father" && $0.sourceRef?.persistentModelID == kingList?.persistentModelID }
+        XCTAssertEqual(fatherLinks.count, 10, "eleven kings form ten father→son links")
+    }
+
+    func testEnsureFirstBabylonianDynastyIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+        Migration.ensureFirstBabylonianDynasty(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let citations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        let relationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+
+        XCTAssertEqual(eras.filter { $0.name == Migration.firstBabylonianEraName }.count, 1)
+        XCTAssertEqual(figures.filter { $0.era?.name == Migration.firstBabylonianEraName }.count, 11)
+        XCTAssertEqual(sources.filter { $0.name == "Babylonian King List A" }.count, 1)
+        XCTAssertEqual(citations.filter { $0.entityType == .figure }.count, 22, "two sources cite each of the eleven kings")
+        XCTAssertEqual(relationships.filter { $0.relationshipType?.name == "Father" }.count, 10)
+    }
+
+    func testEnsureFirstBabylonianDynastyMatchesSpellingVariantsAndPreservesUserData() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        let otherEra = Era(name: "My Custom Era", orderIndex: 90)
+        let custom = Figure(name: "Hammurabi", title: "Custom Title", gender: .male, birthDate: MythologicalDate(era: "My Custom Era"))
+        custom.era = otherEra
+        custom.updateKingship(reignStartYear: -1700, reignEndYear: -1680, reignYears: 20)
+        context.insert(otherEra)
+        context.insert(custom)
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.filter { NameDuplicateCheck.normalizedKey($0.name) == "hammurabi" }.count, 1, "spelling-normalized match must not duplicate")
+        XCTAssertEqual(custom.era?.persistentModelID, otherEra.persistentModelID, "a user-filed ruler keeps a non-superseding era")
+        XCTAssertEqual(custom.title, "Custom Title")
+        XCTAssertEqual(custom.reignStartYear, -1700)
+        XCTAssertEqual(custom.reignYears, 20)
+        let roster = figures.filter { $0.era?.name == Migration.firstBabylonianEraName }
+        XCTAssertEqual(roster.count, 10, "the user-filed Hammurabi stays out of the new era")
+    }
+
+    func testFixEraOrderIndicesPinsFirstBabylonianLaneAndShiftsLaterLanes() {
+        let container = makeContainer()
+        let context = container.mainContext
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+        Migration.ensureHistoricalPeriodEras(context: context)
+        Migration.ensureTimelineMacroEras(context: context)
+        Migration.fixEraOrderIndices(context: context)
+        Migration.fixEraOrderIndices(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let byName = Dictionary(eras.map { ($0.name, $0.orderIndex) }, uniquingKeysWith: { first, _ in first })
+        XCTAssertEqual(byName["First Dynasty of Babylon"], 31)
+        XCTAssertEqual(byName["Old Assyrian Period"], 32)
+        XCTAssertEqual(byName["Old Babylonian Period"], 33)
+        XCTAssertEqual(byName["Neo-Assyrian Period"], 34)
+        XCTAssertEqual(byName["Uruk Period"], 35)
+        XCTAssertEqual(byName["Sassanid Empire"], 47)
+    }
+
+    func testEnrichSKLDataDoesNotCiteNonSKLHistoricalFigures() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let humanType = FigureType(name: "Human", icon: "person.fill", colorHex: "34C759")
+        context.insert(humanType)
+        context.insert(Source(name: "Sumerian King List", sourceType: .kingList))
+        let kishEra = Era(name: "First dynasty of Kish", orderIndex: 11)
+        let babylonEra = Era(name: Migration.firstBabylonianEraName, orderIndex: 31)
+        context.insert(kishEra)
+        context.insert(babylonEra)
+        let sklKing = Figure(name: "Etana", figureType: humanType, birthDate: MythologicalDate(era: "First dynasty of Kish"))
+        sklKing.era = kishEra
+        let babylon = Figure(name: "Hammurabi", figureType: humanType, birthDate: MythologicalDate(era: Migration.firstBabylonianEraName))
+        babylon.era = babylonEra
+        context.insert(sklKing)
+        context.insert(babylon)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        let citations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        let sklCitations = citations.filter { $0.source?.name == "Sumerian King List" }
+        XCTAssertTrue(sklCitations.contains { $0.linkedEntityName == "Etana" }, "the SKL king keeps an SKL citation")
+        XCTAssertFalse(sklCitations.contains { $0.linkedEntityName == "Hammurabi" }, "a later dynasty's king must not inherit an SKL citation")
+    }
+
+    func testEnsureDynastyGroupsBuildsFirstBabylonianSubgroup() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let humanType = FigureType(name: "Human", icon: "person.fill", colorHex: "34C759")
+        context.insert(humanType)
+        let era = Era(name: Migration.firstBabylonianEraName, orderIndex: 31)
+        context.insert(era)
+        let king = Figure(name: "Sumu-abum", figureType: humanType, birthDate: MythologicalDate(era: Migration.firstBabylonianEraName))
+        king.era = era
+        context.insert(king)
+        try? context.save()
+
+        Migration.ensureDynastyGroups(context: context)
+
+        let groups = (try? context.fetch(FetchDescriptor<FigureGroup>())) ?? []
+        let subgroup = groups.first { $0.name == Migration.firstBabylonianEraName }
+        XCTAssertNotNil(subgroup)
+        XCTAssertEqual(subgroup?.era?.persistentModelID, era.persistentModelID)
+        XCTAssertTrue(subgroup?.figureAssociations.contains { $0.figure?.persistentModelID == king.persistentModelID } ?? false)
+    }
+
+    func testEnsureDynastyBoundariesCoversFirstBabylonianDynasty() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: Migration.firstBabylonianEraName, orderIndex: 31))
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let era = (try? context.fetch(FetchDescriptor<Era>()))?.first { $0.name == Migration.firstBabylonianEraName }
+        guard let json = era?.boundaryGeoJSON?.data(using: .utf8),
+              let object = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any],
+              let coordinates = object["coordinates"] as? [[[Double]]],
+              let ring = coordinates.first else {
+            XCTFail("First Dynasty of Babylon must get a boundary")
+            return
+        }
+        XCTAssertEqual(ring.first, ring.last, "ring must be closed")
+        XCTAssertTrue(pointInRing((44.42, 32.54), ring), "Babylon must fall inside the dynasty territory")
     }
 
     // MARK: - Legendary dynasty windows (Kish I … Third Kish)

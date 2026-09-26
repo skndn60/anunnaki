@@ -200,7 +200,17 @@ extension Migration {
             let humanType = try? context.fetch(FetchDescriptor<FigureType>(
                 predicate: #Predicate { $0.name == "Human" }
             )).first
-            let sklFigures = allFigures.filter { $0.figureType?.persistentModelID == humanType?.persistentModelID }
+            // Only the Sumerian King List's own humans get an SKL citation. Later
+            // historical dynasties (First Dynasty of Babylon and the periods after
+            // lane 30) are attested by their own king lists, not the SKL, so they
+            // must not inherit an SKL citation here.
+            let nonSKLEraNames = Set(allEras.filter { $0.orderIndex >= 31 }.map { $0.name })
+            let sklFigures = allFigures.filter { fig in
+                guard fig.figureType?.persistentModelID == humanType?.persistentModelID else { return false }
+                if let order = fig.era?.orderIndex, order >= 31 { return false }
+                if nonSKLEraNames.contains(fig.birthDate.era) { return false }
+                return true
+            }
             for fig in sklFigures where !citedNames.contains(fig.name) {
                 let citation = Citation(
                     source: sklSource,

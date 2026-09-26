@@ -1468,6 +1468,114 @@ func testRegnalKeyOrdersEventsByDate() {
         }
     }
 
+    func testEnsureDynastyBoundariesBackfillsHistoricalEras() {
+        let container = makeContainer()
+        let context = container.mainContext
+        for name in ["Old Assyrian Period", "Old Babylonian Period", "Neo-Assyrian Period", "Uruk Period", "Jemdet Nasr Period", "Mitanni", "Karduniaš (Kassite Babylonia)", "Middle Assyrian Period", "Late Bronze Age Collapse", "Neo-Babylonian Empire", "Achaemenid Empire", "Macedonian Empire", "Seleucid Empire", "Parthian Empire", "Roman and Byzantine Mesopotamia", "Sassanid Empire"] {
+            context.insert(Era(name: name, orderIndex: 31))
+        }
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(eras.count, 16)
+        for era in eras {
+            XCTAssertNotNil(era.boundaryGeoJSON, "\(era.name) got a boundary")
+            guard let data = era.boundaryGeoJSON?.data(using: .utf8),
+                  let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let coordinates = object["coordinates"] as? [[[Double]]],
+                  let ring = coordinates.first else {
+                XCTFail("\(era.name) boundary not a Polygon")
+                continue
+            }
+            XCTAssertEqual(ring.first!, ring.last!, "\(era.name) ring closed")
+        }
+    }
+
+    func testEnsureDynastyBoundariesContainsHistoricalCapitals() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let names = ["Old Assyrian Period", "Old Babylonian Period", "Neo-Assyrian Period", "Uruk Period", "Jemdet Nasr Period", "Mitanni", "Karduniaš (Kassite Babylonia)", "Middle Assyrian Period", "Neo-Babylonian Empire", "Achaemenid Empire", "Macedonian Empire", "Seleucid Empire", "Parthian Empire", "Roman and Byzantine Mesopotamia", "Sassanid Empire"]
+        for name in names {
+            context.insert(Era(name: name, orderIndex: 31))
+        }
+        try? context.save()
+
+        Migration.ensureDynastyBoundaries(context: context)
+
+        let points: [String: (Double, Double)] = [
+            "Old Assyrian Period": (43.26, 35.46),
+            "Old Babylonian Period": (44.42, 32.54),
+            "Neo-Assyrian Period": (43.15, 36.36),
+            "Uruk Period": (45.64, 31.32),
+            "Jemdet Nasr Period": (44.64, 32.55),
+            "Mitanni": (40.04, 36.83),
+            "Karduniaš (Kassite Babylonia)": (44.42, 32.54),
+            "Middle Assyrian Period": (43.26, 35.46),
+            "Neo-Babylonian Empire": (44.42, 32.54),
+            "Achaemenid Empire": (48.24, 32.19),
+            "Macedonian Empire": (44.42, 32.54),
+            "Seleucid Empire": (44.50, 33.10),
+            "Parthian Empire": (44.50, 33.10),
+            "Roman and Byzantine Mesopotamia": (41.20, 37.10),
+            "Sassanid Empire": (44.50, 33.10),
+        ]
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        for era in eras {
+            guard let data = era.boundaryGeoJSON?.data(using: .utf8),
+                  let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+                  let coordinates = object["coordinates"] as? [[[Double]]],
+                  let ring = coordinates.first,
+                  let capital = points[era.name] else { continue }
+            XCTAssertTrue(pointInRing(capital, ring), "\(era.name) contains its capital")
+        }
+    }
+
+    func testRemoveEraTerritoryPlacesRemovesOnlyArtifacts() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let eraNames = ["Old Assyrian Period", "Old Babylonian Period", "Neo-Assyrian Period", "Uruk Period", "Jemdet Nasr Period", "Mitanni", "Karduniaš (Kassite Babylonia)", "Middle Assyrian Period", "Late Bronze Age Collapse", "Neo-Babylonian Empire", "Achaemenid Empire", "Macedonian Empire", "Seleucid Empire", "Parthian Empire", "Roman and Byzantine Mesopotamia", "Sassanid Empire"]
+        let eras = eraNames.map { Era(name: $0, orderIndex: 31) }
+        eras.forEach { context.insert($0) }
+        let placeType = PlaceType(name: "Region", icon: "map", colorHex: "34C759")
+        context.insert(placeType)
+        for (normalizedKey, seed) in Migration.eraTerritoryPlaces {
+            guard let era = eras.first(where: { Migration.normalizedGroupName($0.name) == normalizedKey }) else { continue }
+            context.insert(Place(name: seed.name, placeType: placeType, placeDescription: "\(era.name) territory"))
+        }
+        let userMitanni = Place(name: "Mitanni", placeType: placeType, modernLocation: "Khabur triangle, northern Syria", placeDescription: "Hurrian kingdom of northern Syria")
+        context.insert(userMitanni)
+        try? context.save()
+
+        Migration.removeEraTerritoryPlaces(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.count, 1, "all 16 artifact places removed, the user-authored Mitanni survives")
+        XCTAssertEqual(places.first?.name, "Mitanni")
+        XCTAssertEqual(places.first?.placeDescription, "Hurrian kingdom of northern Syria", "user-authored place untouched")
+    }
+
+    func testRemoveEraTerritoryPlacesLeavesNonArtifactPlacesAlone() {
+        let container = makeContainer()
+        let context = container.mainContext
+        for name in ["Late Bronze Age Collapse", "Mitanni"] {
+            context.insert(Era(name: name, orderIndex: 31))
+        }
+        let placeType = PlaceType(name: "Region", icon: "map", colorHex: "34C759")
+        context.insert(placeType)
+        context.insert(Place(name: "Late Bronze Age Collapse", placeType: placeType, placeDescription: "Late Bronze Age Collapse territory"))
+        let userPlace = Place(name: "Mitanni", placeType: placeType, modernLocation: "Khabur triangle", placeDescription: "user's own entry")
+        context.insert(userPlace)
+        try? context.save()
+
+        Migration.removeEraTerritoryPlaces(context: context)
+
+        let places = (try? context.fetch(FetchDescriptor<Place>())) ?? []
+        XCTAssertEqual(places.map(\.name), ["Mitanni"])
+        XCTAssertEqual(places.first?.placeDescription, "user's own entry")
+    }
+
     func testEnsureDynastyBoundariesNeverOverwrites() {
         let container = makeContainer()
         let context = container.mainContext
