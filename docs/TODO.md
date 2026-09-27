@@ -1,12 +1,49 @@
 # TODO
 
-## HIGH: 274 unchecked `try? context.save()` sites (found 2026-09-26, never previously flagged)
+## Follow-up list from the 2026-09-26 session (recorded 2026-09-27 — it existed only in conversation)
 
-- [ ] **Audit `try? (context|modelContext).save()` — 274 occurrences across 71 files, zero of which inspect the result.** `try?` discards the error, so a failed write is invisible and the in-memory context silently diverges from the store. This is the defect class that most directly violates the "the database is sacred" hard constraint, and it is not hypothetical: three migrations once failed silently this exact way (`docs/SESSION_LOG.md`, 2026-07-20). Scope it in two tiers:
-  - **Tier 1 — MeCore/Store first (highest value, ~40 sites):** migrations, importers, mergers, `DuplicateMerger`. A save here is a commit with no undo path. Wrap in `do/catch`, log via `Logger(subsystem:category:)`, continue to the next migration rather than aborting the chain. Consider a `Migration` helper like `commit(_ context: ModelContext, _ what: String)` that centralises this so call sites read as one-liners.
-  - **Tier 2 — view layer (~234 sites):** acceptable where the mutation is trivially reproducible and the UI already shows the result, but the save must never be the *only* signal. Do not blanket-`try?`→`try!` — a crash on a failed save is worse than a logged error.
-- [ ] **Do not touch the 409 `try? …fetch` sites** — `?? []` degradation there is idiomatic and safe. The temptation to "clean up" `try?` wholesale will make this worse, not better.
-- [ ] **Add a build-time guard:** a lint that fails the build on `try? *context.save()` so the count cannot regress. The count only fell from 274 to 0 by hand; nothing prevents it climbing again.
+Three items were agreed at the end of the 2026-09-26 session and were **not written down at the time**, so the list had to be reconstructed from the session log. The failure mode is now a process tripwire in `docs/QUALITY_RISKS.md` ("ending a session with commitments made only in conversation"). This section exists so that cannot happen to these three.
+
+- [x] **1. Close the 274 unchecked `try? context.save()` sites** — done 2026-09-27. `Commit.save`, a reporting migration chain, an enforced lint. See the HIGH item below and the 2026-09-27 session log entry.
+- [x] **2. Quality control protocol** — done 2026-09-27. `docs/QUALITY_RISKS.md` rewritten from "read this at the start of every session" (passive, and it failed) into five explicit rules: measure-don't-recall, cadence, deliver in-session with the work, re-baseline-or-mark-stale, and audit the list rather than only the numbers. New `scripts/quality-check.sh` measures every tripwire a text scan can decide, names the four it cannot, and exits 1 on a gated regression. Gate verified to fail on an injected violation.
+- [x] **3. Runtime look at the figure detail panel after the filter removal** — owed since 2026-09-26 (`6825049`). **Closed 2026-09-27.** Three cases, chosen from a read-only copy of the live store (629 figures, avg 2.72 filterable rows, 179 with none — the 2026-09-26 measurements, re-verified):
+
+  **Done.** The mechanical half was completed by code inspection, the visual half by the user looking at the screen (the terminal here has neither Screen Recording nor Accessibility, so `screencapture` returns "could not create image from display" and `osascript` fails with -1728 "not allowed assistive access"; the UI can be neither driven nor observed programmatically). The user checked all four figures in the running app and reported they looked fine, which confirms the filter-removal trade-off and the empty-state layout hold up in practice. Their own scoping note: this was a look at the panel, not an in-depth check of the characters themselves — so what is now verified is **rendering, layout and empty states, not the accuracy of the underlying data** (data fill-rate is a separate, known item in `docs/PRODUCT_WEAKNESSES.md`). Do not read this closure as a data-quality sign-off.
+
+  Also verified 2026-09-27 by launching the built app against the live store: the ~103-call migration chain completed with no crash, the app settled idle at the main window, and the store was unchanged at 629 figures before and after. So the chain is a genuine no-op on an already-migrated store, as intended.
+
+  | Case | Figure | Why this one | What to look for | Code-level result |
+  |---|---|---|---|---|
+  | Hub | **Enki** | 35 relationships (29 next: Samyaza 29, An 25) + 4 alt names, 2 places, 3 events, 1 citation = 45 filterable rows | The accepted trade-off of the removal: the relationship list is now fully expanded with no way to narrow it. Does it stay scannable, and does the mini lineage tree still agree with the list above it? | renders fine — confirmed by the user on screen |
+  | Empty | **Geshtu-e** | 0 filterable rows, but an 818-character description and a Deity type — the panel is visibly populated while every relationship/place/event/citation section is empty | Every empty section should read as an intentional empty state, not a blank heading | **done — and it found a real asymmetry, below** |
+  | Citations | **Lugalngu** | Exactly 1 filterable row, and it is a citation: 0 relationships, 0 alt names, 0 places, 0 events | Isolates the Citations section: does it render its one row, and is the count/label honest? | renders `Sources & Citations` + the row; empty state is "No citations yet" — confirmed by the user |
+
+  **Hammurabi** (10 filterable rows — 4 relationships, 1 alt name, 2 places, 3 citations) was the ordinary rich case and also looked fine.
+
+  **Finding (2026-09-27) — empty-state handling is inconsistent across the detail panel.** The specific bug the 2026-09-26 entry predicted is *fixed*: no section renders a heading over an empty body any more, because all 8 component sections now own their own emptiness guard. But the panel now has two different conventions, and the user should know which is which:
+
+  - **Show an empty state** (heading plus an explicit line): AlternateNames, Places, Citations, Things, Groups, Pantheons, ComparisonTables, ContentAttribution.
+  - **Vanish silently** when empty: Relationships (`FigureDetailView.swift:436`), Events (`EventsSection.swift:12`), Variant Reigns (`:379`), Tags (`:481`).
+
+  So Geshtu-e will show "Also Known As / No alternate names", "Associated Places / No places linked", "Sources & Citations / No citations yet", "Associated Things / No things linked", "Groups / Not in any group" and so on — and no Relationships, Events, Variant Reigns or Tags heading at all. Nothing renders broken; the question is whether the four silent omissions read as deliberate or as missing. Hiding an empty "Tags" list is a reasonable call; hiding Relationships is a stronger claim, because a user looking at a figure learns nothing about whether relationships are simply absent. This asymmetry **predates the filter removal and is not caused by it** — the call-site guards existed to implement "hide on no filter match", and removing the filter left them reading as "hide when genuinely empty".
+
+  **Decision 2026-09-27: leave it.** The user chose to keep the two conventions as they are, and to revisit only if it actually looks wrong on screen. So this is a settled judgement, not an open bug — do not "fix" it unasked in a later session. The cheapest correction remains available if that changes: give Relationships an empty state like its eight siblings, and decide deliberately whether Variant Reigns and Tags should follow it or stay silent.
+
+  Note for whoever runs the visual half: launching the app executes the full ~103-call migration chain against the live store. That chain is additive and idempotent by design, and it was confirmed above to leave a migrated store untouched — but it is a write, and the store is the one hard constraint in `AGENTS.md`.
+
+---
+
+## HIGH: 274 unchecked `try? context.save()` sites (found 2026-09-26, **closed 2026-09-27**)
+
+- [x] **Audit `try? (context|modelContext).save()` — 274 occurrences across 71 files, zero of which inspected the result.** Closed 2026-09-27: all 274 converted to `Commit.save(_:_:)` (`Sources/MeCore/Store/Commit.swift`), a lock-guarded helper that logs the failure via `Logger(subsystem: "com.me.app", category: "store")` and returns a discardable Bool. The label is the enclosing func name in MeCore (`ensureMapFlags`) and `Type.func` in views (`EventDetailView.save`) so a log line names something actionable. Control flow is unchanged — a failed save still continues to the next step rather than aborting.
+- [x] **Make the launch chain report failures instead of swallowing them.** `SeedRunner.start`'s completion was `() -> Void`, structurally incapable of reporting. It now carries `[String]` of failed operations, collected by `Commit.collectFailures { }` around the whole chain (a lock-guarded collector stack, so nested scopes unwind cleanly and view-layer saves outside the scope are logged only). `SplashScreenView` hands the result to `StartupReport.shared`, and `ContentView` renders a dismissible top banner naming the affected operations. This was the actual fix for the serious failure mode: a failed save leaves the change pending in the context, so a persistently-bad row poisons *every* later save in the chain, and the old final `try? context.save()` hid the aggregate result.
+- [x] **Add a build-time guard.** `MeCoreTests.testNoUncheckedTrySaveInSources` (`Tests/MeCoreTests/MeCoreTests+StoreHygiene.swift`) walks `Sources/**/*.swift` and fails on any `try?` save, reporting `file:line: source`. Verified to fail on an injected violation, including the no-space `try?modelContext.save()` form. It also `XCTSkip`s (rather than silently passing) if it cannot locate the repo root, so a moved checkout cannot quietly disable it.
+- [x] **Do not touch the 409 `try? …fetch` sites** — `?? []` degradation there is idiomatic and safe, and the lint deliberately does not match them.
+- [ ] **Tier 2 hand-audit of the non-reproducible view-layer sites (deferred, low value).** After the above, all 155 view sites are logged and the lint prevents regression, so the remaining exposure matches what `AGENTS.md` already permits: a user-initiated save that fails is lost, but the mutation was on screen and re-doable. The subset worth a human look is where the mutation is *not* re-doable — deletes, `DuplicateMerger`, bulk edits. No known instance of a save that actually failed exists in the project's history, so this is a hardening pass, not a bug hunt.
+
+### Follow-on (not done, deliberately separate)
+
+- [ ] **`SeedRunner.run` is not version-gated** (~105 unconditional `Migration.*` calls per launch, `TODO.md` below). It interacts with the new reporting: an ungated chain means a migration that fails 1 launch in 5 never reproduces on demand, which makes the new banner hard to debug. Fixing the gating would help both tripwire #1's diagnosability and the launch-cost item — but it is a schema/versioning change and did not belong in a save-handling change.
 
 ---
 
