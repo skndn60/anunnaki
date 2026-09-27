@@ -31,7 +31,7 @@ extension Migration {
                 source: "Sumerian mythology"
             )
             context.insert(fig)
-            try? context.save()
+            Commit.save(context, "getOrCreateFigure")
             return fig
         }
 
@@ -104,7 +104,7 @@ extension Migration {
             context.insert(rel)
         }
 
-        try? context.save()
+        Commit.save(context, "ensureParentRelationshipsExist")
     }
 
     package static func ensureCoverageExemptFlags(context: ModelContext) {
@@ -116,7 +116,7 @@ extension Migration {
                 fig.coverageExempt = true
             }
         }
-        try? context.save()
+        Commit.save(context, "ensureCoverageExemptFlags")
     }
 
     package static func ensureSKLDomain(context: ModelContext) {
@@ -148,7 +148,7 @@ extension Migration {
             guard let domain = domainByTitle[fig.title] else { continue }
             fig.domain = domain
         }
-        try? context.save()
+        Commit.save(context, "ensureSKLDomain")
     }
 
     package static func enrichSKLData(context: ModelContext) {
@@ -223,7 +223,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "enrichSKLData")
     }
 
     /// Citations seeded before this migration copied the seed's `entityId` (a UUID)
@@ -253,7 +253,7 @@ extension Migration {
             citation.linkedEntityName = name
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "resolveSeedCitationIds") }
     }
 
     package static func ensureSKLEventTypesExist(context: ModelContext) {
@@ -267,7 +267,7 @@ extension Migration {
         if !destructionExists {
             context.insert(EventType(name: "Destruction", icon: "flame.fill", colorHex: "FF3B30"))
         }
-        try? context.save()
+        Commit.save(context, "ensureSKLEventTypesExist")
     }
 
     package static func ensureMissingCitiesAndAssociations(context: ModelContext) {
@@ -358,7 +358,7 @@ extension Migration {
             context.insert(assoc)
         }
 
-        try? context.save()
+        Commit.save(context, "ensureMissingCitiesAndAssociations")
     }
 
     /// Backfill SKL historical figures and events from seed_data.json.
@@ -427,7 +427,7 @@ extension Migration {
             placeByName[seedPlace.name.lowercased()] = place
         }
 
-        try? context.save()
+        Commit.save(context, "ensureSKLEventsAndFigures")
 
         // 3. Create missing events
         for seedEvent in root.events {
@@ -461,7 +461,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureSKLEventsAndFigures")
     }
 
     /// SKL founder of the "First rulers of Uruk" block whose `birthDate.era` was
@@ -477,7 +477,7 @@ extension Migration {
             fig.birthDate.era = "First rulers of Uruk"
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureMeshKiAngGasherEra") }
     }
 
 }

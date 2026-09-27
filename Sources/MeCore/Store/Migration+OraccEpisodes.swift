@@ -83,7 +83,7 @@ extension Migration {
             context.insert(StickyNote(text: "IMPORTED FROM ORACC", figure: figure))
             created += 1
         }
-        if created > 0 { try? context.save() }
+        if created > 0 { Commit.save(context, "ensureOraccDeityImports") }
     }
 
     /// Imports ten well-attested everyday-life episodes (curation approved by the
@@ -403,7 +403,7 @@ extension Migration {
             context.insert(FigurePlaceAssociation(figure: figure, place: place, roleType: pair.role))
         }
 
-        if createdFigures > 0 || createdEvents > 0 { try? context.save() }
+        if createdFigures > 0 || createdEvents > 0 { Commit.save(context, "ensureEverydayLifeEpisodes") }
     }
 
     /// Seeds curated everyday-life Things (objects/artifacts that do not belong in
@@ -436,7 +436,7 @@ extension Migration {
             context.insert(thing)
             created += 1
         }
-        if created > 0 { try? context.save() }
+        if created > 0 { Commit.save(context, "ensureEverydayLifeThings") }
     }
 
     /// Reclassifies the "Yale Culinary Tablets" everyday-life entry from an Event
@@ -469,7 +469,7 @@ extension Migration {
         if let autoCitation { context.delete(autoCitation) }
 
         context.delete(event)
-        try? context.save()
+        Commit.save(context, "convertYaleCulinaryTabletsEventToThing")
     }
 
     /// Backfills `Event.involvedFigures` (and `Figure.events`) for any
@@ -495,7 +495,7 @@ extension Migration {
                 }
             }
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "repairInvolvedFiguresFromAssociations") }
     }
 
     /// Repairs the four parent-role edges the consistency scan proved contradictory,
@@ -546,7 +546,7 @@ extension Migration {
             }
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureConsistentParentRoles") }
     }
 
     /// Creates the three historical period labels that events reference but which
@@ -581,7 +581,7 @@ extension Migration {
             context.insert(era)
             createdAny = true
         }
-        if createdAny { try? context.save() }
+        if createdAny { Commit.save(context, "ensureHistoricalPeriodEras") }
     }
 
 }

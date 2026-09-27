@@ -515,7 +515,7 @@ struct PopupTableView: View {
                 let clamped = clampHeaderHeight(start + value.translation.height)
                 headerHeight = clamped
                 table.headerHeight = clamped
-                try? modelContext.save()
+                Commit.save(modelContext, "PopupTableView.headerHeightGesture")
                 fitHostWindowToTable()
             }
     }
@@ -586,7 +586,7 @@ struct PopupTableView: View {
         case .column(let popupColumn):
             table.setColumnLayoutWidth(width, forColumn: popupColumn, context: modelContext)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.persistColumnWidth")
     }
 
     private func gridScaleGesture() -> some Gesture {
@@ -661,7 +661,7 @@ struct PopupTableView: View {
     private func persistGridScale(_ columnScale: CGFloat, _ rowScale: CGFloat) {
         table.columnScale = roundedGridScale(columnScale)
         table.rowScale = roundedGridScale(rowScale)
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.persistGridScale")
     }
 
     private func resetGridScale() {
@@ -708,7 +708,7 @@ struct PopupTableView: View {
         for entry in sources {
             cell.addCellSource(named: entry.name, location: entry.location, context: modelContext)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.saveSources")
         loadCells()
     }
 
@@ -726,7 +726,7 @@ struct PopupTableView: View {
     private func saveCell(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, value: String) {
         guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
         cell.value = value.isEmpty ? nil : value
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.saveCell")
     }
 
     private func richValueBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<Data?> {
@@ -747,7 +747,7 @@ struct PopupTableView: View {
     private func saveRichValue(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, rich: Data?) {
         guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
         cell.richValue = rich
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.saveRichValue")
     }
 
     private func commentBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<String> {
@@ -764,7 +764,7 @@ struct PopupTableView: View {
     private func saveComment(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, comment: String) {
         guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
         cell.comment = comment.isEmpty ? nil : comment
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.saveComment")
     }
 
     private func richCommentBinding(attributeID: PersistentIdentifier, columnID: PersistentIdentifier) -> Binding<Data?> {
@@ -785,7 +785,7 @@ struct PopupTableView: View {
     private func saveRichComment(attributeID: PersistentIdentifier, columnID: PersistentIdentifier, rich: Data?) {
         guard let cell = ensureCell(attributeID: attributeID, columnID: columnID) else { return }
         cell.richComment = rich
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableView.saveRichComment")
     }
 }
 

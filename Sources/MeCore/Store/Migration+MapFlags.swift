@@ -45,6 +45,6 @@ extension Migration {
             changed = true
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureMapFlags") }
     }
 }

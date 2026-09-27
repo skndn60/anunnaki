@@ -77,7 +77,7 @@ extension Migration {
             guard !alreadyHas else { continue }
             context.insert(StickyNote(text: stickyPrefix, figure: figure))
         }
-        try? context.save()
+        Commit.save(context, "ensureMissingDeitiesImportExist")
     }
 
     /// Import the broad attested Mesopotamian pantheon from
@@ -103,7 +103,7 @@ extension Migration {
         var filteredRoot = root
         filteredRoot.figures = toImport
         SeedData.importFrom(root: filteredRoot, context: context)
-        try? context.save()
+        Commit.save(context, "ensureMesopotamianDeitiesImportExist")
     }
 
     /// Import curated alternate names (bynames, cross-language equivalents,
@@ -151,7 +151,7 @@ extension Migration {
             }
         }
         guard added > 0 else { return }
-        try? context.save()
+        Commit.save(context, "ensureAlternateNamesImportExist")
     }
 
     /// Removes the legacy orphaned alternate-name pair created before the
@@ -164,7 +164,7 @@ extension Migration {
             .filter { $0.figure == nil && $0.place == nil && names.contains($0.name.lowercased()) }
         guard !orphans.isEmpty else { return }
         for orphan in orphans { context.delete(orphan) }
-        try? context.save()
+        Commit.save(context, "removeOrphanedKittumNigginaAltNames")
     }
 
 }

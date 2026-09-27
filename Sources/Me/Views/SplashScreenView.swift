@@ -37,7 +37,8 @@ struct SplashScreenView: View {
         .task {
             let container = modelContext.container
             let started = Date()
-            SeedRunner.start(container: container) {
+            SeedRunner.start(container: container) { failures in
+                StartupReport.shared.migrationFailures = failures
                 let remaining = max(0, Self.minimumDisplayDuration - Date().timeIntervalSince(started))
                 DispatchQueue.main.asyncAfter(deadline: .now() + remaining) {
                     isSeeding = false

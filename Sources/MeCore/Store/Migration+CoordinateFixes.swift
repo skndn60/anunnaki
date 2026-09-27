@@ -25,6 +25,6 @@ extension Migration {
             egalmah.latitude = 31.93351
             egalmah.longitude = 45.28521
         }
-        try? context.save()
+        Commit.save(context, "fixEgalmahCoordinates")
     }
 }

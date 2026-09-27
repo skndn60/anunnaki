@@ -194,7 +194,7 @@ struct ImportView: View {
             if let figure = service.matchFigure(query: mq, in: figures) {
                 service.createCitation(sourceTitle: title, wikiURL: wikiURL, extract: extract, entityName: figure.name, entityType: .figure)
                 service.applyToFigure(figure, parsed: parsed.0, extract: extract, wikiURL: wikiURL, allFigures: figures)
-                try? modelContext.save()
+                Commit.save(modelContext, "ImportView.performImport")
                 importMessage = "Imported into figure \"\(figure.name)\"."
                 isImporting = false
                 return
@@ -204,7 +204,7 @@ struct ImportView: View {
         if let place = service.matchPlace(query: query, in: places) {
             service.createCitation(sourceTitle: title, wikiURL: wikiURL, extract: extract, entityName: place.name, entityType: .place)
             service.applyToPlace(place, parsed: parsed.0, extract: extract, wikiURL: wikiURL)
-            try? modelContext.save()
+            Commit.save(modelContext, "ImportView.performImport")
             importMessage = "Imported into place \"\(place.name)\"."
             isImporting = false
             return
@@ -213,14 +213,14 @@ struct ImportView: View {
         if let event = service.matchEvent(query: query, in: events) {
             service.createCitation(sourceTitle: title, wikiURL: wikiURL, extract: extract, entityName: event.name, entityType: .event)
             service.applyToEvent(event, parsed: parsed.0, extract: extract, wikiURL: wikiURL)
-            try? modelContext.save()
+            Commit.save(modelContext, "ImportView.performImport")
             importMessage = "Imported into event \"\(event.name)\"."
             isImporting = false
             return
         }
 
         service.createStandaloneSource(title: title, extract: extract, wikiURL: wikiURL)
-        try? modelContext.save()
+        Commit.save(modelContext, "ImportView.performImport")
         importMessage = "No matching entity found."
         isImporting = false
     }

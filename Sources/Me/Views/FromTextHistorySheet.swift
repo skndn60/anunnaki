@@ -123,7 +123,7 @@ struct FromTextHistorySheet: View {
 
     private func performRevert(_ record: FromTextApplyRecord) {
         let report = FromTextRecognizer.revert(record, in: modelContext)
-        try? modelContext.save()
+        Commit.save(modelContext, "FromTextHistorySheet.performRevert")
         FromTextLog.markReverted(id: record.id)
         records = FromTextLog.load()
         lastReport = report

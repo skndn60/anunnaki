@@ -149,6 +149,7 @@ struct ContentView: View {
     @State private var userSession = UserSession()
     @State private var globalSearchText = ""
     @State private var showRecoveryAlert = MeApp.recoveryError != nil
+    @State private var dismissedMigrationWarning = false
     @State private var showBackupSheet = false
     @State private var showFromTextSheet = false
     @State private var showFromTextHistorySheet = false
@@ -242,6 +243,39 @@ struct ContentView: View {
         }
     }
 
+    private var migrationWarningBanner: some View {
+        let failures = StartupReport.shared.migrationFailures
+        return HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(failures.count == 1
+                     ? "1 startup task could not be saved"
+                     : "\(failures.count) startup tasks could not be saved")
+                    .font(.callout.weight(.semibold))
+                Text("Your existing data is untouched — these are additive backfills that will be retried on the next launch. Affected: \(failures.joined(separator: ", ")).")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+            Button {
+                dismissedMigrationWarning = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Dismiss")
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(.regularMaterial)
+        .overlay(alignment: .bottom) { Divider() }
+    }
+
     private var mainView: some View {
         let sortedBookmarks = bookmarkStore.bookmarks.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         return NavigationSplitView {
@@ -252,6 +286,11 @@ struct ContentView: View {
         .onAppear {
             if let windowUM = NSApp.keyWindow?.undoManager {
                 modelContext.undoManager = windowUM
+            }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if !dismissedMigrationWarning, !StartupReport.shared.migrationFailures.isEmpty {
+                migrationWarningBanner
             }
         }
         .alert("Database Issue", isPresented: $showRecoveryAlert) {

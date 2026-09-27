@@ -110,7 +110,7 @@ struct EventsSection: View {
             modelContext.delete(assoc)
         }
         event.involvedFigures.removeAll { $0.persistentModelID == figure.persistentModelID }
-        try? modelContext.save()
+        Commit.save(modelContext, "EventsSection.removeFigureFromEvent")
     }
 
     @State private var eventToRemove: Event?

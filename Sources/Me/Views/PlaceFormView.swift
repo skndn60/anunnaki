@@ -239,7 +239,7 @@ struct PlaceFormView: View {
             RecentEditStore.trackEdit(entityType: "Place", entityName: newPlace.name)
             ActivityLogger.record(action: .created, entityType: "Place", entityName: newPlace.name, context: modelContext, session: userSession)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "PlaceFormView.save")
         showSuccessAlert = true
     }
 }

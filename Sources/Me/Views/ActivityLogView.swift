@@ -102,7 +102,7 @@ struct ActivityLogView: View {
         for entry in entries {
             modelContext.delete(entry)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "ActivityLogView.clearLog")
     }
 }
 

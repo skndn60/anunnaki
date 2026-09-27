@@ -411,7 +411,7 @@ private struct EntityTypeEditSheetView<T: EntityTypeProtocol>: View {
             }
             modelContext.insert(made)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "EntityTypeEditSheetView.save")
         dismiss()
     }
 }
@@ -520,7 +520,7 @@ private struct RelationshipTypeEditSheetView: View {
             let newItem = RelationshipType(name: name, icon: icon, colorHex: color.hex, category: category, reverseName: trimmedReverse.isEmpty ? nil : trimmedReverse)
             modelContext.insert(newItem)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "RelationshipTypeEditSheetView.save")
         dismiss()
     }
 }
@@ -585,7 +585,7 @@ private struct RoleTypeEditSheetView<T: RoleTypeProtocol>: View {
             made.reverseName = trimmedReverse.isEmpty ? nil : trimmedReverse
             modelContext.insert(made)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "RoleTypeEditSheetView.save")
         dismiss()
     }
 }
@@ -826,7 +826,7 @@ private struct PantheonEditSheetView: View {
             let newItem = Pantheon(name: name, pantheonDescription: pantheonDescription, icon: icon, colorHex: color.hex)
             modelContext.insert(newItem)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "PantheonEditSheetView.save")
         dismiss()
     }
 }

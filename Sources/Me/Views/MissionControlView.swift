@@ -248,12 +248,12 @@ struct MissionControlView: View {
 
     private func toggleReview(_ datum: CollectedDatum) {
         datum.isReviewed = !(datum.isReviewed ?? false)
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.toggleReview")
     }
 
     private func rejectDatum(_ datum: CollectedDatum) {
         modelContext.delete(datum)
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.rejectDatum")
     }
 
     private func rejectAndBlockDatum(_ datum: CollectedDatum) {
@@ -263,7 +263,7 @@ struct MissionControlView: View {
         )
         modelContext.insert(blocked)
         modelContext.delete(datum)
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.rejectAndBlockDatum")
     }
 
     private var blindSpotSection: some View {
@@ -374,7 +374,7 @@ struct MissionControlView: View {
                         Spacer()
                         Button("Unblock") {
                             modelContext.delete(source)
-                            try? modelContext.save()
+                            Commit.save(modelContext, "MissionControlView")
                         }
                         .buttonStyle(.plain)
                         .font(.caption)
@@ -428,19 +428,19 @@ struct MissionControlView: View {
                     newCount += 1
                 }
             }
-            try? modelContext.save()
+            Commit.save(modelContext, "MissionControlView.scanBlindSpots")
             showScanning = false
         }
     }
 
     private func toggleBlindSpotCategory(_ spot: BlindSpot) {
         spot.categoryEnum = spot.categoryEnum == .unresearched ? .knownGap : .unresearched
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.toggleBlindSpotCategory")
     }
 
     private func markBlindSpotAsKnownGap(_ spot: BlindSpot) {
         spot.categoryEnum = .knownGap
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.markBlindSpotAsKnownGap")
     }
 
     private func openFigureQuicklook(name: String) {
@@ -451,7 +451,7 @@ struct MissionControlView: View {
     private func markBlindSpotAsPermanentGap(_ spot: BlindSpot) {
         spot.categoryEnum = .knownGap
         spot.isResolved = true
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.markBlindSpotAsPermanentGap")
     }
 
     private func presentDispatch(_ spot: BlindSpot) {
@@ -469,14 +469,14 @@ struct MissionControlView: View {
         modelContext.insert(agent)
         agent.blindSpots.append(spot)
         spot.isResolved = true
-        try? modelContext.save()
+        Commit.save(modelContext, "MissionControlView.dispatchBlindSpotAgent")
         service.dispatchAgent(agent, context: modelContext)
     }
 
     private var dispatchSheet: some View {
         DispatchAgentSheet { agent in
             modelContext.insert(agent)
-            try? modelContext.save()
+            Commit.save(modelContext, "MissionControlView")
             service.dispatchAgent(agent, context: modelContext)
         }
     }
@@ -785,7 +785,7 @@ struct DatumZoomWindow: View {
             get: { datum.isReviewed ?? false },
             set: { newValue in
                 datum.isReviewed = newValue
-                try? modelContext.save()
+                Commit.save(modelContext, "DatumZoomWindow.reviewedBinding")
             }
         )
     }

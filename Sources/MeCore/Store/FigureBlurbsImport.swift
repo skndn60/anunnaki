@@ -37,7 +37,7 @@ extension Migration {
             didChange = true
         }
         if didChange {
-            try? context.save()
+            Commit.save(context, "ensureMissingFigureDescriptions")
         }
     }
 }

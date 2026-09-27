@@ -127,7 +127,7 @@ struct FigureListView: View {
                     onSave: {
                         figure.richDescription = editRichDescription
                         figure.figureDescription = editPlainDescription
-                        try? modelContext.save()
+                        Commit.save(modelContext, "FigureListView")
                     }
                 )
             }

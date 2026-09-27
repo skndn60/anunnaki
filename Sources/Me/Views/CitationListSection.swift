@@ -33,7 +33,7 @@ struct CitationListSection: View {
         .alert("Delete Citation?", isPresented: $showDeleteConfirm, presenting: citationToDelete) { citation in
             Button("Delete", role: .destructive) {
                 modelContext.delete(citation)
-                try? modelContext.save()
+                Commit.save(modelContext, "CitationListSection")
             }
             Button("Cancel", role: .cancel) {}
         } message: { citation in
@@ -168,7 +168,7 @@ struct CitationFormSheet: View {
             citation.source = selectedSource
             citation.location = location
             citation.note = note
-            try? modelContext.save()
+            Commit.save(modelContext, "CitationFormSheet.save")
         } else {
             if let source = selectedSource {
                 RelationshipManager(context: modelContext).addCitation(
@@ -179,7 +179,7 @@ struct CitationFormSheet: View {
                     linkedEntityName: linkedEntityName ?? "",
                     dedupe: false
                 )
-                try? modelContext.save()
+                Commit.save(modelContext, "CitationFormSheet.save")
             }
         }
         dismiss()

@@ -39,7 +39,7 @@ extension Migration {
             )
             context.insert(group)
         }
-        try? context.save()
+        Commit.save(context, "ensureDefaultFigureGroups")
     }
 
     package static func ensureFigureGroupKinds(context: ModelContext) {
@@ -69,7 +69,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureFigureGroupKinds")
     }
 
     /// Remove the legacy empty "The Flood" placeholder group if it is still empty
@@ -147,7 +147,7 @@ extension Migration {
             )
             context.insert(relationship)
         }
-        try? context.save()
+        Commit.save(context, "ensureImportedDeityRelationships")
     }
 
     /// Auto-assign reign order for Sumerian King List groups. For any group whose kind (or an
@@ -173,7 +173,7 @@ extension Migration {
             group.sortMode = .ordered
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureSKLRegnalOrder") }
     }
 
     /// Fix `Figure.orderIndex` for SKL figures whose seed order was wrong (Etana
@@ -210,7 +210,7 @@ extension Migration {
             changed = true
         }
         guard changed else { return }
-        try? context.save()
+        Commit.save(context, "fixSKLFigureOrder")
 
         func partOfSKLChain(_ group: FigureGroup) -> Bool {
             if group.kind == .skl { return true }
@@ -222,7 +222,7 @@ extension Migration {
             group.applyRegnalOrder()
             group.sortMode = .ordered
         }
-        try? context.save()
+        Commit.save(context, "fixSKLFigureOrder")
     }
 
     /// Backfill `Figure.reignYears` from each figure's description ("Listed reign" /
@@ -237,7 +237,7 @@ extension Migration {
             figure.reignYears = reign.years
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureReignYears") }
     }
 
     /// Backfills `Figure.epithet` from the `Epithet: ...` prose embedded in
@@ -252,7 +252,7 @@ extension Migration {
             figure.epithet = epithet
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureEpithets") }
     }
 
     package static func ensureComputedSKLDates(context: ModelContext) {
@@ -284,7 +284,7 @@ extension Migration {
                 changed = true
             }
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureComputedSKLDates") }
     }
 
     /// Reconciles `Figure.era` links so they always mirror the canonical era
@@ -309,7 +309,7 @@ extension Migration {
                 changed = true
             }
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureFigureEraLinks") }
     }
 
     package static let eraTypoMap: [String: String] = [
@@ -334,7 +334,7 @@ extension Migration {
                 changed = true
             }
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "fixEraTypos") }
     }
 
     /// If a figure's birth-era string is empty, derive the era name from the

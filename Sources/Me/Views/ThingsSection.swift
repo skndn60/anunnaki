@@ -82,7 +82,7 @@ struct ThingsSection: View {
         .alert("Remove Thing?", isPresented: $showDeleteConfirm, presenting: assocToDelete) { assoc in
             Button("Remove", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "ThingsSection")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -179,6 +179,6 @@ private struct ThingLinkPopover: View {
     private func createAssociation() {
         guard let thing = selectedThing, let role = selectedRole else { return }
         RelationshipManager(context: modelContext).addThingFigureAssociation(thing: thing, figure: figure, roleType: role, dedupe: false)
-        try? modelContext.save()
+        Commit.save(modelContext, "ThingLinkPopover.createAssociation")
     }
 }

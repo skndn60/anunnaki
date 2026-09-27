@@ -31,7 +31,7 @@ package struct AuthService {
         let user = User(name: trimmedName, passwordHash: hash, passwordSalt: salt)
         user.isAdmin = isAdmin
         context.insert(user)
-        try? context.save()
+        Commit.save(context, "register")
         return user
     }
 
@@ -54,7 +54,7 @@ package struct AuthService {
             throw AuthServiceError.accountDeactivated
         }
         user.lastLoginAt = .now
-        try? context.save()
+        Commit.save(context, "login")
         return user
     }
 
@@ -71,13 +71,13 @@ package struct AuthService {
             throw AuthServiceError.lastActiveAdmin
         }
         user.isActive = false
-        try? context.save()
+        Commit.save(context, "deactivate")
     }
 
     package static func reactivate(_ user: User, actor: User?, context: ModelContext) throws {
         guard actor?.isAdministrator ?? false else { throw AuthServiceError.notAuthorized }
         user.isActive = true
-        try? context.save()
+        Commit.save(context, "reactivate")
     }
 
     package static func allUsers(context: ModelContext) -> [User] {

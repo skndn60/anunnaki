@@ -728,7 +728,7 @@ struct FigureGroupFormView: View {
                 syncMembers(group: newGroup, newAliases: newMemberAliases)
             }
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureGroupFormView.save")
         showSuccessAlert = true
     }
 

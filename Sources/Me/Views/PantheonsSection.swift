@@ -25,7 +25,7 @@ struct PantheonsSection: View {
                                 showRemoveConfirm = true
                             } else {
                                 RelationshipManager(context: modelContext).addPantheonMembership(figure: figure, pantheon: pantheon, dedupe: false)
-                                try? modelContext.save()
+                                Commit.save(modelContext, "PantheonsSection")
                             }
                         } label: {
                             Label(pantheon.name, systemImage: isMember ? "checkmark" : "")
@@ -105,7 +105,7 @@ struct PantheonsSection: View {
             figure.pantheonAssociations?.removeAll { $0.persistentModelID == assoc.persistentModelID }
             modelContext.delete(assoc)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "PantheonsSection.removePantheonMembership")
     }
 
     private func pantheonAliasBinding(for pantheon: Pantheon) -> Binding<String> {
@@ -122,7 +122,7 @@ struct PantheonsSection: View {
                 guard !trimmed.isEmpty, trimmed != figure.name else {
                     if let assoc = figure.pantheonAssociations?.first(where: { $0.pantheon?.persistentModelID == pantheon.persistentModelID }) {
                         assoc.displayName = nil
-                        try? modelContext.save()
+                        Commit.save(modelContext, "PantheonsSection.pantheonAliasBinding")
                     }
                     return
                 }
@@ -133,7 +133,7 @@ struct PantheonsSection: View {
                         figure: figure, pantheon: pantheon, displayName: trimmed, dedupe: false
                     )
                 }
-                try? modelContext.save()
+                Commit.save(modelContext, "PantheonsSection.pantheonAliasBinding")
             }
         )
     }

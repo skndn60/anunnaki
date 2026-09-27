@@ -582,7 +582,7 @@ struct AttachmentFormView: View {
             attachment.url = url
             attachment.attachmentType = attachmentType
             attachment.note = note.isEmpty ? nil : note
-            try? modelContext.save()
+            Commit.save(modelContext, "AttachmentFormView.save")
         } else if let source {
             RelationshipManager(context: modelContext).addAttachment(
                 to: source, title: title, url: url,
@@ -590,7 +590,7 @@ struct AttachmentFormView: View {
                 note: note.isEmpty ? nil : note,
                 dedupe: false
             )
-            try? modelContext.save()
+            Commit.save(modelContext, "AttachmentFormView.save")
         }
         dismiss()
     }

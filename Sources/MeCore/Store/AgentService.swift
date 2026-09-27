@@ -44,7 +44,7 @@ package final class AgentService {
 
         agent.statusEnum = .running
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "dispatchAgent")
 
         tasks[id] = Task {
             await runMission(id: id, parameter: parameter, targetCount: targetCount, cursor: initialCursor, blockedURLs: blocked)
@@ -59,13 +59,13 @@ package final class AgentService {
     package func pauseAgent(_ agent: Agent, context: ModelContext) {
         agent.statusEnum = .paused
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "pauseAgent")
     }
 
     package func resumeAgent(_ agent: Agent, context: ModelContext) {
         agent.statusEnum = .running
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "resumeAgent")
     }
 
     package func recallAgent(_ agent: Agent, context: ModelContext) {
@@ -74,7 +74,7 @@ package final class AgentService {
         tasks[id] = nil
         agent.statusEnum = .idle
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "recallAgent")
     }
 
     package func deleteAgent(_ agent: Agent, context: ModelContext) {
@@ -192,7 +192,7 @@ package final class AgentService {
         let context = ModelContext(container)
         guard let agent = context.model(for: id) as? Agent else { return }
         agent.currentActivity = activity
-        try? context.save()
+        Commit.save(context, "setActivity")
     }
 
     @MainActor
@@ -207,7 +207,7 @@ package final class AgentService {
         agent.cursor = agentCursor
         agent.currentActivity = ""
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "saveCollectedDatum")
     }
 
     @MainActor
@@ -217,7 +217,7 @@ package final class AgentService {
         guard let agent = context.model(for: id) as? Agent else { return }
         agent.statusEnum = .failed
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "failAgent")
     }
 
     @MainActor
@@ -231,6 +231,6 @@ package final class AgentService {
             agent.statusEnum = .completed
         }
         agent.updatedAt = Date()
-        try? context.save()
+        Commit.save(context, "completeAgent")
     }
 }

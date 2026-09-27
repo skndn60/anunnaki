@@ -152,7 +152,7 @@ extension Migration {
                 existingEventNames.insert(key)
             }
         }
-        try? context.save()
+        Commit.save(context, "ensureHistoricalEventsImportExist")
     }
 
     /// Reconciles a previously imported historical king's era from the JSON.

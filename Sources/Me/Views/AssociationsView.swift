@@ -114,7 +114,7 @@ struct AssociationsView: View {
         .alert("Delete Relationship?", isPresented: $showDeleteRelConfirm, presenting: relToDelete) { rel in
             Button("Delete", role: .destructive) {
                 modelContext.delete(rel)
-                try? modelContext.save()
+                Commit.save(modelContext, "AssociationsView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { rel in
@@ -123,7 +123,7 @@ struct AssociationsView: View {
         .alert("Delete Place ↔ Place Association?", isPresented: $showDeletePlacePlaceConfirm, presenting: placePlaceToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "AssociationsView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in

@@ -79,7 +79,7 @@ struct EntityGroupsSection: View {
                                     onRemove(assoc)
                                 } else {
                                     modelContext.delete(assoc)
-                                    try? modelContext.save()
+                                    Commit.save(modelContext, "EntityGroupsSection")
                                 }
                             } label: {
                                 Image(systemName: "xmark")

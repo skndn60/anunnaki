@@ -298,7 +298,7 @@ package enum FromTextRecognizer {
         }
 
         // The orphan checks below must not see objects we just deleted, so flush first.
-        try? context.save()
+        Commit.save(context, "revert")
 
         for name in record.createdFigureNames {
             guard let fig = existingFigure(named: name, in: context) else { continue }

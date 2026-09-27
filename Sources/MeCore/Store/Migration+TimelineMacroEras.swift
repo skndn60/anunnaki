@@ -68,6 +68,6 @@ extension Migration {
             context.insert(era)
             createdAny = true
         }
-        if createdAny { try? context.save() }
+        if createdAny { Commit.save(context, "ensureTimelineMacroEras") }
     }
 }

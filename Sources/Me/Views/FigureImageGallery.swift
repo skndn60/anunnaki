@@ -543,7 +543,7 @@ struct ImageDetailContent: View {
                             let tag = Tag(name: tagInputText)
                             modelContext.insert(tag)
                             image.tags = image.tags + [tag]
-                            try? modelContext.save()
+                            Commit.save(modelContext, "ImageDetailContent")
                             tagInputText = ""
                         }
                         .buttonStyle(.plain)
@@ -551,7 +551,7 @@ struct ImageDetailContent: View {
                     ForEach(matching) { tag in
                         Button {
                             image.tags = image.tags + [tag]
-                            try? modelContext.save()
+                            Commit.save(modelContext, "ImageDetailContent")
                             tagInputText = ""
                         } label: {
                             tagLabel(tag)
@@ -572,7 +572,7 @@ struct ImageDetailContent: View {
                     }
                     Spacer()
                     Button("Done") {
-                        try? modelContext.save()
+                        Commit.save(modelContext, "ImageDetailContent")
                         dismiss()
                     }
                         .keyboardShortcut(.defaultAction)
@@ -620,7 +620,7 @@ struct ImageDetailContent: View {
                     Spacer()
                     Button("Remove") {
                         onRemove(entity)
-                        try? modelContext.save()
+                        Commit.save(modelContext, "ImageDetailContent.searchableLinkedSection")
                     }
                     .buttonStyle(.plain)
                     .foregroundStyle(.red)

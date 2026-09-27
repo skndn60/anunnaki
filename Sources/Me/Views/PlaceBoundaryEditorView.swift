@@ -350,11 +350,11 @@ struct PlaceBoundaryEditorView: View {
             mapID: place.persistentModelID,
             onSave: { ring in
                 place.storedBoundaryGeoJSON = Migration.polygonGeoJSON(ring: ring)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceBoundaryEditorView")
             },
             onClear: {
                 place.storedBoundaryGeoJSON = nil
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceBoundaryEditorView")
             }
         )
     }
@@ -407,11 +407,11 @@ struct EraBoundaryEditorView: View {
             mapID: era.persistentModelID,
             onSave: { ring in
                 era.boundaryGeoJSON = Migration.polygonGeoJSON(ring: ring)
-                try? modelContext.save()
+                Commit.save(modelContext, "EraBoundaryEditorView")
             },
             onClear: {
                 era.boundaryGeoJSON = nil
-                try? modelContext.save()
+                Commit.save(modelContext, "EraBoundaryEditorView")
             }
         )
     }

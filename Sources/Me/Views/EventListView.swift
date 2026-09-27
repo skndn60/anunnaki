@@ -207,7 +207,7 @@ struct EventListView: View {
                     onSave: {
                         event.richDescription = editRichDescription
                         event.eventDescription = editPlainDescription
-                        try? modelContext.save()
+                        Commit.save(modelContext, "EventListView")
                     }
                 )
             }

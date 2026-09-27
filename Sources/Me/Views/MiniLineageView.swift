@@ -373,7 +373,7 @@ struct MiniLineageView: View {
                 rel.isPreferred = false
             }
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "MiniLineageView.setPreferredCouple")
     }
 
     private var chipRowHeight: CGFloat { 24 }

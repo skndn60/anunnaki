@@ -206,7 +206,7 @@ struct ThingListView: View {
                     onSave: {
                         thing.richDescription = editRichDescription
                         thing.thingDescription = editPlainDescription
-                        try? modelContext.save()
+                        Commit.save(modelContext, "ThingListView")
                     }
                 )
             }
@@ -432,7 +432,7 @@ struct ThingDetailView: View {
                     .onDisappear {
                         thing.richDescription = editRichDescription
                         thing.thingDescription = editPlainDescription
-                        try? modelContext.save()
+                        Commit.save(modelContext, "ThingDetailView")
                     }
                 }
 
@@ -567,7 +567,7 @@ struct ThingDetailView: View {
                     associations: thing.groupAssociations,
                     onCreateAssociation: { group in
                         RelationshipManager(context: modelContext).addGroupMember(group: group, thing: thing, dedupe: false)
-                        try? modelContext.save()
+                        Commit.save(modelContext, "ThingDetailView")
                     },
                     onRemove: { assoc in
                         groupAssocToRemove = assoc
@@ -590,7 +590,7 @@ struct ThingDetailView: View {
         .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
             Button("Delete", role: .destructive) {
                 modelContext.delete(attribution)
-                try? modelContext.save()
+                Commit.save(modelContext, "ThingDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { attribution in
@@ -599,7 +599,7 @@ struct ThingDetailView: View {
         .alert("Remove from Group?", isPresented: $showRemoveGroupConfirm, presenting: groupAssocToRemove) { assoc in
             Button("Remove", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "ThingDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in

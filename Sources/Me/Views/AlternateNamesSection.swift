@@ -49,7 +49,7 @@ struct AlternateNamesSection: View {
         .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
             Button("Delete", role: .destructive) {
                 modelContext.delete(altName)
-                try? modelContext.save()
+                Commit.save(modelContext, "AlternateNamesSection")
             }
             Button("Cancel", role: .cancel) {}
         } message: { altName in

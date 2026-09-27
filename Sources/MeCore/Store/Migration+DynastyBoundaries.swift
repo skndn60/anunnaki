@@ -206,7 +206,7 @@ extension Migration {
             }
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureDynastyGroups") }
     }
 
     package static func normalizedGroupName(_ name: String) -> String {
@@ -306,7 +306,7 @@ extension Migration {
             era.boundaryGeoJSON = authored
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureDynastyBoundaries") }
     }
 
     package static let sliverMinAxisDegrees = 0.4
@@ -406,7 +406,7 @@ extension Migration {
                 changed = true
             }
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "removeEraTerritoryPlaces") }
     }
 
 }

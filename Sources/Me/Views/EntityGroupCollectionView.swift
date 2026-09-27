@@ -610,7 +610,7 @@ struct EntityGroupCollectionView: View {
         modelContext.insert(block)
         group.appendTextBlock(block)
         editingTextBlock = block
-        try? modelContext.save()
+        Commit.save(modelContext, "EntityGroupCollectionView.addTextBlock")
     }
 
     private var searchBar: some View {
@@ -728,7 +728,7 @@ struct EntityGroupCollectionView: View {
             modelContext.delete(block)
         }
         deletingTextBlock = nil
-        try? modelContext.save()
+        Commit.save(modelContext, "EntityGroupCollectionView.deleteTextBlock")
     }
 
     private func deleteSelected() {
@@ -746,7 +746,7 @@ struct EntityGroupCollectionView: View {
             modelContext.delete(thing)
         }
         detailItem = nil
-        try? modelContext.save()
+        Commit.save(modelContext, "EntityGroupCollectionView.deleteSelected")
     }
 }
 
@@ -1403,7 +1403,7 @@ struct GroupTextBlockSheet: View {
                         },
                         onDelete: { attribution in
                             modelContext.delete(attribution)
-                            try? modelContext.save()
+                            Commit.save(modelContext, "GroupTextBlockSheet")
                         }
                     )
                 }
@@ -1423,7 +1423,7 @@ struct GroupTextBlockSheet: View {
                     if group.sortMode == .ordered, block.orderIndex == nil {
                         block.orderIndex = (group.textBlocks ?? []).count
                     }
-                    try? modelContext.save()
+                    Commit.save(modelContext, "GroupTextBlockSheet")
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)

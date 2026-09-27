@@ -44,7 +44,7 @@ extension Migration {
             context.insert(place)
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureRiverPlaces") }
     }
 
     /// Backfills `Place.storedBoundaryGeoJSON` for the river places in
@@ -73,7 +73,7 @@ extension Migration {
             place.storedBoundaryGeoJSON = authored
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureRiverBoundaries") }
     }
 
     /// Loads a bundled river GeoJSON Polygon and re-serializes it through the same

@@ -3,13 +3,13 @@ import Foundation
 import MeCore
 
 package enum SeedRunner {
-    package static func start(container: ModelContainer, completion: @escaping () -> Void) {
+    package static func start(container: ModelContainer, completion: @escaping ([String]) -> Void) {
         let queue = DispatchQueue(label: "me.seed", qos: .userInitiated)
         queue.async {
             let context = ModelContext(container)
-            run(context)
+            let failures = Commit.collectFailures { run(context) }
             DispatchQueue.main.async {
-                completion()
+                completion(failures)
             }
         }
     }
@@ -107,6 +107,6 @@ package enum SeedRunner {
 
         Migration.ensureTimelineDefaults(context: context)
 
-        try? context.save()
+        Commit.save(context, "seedChainFinalFlush")
     }
 }

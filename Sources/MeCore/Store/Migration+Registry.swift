@@ -33,6 +33,6 @@ extension Migration {
         for config in configs where !existing.contains(config.name) {
             context.insert(create(config))
         }
-        try? context.save()
+        Commit.save(context, "ensureTypesExist")
     }
 }

@@ -197,7 +197,7 @@ struct FromTextSheet: View {
         guard let result else { return }
         guard let record = FromTextRecognizer.apply(result, in: modelContext) else { return }
         FromTextLog.append(record)
-        try? modelContext.save()
+        Commit.save(modelContext, "FromTextSheet.apply")
         input = ""
         self.result = nil
         lastRecord = record
@@ -205,7 +205,7 @@ struct FromTextSheet: View {
 
     private func undo(_ record: FromTextApplyRecord) {
         let report = FromTextRecognizer.revert(record, in: modelContext)
-        try? modelContext.save()
+        Commit.save(modelContext, "FromTextSheet.undo")
         if report.deletedFigures.isEmpty, report.deletedPlaces.isEmpty,
            report.deletedRelationships == 0, report.deletedPlaceLinks == 0,
            report.deletedAlternateNames == 0, report.restoredMutations.isEmpty {

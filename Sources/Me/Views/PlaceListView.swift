@@ -212,7 +212,7 @@ struct PlaceListView: View {
                     onSave: {
                         place.richDescription = editRichDescription
                         place.placeDescription = editPlainDescription
-                        try? modelContext.save()
+                        Commit.save(modelContext, "PlaceListView")
                     }
                 )
             }

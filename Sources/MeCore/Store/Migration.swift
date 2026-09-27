@@ -73,7 +73,7 @@ package struct Migration {
         for config in defaultRelationTypes where !existing.contains(config.name) {
             context.insert(RelationshipType(name: config.name, icon: config.icon, colorHex: config.colorHex, category: config.category))
         }
-        try? context.save()
+        Commit.save(context, "ensureRelationTypesExist")
     }
 
     package static func ensurePlacePlaceRoleTypesExist(context: ModelContext) {
@@ -143,7 +143,7 @@ package struct Migration {
                 figure.figureType = igigiType
             }
         }
-        try? context.save()
+        Commit.save(context, "ensureCommanderFigureTypeExists")
     }
 
     /// Create Hermani and Yehadiel — the two Commander figures missing from the restored snapshot.
@@ -202,7 +202,7 @@ package struct Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureMissingCommanderFiguresExist")
     }
 
     /// Backfill the 7 holy archangels from the Book of Enoch if missing.
@@ -261,7 +261,7 @@ package struct Migration {
             )
             context.insert(figure)
         }
-        try? context.save()
+        Commit.save(context, "ensureArchangelsExist")
     }
 
     /// Extract "Also known as ..." patterns from figure descriptions and register as AlternateNames.
@@ -304,7 +304,7 @@ package struct Migration {
             if !cleaned.hasSuffix(".") { cleaned += "." }
             figure.figureDescription = cleaned
         }
-        try? context.save()
+        Commit.save(context, "extractAlternateNamesFromDescriptions")
     }
 
     /// Fixes: "handshake" is not a valid SF Symbol. Update existing Ally types to "person.2.fill".
@@ -315,7 +315,7 @@ package struct Migration {
         for type in matches {
             type.icon = "person.2.fill"
         }
-        try? context.save()
+        Commit.save(context, "fixAllyIcon")
     }
 
     // MARK: - Thing Role Types
@@ -384,7 +384,7 @@ package struct Migration {
                     changed = true
                 }
             }
-            if changed { try? context.save() }
+            if changed { Commit.save(context, "backfill") }
         }
 
         backfill(PlacePlaceRoleType.self, [
@@ -475,7 +475,7 @@ package struct Migration {
                 source: "Sumerian mythology"
             )
             context.insert(duttur)
-            try? context.save()
+            Commit.save(context, "ensureDumuziFamilyExists")
             dutturID = duttur.persistentModelID
         }
 
@@ -510,7 +510,7 @@ package struct Migration {
             context.insert(rel)
         }
 
-        try? context.save()
+        Commit.save(context, "ensureDumuziFamilyExists")
     }
 
 }

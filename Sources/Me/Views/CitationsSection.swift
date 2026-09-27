@@ -51,7 +51,7 @@ struct CitationsSection: View {
         .alert("Delete Citation?", isPresented: $showDeleteConfirm, presenting: citationToDelete) { citation in
             Button("Delete", role: .destructive) {
                 modelContext.delete(citation)
-                try? modelContext.save()
+                Commit.save(modelContext, "CitationsSection")
             }
             Button("Cancel", role: .cancel) {}
         } message: { citation in

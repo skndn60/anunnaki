@@ -40,7 +40,7 @@ package struct VersionManager {
             parentId: parentId
         )
         context.insert(version)
-        try? context.save()
+        Commit.save(context, "commit")
         return version
     }
 
@@ -59,7 +59,7 @@ package struct VersionManager {
         }
 
         SeedData.clearAll(context: context)
-        try? context.save()
+        Commit.save(context, "checkout")
 
         SeedData.importFrom(root: root, context: context)
     }
@@ -103,7 +103,7 @@ package struct VersionManager {
             parentId: fromVersion.id
         )
         context.insert(version)
-        try? context.save()
+        Commit.save(context, "branch")
         return version
     }
 
@@ -111,7 +111,7 @@ package struct VersionManager {
         let fileURL = snapshotsDirectory.appendingPathComponent(version.filename)
         try? FileManager.default.removeItem(at: fileURL)
         context.delete(version)
-        try? context.save()
+        Commit.save(context, "delete")
     }
 
     // MARK: - Export

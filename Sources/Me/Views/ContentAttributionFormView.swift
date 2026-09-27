@@ -296,7 +296,7 @@ struct ContentAttributionFormView: View {
             )
             modelContext.insert(newAttribution)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "ContentAttributionFormView.save")
         dismiss()
     }
 

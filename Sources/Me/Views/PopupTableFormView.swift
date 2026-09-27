@@ -193,7 +193,7 @@ struct PopupTableFormView: View {
             syncStringColumns(in: tbl)
         }
 
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableFormView.save")
         dismiss()
     }
 
@@ -336,13 +336,13 @@ struct PopupTableFormView: View {
             }
         }
 
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableFormView.addAttribute")
     }
 
     private func removeAttribute(_ attr: PopupTableAttribute) {
         for cell in attr.cells { modelContext.delete(cell) }
         modelContext.delete(attr)
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableFormView.removeAttribute")
     }
 
     private func moveAttributes(from source: IndexSet, to destination: Int) {
@@ -352,7 +352,7 @@ struct PopupTableFormView: View {
         for (index, attr) in attrs.enumerated() {
             attr.orderIndex = index
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "PopupTableFormView.moveAttributes")
     }
 }
 

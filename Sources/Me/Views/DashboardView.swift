@@ -216,7 +216,7 @@ struct DashboardView: View {
                 Task {
                     await MainActor.run {
                         SeedData.reseed(context: modelContext)
-                        try? modelContext.save()
+                        Commit.save(modelContext, "DashboardView")
                         isReseeding = false
                     }
                 }
@@ -299,8 +299,8 @@ struct DashboardView: View {
                 total: coverageFigures.count,
                 totalLabel: "figures",
                 name: { $0.name },
-                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; Commit.save(modelContext, "DashboardView") },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; Commit.save(modelContext, "DashboardView") }
             )
 
             coverageGroupHeader("Places")
@@ -314,8 +314,8 @@ struct DashboardView: View {
                 total: places.filter { $0.coverageExempt != true }.count,
                 totalLabel: "places",
                 name: { $0.name },
-                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; Commit.save(modelContext, "DashboardView") },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; Commit.save(modelContext, "DashboardView") }
             )
 
             coverageGroupHeader("Events")
@@ -329,8 +329,8 @@ struct DashboardView: View {
                 total: events.filter { $0.coverageExempt != true }.count,
                 totalLabel: "events",
                 name: { $0.name },
-                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; Commit.save(modelContext, "DashboardView") },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; Commit.save(modelContext, "DashboardView") }
             )
 
             coverageGroupHeader("Things")
@@ -342,8 +342,8 @@ struct DashboardView: View {
                 total: things.filter { $0.coverageExempt != true }.count,
                 totalLabel: "things",
                 name: { $0.name },
-                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; try? modelContext.save() },
-                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; try? modelContext.save() }
+                markAll: { items in items.forEach { $0.coverageExempt = true; $0.coverageReviewedAt = now }; Commit.save(modelContext, "DashboardView") },
+                markOne: { item in item.coverageExempt = true; item.coverageReviewedAt = now; Commit.save(modelContext, "DashboardView") }
             )
         }
     }

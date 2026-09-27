@@ -186,7 +186,7 @@ struct MugshotSheet: View {
             modelContext.insert(image)
             figure.images.append(image)
             selectedImage = image
-            try? modelContext.save()
+            Commit.save(modelContext, "MugshotSheet.handleImport")
         } catch { }
     }
 
@@ -198,7 +198,7 @@ struct MugshotSheet: View {
         figure.mugshotImage = selectedImage
         figure.mugshotCropRect = crop.encoded()
         figure.mugshotIdentification = identification
-        try? modelContext.save()
+        Commit.save(modelContext, "MugshotSheet.save")
         onClose?()
     }
 
@@ -206,7 +206,7 @@ struct MugshotSheet: View {
         figure.mugshotImage = nil
         figure.mugshotCropRect = nil
         figure.mugshotIdentification = nil
-        try? modelContext.save()
+        Commit.save(modelContext, "MugshotSheet.remove")
         onClose?()
     }
 }

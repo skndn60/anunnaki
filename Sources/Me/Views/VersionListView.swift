@@ -182,7 +182,7 @@ struct VersionListView: View {
         Task {
             await MainActor.run {
                 VersionManager.checkout(version: version, context: modelContext)
-                try? modelContext.save()
+                Commit.save(modelContext, "VersionListView.restoreVersion")
                 isCheckingOut = false
                 selectedVersion = nil
                 loadVersions()

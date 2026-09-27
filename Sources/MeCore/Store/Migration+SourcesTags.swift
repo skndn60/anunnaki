@@ -38,7 +38,7 @@ extension Migration {
             }
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureRelationshipSources") }
     }
 
     /// Links every association's `sourceRef` (7 types) to the `Source` entity
@@ -165,7 +165,7 @@ extension Migration {
             changed = true
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureAssociationSources") }
     }
 
     package static func primarySourceName(from raw: String) -> String? {
@@ -191,7 +191,7 @@ extension Migration {
             cellSource.sourceRef = match
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureCellSourceLinksExist") }
     }
 
     /// Replaces the plain-text state values ("friendly"/"neutral"/"hostile") in the
@@ -216,7 +216,7 @@ extension Migration {
             cell.value = emoji
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureComparisonStateEmoji") }
     }
 
     /// Backfills the standard Mesopotamian god list "An = Anum" as a Source row
@@ -239,7 +239,7 @@ extension Migration {
             url: ""
         )
         context.insert(source)
-        try? context.save()
+        Commit.save(context, "ensureAnAnumGodListSourceExists")
     }
 
     /// Cleans up debris produced by junk free-text source strings. A typo like
@@ -281,7 +281,7 @@ extension Migration {
             }
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureJunkSourceStringsCleaned") }
     }
 
     /// Tag every entity that has no tags yet using `TagEngine`'s rule-based
@@ -344,7 +344,7 @@ extension Migration {
             changed = true
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureAutoTags") }
     }
 
     /// Follow-up to `ensureAutoTags`: the old `domainTags` kept each comma-separated
@@ -388,7 +388,7 @@ extension Migration {
             if hasChange { changed = true }
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureRefinedDomainTags") }
     }
 
     /// Removes `Tag` rows whose names carry punctuation that older tokenizers let
@@ -406,7 +406,7 @@ extension Migration {
             context.delete(tag)
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "removeJunkPunctuationTags") }
     }
 
     package static func legacyDomainTagPhrases(_ domain: String) -> [String] {

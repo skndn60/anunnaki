@@ -33,6 +33,6 @@ extension Migration {
             context.insert(version)
             createdAny = true
         }
-        if createdAny { try? context.save() }
+        if createdAny { Commit.save(context, "ensureReignVersionBackfill") }
     }
 }

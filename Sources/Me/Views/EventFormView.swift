@@ -407,7 +407,7 @@ struct EventFormView: View {
             RecentEditStore.trackEdit(entityType: "Event", entityName: newEvent.name)
             ActivityLogger.record(action: .created, entityType: "Event", entityName: newEvent.name, context: modelContext, session: userSession)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "EventFormView.save")
         showSuccessAlert = true
     }
 }

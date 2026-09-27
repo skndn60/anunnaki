@@ -71,7 +71,7 @@ struct EventDetailView: View {
                         Spacer()
                         Button("Save") {
                             assoc.displayName = editDisplayName.isEmpty ? nil : editDisplayName
-                            try? modelContext.save()
+                            Commit.save(modelContext, "EventDetailView")
                             showEditDisplayName = false
                         }
                         .buttonStyle(.borderedProminent)
@@ -98,7 +98,7 @@ struct EventDetailView: View {
         .alert("Delete Place Association?", isPresented: $showDeletePlaceAssocConfirm, presenting: placeAssocToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "EventDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -107,7 +107,7 @@ struct EventDetailView: View {
         .alert("Delete Thing Association?", isPresented: $showDeleteThingAssocConfirm, presenting: thingAssocToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "EventDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -116,7 +116,7 @@ struct EventDetailView: View {
         .alert("Remove Tag?", isPresented: $showRemoveTagConfirm, presenting: tagToRemove) { tag in
             Button("Remove", role: .destructive) {
                 event.tags.removeAll { $0.persistentModelID == tag.persistentModelID }
-                try? modelContext.save()
+                Commit.save(modelContext, "EventDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { tag in
@@ -126,10 +126,10 @@ struct EventDetailView: View {
             Button("Remove", role: .destructive) {
                 if let eventToRemove = assoc.event, let group = assoc.group {
                     let removedNames = group.removeEventWithDepropagation(event: eventToRemove, in: modelContext)
-                    try? modelContext.save()
+                    Commit.save(modelContext, "EventDetailView")
                 } else {
                     modelContext.delete(assoc)
-                    try? modelContext.save()
+                    Commit.save(modelContext, "EventDetailView")
                 }
             }
             Button("Cancel", role: .cancel) {}
@@ -139,7 +139,7 @@ struct EventDetailView: View {
         .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
             Button("Delete", role: .destructive) {
                 modelContext.delete(attribution)
-                try? modelContext.save()
+                Commit.save(modelContext, "EventDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { attribution in
@@ -240,7 +240,7 @@ HStack(spacing: 12) {
     .onDisappear {
         event.richDescription = editRichDescription
         event.eventDescription = editPlainDescription
-        try? modelContext.save()
+        Commit.save(modelContext, "EventDetailView")
     }
 }
     }
@@ -567,7 +567,7 @@ EntityGroupsSection(
     event: event,
     onJoinWithPropagation: { group in
         let summary = group.addEventWithPropagation(event: event, in: modelContext)
-        try? modelContext.save()
+        Commit.save(modelContext, "EventDetailView")
     },
     onRemoveWithDepropagation: { assoc in
         groupAssocToRemove = assoc
@@ -597,7 +597,7 @@ EntityGroupsSection(
             modelContext.delete(assoc)
         }
         event.involvedFigures.removeAll { $0.persistentModelID == item.figure.persistentModelID }
-        try? modelContext.save()
+        Commit.save(modelContext, "EventDetailView.removeFigure")
     }
 
     private func editFigureAssociation(_ assoc: EventFigureAssociation) {
@@ -758,7 +758,7 @@ private struct EventFigureLinkPopover: View {
             event: event, figure: figure, displayName: displayName,
             alsoLinkInvolvedFigures: false, dedupe: false
         )
-        try? modelContext.save()
+        Commit.save(modelContext, "EventFigureLinkPopover.linkFigure")
         isPresented = false
     }
 }
@@ -852,7 +852,7 @@ private struct EventPlaceLinkPopover: View {
     private func createAssociation() {
         guard let place = selectedPlace, let role = selectedRole else { return }
         RelationshipManager(context: modelContext).addEventPlaceAssociation(event: event, place: place, roleType: role, dedupe: false)
-        try? modelContext.save()
+        Commit.save(modelContext, "EventPlaceLinkPopover.createAssociation")
     }
 }
 
@@ -939,6 +939,6 @@ private struct EventThingLinkPopover: View {
         RelationshipManager(context: modelContext).addThingEventAssociation(
             thing: thing, event: event, roleType: selectedRole, source: "", dedupe: false
         )
-        try? modelContext.save()
+        Commit.save(modelContext, "EventThingLinkPopover.createAssociation")
     }
 }

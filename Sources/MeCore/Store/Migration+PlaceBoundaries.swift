@@ -151,7 +151,7 @@ extension Migration {
             place.storedBoundaryGeoJSON = authored
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensurePlaceBoundaries") }
     }
 
     /// Replaces the *seeded* placeholder boundary for the southern Mesopotamian
@@ -172,7 +172,7 @@ extension Migration {
                   zip(lhs, rhs).allSatisfy { abs($0.0 - $0.1) < 1e-9 }
               }) else { return }
         place.storedBoundaryGeoJSON = authored
-        try? context.save()
+        Commit.save(context, "upgradeSeededMarshesBoundary")
     }
 
     /// Replaces the *seeded* Cedar Forest profile with the refined Mount-Lebanon
@@ -193,6 +193,6 @@ extension Migration {
                   zip(lhs, rhs).allSatisfy { abs($0.0 - $0.1) < 1e-9 }
               }) else { return }
         place.storedBoundaryGeoJSON = authored
-        try? context.save()
+        Commit.save(context, "upgradeSeededCedarForestBoundary")
     }
 }

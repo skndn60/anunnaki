@@ -63,7 +63,7 @@ struct PlaceDetailView: View {
         .alert("Delete Alternate Name?", isPresented: $showDeleteAltConfirm, presenting: altToDelete) { altName in
             Button("Delete", role: .destructive) {
                 modelContext.delete(altName)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { altName in
@@ -72,7 +72,7 @@ struct PlaceDetailView: View {
         .alert("Delete Place ↔ Place Association?", isPresented: $showDeleteAssocConfirm, presenting: assocToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -81,7 +81,7 @@ struct PlaceDetailView: View {
         .alert("Delete Place ↔ Event Association?", isPresented: $showDeleteEventAssocConfirm, presenting: eventAssocToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -90,7 +90,7 @@ struct PlaceDetailView: View {
         .alert("Delete Figure Association?", isPresented: $showDeleteFigureAssocConfirm, presenting: figureAssocToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -99,7 +99,7 @@ struct PlaceDetailView: View {
         .alert("Remove Tag?", isPresented: $showRemoveTagConfirm, presenting: tagToRemove) { tag in
             Button("Remove", role: .destructive) {
                 place.tags.removeAll { $0.persistentModelID == tag.persistentModelID }
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { tag in
@@ -108,7 +108,7 @@ struct PlaceDetailView: View {
         .alert("Remove from Group?", isPresented: $showRemoveGroupConfirm, presenting: groupAssocToRemove) { assoc in
             Button("Remove", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -117,7 +117,7 @@ struct PlaceDetailView: View {
         .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
             Button("Delete", role: .destructive) {
                 modelContext.delete(attribution)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { attribution in
@@ -229,7 +229,7 @@ struct PlaceDetailView: View {
             .onDisappear {
                 place.richDescription = editRichDescription
                 place.placeDescription = editPlainDescription
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             }
         }
 
@@ -637,7 +637,7 @@ struct PlaceDetailView: View {
             associations: place.groupAssociations,
             onCreateAssociation: { group in
                 RelationshipManager(context: modelContext).addGroupMember(group: group, place: place, dedupe: false)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlaceDetailView")
             },
             onRemove: { assoc in
                 groupAssocToRemove = assoc
@@ -813,7 +813,7 @@ private struct PlaceFigureLinkPopover: View {
             displayName: selectedFigure?.matchedAlternateName,
             dedupe: false
         )
-        try? modelContext.save()
+        Commit.save(modelContext, "PlaceFigureLinkPopover.createAssociation")
     }
 }
 
@@ -901,6 +901,6 @@ private struct PlaceEventLinkPopover: View {
     private func createAssociation() {
         guard let event = selectedEvent, let role = selectedRole else { return }
         RelationshipManager(context: modelContext).addEventPlaceAssociation(event: event, place: place, roleType: role, dedupe: false)
-        try? modelContext.save()
+        Commit.save(modelContext, "PlaceEventLinkPopover.createAssociation")
     }
 }

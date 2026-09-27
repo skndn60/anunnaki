@@ -79,7 +79,7 @@ struct GroupsSection: View {
         .alert("Remove from Group?", isPresented: $showDeleteConfirm, presenting: assocToDelete) { assoc in
             Button("Remove", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "GroupsSection")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -182,6 +182,6 @@ private struct GroupLinkPopover: View {
     private func createAssociation() {
         guard let group = selectedGroup else { return }
         RelationshipManager(context: modelContext).addGroupMember(group: group, figure: figure, note: note, dedupe: false)
-        try? modelContext.save()
+        Commit.save(modelContext, "GroupLinkPopover.createAssociation")
     }
 }

@@ -242,7 +242,7 @@ struct FigureGroupDetailView: View {
         modelContext.insert(block)
         group.appendTextBlock(block)
         editingTextBlock = block
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureGroupDetailView.addTextBlock")
     }
 
     private func deleteTextBlock() {
@@ -250,7 +250,7 @@ struct FigureGroupDetailView: View {
             modelContext.delete(block)
         }
         deletingTextBlock = nil
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureGroupDetailView.deleteTextBlock")
     }
 
     private var members: [GroupMemberItem] {
@@ -290,7 +290,7 @@ struct FigureGroupDetailView: View {
         case .member(_, let assoc): group.moveMemberTextItem(.member(assoc), direction: direction)
         case .text(let block): group.moveMemberTextItem(.text(block), direction: direction)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureGroupDetailView.moveSpine")
     }
 
     private func moveSpine(_ entry: SpineEntry, toIndex: Int) {
@@ -298,7 +298,7 @@ struct FigureGroupDetailView: View {
         case .member(_, let assoc): group.moveMemberTextItem(.member(assoc), toIndex: toIndex)
         case .text(let block): group.moveMemberTextItem(.text(block), toIndex: toIndex)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureGroupDetailView.moveSpine")
     }
 
     /// Maps a drop location (in `SpineDropSpaceName` coordinates) to the insertion
@@ -361,7 +361,7 @@ struct FigureGroupDetailView: View {
                         canMoveDown: group.canMoveMemberTextItem(.member(assoc), direction: 1),
                         onMove: { direction in
                             group.moveMemberTextItem(.member(assoc), direction: direction)
-                            try? modelContext.save()
+                            Commit.save(modelContext, "FigureGroupDetailView.memberRow")
                         }
                     )
                 }
@@ -499,7 +499,7 @@ struct FigureGroupDetailView: View {
                     get: { group.sortMode },
                     set: { newValue in
                         group.setSortMode(newValue)
-                        try? modelContext.save()
+                        Commit.save(modelContext, "FigureGroupDetailView")
                     }
                 )) {
                     ForEach(GroupSortMode.allCases, id: \.self) { mode in
@@ -515,7 +515,7 @@ struct FigureGroupDetailView: View {
 
                 Toggle(isOn: Binding(
                     get: { group.isPublished },
-                    set: { group.isPublished = $0; try? modelContext.save() }
+                    set: { group.isPublished = $0; Commit.save(modelContext, "FigureGroupDetailView") }
                 )) {
                     Label("Show in sidebar", systemImage: "sidebar.left")
                 }
@@ -674,7 +674,7 @@ struct FigureGroupDetailView: View {
                                     canMoveDown: index < subgroups.count - 1,
                                     onMove: { direction in
                                         group.moveSubgroup(sub, direction: direction)
-                                        try? modelContext.save()
+                                        Commit.save(modelContext, "FigureGroupDetailView")
                                     }
                                 )
                             }
@@ -718,7 +718,7 @@ struct FigureGroupDetailView: View {
         if group.sortMode == .ordered, group.entityType == .figure {
             group.applyRegnalOrder()
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureGroupDetailView.syncMembers")
     }
 }
 
@@ -1005,7 +1005,7 @@ private struct BulkAddMembersSheet: View {
             group.applyRegnalOrder()
         }
         addedCount = matchingItems.count
-        try? modelContext.save()
+        Commit.save(modelContext, "BulkAddMembersSheet.addAllMatching")
         showSuccess = true
     }
 }

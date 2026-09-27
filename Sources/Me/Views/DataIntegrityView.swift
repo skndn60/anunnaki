@@ -594,20 +594,20 @@ struct DataIntegrityView: View {
     private func replaceRecords(with newRecords: [IntegrityFinding]) {
         for existing in fetchRecords() { modelContext.delete(existing) }
         for record in newRecords { modelContext.insert(record) }
-        try? modelContext.save()
+        Commit.save(modelContext, "DataIntegrityView.replaceRecords")
     }
 
     private func fix(_ row: FindingRow, action: @escaping (ModelContext) -> Void) {
         action(modelContext)
         modelContext.delete(row.record)
-        try? modelContext.save()
+        Commit.save(modelContext, "DataIntegrityView.fix")
         store.rows.removeAll { $0.id == row.id }
     }
 
     private func dismiss(_ row: FindingRow) {
         modelContext.insert(FindingDismissal(kindRaw: row.record.kindRaw, entityKey: row.record.entityKey))
         modelContext.delete(row.record)
-        try? modelContext.save()
+        Commit.save(modelContext, "DataIntegrityView.dismiss")
         store.rows.removeAll { $0.id == row.id }
         refreshDismissalCount()
     }
@@ -615,7 +615,7 @@ struct DataIntegrityView: View {
     private func clearDismissals() {
         let all = (try? modelContext.fetch(FetchDescriptor<FindingDismissal>())) ?? []
         for dismissal in all { modelContext.delete(dismissal) }
-        try? modelContext.save()
+        Commit.save(modelContext, "DataIntegrityView.clearDismissals")
         store.dismissalCount = 0
     }
 
@@ -697,7 +697,7 @@ private struct QueueDescriptionEditor: View {
             onSave: {
                 figure.richDescription = richDescription
                 figure.figureDescription = plainDescription
-                try? modelContext.save()
+                Commit.save(modelContext, "QueueDescriptionEditor")
             }
         )
         .onAppear {

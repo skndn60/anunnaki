@@ -18,7 +18,7 @@ extension Migration {
                 colorHex: "8E5E3C"
             )
             context.insert(new)
-            try? context.save()
+            Commit.save(context, "ensureMesopotamianPantheons")
             pantheon = new
         }
 
@@ -29,7 +29,7 @@ extension Migration {
             changed = true
         }
         if changed {
-            try? context.save()
+            Commit.save(context, "ensureMesopotamianPantheons")
         }
     }
 
@@ -77,7 +77,7 @@ extension Migration {
             )
             context.insert(figure)
         }
-        try? context.save()
+        Commit.save(context, "ensureDivineCollectives")
     }
 
     /// Add a "Collectives" sidebar group and seed the human collectives — the peoples and
@@ -232,7 +232,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureCollectives")
     }
 
     /// Seed a starter set of key figures for the non-SKL collectives (Babylonians,
@@ -402,7 +402,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureCollectiveMembers")
     }
 
     /// Correctively repair figures that were wrongly typed "Human Collective".
@@ -430,7 +430,7 @@ extension Migration {
                 figure.figureType = nil
             }
         }
-        try? context.save()
+        Commit.save(context, "fixHumanCollectiveMemberTypes")
     }
 
     /// Add cross-cultural alternate names to the collectives (e.g. Akkadians/Akkadeans,
@@ -503,7 +503,7 @@ extension Migration {
             context.insert(AlternateName(figure: figure, name: seed.name, tradition: seed.tradition, nameType: seed.nameType, note: seed.note))
         }
 
-        try? context.save()
+        Commit.save(context, "ensureCollectiveAlternateNames")
     }
 
     /// Link each collective to its homeland, capital, and territory places via new
@@ -589,7 +589,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureCollectiveTerritory")
     }
 
 }

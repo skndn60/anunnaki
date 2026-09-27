@@ -138,7 +138,7 @@ struct RelationshipListView: View {
         .alert("Delete Relationship?", isPresented: $showDeleteConfirm, presenting: relToDelete) { rel in
             Button("Delete", role: .destructive) {
                 modelContext.delete(rel)
-                try? modelContext.save()
+                Commit.save(modelContext, "RelationshipListView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { rel in
@@ -162,7 +162,7 @@ struct RelationshipRowView: View {
                     Button(action: {
                         Task { @MainActor in
                             relationship.isPreferred = false
-                            try? modelContext.save()
+                            Commit.save(modelContext, "RelationshipRowView")
                         }
                     }) {
                         Image(systemName: "star.fill")
@@ -317,7 +317,7 @@ struct RelationshipFormView: View {
             isPreferred: isPreferred,
             dedupe: false
         )
-        try? modelContext.save()
+        Commit.save(modelContext, "RelationshipFormView.commit")
         dismiss()
     }
 
@@ -343,7 +343,7 @@ struct RelationshipFormView: View {
                 isPreferred: false,
                 dedupe: false
             )
-            try? modelContext.save()
+            Commit.save(modelContext, "RelationshipFormView.save")
             dismiss()
         } else if type.category == "parent" {
             duplicateMessage = "\(from.name) already has a \(type.name) relationship (\(existing.first?.toFigure?.name ?? "?")). Adding another will create conflicting lineages."

@@ -22,7 +22,7 @@ extension Migration {
             user.activityLogEntries?.append(entry)
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureActivityLogUserLinks") }
     }
 }
 
@@ -37,7 +37,7 @@ extension Migration {
 
         let first = users.min { ($0.createdAt, $0.name) < ($1.createdAt, $1.name) }
         first?.isAdmin = true
-        try? context.save()
+        Commit.save(context, "ensureFirstUserIsAdmin")
     }
 
     /// Marks figures that already had syncretised deity names in the database
@@ -69,7 +69,7 @@ extension Migration {
             context.insert(StickyNote(text: note, figure: figure))
             changed = true
         }
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "markPreExistingSyncretisms") }
     }
 
     /// Re-types Nergal's "Irra" alternate name from an Epithet to a Syncretism
@@ -102,7 +102,7 @@ extension Migration {
         }
 
         guard changed else { return }
-        try? context.save()
+        Commit.save(context, "alignNergalErraSyncretism")
     }
 
     /// Merges the duplicate Asalluhi figure into Asarluhi (variant spellings of
@@ -139,7 +139,7 @@ extension Migration {
             }
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "deduplicateAsalluhiAsarluhi") }
     }
 
     /// Ensures canonical spouse and family links for key deity couples.
@@ -221,7 +221,7 @@ extension Migration {
             }
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureCanonicalDeityFamilies") }
     }
 
     /// Ensures bidirectional consistency for relationship types that are
@@ -343,7 +343,7 @@ extension Migration {
         }
 
         if let pair { context.delete(pair) }
-        try? context.save()
+        Commit.save(context, "splitLugalIrraMeslamtaea")
     }
 
     /// Split the combined "Enki and Ninki" primordial figure (the first of the
@@ -451,7 +451,7 @@ extension Migration {
             context.delete(pair)
         }
 
-        try? context.save()
+        Commit.save(context, "splitEnkiNinkiPair")
     }
 
     package static func ensureBidirectionalRelationshipConsistency(context: ModelContext) {
@@ -496,14 +496,14 @@ extension Migration {
             changed = true
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "ensureBidirectionalRelationshipConsistency") }
     }
 
     package static func backfillBuziDescription(context: ModelContext) {
         guard let buzi = ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).first(where: { $0.name == "Buzi" }),
               buzi.figureDescription.isEmpty else { return }
         buzi.figureDescription = "Buzi was the father of Ezekiel and a priest of Jerusalem (Ezekiel 1:3). The name derives from the Hebrew word Buz, meaning 'despise.' Some traditions identify Buzi with the prophet Jeremiah, also called Buzi because he was despised by his compatriots in Judah."
-        try? context.save()
+        Commit.save(context, "backfillBuziDescription")
     }
 
     /// Import demons and monsters from demons_import.json.
@@ -538,7 +538,7 @@ package static func ensureDemonsImportExist(context: ModelContext) {
             guard !alreadyHas else { continue }
             context.insert(StickyNote(text: stickyPrefix, figure: figure))
         }
-        try? context.save()
+        Commit.save(context, "ensureDemonsImportExist")
     }
 
     /// Import curated notable names from curated_names_import.json.
@@ -574,7 +574,7 @@ package static func ensureDemonsImportExist(context: ModelContext) {
             guard !alreadyHas else { continue }
             context.insert(StickyNote(text: stickyPrefix, figure: figure))
         }
-        try? context.save()
+        Commit.save(context, "ensureCuratedNamesImportExist")
     }
 
     /// Corrects `childBornBeforeParent` data-integrity complaints by fixing the
@@ -697,6 +697,6 @@ package static func ensureDemonsImportExist(context: ModelContext) {
             changed = true
         }
 
-        if changed { try? context.save() }
+        if changed { Commit.save(context, "correctAnomalousGenealogy") }
     }
 }

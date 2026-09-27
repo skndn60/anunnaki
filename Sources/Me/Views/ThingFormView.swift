@@ -165,7 +165,7 @@ struct ThingFormView: View {
             RecentEditStore.trackEdit(entityType: "Thing", entityName: newThing.name)
             ActivityLogger.record(action: .created, entityType: "Thing", entityName: newThing.name, context: modelContext, session: userSession)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "ThingFormView.save")
         showSuccessAlert = true
     }
 }

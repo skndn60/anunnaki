@@ -359,7 +359,7 @@ struct TagCloudView: View {
             tag.name = newName
             target = tag
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "TagCloudView.commitRename")
         sheetTag = target
         tagRenameText = target.name
         detailItem = tagDetailItem(target)
@@ -400,7 +400,7 @@ struct TagCloudView: View {
 
     private func deleteTag(_ tag: Tag) {
         modelContext.delete(tag)
-        try? modelContext.save()
+        Commit.save(modelContext, "TagCloudView.deleteTag")
         if sheetTag?.persistentModelID == tag.persistentModelID {
             sheetTag = nil
             detailItem = nil

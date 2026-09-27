@@ -382,7 +382,7 @@ struct FigureFormView: View {
             RecentEditStore.trackEdit(entityType: "Figure", entityName: newFigure.name)
             ActivityLogger.record(action: .created, entityType: "Figure", entityName: newFigure.name, context: modelContext, session: userSession)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureFormView.save")
         showSuccessAlert = true
     }
 

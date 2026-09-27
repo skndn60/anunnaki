@@ -145,12 +145,12 @@ struct DictionaryListView: View {
         .sheet(isPresented: $showingAddSheet) {
             DictionaryFormView(entry: nil) { newEntry in
                 modelContext.insert(newEntry)
-                try? modelContext.save()
+                Commit.save(modelContext, "DictionaryListView")
             }
         }
         .sheet(item: $editingEntry) { entry in
             DictionaryFormView(entry: entry) { _ in
-                try? modelContext.save()
+                Commit.save(modelContext, "DictionaryListView")
             }
         }
         .alert("Delete Entry?", isPresented: $showDeleteConfirm, presenting: selectedEntry) { entry in
@@ -178,7 +178,7 @@ struct DictionaryListView: View {
             selectedEntryID = nil
         }
         modelContext.delete(entry)
-        try? modelContext.save()
+        Commit.save(modelContext, "DictionaryListView.deleteEntry")
     }
 
     private func sortName(for string: String) -> String {

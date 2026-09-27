@@ -187,7 +187,7 @@ extension Migration {
             }
         }
 
-        try? context.save()
+        Commit.save(context, "ensureFirstBabylonianDynasty")
     }
 
     private static func firstBabylonianKingListSource(context: ModelContext) -> Source {

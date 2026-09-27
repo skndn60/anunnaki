@@ -466,7 +466,7 @@ package struct SeedData {
 
         if force && figureCount > 0 {
             clearAll(context: context)
-            try? context.save()
+            Commit.save(context, "seedIfEmpty")
         }
 
         guard figureCount == 0 || force else {
@@ -866,12 +866,12 @@ package struct SeedData {
         }
 
         // Save
-        try? context.save()
+        Commit.save(context, "importFrom")
     }
 
     package static func reseed(context: ModelContext) {
         clearAll(context: context)
-        try? context.save()
+        Commit.save(context, "reseed")
         seedIfEmpty(context: context)
     }
 
@@ -984,7 +984,7 @@ package struct SeedData {
         Migration.ensureThingPlaceRoleTypesExist(context: context)
         Migration.ensureThingEventRoleTypesExist(context: context)
         Migration.fixAllyIcon(context: context)
-        try? context.save()
+        Commit.save(context, "ensureTypesExist")
     }
 
     static func ensureEnochDataExists(context: ModelContext) {
@@ -1083,6 +1083,6 @@ package struct SeedData {
             context.insert(event)
         }
 
-        try? context.save()
+        Commit.save(context, "ensureEnochDataExists")
     }
 }

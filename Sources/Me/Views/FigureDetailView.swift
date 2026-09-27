@@ -83,7 +83,7 @@ struct FigureDetailView: View {
         }) {
             modelContext.delete(sticky)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureDetailView.markParentKnownUnavailable")
     }
 
     private func revertParentKnownUnavailable(_ typeName: String) {
@@ -96,7 +96,7 @@ struct FigureDetailView: View {
         }) {
             modelContext.delete(spot)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "FigureDetailView.revertParentKnownUnavailable")
     }
 
     private var figureAttributions: [ContentAttribution] {
@@ -299,7 +299,7 @@ struct FigureDetailView: View {
                                     dedupe: false
                                 )
                             }
-                            try? modelContext.save()
+                            Commit.save(modelContext, "FigureDetailView")
                         }
                         showDropConfirmation = false
                     }
@@ -335,7 +335,7 @@ struct FigureDetailView: View {
         .alert("Remove Tag?", isPresented: $showRemoveTagConfirm, presenting: tagToRemove) { tag in
             Button("Remove", role: .destructive) {
                 figure.tags.removeAll { $0.persistentModelID == tag.persistentModelID }
-                try? modelContext.save()
+                Commit.save(modelContext, "FigureDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { tag in
@@ -344,7 +344,7 @@ struct FigureDetailView: View {
         .alert("Delete Attribution?", isPresented: $showDeleteAttributionConfirm, presenting: attributionToDelete) { attribution in
             Button("Delete", role: .destructive) {
                 modelContext.delete(attribution)
-                try? modelContext.save()
+                Commit.save(modelContext, "FigureDetailView")
             }
             Button("Cancel", role: .cancel) {}
         } message: { attribution in
@@ -585,7 +585,7 @@ struct RelationshipGroupRow: View {
         .alert("Delete Relationship?", isPresented: $showDeleteConfirm) {
             Button("Delete", role: .destructive) {
                 modelContext.delete(relationship)
-                try? modelContext.save()
+                Commit.save(modelContext, "RelationshipGroupRow")
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -872,7 +872,7 @@ private struct ParentCoupleSheet: View {
         if let mother = selectedMother {
             upsertParent(parent: mother.figure, typeName: "Mother", groupID: groupID)
         }
-        try? modelContext.save()
+        Commit.save(modelContext, "ParentCoupleSheet.addCouple")
         isPresented = false
     }
 

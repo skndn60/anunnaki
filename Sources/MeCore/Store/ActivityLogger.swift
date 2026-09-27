@@ -17,6 +17,6 @@ package struct ActivityLogger {
         if let user {
             user.activityLogEntries?.append(entry)
         }
-        try? context.save()
+        Commit.save(context, "record")
     }
 }

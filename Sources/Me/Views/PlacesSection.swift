@@ -55,12 +55,12 @@ struct PlacesSection: View {
                                     .onSubmit {
                                         assoc.comments = editingCommentsText.isEmpty ? nil : editingCommentsText
                                         editingCommentsID = nil
-                                        try? modelContext.save()
+                                        Commit.save(modelContext, "PlacesSection")
                                     }
                                 Button(action: {
                                     assoc.comments = editingCommentsText.isEmpty ? nil : editingCommentsText
                                     editingCommentsID = nil
-                                    try? modelContext.save()
+                                    Commit.save(modelContext, "PlacesSection")
                                 }) {
                                     Image(systemName: "checkmark")
                                         .font(.caption2)
@@ -117,7 +117,7 @@ struct PlacesSection: View {
         .alert("Delete Place Association?", isPresented: $showDeleteConfirm, presenting: assocToDelete) { assoc in
             Button("Delete", role: .destructive) {
                 modelContext.delete(assoc)
-                try? modelContext.save()
+                Commit.save(modelContext, "PlacesSection")
             }
             Button("Cancel", role: .cancel) {}
         } message: { assoc in
@@ -237,6 +237,6 @@ private struct PlaceLinkPopover: View {
             comments: comments.isEmpty ? nil : comments,
             dedupe: false
         )
-        try? modelContext.save()
+        Commit.save(modelContext, "PlaceLinkPopover.createAssociation")
     }
 }
