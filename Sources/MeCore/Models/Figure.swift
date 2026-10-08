@@ -90,6 +90,13 @@ package final class Figure {
     @Relationship(deleteRule: .cascade, inverse: \Relationship.toFigure)
     package var incomingRelationships: [Relationship] = []
 
+    /// A collective is an assembly of figures (the Anunnaki, the Assyrians) rather
+    /// than an individual, so father/mother do not apply to it — its structure is
+    /// membership. Views must branch on this instead of rendering parent slots.
+    package var isCollective: Bool {
+        figureType?.isCollective ?? false
+    }
+
     /// Alternate names and cross-cultural equivalents
     @Relationship(deleteRule: .cascade, inverse: \AlternateName.figure)
     package var alternateNames: [AlternateName] = []

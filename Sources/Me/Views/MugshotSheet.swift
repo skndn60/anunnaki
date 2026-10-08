@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import AppKit
 
 /// Set/edit/remove a figure's mugshot: choose (or import) a statue photo, drag a

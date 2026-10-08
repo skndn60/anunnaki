@@ -15,7 +15,9 @@ package struct FigureDossier {
     package let placeAssociations: [FigurePlaceAssociation]
     package let citations: [Citation]
     package let matchedAliasName: String?
-    package let figureTypeName: String
+    /// Carried as a plain value so views can gate on it without faulting
+    /// `figure.figureType` during a render pass.
+    package let isCollective: Bool
 }
 
 package struct PlaceDossier {
@@ -71,7 +73,7 @@ extension ModelContext {
             placeAssociations: figure.placeAssociations,
             citations: figureCitations,
             matchedAliasName: matchedAlias,
-            figureTypeName: figure.figureType?.name ?? ""
+            isCollective: figure.isCollective
         )
     }
 

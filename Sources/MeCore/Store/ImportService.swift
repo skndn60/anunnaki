@@ -132,7 +132,6 @@ package struct ImportService {
             dedupe: false
         )
         return citation
-        return citation
     }
 
     package func createStandaloneSource(title: String, extract: String, wikiURL: String) {

@@ -1014,4 +1014,219 @@ extension MeCoreTests {
         XCTAssertEqual((try? context.fetchCount(FetchDescriptor<Relationship>())) ?? -1, 0)
     }
 
+    // MARK: - FigureType.category / isCollective
+
+    func testEnsureFigureTypeCategoriesMarksCollectiveTypes() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+
+        Migration.ensureDivineCollectives(context: context)
+        Migration.ensureCollectives(context: context)
+        let human = FigureType(name: "Human", icon: "person", colorHex: "000000")
+        context.insert(human)
+        try? context.save()
+
+        Migration.ensureFigureTypeCategories(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        for name in ["Divine Collective", "Human Collective", "Mixed Collective"] {
+            let type = types.first { $0.name == name }
+            XCTAssertEqual(type?.category, "collective", "\(name) is categorised")
+            XCTAssertEqual(type?.isCollective, true, "\(name) answers isCollective")
+        }
+        XCTAssertEqual(human.category, nil, "unrelated types are left unclassified, not given an invented category")
+        XCTAssertEqual(human.isCollective, false)
+    }
+
+    func testEnsureFigureTypeCategoriesIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+        Migration.ensureDivineCollectives(context: context)
+
+        Migration.ensureFigureTypeCategories(context: context)
+        Migration.ensureFigureTypeCategories(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<FigureType>())) ?? []
+        XCTAssertEqual(types.count, 1, "no duplicate type rows")
+        XCTAssertEqual(types.first?.category, "collective")
+    }
+
+    func testEnsureFigureTypeCategoriesKeepsUserChosenCategory() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+        let type = FigureType(name: "Human Collective", icon: "person.3.fill", colorHex: "34C759", category: "deity")
+        context.insert(type)
+        try? context.save()
+
+        Migration.ensureFigureTypeCategories(context: context)
+
+        XCTAssertEqual(type.category, "deity", "a category the user set is not overwritten")
+        XCTAssertEqual(type.isCollective, false)
+    }
+
+    /// The old predicate was `figureType?.name.contains("Collective")`, which a rename in
+    /// the Type Manager silently broke. The category must not depend on the display name.
+    func testIsCollectiveSurvivesFigureTypeRename() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+        let type = FigureType(name: "Divine Collective", icon: "person.3.fill", colorHex: "8B5CF6", category: "collective")
+        let figure = Figure(name: "Anunnaki", figureType: type, gender: .unknown)
+        context.insert(type)
+        context.insert(figure)
+        try? context.save()
+
+        XCTAssertTrue(figure.isCollective)
+
+        type.name = "Great Gods"
+
+        XCTAssertTrue(figure.isCollective, "renaming the type must not change whether its figures are collectives")
+    }
+
+    func testFigureWithoutTypeIsNotCollective() {
+        let container = makeContainer()
+        let context = container.mainContext
+        try? context.save()
+        let figure = Figure(name: "Gilgamesh", figureType: nil, gender: .male)
+        context.insert(figure)
+        try? context.save()
+
+        XCTAssertFalse(figure.isCollective)
+    }
+
+    // MARK: - Membership direction
+
+    private func makeMembershipFixture() -> (container: ModelContainer, context: ModelContext, collective: Figure, member: Figure, type: RelationshipType) {
+        let container = makeContainer()
+        let context = container.mainContext
+        let type = FigureType(name: "Human Collective", icon: "person.3.fill", colorHex: "34C759", category: "collective")
+        let collective = Figure(name: "Amorites", figureType: type, gender: .unknown)
+        let member = Figure(name: "Hammurabi", figureType: nil, gender: .male)
+        let memberOf = RelationshipType(name: "Member of", icon: "person.3", colorHex: "007AFF", category: "membership", reverseName: "Contains")
+        context.insert(type)
+        context.insert(collective)
+        context.insert(member)
+        context.insert(memberOf)
+        try? context.save()
+        return (container, context, collective, member, memberOf)
+    }
+
+    func testIsMembershipIdentifiesTheMembershipCategory() {
+        let f = makeMembershipFixture()
+        let father = RelationshipType(name: "Father", icon: "arrow.down", colorHex: "007AFF", category: "parent")
+        f.context.insert(father)
+        try? f.context.save()
+
+        XCTAssertTrue(RelationshipManager.isMembership(f.type))
+        XCTAssertFalse(RelationshipManager.isMembership(father), "a parent relationship is symmetric, not directed")
+    }
+
+    /// The direction is a parameter of the method, not of its caller, so it cannot be
+    /// recorded backwards.
+    func testAddMembershipAlwaysWritesMemberToCollective() {
+        let f = makeMembershipFixture()
+
+        RelationshipManager(context: f.context).addMembership(
+            member: f.member, collective: f.collective, relationshipType: f.type
+        )
+        try? f.context.save()
+
+        let rels = (try? f.context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(rels.count, 1)
+        XCTAssertEqual(rels.first?.fromFigure?.name, "Hammurabi", "the member is always the from-figure")
+        XCTAssertEqual(rels.first?.toFigure?.name, "Amorites", "the collective is always the to-figure")
+    }
+
+    /// The round trip that the whole feature depends on: what the sanctioned writer writes
+    /// is what the collective's member roll reads back.
+    func testAddMembershipRoundTripsIntoTheMemberRoll() {
+        let f = makeMembershipFixture()
+        let manager = RelationshipManager(context: f.context)
+
+        manager.addMembership(member: f.member, collective: f.collective, relationshipType: f.type)
+        try? f.context.save()
+
+        let rels = (try? f.context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(collectiveMembers(of: f.collective, from: rels).map(\.name), ["Hammurabi"])
+        XCTAssertEqual(collectiveMembers(of: f.member, from: rels).count, 0, "a member is not a collective and has no members")
+    }
+
+    func testAddMembershipDedupesTheSameMemberAndCollective() {
+        let f = makeMembershipFixture()
+        let manager = RelationshipManager(context: f.context)
+
+        manager.addMembership(member: f.member, collective: f.collective, relationshipType: f.type)
+        manager.addMembership(member: f.member, collective: f.collective, relationshipType: f.type)
+        try? f.context.save()
+
+        let rels = (try? f.context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(rels.count, 1, "adding the same membership twice does not duplicate the row")
+    }
+
+    func testMembershipIsNotExclusiveAcrossCollectives() {
+        let f = makeMembershipFixture()
+        let other = Figure(name: "Babylonians", figureType: f.collective.figureType, gender: .unknown)
+        f.context.insert(other)
+        try? f.context.save()
+        let manager = RelationshipManager(context: f.context)
+
+        manager.addMembership(member: f.member, collective: f.collective, relationshipType: f.type)
+        manager.addMembership(member: f.member, collective: other, relationshipType: f.type)
+        try? f.context.save()
+
+        let rels = (try? f.context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(rels.count, 2, "a figure may belong to more than one collective")
+    }
+
+    func testCollectiveMembersOrdersByReignThenName() {
+        let f = makeMembershipFixture()
+        let type = FigureType(name: "Human", icon: "person", colorHex: "000000")
+        f.context.insert(type)
+        func king(_ name: String, year: Int?) -> Figure {
+            let figure = Figure(name: name, figureType: type, gender: .male)
+            figure.reignStartYear = year
+            f.context.insert(figure)
+            return figure
+        }
+        // BCE years are stored negative (the app-wide convention: Alulim is -269200,
+        // and every dated figure in the live store is negative), so ascending numeric
+        // order is chronological order.
+        let early = king("Early", year: -1900)
+        let late = king("Late", year: -1700)
+        let undatedZ = king("Zeta", year: nil)
+        let undatedA = king("Alpha", year: nil)
+        try? f.context.save()
+
+        let manager = RelationshipManager(context: f.context)
+        for member in [undatedZ, late, undatedA, early] {
+            manager.addMembership(member: member, collective: f.collective, relationshipType: f.type)
+        }
+        try? f.context.save()
+
+        let rels = (try? f.context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(
+            collectiveMembers(of: f.collective, from: rels).map(\.name),
+            ["Early", "Late", "Alpha", "Zeta"],
+            "dated members in ruling order first, undated ones alphabetically after"
+        )
+    }
+
+    func testCollectiveMembersIgnoresNonMembershipRelationships() {
+        let f = makeMembershipFixture()
+        let father = RelationshipType(name: "Father", icon: "arrow.down", colorHex: "007AFF", category: "parent")
+        f.context.insert(father)
+        try? f.context.save()
+        RelationshipManager(context: f.context).addRelationship(
+            from: f.member, to: f.collective, relationshipType: father
+        )
+        try? f.context.save()
+
+        let rels = (try? f.context.fetch(FetchDescriptor<Relationship>())) ?? []
+        XCTAssertEqual(collectiveMembers(of: f.collective, from: rels).count, 0,
+                       "a parent edge pointing at a collective is not a membership")
+    }
+
 }

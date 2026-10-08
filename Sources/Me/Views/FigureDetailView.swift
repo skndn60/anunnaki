@@ -109,6 +109,10 @@ struct FigureDetailView: View {
         return ["Deity", "Primordial", "Semi-Divine", "Igigi", "Archangel", "Commander"].contains(name)
     }
 
+    private var isCollectiveFigure: Bool {
+        figure.isCollective
+    }
+
     private var figureCitations: [Citation] {
         let all: [Citation] = modelContext.fetchAll()
         return all.filter { $0.safeEntityName == figure.name && $0.safeEntityType == .figure }
@@ -391,18 +395,24 @@ struct FigureDetailView: View {
                 }
             }
 
-            // Mini Lineage Tree
-            MiniLineageView(figure: figure, relationships: matchingRelationships, isParentGap: { [weak figure] typeName in
-                guard figure != nil else { return false }
-                return isParentGap(typeName: typeName)
-            }, onSelectFigure: onSelectFigure, onTapUnknownParent: { typeName in
-                parentSearchTypeName = typeName
-                showParentSearch = true
-            }, onMarkKnownUnavailable: { typeName in
-                markParentKnownUnavailable(typeName)
-            }, onRevertKnownUnavailable: { typeName in
-                revertParentKnownUnavailable(typeName)
-            })
+            // Lineage tree — or, for a collective, the membership roll that replaces it.
+            // A collective has no father or mother, so the lineage strip would render two
+            // "unknown parent" slots that are not unresearched but inapplicable.
+            if isCollectiveFigure {
+                CollectiveMembershipStrip(figure: figure, relationships: matchingRelationships, onSelectFigure: onSelectFigure)
+            } else {
+                MiniLineageView(figure: figure, relationships: matchingRelationships, isParentGap: { [weak figure] typeName in
+                    guard figure != nil else { return false }
+                    return isParentGap(typeName: typeName)
+                }, onSelectFigure: onSelectFigure, onTapUnknownParent: { typeName in
+                    parentSearchTypeName = typeName
+                    showParentSearch = true
+                }, onMarkKnownUnavailable: { typeName in
+                    markParentKnownUnavailable(typeName)
+                }, onRevertKnownUnavailable: { typeName in
+                    revertParentKnownUnavailable(typeName)
+                })
+            }
 
             // Description
             if !figure.figureDescription.isEmpty || figure.richDescription != nil {

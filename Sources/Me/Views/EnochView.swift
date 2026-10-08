@@ -26,7 +26,7 @@ struct EnochView: View {
     private var hasData: Bool { !enochFigures.isEmpty || !enochPlaces.isEmpty }
 
     private var groupedFigures: [(name: String, figures: [Figure])] {
-        let sectionNames: [String] = ["Commanders", "Watchers", "Archangels", "Righteous"]
+        let sectionNames: [String] = ["Commanders", "Watchers", "Archangels", "Children of the Watchers", "Named Giants", "Righteous"]
         var groups: [(String, [Figure])] = []
         for sectionName in sectionNames {
             let typeName: String
@@ -34,6 +34,10 @@ struct EnochView: View {
             case "Commanders": typeName = "Commander"
             case "Watchers": typeName = "Igigi"
             case "Archangels": typeName = "Archangel"
+            // The peoples of that generation sit on the collective type, the named giants on
+            // the "Nephilim" type — see Migration+NephilimCollectives for why they are split.
+            case "Children of the Watchers": typeName = "Mythical Collective"
+            case "Named Giants": typeName = "Nephilim"
             case "Righteous": typeName = "Human"
             default: continue
             }

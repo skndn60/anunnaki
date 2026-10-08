@@ -1606,4 +1606,577 @@ extension MeCoreTests {
         XCTAssertEqual(figure.reignVersions.first?.note, "User-entered note")
     }
 
+    // MARK: - Migration.ensureBabylonianKingListDynasties
+
+    func testEnsureBabylonianKingListCreatesEveryDynastyAndRuler() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        for dynasty in Migration.babylonianDynasties {
+            XCTAssertEqual(
+                eras.filter { $0.name == dynasty.name }.count, 1,
+                "expected exactly one era named \(dynasty.name)"
+            )
+        }
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var byKey: [String: Figure] = [:]
+        for figure in figures { byKey[NameDuplicateCheck.normalizedKey(figure.name)] = figure }
+
+        for ruler in Migration.babylonianKingListRulers {
+            XCTAssertNotNil(
+                byKey[NameDuplicateCheck.normalizedKey(ruler.name)],
+                "\(ruler.name) is missing after the import"
+            )
+        }
+        XCTAssertEqual(Migration.babylonianKingListRulers.count, 115)
+    }
+
+    func testBabylonianKingListIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+        Migration.ensureBabylonianKingListDynasties(context: context)
+        let erasAfterFirst = ((try? context.fetch(FetchDescriptor<Era>())) ?? []).count
+        let figuresAfterFirst = ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).count
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(eras.count, erasAfterFirst, "a second pass must not add eras")
+        XCTAssertEqual(figures.count, figuresAfterFirst, "a second pass must not add figures")
+        for dynasty in Migration.babylonianDynasties {
+            XCTAssertEqual(eras.filter { $0.name == dynasty.name }.count, 1, "duplicate era \(dynasty.name)")
+        }
+    }
+
+    func testBabylonianKingListReusesTheFirstDynastyEraInsteadOfDuplicatingIt() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let eras = (try? context.fetch(FetchDescriptor<Era>())) ?? []
+        XCTAssertEqual(
+            eras.filter { $0.name == Migration.firstBabylonianEraName }.count, 1,
+            "two seeders must not each create a First Dynasty of Babylon era"
+        )
+        XCTAssertEqual(
+            eras.filter { $0.name == "Amorite dynasty of Babylon" }.count, 0,
+            "Dynasty I must land in the era ensureFirstBabylonianDynasty owns"
+        )
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let dynastyIRulers = Migration.babylonianKingListRulers.filter { $0.dynasty == 1 }
+        XCTAssertEqual(dynastyIRulers.count, 11)
+        let era = eras.first { $0.name == Migration.firstBabylonianEraName }
+        let roster = figures.filter { $0.era?.persistentModelID == era?.persistentModelID }
+        XCTAssertEqual(roster.count, 11)
+    }
+
+    func testBabylonianKingListDatesAreNegativeForBCEAndNilWhereTheTableHasNone() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var byName: [String: Figure] = [:]
+        for figure in figures { byName[figure.name] = figure }
+
+        XCTAssertEqual(byName["Gandash"]?.reignStartYear, -1729)
+        XCTAssertEqual(byName["Gandash"]?.reignEndYear, -1704)
+        XCTAssertEqual(byName["Nabonidus"]?.reignStartYear, -556)
+
+        // The Sealand and middle Kassite kings are printed "??" in the table, so a
+        // negative or positive year here would be one we invented.
+        XCTAssertNil(byName["Abi-Rattash"]?.reignStartYear)
+        XCTAssertNil(byName["Kashtiliash II"]?.reignStartYear)
+        XCTAssertNil(byName["Itti-ili-nibi"]?.reignStartYear)
+        XCTAssertNil(byName["Damqi-ilishu"]?.reignStartYear)
+
+        for ruler in Migration.babylonianKingListRulers {
+            guard let start = ruler.startYear else { continue }
+            XCTAssertLessThan(start, 0, "\(ruler.name) is BCE and must be stored negative")
+        }
+    }
+
+    func testBabylonianKingListStoresInterruptedReignsAsTheOuterSpanWithANote() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        var byName: [String: Figure] = [:]
+        for figure in figures { byName[figure.name] = figure }
+
+        // Sennacherib holds Babylon -705..-703 and again -689..-681 with Esarhaddon
+        // in between. Figure has one reign span, so the span is the bounding box and
+        // the description has to say why it is not continuous.
+        XCTAssertEqual(byName["Sennacherib"]?.reignStartYear, -705)
+        XCTAssertEqual(byName["Sennacherib"]?.reignEndYear, -681)
+        XCTAssertTrue(
+            byName["Sennacherib"]?.figureDescription.contains("two reigns") == true,
+            "the interruption must be recorded in the description"
+        )
+
+        for name in ["Ashurbanipal", "Marduk-apla-iddina II"] {
+            XCTAssertTrue(
+                byName[name]?.figureDescription.contains("two reigns") == true,
+                "\(name) held the throne twice and the note must say so"
+            )
+        }
+    }
+
+    func testBabylonianKingListDoesNotDeriveLineageFromSuccession() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        context.insert(RelationshipType(name: "Father", icon: "arrow.down", colorHex: "007AFF", category: "parent", reverseName: "Son of"))
+        try? context.save()
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let relationships = (try? context.fetch(FetchDescriptor<Relationship>())) ?? []
+        let kingListFatherLinks = relationships.filter {
+            $0.relationshipType?.name == "Father"
+                && $0.sourceRef?.name == "Babylonian King List A"
+                && ($0.toFigure?.name == "Kurigalzu I" || $0.toFigure?.name == "Kashtiliash I")
+        }
+        XCTAssertTrue(
+            kingListFatherLinks.isEmpty,
+            "a king list gives succession, not filiation; adjacent rows must not become father→son"
+        )
+    }
+
+    func testBabylonianKingListKeepsAKingInTheEraTheUserChose() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        let assyrian = Era(name: "Neo-Assyrian Period", orderIndex: 34)
+        context.insert(assyrian)
+        let usurper = Figure(name: "Marduk-apla-iddina II", title: "Chaldean chief")
+        usurper.era = assyrian
+        usurper.birthDate = MythologicalDate(year: -720, era: "Neo-Assyrian Period", isApproximate: true)
+        context.insert(usurper)
+        try? context.save()
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        let kept = figures.first { $0.name == "Marduk-apla-iddina II" }
+        XCTAssertEqual(kept?.era?.name, "Neo-Assyrian Period", "the user's era choice must win")
+        XCTAssertEqual(kept?.title, "Chaldean chief", "existing prose must survive")
+        XCTAssertEqual(kept?.reignStartYear, -722, "a blank regnal field may still be filled")
+    }
+
+    func testBabylonianKingListMatchesExistingSpellingVariants() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        context.insert(Figure(name: "Ea-Gamil", title: "Sealand king"))
+        try? context.save()
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let figures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
+        XCTAssertEqual(figures.filter { $0.name == "Ea-Gamil" }.count, 1)
+        XCTAssertEqual(
+            figures.first { $0.name == "Ea-Gamil" }?.reignStartYear, -1484,
+            "the user's spelling must be kept and its blank regnal field filled"
+        )
+    }
+
+    func testBabylonianKingListCitesTheKingListAndTheModernChronologySeparately() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureBabylonianKingListDynasties(context: context)
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let kingList = sources.first { $0.name == "Babylonian King List A" }
+        let chronology = sources.first { $0.name == "List of kings of Babylon" }
+        XCTAssertNotNil(kingList)
+        XCTAssertNotNil(chronology, "the regnal dates need a source of their own")
+        XCTAssertNotEqual(
+            kingList?.persistentModelID, chronology?.persistentModelID,
+            "the ancient succession and the modern regnal dates are different claims"
+        )
+
+        let citations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        let datedCitations = citations.filter {
+            $0.source?.persistentModelID == chronology?.persistentModelID && $0.entityType == .figure
+        }
+        XCTAssertGreaterThan(datedCitations.count, 0)
+        XCTAssertTrue(citations.allSatisfy { $0.source?.name != "Babylonian King List A" || $0.location.hasPrefix("Dynasty") })
+    }
+
+    func testBabylonianDynastyErasDoNotDriftUnderFixEraOrderIndices() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(FigureType(name: "Human", icon: "person.fill", colorHex: "34C759"))
+        try? context.save()
+
+        Migration.ensureFirstBabylonianDynasty(context: context)
+        Migration.ensureBabylonianKingListDynasties(context: context)
+        let dynastyNames = Set(Migration.babylonianDynasties.map(\.name))
+        let before = ((try? context.fetch(FetchDescriptor<Era>())) ?? [])
+            .filter { dynastyNames.contains($0.name) }
+            .reduce(into: [String: Int]()) { $0[$1.name] = $1.orderIndex }
+
+        Migration.fixEraOrderIndices(context: context)
+
+        let after = ((try? context.fetch(FetchDescriptor<Era>())) ?? [])
+            .filter { dynastyNames.contains($0.name) }
+            .reduce(into: [String: Int]()) { $0[$1.name] = $1.orderIndex }
+
+        XCTAssertEqual(before, after, "an era missing from fixEraOrderIndices gains +1 on every launch")
+        XCTAssertEqual(
+            after.count, Migration.babylonianDynasties.count,
+            "all ten dynasties must be pinned in fixEraOrderIndices, Dynasty I included"
+        )
+    }
+
+    func testBabylonianDynastyOrderIndexesDoNotCollideWithTheExistingPostSKLLane() {
+        let reserved = Set(0...47)
+        for dynasty in Migration.babylonianDynasties where dynasty.number != 1 {
+            let index = Migration.babylonianDynastyOrderIndex[dynasty.name] ?? -1
+            XCTAssertFalse(
+                reserved.contains(index),
+                "\(dynasty.name) at \(index) would renumber eras the user already has"
+            )
+        }
+    }
+
+    /// The propagator groups every figure in the store by `birthDate.era`, and a
+    /// group with no explicitly dated member yields `startBCE: nil` for all of it.
+    /// Assigning that nil through emptied the reign years of the imported
+    /// Babylonian kings on every launch while their era and prose survived. This
+    /// pins adopt-if-absent: a real date is filled in, an absent one is left alone.
+    func testEnrichSKLDataDoesNotClearReignYearsItCannotCompute() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let era = Era(name: "Kassite Dynasty of Babylon", orderIndex: 49)
+        context.insert(era)
+        let dated = Figure(name: "Ulamburiash")
+        dated.birthDate = MythologicalDate(startYear: -1831, endYear: -1831, era: "Kassite Dynasty of Babylon")
+        context.insert(dated)
+        let imported = Figure(name: "Harba-Shipak")
+        imported.birthDate = MythologicalDate(era: "Kassite Dynasty of Babylon")
+        imported.reignStartYear = -1761
+        imported.reignEndYear = -1755
+        context.insert(imported)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        XCTAssertEqual(imported.reignStartYear, -1761)
+        XCTAssertEqual(imported.reignEndYear, -1755)
+    }
+
+    /// The other half: a genuinely undated figure in a dated group still gets filled
+    /// by propagation, so the guard above does not disable the feature it protects.
+    func testEnrichSKLDataStillFillsAReignItCanCompute() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Era(name: "Third dynasty of Ur", orderIndex: 29))
+        let dated = Figure(name: "Ur-Nammu")
+        dated.birthDate = MythologicalDate(startYear: -2112, era: "Third dynasty of Ur")
+        dated.deathDate = MythologicalDate(startYear: -2095, era: "Third dynasty of Ur")
+        context.insert(dated)
+        let propagated = Figure(name: "Šulgi")
+        propagated.figureDescription = "Second king of the Third dynasty of Ur. Reigned 48 years."
+        propagated.birthDate = MythologicalDate(era: "Third dynasty of Ur")
+        context.insert(propagated)
+        try? context.save()
+
+        Migration.enrichSKLData(context: context)
+
+        // The exact BCE arithmetic is the propagator's own concern and is unit-tested
+        // with the real SKL data; what this pins is that adopt-if-absent did not turn
+        // the propagation off.
+        XCTAssertNotNil(propagated.reignStartYear, "propagation still fills a reign it can compute")
+        XCTAssertNotNil(propagated.reignEndYear)
+    }
+
+    // MARK: - Migration: fixFoundingOfEriduEra
+
+    private func insertEriduEraFixture(context: ModelContext, year: Int, era: String) -> Event {
+        context.insert(Era(
+            name: "Anunnaki on Earth",
+            orderIndex: 1,
+            startDate: MythologicalDate(startYear: -445000, endYear: -445000, era: "Anunnaki on Earth"),
+            endDate: MythologicalDate(year: -200000, era: "Anunnaki on Earth")
+        ))
+        context.insert(Era(
+            name: "Post-Flood Kingdoms",
+            orderIndex: 8,
+            startDate: MythologicalDate(startYear: -27000, endYear: -27000, era: "Post-Flood Kingdoms"),
+            endDate: MythologicalDate(year: -2900, era: "Post-Flood Kingdoms")
+        ))
+        let event = Event(
+            name: "Founding of Eridu",
+            eventDescription: "The first city was established by the gods. Kingship first descended from heaven here.",
+            date: MythologicalDate(startYear: year, endYear: nil, era: era, isApproximate: true),
+            era: era,
+            source: "Sumerian King List"
+        )
+        context.insert(event)
+        try? context.save()
+        return event
+    }
+
+    func testFixFoundingOfEriduEraMovesAnOutOfBandDateIntoItsContainingEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let event = insertEriduEraFixture(context: context, year: -5400, era: "Anunnaki on Earth")
+
+        Migration.fixFoundingOfEriduEra(context: context)
+
+        XCTAssertEqual(event.date.era, "Post-Flood Kingdoms")
+        XCTAssertEqual(event.era, "Post-Flood Kingdoms")
+    }
+
+    func testFixFoundingOfEriduEraLeavesTheDateItselfUntouched() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let event = insertEriduEraFixture(context: context, year: -5400, era: "Anunnaki on Earth")
+
+        Migration.fixFoundingOfEriduEra(context: context)
+
+        XCTAssertEqual(event.date.startYear, -5400)
+        XCTAssertNil(event.date.endYear)
+        XCTAssertTrue(event.date.isApproximate)
+        XCTAssertEqual(event.eventDescription, "The first city was established by the gods. Kingship first descended from heaven here.")
+    }
+
+    func testFixFoundingOfEriduEraIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let event = insertEriduEraFixture(context: context, year: -5400, era: "Anunnaki on Earth")
+
+        Migration.fixFoundingOfEriduEra(context: context)
+        Migration.fixFoundingOfEriduEra(context: context)
+
+        XCTAssertEqual(event.date.era, "Post-Flood Kingdoms")
+        XCTAssertEqual(event.era, "Post-Flood Kingdoms")
+        XCTAssertEqual(event.date.startYear, -5400)
+    }
+
+    func testFixFoundingOfEriduEraLeavesADateInsideTheBandAlone() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let event = insertEriduEraFixture(context: context, year: -445000, era: "Anunnaki on Earth")
+
+        Migration.fixFoundingOfEriduEra(context: context)
+
+        XCTAssertEqual(event.date.era, "Anunnaki on Earth")
+        XCTAssertEqual(event.era, "Anunnaki on Earth")
+        XCTAssertEqual(event.date.startYear, -445000)
+    }
+
+    func testFixFoundingOfEriduEraLeavesOtherEventsAlone() {
+        let container = makeContainer()
+        let context = container.mainContext
+        _ = insertEriduEraFixture(context: context, year: -5400, era: "Anunnaki on Earth")
+        let other = Event(
+            name: "The great Flood",
+            date: MythologicalDate(startYear: -30000, endYear: nil, era: "The Great Flood", isApproximate: true),
+            era: "The Great Flood"
+        )
+        context.insert(other)
+        try? context.save()
+
+        Migration.fixFoundingOfEriduEra(context: context)
+
+        XCTAssertEqual(other.date.era, "The Great Flood")
+        XCTAssertEqual(other.era, "The Great Flood")
+    }
+
+    // MARK: - Migration: ensureFirstGodsEventsExist
+
+    private func insertFirstGodsFigures(context: ModelContext) {
+        for name in ["Nammu", "An", "Ki", "Anunnaki", "Enlil", "Enki", "Inanna", "Utu", "Ninurta"] {
+            context.insert(Figure(name: name))
+        }
+        for name in ["Heaven", "Earth", "Eridu", "Abzu", "Nippur"] {
+            context.insert(Place(name: name))
+        }
+        try? context.save()
+    }
+
+    func testFirstGodsEventsImportCreatesSixUndatedEventsInTheFirstGodsEra() {
+        let container = makeContainer()
+        let context = container.mainContext
+        SeedData.ensureTypesExist(context: context)
+        insertFirstGodsFigures(context: context)
+
+        Migration.ensureFirstGodsEventsExist(context: context)
+
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        XCTAssertEqual(events.count, 6, "expected the six first-gods events, got \(events.map(\.name))")
+
+        let expected = [
+            "Nammu gives birth to heaven and earth",
+            "The Anuna gods are born",
+            "Separation of heaven and earth",
+            "Enki founds his house in the Abzu at Eridu",
+            "Enki establishes the world order",
+            "Enlil founds the E-kur at Nippur"
+        ]
+        let byName = Dictionary(uniqueKeysWithValues: events.map { ($0.name, $0) })
+        for name in expected {
+            guard let event = byName[name] else {
+                XCTFail("missing imported event \(name)")
+                continue
+            }
+            XCTAssertNil(event.date.startYear, "\(name) must be undated")
+            XCTAssertNil(event.date.endYear, "\(name) must be undated")
+            XCTAssertEqual(event.era, "Age of the First Gods", name)
+            XCTAssertEqual(event.date.era, "Age of the First Gods", name)
+            XCTAssertNotNil(event.eventType, "\(name) must link an existing event type")
+        }
+
+        guard let separation = byName["Separation of heaven and earth"] else {
+            return XCTFail("missing Separation of heaven and earth")
+        }
+        XCTAssertEqual(Set(separation.involvedFigures.map(\.name)), ["An", "Enlil"])
+        XCTAssertEqual(Set(separation.placeAssociations.compactMap { $0.place?.name }), ["Heaven", "Earth"])
+
+        let stickies = (try? context.fetch(FetchDescriptor<StickyNote>())) ?? []
+        XCTAssertEqual(stickies.filter { $0.text == "IMPORTED — needs review (first gods)" }.count, 6)
+    }
+
+    func testFirstGodsEventsImportCitesWorksAndReusesExistingSourceRows() {
+        let container = makeContainer()
+        let context = container.mainContext
+        SeedData.ensureTypesExist(context: context)
+        insertFirstGodsFigures(context: context)
+        let existingWork = Source(
+            name: "Enki and the World Order (t.1.1.3)",
+            sourceDescription: "the user's own row"
+        )
+        context.insert(existingWork)
+        try? context.save()
+
+        Migration.ensureFirstGodsEventsExist(context: context)
+
+        let sources = (try? context.fetch(FetchDescriptor<Source>())) ?? []
+        let matches = sources.filter { $0.name == "Enki and the World Order (t.1.1.3)" }
+        XCTAssertEqual(matches.count, 1, "check-by-name must not duplicate an existing work")
+        XCTAssertEqual(matches[0].sourceDescription, "the user's own row", "an existing work's metadata must not be overwritten")
+
+        let hoe = sources.first { $0.name == "The Song of the Hoe (t.5.5.4)" }
+        XCTAssertNotNil(hoe, "missing works must be created")
+        XCTAssertFalse(hoe?.url.isEmpty ?? true, "created ETCSL works should carry their URL")
+
+        let citations = (try? context.fetch(FetchDescriptor<Citation>())) ?? []
+        XCTAssertEqual(citations.count, 8, "expected 8 citations across the six events, got \(citations.count)")
+        XCTAssertTrue(citations.allSatisfy { $0.entityType == .event })
+        XCTAssertTrue(citations.allSatisfy { !$0.location.isEmpty })
+        XCTAssertEqual(citations.filter { $0.source?.name == "Enki and the World Order (t.1.1.3)" }.count, 2)
+        XCTAssertEqual(citations.filter { $0.source?.name == "The Song of the Hoe (t.5.5.4)" }.count, 2)
+        XCTAssertTrue(citations.contains { $0.source?.name == "Wikipedia" && $0.linkedEntityName == "Nammu gives birth to heaven and earth" })
+    }
+
+    func testFirstGodsEventsImportIsIdempotent() {
+        let container = makeContainer()
+        let context = container.mainContext
+        SeedData.ensureTypesExist(context: context)
+        context.insert(Figure(name: "Enlil"))
+        try? context.save()
+
+        Migration.ensureFirstGodsEventsExist(context: context)
+        let firstEvents = ((try? context.fetch(FetchDescriptor<Event>())) ?? []).count
+        let firstCitations = ((try? context.fetch(FetchDescriptor<Citation>())) ?? []).count
+        let firstSources = ((try? context.fetch(FetchDescriptor<Source>())) ?? []).count
+        XCTAssertEqual(firstEvents, 6, "events must import even when most involved figures are absent")
+
+        Migration.ensureFirstGodsEventsExist(context: context)
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Event>())) ?? []).count, firstEvents)
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Citation>())) ?? []).count, firstCitations)
+        XCTAssertEqual(((try? context.fetch(FetchDescriptor<Source>())) ?? []).count, firstSources)
+    }
+
+    // MARK: - Migration: ensurePunishmentEventTypeAndBindings
+
+    private func insertBindingFixture(context: ModelContext, typeName: String) -> (battle: EventType, azazel: Event, watchers: Event, other: Event) {
+        let type = EventType(name: typeName, icon: "shield.righthalf.filled", colorHex: "FF3B30")
+        context.insert(type)
+        let azazel = Event(name: "The Binding of Azazel")
+        let watchers = Event(name: "The Binding of the Watchers")
+        let other = Event(name: "The Battle of Qarqar")
+        for event in [azazel, watchers, other] {
+            context.insert(event)
+            type.events.append(event)
+        }
+        try? context.save()
+        return (type, azazel, watchers, other)
+    }
+
+    func testPunishmentEventTypeAndBindingsRetypesTheTwoBindingEvents() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fixture = insertBindingFixture(context: context, typeName: "Battle")
+
+        Migration.ensurePunishmentEventTypeAndBindings(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
+        let punishment = types.first { $0.name == "Punishment" }
+        XCTAssertNotNil(punishment, "Punishment type must be created")
+        XCTAssertEqual(punishment?.icon, "lock.fill")
+        XCTAssertEqual(fixture.azazel.eventType?.name, "Punishment")
+        XCTAssertEqual(fixture.watchers.eventType?.name, "Punishment")
+        XCTAssertEqual(fixture.other.eventType?.name, "Battle", "unrelated battle events must not move")
+        XCTAssertFalse(fixture.battle.events.contains { $0 == fixture.azazel }, "the old type must release the retyped event")
+        XCTAssertTrue(punishment?.events.contains { $0 == fixture.watchers } == true)
+    }
+
+    func testPunishmentMigrationLeavesAUserChosenTypeAlone() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let fixture = insertBindingFixture(context: context, typeName: "Descent")
+
+        Migration.ensurePunishmentEventTypeAndBindings(context: context)
+
+        XCTAssertEqual(fixture.azazel.eventType?.name, "Descent", "a type the user chose must not be overwritten")
+        XCTAssertEqual(fixture.watchers.eventType?.name, "Descent")
+    }
+
+    func testPunishmentMigrationIsIdempotentAndPreservesExistingType() {
+        let container = makeContainer()
+        let context = container.mainContext
+        let existing = EventType(name: "Punishment", icon: "star", colorHex: "000000")
+        context.insert(existing)
+        let fixture = insertBindingFixture(context: context, typeName: "Battle")
+
+        Migration.ensurePunishmentEventTypeAndBindings(context: context)
+        Migration.ensurePunishmentEventTypeAndBindings(context: context)
+
+        let types = (try? context.fetch(FetchDescriptor<EventType>())) ?? []
+        XCTAssertEqual(types.filter { $0.name == "Punishment" }.count, 1, "must reuse, not duplicate, an existing Punishment type")
+        XCTAssertEqual(types.first { $0.name == "Punishment" }?.icon, "star", "an existing type's metadata must not be overwritten")
+        XCTAssertEqual(fixture.azazel.eventType?.name, "Punishment")
+        XCTAssertEqual(fixture.watchers.eventType?.name, "Punishment")
+    }
 }

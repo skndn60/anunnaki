@@ -12,11 +12,12 @@ struct PlaceListView: View {
     @State private var showingAddSheet = false
     @State private var editingPlace: Place?
     @State private var selectedPlaceID: PersistentIdentifier?
-    @State private var sortOrder: PlaceSortOrder = .name
+    @DefaultSortOrder(.place) private var sortOrder: PlaceSortOrder
     @State private var imageDetailImage: ImageAsset?
     @DetailWidth(.place) private var detailWidth
     @State private var showDeleteConfirm = false
     @State private var selectedTypeFilters: Set<String> = []
+    @State private var searchText = ""
     @Query(sort: \PlaceType.name) private var placeTypes: [PlaceType]
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
@@ -39,6 +40,11 @@ struct PlaceListView: View {
 
     private var filteredPlaces: [Place] {
         var result = places
+        if !searchText.isEmpty {
+            result = result.filter {
+                EntitySearch.matches(query: searchText, primary: $0.name, secondary: [$0.modernLocation])
+            }
+        }
         if !selectedTypeFilters.isEmpty {
             result = result.filter { selectedTypeFilters.contains($0.placeType?.name ?? "") }
         }
@@ -83,6 +89,14 @@ struct PlaceListView: View {
                 }
                 .padding()
 
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search places…", text: $searchText)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .padding(.horizontal)
+
                 // Breadcrumbs
                 let coordinatorHistory = coordinator?.history ?? []
                 if !coordinatorHistory.isEmpty {
@@ -126,10 +140,22 @@ struct PlaceListView: View {
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: 300)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                } else {
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else if filteredPlaces.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No places to display")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
                     ScrollViewReader { proxy in
                         List(selection: $selectedPlaceID) {
                             ForEach(groupedPlaces, id: \.key) { group in
@@ -175,16 +201,14 @@ struct PlaceListView: View {
                     PlaceDetailView(
                             place: place,
                             onSelectFigure: { figure in
-                                if let id = figure.persistentModelID as? PersistentIdentifier {
-                                    coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
-                                    coordinator?.navigateToFigure(id, name: figure.name, recordHistory: false)
-                                }
+                                let id = figure.persistentModelID
+                                coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
+                                coordinator?.navigateToFigure(id, name: figure.name, recordHistory: false)
                             },
                             onSelectEvent: { event in
-                                if let id = event.persistentModelID as? PersistentIdentifier {
-                                    coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
-                                    coordinator?.navigateToEvent(id, name: event.name, recordHistory: false)
-                                }
+                                let id = event.persistentModelID
+                                coordinator?.pushHistory(id: place.persistentModelID, name: place.name, item: .places)
+                                coordinator?.navigateToEvent(id, name: event.name, recordHistory: false)
                             },
                             onSelectImage: { imageDetailImage = $0 }
                         )

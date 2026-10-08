@@ -1,7 +1,7 @@
 import Foundation
 import SwiftData
 
-// Codable mirrors for historical_events_{a,b,c}.json — a curated tranche of
+// Codable mirrors for historical_events_{a,b,c,d}.json — a curated tranche of
 // documented Mesopotamian events (Early Dynastic → fall of Nineveh, 612 BCE)
 // plus the kings they involve that are missing from the store.
 private struct HistoricalKingImport: Codable {
@@ -33,13 +33,13 @@ private struct HistoricalEventsRoot: Codable {
 }
 
 extension Migration {
-    /// Import the curated documented-events tranche from historical_events_{a,b,c}.json.
+    /// Import the curated documented-events tranche from historical_events_{a,b,c,d}.json.
     /// Creates missing kings first (linked to their dynasty era where one exists),
     /// then events (era string, existing event type, involved figures by name,
     /// optional city association). Additive + idempotent; every new row gets an
     /// "IMPORTED — needs review" sticky note.
     package static func ensureHistoricalEventsImportExist(context: ModelContext) {
-        let resourceNames = ["historical_events_a", "historical_events_b", "historical_events_c"]
+        let resourceNames = ["historical_events_a", "historical_events_b", "historical_events_c", "historical_events_d"]
         var roots: [HistoricalEventsRoot] = []
         for name in resourceNames {
             let url: URL? = {

@@ -422,7 +422,7 @@ struct CausalChainDiagramView: View {
     }
 
     private var chainGroups: [[CCEvent]] {
-        let nodesById = Dictionary(uniqueKeysWithValues: linkedEvents.map { ($0.id, $0) })
+        _ = Dictionary(uniqueKeysWithValues: linkedEvents.map { ($0.id, $0) })
         var parent: [PersistentIdentifier: PersistentIdentifier] = [:]
         for id in linkedEvents.map(\.id) { parent[id] = id }
 

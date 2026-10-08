@@ -622,14 +622,6 @@ struct EraSwimlaneRow: View {
     }
 
     private var dateRangeLabel: String {
-        let start = era.startDate
-        let end = era.endDate
-        if start.startYear == nil && start.endYear == nil && end.startYear == nil && end.endYear == nil {
-            return ""
-        }
-        let startLabel = start.displayLabel
-        let endLabel = end.displayLabel
-        if startLabel == endLabel { return startLabel }
-        return "\(startLabel) → \(endLabel)"
+        era.dateSpanLabel ?? ""
     }
 }

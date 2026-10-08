@@ -15,6 +15,7 @@ struct AlternateNameListView: View {
     @State private var altNameToDelete: AlternateName?
     @State private var filterEntityText = ""
     @State private var filterEntityType: AltEntityType?
+    @DetailWidth(.alternateName) private var detailWidth
 
     private enum AltEntityType: String, CaseIterable {
         case figure = "Figure"
@@ -50,131 +51,155 @@ struct AlternateNameListView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Header
-            HStack {
-                Text("Alternate Names")
-                    .font(.title2.bold())
-                Spacer()
-                Button(action: { showingAddSheet = true }) {
-                    Label("Add Name", systemImage: "plus")
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(figures.isEmpty && places.isEmpty)
-            }
-            .padding()
-
-            // Filters
-            HStack(spacing: 16) {
-                HStack(spacing: 6) {
-                    Text("Tradition:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("", selection: $filterTradition) {
-                        Text("All").tag(nil as AlternateName.Tradition?)
-                        ForEach(AlternateName.Tradition.allCases, id: \.self) { t in
-                            Text(t.rawValue).tag(t as AlternateName.Tradition?)
-                        }
+        HStack(spacing: 0) {
+            VStack(spacing: 0) {
+                // Header
+                HStack {
+                    Text("Alternate Names")
+                        .font(.title2.bold())
+                    Spacer()
+                    Button(action: { showingAddSheet = true }) {
+                        Label("Add Name", systemImage: "plus")
                     }
-                    .frame(width: 140)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(figures.isEmpty && places.isEmpty)
                 }
+                .padding()
 
-                HStack(spacing: 6) {
-                    Text("Type:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    Picker("", selection: $filterEntityType) {
-                        Text("All").tag(nil as AltEntityType?)
-                        ForEach(AltEntityType.allCases, id: \.self) { t in
-                            Text(t.rawValue).tag(t as AltEntityType?)
-                        }
-                    }
-                    .frame(width: 100)
-                }
-
-                HStack(spacing: 6) {
-                    Text("Entity:")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                    TextField("Filter by name\u{2026}", text: $filterEntityText)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 160)
-                        .overlay(alignment: .trailing) {
-                            if !filterEntityText.isEmpty {
-                                Button(action: { filterEntityText = "" }) {
-                                    Image(systemName: "xmark")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.plain)
-                                .padding(.trailing, 4)
-                                .help("Clear filter")
+                // Filters
+                HStack(spacing: 16) {
+                    HStack(spacing: 6) {
+                        Text("Tradition:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Picker("", selection: $filterTradition) {
+                            Text("All").tag(nil as AlternateName.Tradition?)
+                            ForEach(AlternateName.Tradition.allCases, id: \.self) { t in
+                                Text(t.rawValue).tag(t as AlternateName.Tradition?)
                             }
                         }
-                }
+                        .frame(width: 140)
+                    }
 
-                Spacer()
+                    HStack(spacing: 6) {
+                        Text("Type:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Picker("", selection: $filterEntityType) {
+                            Text("All").tag(nil as AltEntityType?)
+                            ForEach(AltEntityType.allCases, id: \.self) { t in
+                                Text(t.rawValue).tag(t as AltEntityType?)
+                            }
+                        }
+                        .frame(width: 100)
+                    }
 
-                Text("\(filteredNames.count) names")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-            }
-            .padding(.horizontal)
-            .padding(.bottom, 8)
-
-            Divider()
-
-            if alternateNames.isEmpty {
-                VStack(spacing: 12) {
-                    Spacer()
-                    Image(systemName: "textformat.abc")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.secondary)
-                    Text("No alternate names yet")
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                    Text("Track alternate spellings, translations, and cross-cultural identifications for figures and places.")
-                        .font(.body)
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: 300)
-                    Spacer()
-                }
-            } else if filteredNames.isEmpty {
-                VStack(spacing: 12) {
-                    Spacer()
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 36))
-                        .foregroundStyle(.tertiary)
-                    Text("No results for filter")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                }
-            } else {
-                List(selection: $selectedAltNameID) {
-                    ForEach(groupedNames, id: \.key) { group in
-                        Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
-                            ForEach(group.names) { altName in
-                                AlternateNameRow(
-                                    altName: altName,
-                                    onEdit: { editingAltName = altName },
-                                    onDelete: {
-                                        altNameToDelete = altName
-                                        showDeleteConfirm = true
+                    HStack(spacing: 6) {
+                        Text("Entity:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        TextField("Filter by name\u{2026}", text: $filterEntityText)
+                            .textFieldStyle(.roundedBorder)
+                            .frame(width: 160)
+                            .overlay(alignment: .trailing) {
+                                if !filterEntityText.isEmpty {
+                                    Button(action: { filterEntityText = "" }) {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 9, weight: .bold))
+                                            .foregroundStyle(.secondary)
                                     }
-                                )
-                                .tag(altName.persistentModelID)
+                                    .buttonStyle(.plain)
+                                    .padding(.trailing, 4)
+                                    .help("Clear filter")
+                                }
+                            }
+                    }
+
+                    Spacer()
+
+                    Text("\(filteredNames.count) names")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+
+                Divider()
+
+                if alternateNames.isEmpty {
+                    VStack(spacing: 12) {
+                        Spacer()
+                        Image(systemName: "textformat.abc")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.secondary)
+                        Text("No alternate names yet")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                        Text("Track alternate spellings, translations, and cross-cultural identifications for figures and places.")
+                            .font(.body)
+                            .foregroundStyle(.tertiary)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: 300)
+                        Spacer()
+                    }
+                } else if filteredNames.isEmpty {
+                    VStack(spacing: 12) {
+                        Spacer()
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 36))
+                            .foregroundStyle(.tertiary)
+                        Text("No results for filter")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                } else {
+                    List(selection: $selectedAltNameID) {
+                        ForEach(groupedNames, id: \.key) { group in
+                            Section(header: Text(group.key).font(.largeTitle.bold()).foregroundStyle(.secondary)) {
+                                ForEach(group.names) { altName in
+                                    AlternateNameRow(
+                                        altName: altName,
+                                        onEdit: { editingAltName = altName },
+                                        onDelete: {
+                                            altNameToDelete = altName
+                                            showDeleteConfirm = true
+                                        }
+                                    )
+                                    .tag(altName.persistentModelID)
+                                }
                             }
                         }
                     }
+                    .listStyle(.inset(alternatesRowBackgrounds: true))
+                    .listArrowKeyNavigation(
+                        selection: $selectedAltNameID,
+                        orderedIDs: groupedNames.flatMap { $0.names.map(\.persistentModelID) }
+                    )
                 }
-                .listStyle(.inset(alternatesRowBackgrounds: true))
-                .listArrowKeyNavigation(
-                    selection: $selectedAltNameID,
-                    orderedIDs: groupedNames.flatMap { $0.names.map(\.persistentModelID) }
-                )
             }
+            .frame(minWidth: 450, maxWidth: .infinity)
+
+            Group {
+                if let altName = selectedAltName {
+                    VStack(spacing: 0) {
+                        DetailToolbar(
+                            onEdit: { editingAltName = altName },
+                            onDelete: {
+                                altNameToDelete = altName
+                                showDeleteConfirm = true
+                            },
+                            onClose: { selectedAltNameID = nil }
+                        )
+                        AlternateNameDetailView(altName: altName)
+                    }
+                    .frame(width: detailWidth)
+                    .frame(maxHeight: .infinity)
+                    .background(.thinMaterial)
+                }
+            }
+            .transition(.move(edge: .trailing).combined(with: .opacity))
+            .animation(.easeInOut(duration: 0.25), value: selectedAltNameID)
         }
         .sheet(isPresented: $showingAddSheet) {
             AlternateNameFormView(alternateName: nil)
@@ -184,12 +209,20 @@ struct AlternateNameListView: View {
         }
         .alert("Delete Alternate Name?", isPresented: $showDeleteConfirm, presenting: altNameToDelete) { altName in
             Button("Delete", role: .destructive) {
+                if selectedAltNameID == altName.persistentModelID {
+                    selectedAltNameID = nil
+                }
                 withAnimation { modelContext.delete(altName) }
             }
             Button("Cancel", role: .cancel) {}
         } message: { altName in
             Text("Delete \"\(altName.name)\" (\(altName.tradition.rawValue)) from \(entityLabel(for: altName))?")
         }
+    }
+
+    private var selectedAltName: AlternateName? {
+        guard let id = selectedAltNameID else { return nil }
+        return alternateNames.first { $0.persistentModelID == id }
     }
 
     private func entityLabel(for altName: AlternateName) -> String {
@@ -503,15 +536,79 @@ struct AlternateNameRow: View {
                 }
             }
             Spacer()
-            HStack(spacing: 4) {
-                IconActionButton(icon: "pencil", color: .accentColor, help: "Edit", action: onEdit)
-                IconActionButton(icon: "trash", color: .red, help: "Delete", action: onDelete)
-            }
         }
         .padding(.vertical, 2)
     }
 
     private func entityLabel(for altName: AlternateName) -> String {
         altName.figure?.name ?? altName.place?.name ?? "\u{2014}"
+    }
+}
+
+// MARK: - Alternate Name Detail
+
+struct AlternateNameDetailView: View {
+    let altName: AlternateName
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color.indigo.opacity(0.2))
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Image(systemName: "textformat.abc")
+                                .foregroundStyle(.indigo)
+                        )
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(altName.name)
+                            .font(.title2.bold())
+                        Text(altName.tradition.rawValue)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+                }
+
+                Divider()
+
+                LazyVGrid(columns: [GridItem(.fixed(90), alignment: .trailing), GridItem(.flexible(), alignment: .leading)], spacing: 8) {
+                    Text("Type").font(.caption).foregroundStyle(.secondary)
+                    Text(altName.nameType.rawValue)
+
+                    Text("Tradition").font(.caption).foregroundStyle(.secondary)
+                    Text(altName.tradition.rawValue)
+
+                    Text("Linked To").font(.caption).foregroundStyle(.secondary)
+                    if let figure = altName.figure {
+                        HStack(spacing: 6) {
+                            Image(systemName: "person.fill")
+                                .font(.caption)
+                                .foregroundStyle(.blue)
+                            Text(figure.name)
+                        }
+                    } else if let place = altName.place {
+                        HStack(spacing: 6) {
+                            Image(systemName: "mappin")
+                                .font(.caption)
+                                .foregroundStyle(.teal)
+                            Text(place.name)
+                        }
+                    } else {
+                        Text("\u{2014}")
+                            .foregroundStyle(.tertiary)
+                    }
+
+                    if !altName.note.isEmpty {
+                        Text("Note").font(.caption).foregroundStyle(.secondary)
+                        Text(altName.note)
+                    }
+                }
+            }
+            .padding(20)
+        }
     }
 }

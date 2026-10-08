@@ -186,7 +186,7 @@ package struct Migration {
             let commanderRelPredicate = #Predicate<RelationshipType> { $0.name == "Commander" }
             let commanderRelType = try? context.fetch(FetchDescriptor<RelationshipType>(predicate: commanderRelPredicate)).first
 
-            let existingRelations = Set((samyaza.outgoingRelationships ?? []).compactMap { $0.toFigure?.name.lowercased() })
+            let existingRelations = Set((samyaza.outgoingRelationships).compactMap { $0.toFigure?.name.lowercased() })
             let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
 
             for name in ["Hermani", "Yehadiel"] {
@@ -281,7 +281,7 @@ package struct Migration {
                 .map { $0.trimmingCharacters(in: .whitespaces) }
                 .filter { !$0.isEmpty }
 
-            let existingNames = Set((figure.alternateNames ?? []).map { $0.name.lowercased() })
+            let existingNames = Set((figure.alternateNames).map { $0.name.lowercased() })
 
             for name in names {
                 guard !existingNames.contains(name.lowercased()) else { continue }

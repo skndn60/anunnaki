@@ -6704,12 +6704,12 @@
    "eventType": "City Founding",
    "eventDescription": "The first city was established by the gods. Kingship first descended from heaven here.",
    "date": {
-    "era": "Anunnaki on Earth",
+    "era": "Post-Flood Kingdoms",
     "isApproximate": true,
-    "startYear": -445000,
-    "endYear": -445000
+    "startYear": -5400,
+    "endYear": -5400
    },
-   "era": "Anunnaki on Earth",
+   "era": "Post-Flood Kingdoms",
    "source": "Sumerian King List",
    "id": "02c2d29b-3cdf-585c-8d04-a4b71a5b5564",
    "involvedFigureIds": [
@@ -6738,7 +6738,7 @@
   },
   {
    "name": "The Binding of Azazel",
-   "eventType": "Battle",
+   "eventType": "Punishment",
    "eventDescription": "God commanded Raphael to bind Azazel hand and foot, cast him into the darkness of Dudael, and cover him with rugged and sharp rocks. Azazel was to remain there until the great day of judgment, when he would be cast into the fire.",
    "date": {
     "era": "Age of the Watchers",
@@ -6757,7 +6757,7 @@
   },
   {
    "name": "The Binding of the Watchers",
-   "eventType": "Battle",
+   "eventType": "Punishment",
    "eventDescription": "God commanded Michael to bind Samyaza and his associates under the hills of the earth for seventy generations until the day of judgment. The Watchers were to be cast into the abyss of fire for eternity. Their sons, the Nephilim, were destroyed by being set against each other with the sword.",
    "date": {
     "era": "Age of the Watchers",

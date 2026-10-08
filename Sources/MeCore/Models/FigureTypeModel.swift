@@ -7,6 +7,10 @@ package final class FigureType {
     package var name: String
     package var icon: String
     package var colorHex: String
+    /// Behavioural class of the type, mirroring `RelationshipType.category`. `"collective"`
+    /// marks a type whose figures are assemblies of other figures rather than individuals,
+    /// so they have no father or mother — only members. Nil means unclassified.
+    package var category: String?
 
     @Relationship(deleteRule: .deny, inverse: \Figure.figureType)
     package var figures: [Figure] = []
@@ -15,10 +19,17 @@ package final class FigureType {
         Color(hex: colorHex)
     }
 
-    package init(name: String, icon: String, colorHex: String) {
+    /// True for types whose figures are collectives. Owned here so the answer cannot
+    /// drift from the type's identity the way a `name.contains("Collective")` test does.
+    package var isCollective: Bool {
+        category == "collective"
+    }
+
+    package init(name: String, icon: String, colorHex: String, category: String? = nil) {
         self.name = name
         self.icon = icon
         self.colorHex = colorHex
+        self.category = category
     }
 }
 

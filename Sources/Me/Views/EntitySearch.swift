@@ -19,17 +19,16 @@ struct FigureSearchResult: Identifiable, Equatable {
 
 extension Figure {
     func matchedAlternateName(for query: String) -> String? {
-        guard !query.isEmpty else { return nil }
-        return alternateNames.first { $0.name.localizedCaseInsensitiveContains(query) }?.name
+        EntitySearch.bestMatch(query: query, in: alternateNames.map(\.name))
     }
 }
 
 func searchFigures(_ figures: [Figure], query: String) -> [FigureSearchResult] {
-    guard !query.isEmpty else {
+    guard !EntitySearch.fold(query).isEmpty else {
         return figures.map { FigureSearchResult(figure: $0, matchedAlternateName: nil) }
     }
     return figures.compactMap { figure in
-        if figure.name.localizedCaseInsensitiveContains(query) {
+        if EntitySearch.matches(query: query, primary: figure.name) {
             return FigureSearchResult(figure: figure, matchedAlternateName: nil)
         }
         if let alt = figure.matchedAlternateName(for: query) {
@@ -57,8 +56,7 @@ struct PlaceSearchResult: Identifiable, Equatable {
 
 extension Place {
     func matchedAlternateName(for query: String) -> String? {
-        guard !query.isEmpty else { return nil }
-        return alternateNames.first { $0.name.localizedCaseInsensitiveContains(query) }?.name
+        EntitySearch.bestMatch(query: query, in: alternateNames.map(\.name))
     }
 }
 
@@ -66,14 +64,11 @@ extension Place {
 /// `searchFigures` in returning a typed result so alternate-name matches can
 /// be displayed ("Name as Alt").
 func searchPlaces(_ places: [Place], query: String) -> [PlaceSearchResult] {
-    guard !query.isEmpty else {
+    guard !EntitySearch.fold(query).isEmpty else {
         return places.map { PlaceSearchResult(place: $0, matchedAlternateName: nil) }
     }
     return places.compactMap { place in
-        if place.name.localizedCaseInsensitiveContains(query) {
-            return PlaceSearchResult(place: place, matchedAlternateName: nil)
-        }
-        if place.modernLocation.localizedCaseInsensitiveContains(query) {
+        if EntitySearch.matches(query: query, primary: place.name, secondary: [place.modernLocation]) {
             return PlaceSearchResult(place: place, matchedAlternateName: nil)
         }
         if let alt = place.matchedAlternateName(for: query) {
@@ -85,18 +80,16 @@ func searchPlaces(_ places: [Place], query: String) -> [PlaceSearchResult] {
 
 /// Matches events by name or description. Events carry no alternate names.
 func searchEvents(_ events: [Event], query: String) -> [Event] {
-    guard !query.isEmpty else { return events }
+    guard !EntitySearch.fold(query).isEmpty else { return events }
     return events.filter { event in
-        if event.name.localizedCaseInsensitiveContains(query) { return true }
-        return event.eventDescription.localizedCaseInsensitiveContains(query)
+        EntitySearch.matches(query: query, primary: event.name, secondary: [event.eventDescription])
     }
 }
 
 /// Matches things by name or description. Things carry no alternate names.
 func searchThings(_ things: [Thing], query: String) -> [Thing] {
-    guard !query.isEmpty else { return things }
+    guard !EntitySearch.fold(query).isEmpty else { return things }
     return things.filter { thing in
-        if thing.name.localizedCaseInsensitiveContains(query) { return true }
-        return thing.thingDescription.localizedCaseInsensitiveContains(query)
+        EntitySearch.matches(query: query, primary: thing.name, secondary: [thing.thingDescription])
     }
 }

@@ -55,6 +55,23 @@ extension Migration {
             "Parthian Empire": 45,
             "Roman and Byzantine Mesopotamia": 46,
             "Sassanid Empire": 47,
+            // Dynasties II-X of the Babylonian king list. Dynasty I is the
+            // "First Dynasty of Babylon" entry above, which
+            // `ensureFirstBabylonianDynasty` owns. These sit after the existing
+            // post-SKL lane rather than interleaved into it: the lane above is not
+            // in chronological order (Jemdet Nasr follows Old Babylonian), so
+            // picking ten slots between 32 and 47 would have meant renumbering
+            // eras the user already has to accommodate a list that does not fit
+            // that scheme.
+            "First Dynasty of the Sealand": 48,
+            "Kassite Dynasty of Babylon": 49,
+            "Second Dynasty of Isin": 50,
+            "Second Dynasty of the Sealand": 51,
+            "Bazi Dynasty": 52,
+            "Elamite Dynasty": 53,
+            "Second Dynasty of Babylon": 54,
+            "Assyrian Dynasty of Babylon": 55,
+            "Chaldean Dynasty": 56,
         ]
         var changed = false
         for era in eras {

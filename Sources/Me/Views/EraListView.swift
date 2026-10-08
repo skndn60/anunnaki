@@ -4,11 +4,19 @@ import SwiftData
 struct EraListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Era.orderIndex) private var eras: [Era]
+    @Query private var citations: [Citation]
     @State private var showingAddSheet = false
     @State private var editingEra: Era?
     @State private var selectedEraID: PersistentIdentifier?
     @DetailWidth(.era) private var detailWidth
     @State private var showDeleteConfirm = false
+
+    /// Resolved once for the whole list rather than per row: `EraSourceLabels` scans the
+    /// citation array, and doing that inside each row's body would repeat the scan for
+    /// every era on screen.
+    private var eraNumerals: [PersistentIdentifier: String] {
+        EraSourceLabels.numerals(for: eras, in: citations)
+    }
 
     private var selectedEra: Era? {
         guard let id = selectedEraID else { return nil }
@@ -54,7 +62,7 @@ struct EraListView: View {
                     .frame(maxWidth: .infinity)
                 } else {
                     List(eras, selection: $selectedEraID) { era in
-                        EraRow(era: era)
+                        EraRow(era: era, sourceNumeral: eraNumerals[era.persistentModelID])
                             .tag(era.persistentModelID)
                             .contextMenu {
                                 Button("Edit") { editingEra = era }
@@ -79,7 +87,7 @@ struct EraListView: View {
                             onDelete: { showDeleteConfirm = true },
                             onClose: { selectedEraID = nil }
                         )
-                    EraDetailView(era: era)
+                    EraDetailView(era: era, sourceNumeral: eraNumerals[era.persistentModelID])
                     }
                 .frame(width: detailWidth)
                 .frame(maxHeight: .infinity)
@@ -111,6 +119,8 @@ struct EraListView: View {
 
 struct EraRow: View {
     let era: Era
+    /// The source's own ordinal for this era ("Dynasty X"), when a citation states one.
+    var sourceNumeral: String? = nil
 
     var body: some View {
         HStack(spacing: 10) {
@@ -120,13 +130,12 @@ struct EraRow: View {
                 .frame(width: 20)
             Text(era.name)
                 .fontWeight(.medium)
-            Text(era.startDate.displayLabel)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text("→")
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-            Text(era.endDate.displayLabel)
+            if let sourceNumeral {
+                Text(sourceNumeral)
+                    .font(.caption)
+                    .foregroundStyle(.tertiary)
+            }
+            Text(era.dateSpanLabel ?? era.startDate.displayLabel)
                 .font(.caption)
                 .foregroundStyle(.secondary)
             if !era.eraDescription.isEmpty {

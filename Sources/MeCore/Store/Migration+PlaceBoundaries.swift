@@ -103,6 +103,19 @@ extension Migration {
             [37.4, 36.0], [39.2, 35.9], [40.6, 36.1], [41.6, 35.4],
             [40.8, 33.9], [38.6, 33.7], [37.0, 33.8], [36.4, 34.2],
         ],
+        // Bashan: the plateau east of the Jordan rift. Anchored to the Yarmouk
+        // confluence in the northwest, the Dead Sea's east shore along the west,
+        // the Jebel Druze and Hauran basalt plain in the east, and the Arnon
+        // (Wadi Mujib) line in the south. Two deliberate calls: the Golan is
+        // included (Gaulanitis counts as Bashan in the biblical usage, and it is
+        // where the place's own coordinate sits), and Amman falls just inside the
+        // southern margin — Ammon is a distinct entity, so treat the southern edge
+        // as the softer of these boundaries. Reconstruction, not survey.
+        "bashan": [
+            [35.57, 32.72], [35.72, 33.05], [35.95, 33.25], [36.18, 33.40],
+            [36.45, 33.30], [36.55, 32.75], [36.60, 32.20], [36.20, 31.85],
+            [35.90, 31.60], [35.55, 31.30], [35.42, 31.95], [35.46, 32.45],
+        ],
         "assyria": [
             [40.7, 37.4], [43.2, 37.4], [44.6, 36.7], [45.2, 36.0], [44.9, 35.1],
             [43.6, 34.6], [41.8, 34.4], [40.3, 34.8], [39.9, 35.9], [40.7, 37.4],

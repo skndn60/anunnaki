@@ -519,7 +519,7 @@ extension Migration {
         }
         let homeland = roleNamed("Homeland", "house.fill", "AF52DE", reverseName: "Homeland Of")
         let capital = roleNamed("Capital", "crown.fill", "FFCC00", reverseName: "Capital Of")
-        let territory = roleNamed("Territory", "map.fill", "34C759", reverseName: "Territory Of")
+        _ = roleNamed("Territory", "map.fill", "34C759", reverseName: "Territory Of")
 
         let allPlaces = (try? context.fetch(FetchDescriptor<Place>())) ?? []
         var placeByName = Dictionary(allPlaces.map { ($0.name.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })

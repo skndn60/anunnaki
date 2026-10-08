@@ -30,4 +30,16 @@ package final class Era {
         self.startDate = startDate
         self.endDate = endDate
     }
+
+    package var dateSpanLabel: String? {
+        guard let range = EventChronology.eraRange(of: self) else { return nil }
+        let approx = startDate.isApproximate || endDate.isApproximate
+        return MythologicalDate(startYear: range.lowerBound, endYear: range.upperBound, isApproximate: approx).displayLabel
+    }
+
+    package var durationYears: Int? {
+        guard let range = EventChronology.eraRange(of: self) else { return nil }
+        let years = range.upperBound - range.lowerBound
+        return years > 0 ? years : nil
+    }
 }

@@ -1,0 +1,112 @@
+{
+  "works": [
+    {
+      "name": "Enki and Ninmah (t.1.1.2)",
+      "type": "Ancient Text",
+      "language": "Sumerian",
+      "period": "Old Babylonian",
+      "description": "Sumerian myth of the creation of mankind: Namma wakes her son Enki, and Ninmah and the birth-goddesses fashion humanity from clay. ETCSL t.1.1.2.",
+      "url": "https://etcsl.orinst.ox.ac.uk/cgi-bin/etcsl.cgi?text=t.1.1.2"
+    },
+    {
+      "name": "The Song of the Hoe (t.5.5.4)",
+      "type": "Ancient Text",
+      "language": "Sumerian",
+      "period": "Old Babylonian",
+      "description": "Sumerian praise poem for Enlil and his hoe: the separation of heaven and earth, the founding of the E-kur at Nippur, and the making of mankind. ETCSL t.5.5.4.",
+      "url": "https://etcsl.orinst.ox.ac.uk/cgi-bin/etcsl.cgi?text=t.5.5.4"
+    },
+    {
+      "name": "Gilgameš, Enkidu and the Nether World (t.1.8.1.4)",
+      "type": "Ancient Text",
+      "language": "Sumerian",
+      "period": "Old Babylonian",
+      "description": "Sumerian Gilgamesh cycle; the Version A prologue lists the primeval orderings of the world, from the separation of heaven and earth to the gift of the nether world to Ereškigala. ETCSL t.1.8.1.4.",
+      "url": "https://etcsl.orinst.ox.ac.uk/cgi-bin/etcsl.cgi?text=t.1.8.1.4"
+    },
+    {
+      "name": "Enki and the World Order (t.1.1.3)",
+      "type": "Ancient Text",
+      "language": "Sumerian",
+      "period": "Old Babylonian",
+      "description": "Sumerian myth in which Enki proclaims his greatness, assigns the gods their functions, and decrees the fates of the cities. ETCSL t.1.1.3.",
+      "url": "https://etcsl.orinst.ox.ac.uk/cgi-bin/etcsl.cgi?text=t.1.1.3"
+    },
+    {
+      "name": "Wikipedia",
+      "type": "Other",
+      "language": "English",
+      "period": "Modern",
+      "description": "The free encyclopedia; used here as a tertiary reference for attestations and epithets.",
+      "url": "https://en.wikipedia.org/"
+    }
+  ],
+  "events": [
+    {
+      "name": "Nammu gives birth to heaven and earth",
+      "type": "Creation",
+      "era": "Age of the First Gods",
+      "description": "In the Old Babylonian theologies of Eridu, Nammu is “the mother who gave birth to heaven and earth” (dama-tu-an-ki) and “first mother who gave birth to all the gods”. Her maternity of An (heaven) and Ki (earth) is attested in the god-list TCL XV 10. In the myth Enki and Ninmah she is “Namma, the primeval mother who gave birth to the senior gods”, who carries the tears of the toiling gods to her sleeping son and bids him create a substitute for them.",
+      "figures": ["Nammu", "An", "Ki"],
+      "citations": [
+        { "work": "Enki and Ninmah (t.1.1.2)", "location": "lines 12–23", "note": "Namma, primeval mother of the senior gods" },
+        { "work": "Wikipedia", "location": "Nammu", "note": "Epithets and TCL XV 10 attestation" }
+      ]
+    },
+    {
+      "name": "The Anuna gods are born",
+      "type": "Creation",
+      "era": "Age of the First Gods",
+      "description": "The opening of Enki and Ninmah sets the birth of the gods at the beginning of time: “In those days, in the days when heaven and earth were created … when the Anuna gods were born; when the goddesses were taken in marriage; when the goddesses were distributed in heaven and earth”. The senior gods oversaw the work while the minor gods bore the toil of digging the canals and piling up the silt in Ḫarali — the labour that later prompts the creation of mankind.",
+      "figures": ["Anunnaki", "An"],
+      "citations": [
+        { "work": "Enki and Ninmah (t.1.1.2)", "location": "lines 1–11" }
+      ]
+    },
+    {
+      "name": "Separation of heaven and earth",
+      "type": "Creation",
+      "era": "Age of the First Gods",
+      "description": "The primeval ordering in which An takes the heavens and Enlil the earth. The Version A prologue of Gilgameš, Enkidu and the Nether World lists it among the world’s first arrangements: “when the heavens had been separated from the earth, when the earth had been delimited from the heavens … when An had taken the heavens for himself, when Enlil had taken the earth for himself”. The Song of the Hoe credits Enlil with the deed: he “hasten[ed] to separate heaven from earth, and hasten[ed] to separate earth from heaven”, first suspending the axis of the world at Dur-an-ki.",
+      "figures": ["An", "Enlil"],
+      "places": ["Heaven", "Earth"],
+      "citations": [
+        { "work": "The Song of the Hoe (t.5.5.4)", "location": "lines 1–7" },
+        { "work": "Gilgameš, Enkidu and the Nether World (t.1.8.1.4)", "location": "Version A, lines 1–26" }
+      ]
+    },
+    {
+      "name": "Enki founds his house in the Abzu at Eridu",
+      "type": "Foundation",
+      "era": "Age of the First Gods",
+      "description": "Enki is announced in Enki and the World Order as the “meš tree planted in the Abzu” whose “great house is founded in the Abzu, the great mooring-post of heaven and earth”, the “great dragon who stands in Eridug”. In his own words he has “built my house, a shrine, in a pure place … and built my Abzu, a shrine”, where the carp dart among the gizi reeds and the incantation-priests of Eridug perform the purification rites of the Abzu.",
+      "figures": ["Enki"],
+      "places": ["Eridu", "Abzu"],
+      "citations": [
+        { "work": "Enki and the World Order (t.1.1.3)", "location": "lines 1–16; 89–99; 140–161" }
+      ]
+    },
+    {
+      "name": "Enki establishes the world order",
+      "type": "Achievement",
+      "era": "Age of the First Gods",
+      "description": "Enlil commissions Enki “to gladden the hearts of lords and rulers” and to confirm the functions of the Anuna gods. Enki brings the arts and crafts from the E-kur, the house of Enlil, to his Abzu in Eridug, then assigns each god their office: Enkimdu the ditches and dykes, Kulla the brick moulds, Mušdama the foundations, Šakkan the animals of the hills, Nanše the fisheries, Iškur the rain, Utu justice over heaven and earth, and Uttu the loom; Inanna, who alone still lacked functions, receives her prerogatives from Enki. He also decrees the fates of Sumer, Urim, Meluḫa and Dilmun.",
+      "figures": ["Enki", "Enlil", "Inanna", "Utu"],
+      "places": ["Eridu"],
+      "citations": [
+        { "work": "Enki and the World Order (t.1.1.3)", "location": "lines 38–47; 61–80; 318–471" }
+      ]
+    },
+    {
+      "name": "Enlil founds the E-kur at Nippur",
+      "type": "Foundation",
+      "era": "Age of the First Gods",
+      "description": "The Song of the Hoe tells how Enlil’s temple came to be: “The E-kur, the temple of Enlil, was founded by the hoe. By day it was building it, by night it caused the temple to grow. In well-founded Nibru, the hero Ninurta entered into the presence of Enlil in the inner chamber of the Tummal”. The same poem has Enlil fix the destiny of the hoe before it placed the first model of mankind in the brick mould at “Where Flesh Came Forth”.",
+      "figures": ["Enlil", "Ninurta"],
+      "places": ["Nippur"],
+      "citations": [
+        { "work": "The Song of the Hoe (t.5.5.4)", "location": "lines 18–27; 35–42" }
+      ]
+    }
+  ]
+}

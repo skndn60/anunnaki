@@ -1,0 +1,520 @@
+{
+  "kings": [],
+  "events": [
+    {
+      "name": "Jemdet Nasr settlement becomes a regional centre near Kish",
+      "type": "Foundation",
+      "era": "Jemdet Nasr Period",
+      "year": -3050,
+      "approximate": true,
+      "description": "The type site of the Jemdet Nasr period grows into a regional centre, giving its name to the culture that closes the Uruk era in southern Mesopotamia.",
+      "source": "Wikipedia",
+      "figures": [],
+      "city": "Kish"
+    },
+    {
+      "name": "Numerical clay tablets spread across Mesopotamia",
+      "type": "Daily Life",
+      "era": "Jemdet Nasr Period",
+      "year": -3000,
+      "approximate": true,
+      "description": "Geometric numerical tablets and archaic pictographic records are used for accounting across settlements between the rivers, on the eve of cuneiform writing.",
+      "source": "Wikipedia",
+      "figures": []
+    },
+    {
+      "name": "The Awan dynasty briefly holds the kingship of Sumer",
+      "type": "Achievement",
+      "era": "Dynasty of Awan",
+      "year": -2480,
+      "approximate": true,
+      "description": "An Elamite dynasty from the region of Awan is listed among the holders of the kingship of Sumer in the Sumerian King List.",
+      "source": "Sumerian King List",
+      "figures": []
+    },
+    {
+      "name": "Hadanish rules Hamazi as a power between Kish and Nippur",
+      "type": "Daily Life",
+      "era": "Dynasty of Hamazi",
+      "year": -2440,
+      "approximate": true,
+      "description": "Hadanish, the ruler recorded for Hamazi in the Sumerian King List, governs a city-state counted among the great cities of Sumer before the Akkadian conquest.",
+      "source": "Sumerian King List",
+      "figures": ["Hadanish"]
+    },
+    {
+      "name": "Susuda takes the kingship of Kish",
+      "type": "Ascension",
+      "era": "Second dynasty of Kish",
+      "year": -2500,
+      "approximate": true,
+      "description": "Susuda founds the second dynasty of Kish, one of the dynasties listed between the first dynasty of Ur and the dynasty of Awan in the Sumerian King List.",
+      "source": "Sumerian King List",
+      "figures": ["Susuda"],
+      "city": "Kish"
+    },
+    {
+      "name": "The Second Dynasty of Ur rules the city of Ur",
+      "type": "Daily Life",
+      "era": "Second dynasty of Ur",
+      "year": -2325,
+      "approximate": true,
+      "description": "Two kings — Nanni and his son Mesh-ki-ang-Nanna — are recorded for the second dynasty of Ur in the Sumerian King List. Conventional dates for this dynasty are disputed.",
+      "source": "Sumerian King List",
+      "figures": [],
+      "city": "Ur"
+    },
+    {
+      "name": "The Third Dynasty of Kish, dynasty of Kubaba",
+      "type": "Daily Life",
+      "era": "Third dynasty of Kish",
+      "year": -2330,
+      "approximate": true,
+      "description": "The third dynasty of Kish is recorded in the Sumerian King List; its most notable ruler is Kubaba, the only woman listed as holder of the kingship of Kish.",
+      "source": "Sumerian King List",
+      "figures": [],
+      "city": "Kish"
+    },
+    {
+      "name": "Shu-Suen, last ruler listed for Akshak",
+      "type": "Daily Life",
+      "era": "Dynasty of Akshak",
+      "year": -2300,
+      "approximate": true,
+      "description": "Shu-Suen is the last king recorded for the dynasty of Akshak in the Sumerian King List, before the kingship passes to the fourth dynasty of Kish.",
+      "source": "Sumerian King List",
+      "figures": ["Shu-Suen (Akshak)"],
+      "city": "Akshak"
+    },
+    {
+      "name": "Zimudar takes the kingship of Kish",
+      "type": "Ascension",
+      "era": "Fourth dynasty of Kish",
+      "year": -2339,
+      "approximate": true,
+      "description": "Zimudar founds the fourth dynasty of Kish, recorded in the Sumerian King List alongside Usi-watar, Eshtar-muti, Ishme-Shamash, Nanniya and Puzur-Suen.",
+      "source": "Sumerian King List",
+      "figures": ["Zimudar"],
+      "city": "Kish"
+    },
+    {
+      "name": "The Fourth Dynasty of Uruk rules Uruk after the Gutian period",
+      "type": "Daily Life",
+      "era": "Fourth dynasty of Uruk",
+      "year": -2075,
+      "approximate": true,
+      "description": "Ur-nigin, Ur-gigir, Kuda, Puzur-ili and Ur-Utu are recorded as the fourth dynasty of Uruk in the Sumerian King List; conventional dates for this dynasty are disputed.",
+      "source": "Sumerian King List",
+      "figures": [],
+      "city": "Uruk"
+    },
+    {
+      "name": "Sharrum-iter takes the kingship of Mari",
+      "type": "Ascension",
+      "era": "Dynasty of Mari",
+      "year": -2350,
+      "approximate": true,
+      "description": "Sharrum-iter founds the dynasty of Mari, the first ruler recorded for the city in the Sumerian King List.",
+      "source": "Sumerian King List",
+      "figures": ["Sharrum-iter"],
+      "city": "Mari"
+    },
+    {
+      "name": "Reign of Peshgaldaramesh of the Sealand dynasty",
+      "type": "Ascension",
+      "era": "First Dynasty of the Sealand",
+      "year": -1599,
+      "approximate": true,
+      "description": "Peshgaldaramesh takes the throne of the Sealand dynasty, an independent power in southern Mesopotamia contemporary with the later Kassite kings of Babylon.",
+      "source": "Babylonian King List",
+      "figures": ["Peshgaldaramesh"]
+    },
+    {
+      "name": "Simbar-shipak seizes the throne of Babylon",
+      "type": "Ascension",
+      "era": "Second Dynasty of the Sealand",
+      "year": -1021,
+      "approximate": true,
+      "description": "Simbar-shipak, a priest from Bit-Dagan, seizes the Babylonian throne and founds the second Sea Land dynasty after the fall of Kassite power.",
+      "source": "Babylonian King List",
+      "figures": ["Simbar-shipak"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Eulmash-shakin-shumi takes the throne of Babylon",
+      "type": "Ascension",
+      "era": "Bazi Dynasty",
+      "year": -1000,
+      "approximate": true,
+      "description": "Eulmash-shakin-shumi takes the Babylonian throne, beginning the short Bazi dynasty recorded in the Babylonian King List.",
+      "source": "Babylonian King List",
+      "figures": ["Eulmash-shakin-shumi"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Mar-biti-apla-usur founds the Elamite dynasty of Babylon",
+      "type": "Ascension",
+      "era": "Elamite Dynasty",
+      "year": -980,
+      "approximate": true,
+      "description": "Mar-biti-apla-usur takes the Babylonian throne, founding the five-year Elamite dynasty of the Babylonian King List.",
+      "source": "Babylonian King List",
+      "figures": ["Mar-biti-apla-usur"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Nabu-mukin-apli takes the throne of Babylon",
+      "type": "Ascension",
+      "era": "Second Dynasty of Babylon",
+      "year": -974,
+      "approximate": true,
+      "description": "Nabu-mukin-apli founds the dynasty that rules Babylon for over two centuries as Assyrian influence grows in the west.",
+      "source": "Babylonian King List",
+      "figures": ["Nabu-mukin-apli"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Nabu-apla-iddina restores the cult of Shamash at Sippar",
+      "type": "Achievement",
+      "era": "Second Dynasty of Babylon",
+      "year": -870,
+      "approximate": true,
+      "description": "Nabu-apla-iddina restores the cult of the sun-god Shamash at Sippar, commemorated by the famous terracotta plaque showing the seated sun-god.",
+      "source": "Nabu-apla-iddina sun-god plaque",
+      "figures": ["Nabu-apla-iddina"],
+      "city": "Sippar"
+    },
+    {
+      "name": "Nabopolassar becomes king of Babylon",
+      "type": "Ascension",
+      "era": "Chaldean Dynasty",
+      "year": -626,
+      "approximate": true,
+      "description": "Nabopolassar takes the Babylonian throne and throws off Assyrian rule, founding the Chaldean dynasty.",
+      "source": "Babylonian King List",
+      "figures": ["Nabopolassar"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Nebuchadnezzar II succeeds his father",
+      "type": "Ascension",
+      "era": "Chaldean Dynasty",
+      "year": -605,
+      "approximate": true,
+      "description": "Nebuchadnezzar II succeeds Nabopolassar as king of Babylon after the victory over the Egyptians at Carchemish.",
+      "source": "Babylonian Chronicle",
+      "figures": ["Nebuchadnezzar II"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Thutmose III defeats the Mitanni at the Euphrates",
+      "type": "Battle",
+      "era": "Mitanni",
+      "year": -1457,
+      "approximate": true,
+      "description": "After his victory at Megiddo, Thutmose III crosses the Euphrates and campaigns against Mitanni, the Hurrian kingdom dominating northern Mesopotamia.",
+      "source": "Annals of Thutmose III",
+      "figures": []
+    },
+    {
+      "name": "Washukanni becomes the capital of Mitanni",
+      "type": "Foundation",
+      "era": "Mitanni",
+      "year": -1500,
+      "approximate": true,
+      "description": "Washukanni rises as the royal capital of the Mitanni kingdom, later destroyed by Shupiluliuma I of the Hittites.",
+      "source": "Hittite–Mitanni correspondence",
+      "figures": [],
+      "city": "Washukanni"
+    },
+    {
+      "name": "Ashur-uballit I makes Assyria a great power",
+      "type": "Achievement",
+      "era": "Middle Assyrian Period",
+      "year": -1365,
+      "approximate": true,
+      "description": "Ashur-uballit I breaks Mitanni supremacy, Corresponds with the pharaoh as an equal and turns Assyria into a major power of the Late Bronze Age.",
+      "source": "Assyrian King List",
+      "figures": ["Ashur-uballit I"],
+      "city": "Ashur"
+    },
+    {
+      "name": "Tukulti-Ninurta I founds Kar-Tukulti-Ninurta",
+      "type": "Foundation",
+      "era": "Middle Assyrian Period",
+      "year": -1224,
+      "approximate": true,
+      "description": "Tukulti-Ninurta I founds his new royal capital across the Tigris from Ashur after capturing Babylon.",
+      "source": "Tukulti-Ninurta I inscriptions",
+      "figures": ["Tukulti-Ninurta I"],
+      "city": "Ashur"
+    },
+    {
+      "name": "Gandash founds the Kassite dynasty of Babylon",
+      "type": "Foundation",
+      "era": "Kassite Dynasty of Babylon",
+      "year": -1729,
+      "approximate": true,
+      "description": "Gandash takes control of Babylon, beginning the longest-ruling dynasty in Babylonian history.",
+      "source": "Babylonian King List A",
+      "figures": ["Gandash"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Kurigalzu I builds Dur-Kurigalzu",
+      "type": "Foundation",
+      "era": "Kassite Dynasty of Babylon",
+      "year": -1330,
+      "approximate": true,
+      "description": "Kurigalzu I founds Dur-Kurigalzu as a Kassite royal residence on the Diyala, later excavated with royal tombs and archives.",
+      "source": "Kassite building inscriptions",
+      "figures": ["Kurigalzu I"],
+      "city": "Dur-Kurigalzu"
+    },
+    {
+      "name": "Ugarit is destroyed in the final Bronze Age collapse",
+      "type": "Destruction",
+      "era": "Late Bronze Age Collapse",
+      "year": -1185,
+      "approximate": true,
+      "description": "The port city of Ugarit is burned and never resettled; its last tablet reports enemy ships and fire in the city.",
+      "source": "Last tablet of Ugarit",
+      "figures": []
+    },
+    {
+      "name": "The Sea Peoples raid the Egyptian coast",
+      "type": "Battle",
+      "era": "Late Bronze Age Collapse",
+      "year": -1178,
+      "approximate": true,
+      "description": "Ramesses III repels an attack of the Sea Peoples by land and sea, recorded in reliefs at Medinet Habu, amid the wider Bronze Age collapse.",
+      "source": "Medinet Habu inscriptions",
+      "figures": []
+    },
+    {
+      "name": "Nebuchadnezzar II destroys Jerusalem",
+      "type": "Destruction",
+      "era": "Neo-Babylonian Empire",
+      "year": -586,
+      "approximate": true,
+      "description": "Babylonian forces sack Jerusalem and destroy the Temple, beginning the Babylonian Captivity of the Judahites.",
+      "source": "Hebrew Bible, 2 Kings 25",
+      "figures": ["Nebuchadnezzar II"]
+    },
+    {
+      "name": "The Ishtar Gate of Babylon is completed",
+      "type": "Foundation",
+      "era": "Neo-Babylonian Empire",
+      "year": -566,
+      "approximate": true,
+      "description": "Nebuchadnezzar II completes the Ishtar Gate, faced with glazed blue bricks and dragons of Marduk, leading into Babylon.",
+      "source": "Nebuchadnezzar II building inscriptions",
+      "figures": ["Nebuchadnezzar II"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Cyrus the Great captures Babylon",
+      "type": "Battle",
+      "era": "Neo-Babylonian Empire",
+      "year": -539,
+      "approximate": true,
+      "description": "Cyrus the Great takes Babylon without a siege of the city itself, ending the Neo-Babylonian Empire and founding the Persian Achaemenid Empire.",
+      "source": "Cyrus Cylinder",
+      "figures": []
+    },
+    {
+      "name": "Cambyses II conquers Egypt",
+      "type": "Battle",
+      "era": "Achaemenid Empire",
+      "year": -525,
+      "approximate": true,
+      "description": "Cambyses II defeats Psamtik III and adds Egypt to the Achaemenid Empire.",
+      "source": "Herodotus, Histories",
+      "figures": []
+    },
+    {
+      "name": "Darius I builds Persepolis",
+      "type": "Foundation",
+      "era": "Achaemenid Empire",
+      "year": -518,
+      "approximate": true,
+      "description": "Darius I begins building Persepolis as the ceremonial capital of the Achaemenid Empire.",
+      "source": "Achaemenid royal inscriptions",
+      "figures": []
+    },
+    {
+      "name": "Darius I organizes the satrapies of the empire",
+      "type": "Achievement",
+      "era": "Achaemenid Empire",
+      "year": -515,
+      "approximate": true,
+      "description": "Darius I divides the empire into satrapies with regular taxation and the Royal Road, as described by Herodotus.",
+      "source": "Herodotus, Histories",
+      "figures": []
+    },
+    {
+      "name": "Alexander defeats Darius III at Issus",
+      "type": "Battle",
+      "era": "Macedonian Empire",
+      "year": -333,
+      "approximate": true,
+      "description": "Alexander the Great routs Darius III at Issus, opening the way to Syria, Egypt and Mesopotamia.",
+      "source": "Arrian, Anabasis",
+      "figures": []
+    },
+    {
+      "name": "Alexander the Great enters Babylon",
+      "type": "Achievement",
+      "era": "Macedonian Empire",
+      "year": -331,
+      "approximate": true,
+      "description": "After the victory at Gaugamela, Alexander enters Babylon and is received as king in the ancient capital.",
+      "source": "Arrian, Anabasis",
+      "figures": []
+    },
+    {
+      "name": "Death of Alexander the Great in Babylon",
+      "type": "Death",
+      "era": "Macedonian Empire",
+      "year": -323,
+      "approximate": true,
+      "description": "Alexander dies in Babylon at the age of 32; his empire is soon divided among the Diadochi.",
+      "source": "Arrian, Anabasis",
+      "figures": []
+    },
+    {
+      "name": "Seleucus I founds Seleucia on the Tigris",
+      "type": "Foundation",
+      "era": "Seleucid Empire",
+      "year": -305,
+      "approximate": true,
+      "description": "Seleucus I founds Seleucia on the Tigris as the new capital of the Seleucid Empire, drawing population from Babylon.",
+      "source": "Appian, Roman History",
+      "figures": []
+    },
+    {
+      "name": "Mithridates I of Parthia conquers Mesopotamia",
+      "type": "Battle",
+      "era": "Seleucid Empire",
+      "year": -141,
+      "approximate": true,
+      "description": "Mithridates I of Parthia takes Mesopotamia from the Seleucids and holds the Babylonian king as a captive, ending Seleucid rule in the east.",
+      "source": "Justin, Epitome of Pompeius Trogus",
+      "figures": []
+    },
+    {
+      "name": "Battle of Carrhae",
+      "type": "Battle",
+      "era": "Parthian Empire",
+      "year": -53,
+      "approximate": true,
+      "description": "The Parthian army under Surena defeats Crassus and destroys seven legions of Rome in Mesopotamia.",
+      "source": "Plutarch, Life of Crassus",
+      "figures": []
+    },
+    {
+      "name": "Battle of Nisibis between Rome and Parthia",
+      "type": "Battle",
+      "era": "Parthian Empire",
+      "year": 217,
+      "approximate": true,
+      "description": "Vologases V defeats the Roman emperor Caracalla's successor Macrinus near Nisibis and secures terms for Parthia.",
+      "source": "Cassius Dio, Roman History",
+      "figures": []
+    },
+    {
+      "name": "Ardashir I overthrows the Parthian Empire",
+      "type": "Foundation",
+      "era": "Sassanid Empire",
+      "year": 224,
+      "approximate": true,
+      "description": "Ardashir I defeats Artabanus V and founds the Sassanid dynasty, reviving Persian imperial rule from Ctesiphon.",
+      "source": "Sasanian royal inscriptions",
+      "figures": []
+    },
+    {
+      "name": "Shapur I captures the Roman emperor Valerian",
+      "type": "Achievement",
+      "era": "Sassanid Empire",
+      "year": 260,
+      "approximate": true,
+      "description": "Shapur I defeats and captures Valerian at Edessa, an unprecedented humiliation for Rome, recorded in his own investiture inscriptions.",
+      "source": "Res Gestae Divi Saporis",
+      "figures": []
+    },
+    {
+      "name": "Heraclius defeats the Sassanids near Nineveh",
+      "type": "Battle",
+      "era": "Sassanid Empire",
+      "year": 627,
+      "approximate": true,
+      "description": "Heraclius routs the Sassanid army near Nineveh, ending the last Byzantine–Sassanid war and restoring the pre-war borders.",
+      "source": "Theophanes, Chronographia",
+      "figures": [],
+      "city": "Nineveh"
+    },
+    {
+      "name": "Pompey reorganizes the Roman East",
+      "type": "Achievement",
+      "era": "Roman and Byzantine Mesopotamia",
+      "year": -63,
+      "approximate": true,
+      "description": "Pompey ends the Seleucid kingdom and reorganizes Syria and the client kingdoms, bringing Rome to the Mesopotamian frontier.",
+      "source": "Cassius Dio, Roman History",
+      "figures": []
+    },
+    {
+      "name": "Trajan annexes Mesopotamia",
+      "type": "Achievement",
+      "era": "Roman and Byzantine Mesopotamia",
+      "year": 116,
+      "approximate": true,
+      "description": "Trajan captures Ctesiphon and briefly makes Mesopotamia a Roman province, the empire's furthest reach in the east.",
+      "source": "Cassius Dio, Roman History",
+      "figures": []
+    },
+    {
+      "name": "Julian campaigns against the Sassanids",
+      "type": "Battle",
+      "era": "Roman and Byzantine Mesopotamia",
+      "year": 363,
+      "approximate": true,
+      "description": "Julian advances to Ctesiphon and fights the Sassanid army before dying during the retreat from Mesopotamia.",
+      "source": "Ammianus Marcellinus, Res Gestae",
+      "figures": []
+    },
+    {
+      "name": "Tiglath-Pileser III takes the throne of Babylon",
+      "type": "Ascension",
+      "era": "Assyrian Dynasty of Babylon",
+      "year": -729,
+      "approximate": true,
+      "description": "Tiglath-Pileser III takes the Babylonian crown in addition to the Assyrian throne, binding Babylon closely to Assyria.",
+      "source": "Assyrian King List",
+      "figures": ["Tiglath-Pileser III"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Esarhaddon begins the rebuilding of Babylon",
+      "type": "Foundation",
+      "era": "Assyrian Dynasty of Babylon",
+      "year": -669,
+      "approximate": true,
+      "description": "Esarhaddon orders the restoration of Babylon after his father Sennacherib's destruction of the city.",
+      "source": "Esarhaddon building inscriptions",
+      "figures": ["Esarhaddon"],
+      "city": "Babylon"
+    },
+    {
+      "name": "Shamash-shum-ukin revolts against Ashurbanipal",
+      "type": "Battle",
+      "era": "Assyrian Dynasty of Babylon",
+      "year": -652,
+      "approximate": true,
+      "description": "The Assyrian-appointed Babylonian king Shamash-shum-ukin rebels against his brother Ashurbanipal, sparking a devastating civil war.",
+      "source": "Ashurbanipal annals",
+      "figures": ["Shamash-shum-ukin"],
+      "city": "Babylon"
+    }
+  ]
+}

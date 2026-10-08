@@ -318,7 +318,7 @@ private struct InlineEntityLink: View {
 
     private var mugshotFigure: Figure? {
         guard candidate.kind == .figure else { return nil }
-        guard let figure = try? modelContext.model(for: candidate.targetID) as? Figure else { return nil }
+        guard let figure = modelContext.model(for: candidate.targetID) as? Figure else { return nil }
         return figure.mugshotImage != nil ? figure : nil
     }
 

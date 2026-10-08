@@ -11,9 +11,9 @@ extension Migration {
         let unknownDate = MythologicalDate(year: nil, era: "", isApproximate: true)
 
         let allFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
-        let existingNames = Set(allFigures.map { $0.name.lowercased() })
+        _ = Set(allFigures.map { $0.name.lowercased() })
 
-        let figureById: [PersistentIdentifier: Figure] = allFigures.reduce(into: [:]) { $0[$1.persistentModelID] = $1 }
+        _ = allFigures.reduce(into: [:]) { $0[$1.persistentModelID] = $1 }
         let figureByName: [String: Figure] = allFigures.reduce(into: [:]) { $0[$1.name.lowercased()] = $1 }
 
         // Look up or create a figure by name
@@ -161,8 +161,21 @@ extension Migration {
         let timelines = SKLDatePropagator.compute(figures: allFigures, eraOrder: eraOrder)
         for timeline in timelines {
             for reign in timeline.reigns {
-                reign.figure.reignStartYear = reign.startBCE
-                reign.figure.reignEndYear = reign.endBCE
+                // Adopt-if-absent, never clear. `compute` groups *every* figure in the
+                // store by `birthDate.era`, and a group with no figure carrying an
+                // explicit date yields `startBCE: nil` for all of them (SKLDatePropagator
+                // line 59). Writing that nil straight through erased real regnal data
+                // on every launch: it silently emptied the reign years of all 88
+                // "Babylonian King List A" rulers the day they were imported, while
+                // their era, prose and citations — written by the same migration —
+                // survived, which is what made it look like a lost update between
+                // contexts rather than a propagator writing nil over good data.
+                if let start = reign.startBCE {
+                    reign.figure.reignStartYear = start
+                }
+                if let end = reign.endBCE {
+                    reign.figure.reignEndYear = end
+                }
             }
         }
 

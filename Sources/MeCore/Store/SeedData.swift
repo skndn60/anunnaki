@@ -952,6 +952,8 @@ package struct SeedData {
                 ("City Founding", "building.2", "007AFF"),
                 ("Foundation", "building.columns.fill", "F59E0B"),
                 ("Destruction", "flame.fill", "FF3B30"),
+                ("Achievement", "medal", "FF9200"),
+                ("Punishment", "lock.fill", "8E44AD"),
             ]
             for config in eventTypeConfig {
                 let type = EventType(name: config.name, icon: config.icon, colorHex: config.colorHex)
@@ -1051,11 +1053,11 @@ package struct SeedData {
              "Two hundred Watcher angels under the leadership of Samyaza descended on Mount Hermon, swore an oath to bind themselves together, and took human wives. They fathered the Nephilim, giants who consumed the labor of mankind. The Watchers also taught humanity forbidden knowledge: sorcery, weapon-making, cosmetics, astrology, and divination.",
              "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 6-8", nil,
              ["Samyaza", "Azazel"]),
-            ("The Binding of Azazel", "Battle",
+            ("The Binding of Azazel", "Punishment",
              "God commanded Raphael to bind Azazel hand and foot, cast him into the darkness of Dudael, and cover him with rugged and sharp rocks. Azazel was to remain there until the great day of judgment, when he would be cast into the fire.",
              "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:4-8", nil,
              ["Azazel", "Raphael"]),
-            ("The Binding of the Watchers", "Battle",
+            ("The Binding of the Watchers", "Punishment",
              "God commanded Michael to bind Samyaza and his associates under the hills of the earth for seventy generations until the day of judgment. The Watchers were to be cast into the abyss of fire for eternity. Their sons, the Nephilim, were destroyed by being set against each other with the sword.",
              "Age of the Watchers", "Book of Enoch (1 Enoch), ch. 10:11-12", nil,
              ["Samyaza", "Michael"]),

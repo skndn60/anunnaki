@@ -1847,6 +1847,32 @@ func testRegnalKeyOrdersEventsByDate() {
         }
     }
 
+    func testBashanBoundaryBackfilledAndGeoreferenced() {
+        let container = makeContainer()
+        let context = container.mainContext
+        context.insert(Place(name: "Bashan", modernLocation: "Southern Syria / northern Jordan"))
+        try? context.save()
+
+        Migration.ensurePlaceBoundaries(context: context)
+
+        let fetched = ((try? context.fetch(FetchDescriptor<Place>())) ?? []).first { $0.name == "Bashan" }
+        XCTAssertNotNil(fetched?.storedBoundaryGeoJSON, "Bashan got a region boundary")
+        let decoded = Migration.decodedRing(from: fetched?.storedBoundaryGeoJSON ?? "") ?? []
+        XCTAssertEqual(decoded.first!, decoded.last!, "Bashan ring closed")
+        XCTAssertGreaterThan(
+            Migration.ringMinAxisDegrees(decoded), Migration.sliverMinAxisDegrees,
+            "Bashan ring is a region, not a sliver"
+        )
+        for inside in [(35.83, 32.55), (35.73, 32.04), (36.10, 32.62), (35.85, 32.55),
+                       (35.80, 33.10), (36.30, 32.70), (36.10, 32.30)] {
+            XCTAssertTrue(pointInRing(inside, decoded), "\(inside) within Bashan")
+        }
+        for outside in [(36.29, 33.51), (37.16, 36.20), (35.69, 33.25), (35.48, 31.45),
+                        (35.44, 30.33), (38.27, 38.28), (35.40, 32.75)] {
+            XCTAssertFalse(pointInRing(outside, decoded), "\(outside) outside Bashan")
+        }
+    }
+
     func testRefinedElamRingGeoreferenced() {
         let geo = Migration.polygonGeoJSON(ring: Migration.placeBoundaryRings["elam"]!)
         let decoded = Migration.decodedRing(from: geo ?? "") ?? []

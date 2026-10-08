@@ -125,7 +125,7 @@ struct EventDetailView: View {
         .alert("Remove from Group?", isPresented: $showRemoveGroupConfirm, presenting: groupAssocToRemove) { assoc in
             Button("Remove", role: .destructive) {
                 if let eventToRemove = assoc.event, let group = assoc.group {
-                    let removedNames = group.removeEventWithDepropagation(event: eventToRemove, in: modelContext)
+                    _ = group.removeEventWithDepropagation(event: eventToRemove, in: modelContext)
                     Commit.save(modelContext, "EventDetailView")
                 } else {
                     modelContext.delete(assoc)
@@ -566,7 +566,7 @@ EntityGroupsSection(
     associations: event.groupAssociations,
     event: event,
     onJoinWithPropagation: { group in
-        let summary = group.addEventWithPropagation(event: event, in: modelContext)
+        _ = group.addEventWithPropagation(event: event, in: modelContext)
         Commit.save(modelContext, "EventDetailView")
     },
     onRemoveWithDepropagation: { assoc in

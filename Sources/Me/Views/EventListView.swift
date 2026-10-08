@@ -12,12 +12,14 @@ struct EventListView: View {
     @State private var showingAddSheet = false
     @State private var editingEvent: Event?
     @State private var selectedEventID: PersistentIdentifier?
-    @State private var sortOrder: EventSortOrder = .name
+    @DefaultSortOrder(.event) private var sortOrder: EventSortOrder
     @State private var imageDetailImage: ImageAsset?
     @DetailWidth(.event) private var detailWidth
     @State private var showDeleteConfirm = false
     @State private var selectedTypeFilters: Set<String> = []
+    @State private var searchText = ""
     @Query(sort: \EventType.name) private var eventTypes: [EventType]
+    @Query(sort: \Era.orderIndex) private var eras: [Era]
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
@@ -34,28 +36,61 @@ struct EventListView: View {
         return filteredEvents.first { $0.persistentModelID == id }
     }
 
+    private var eraBounds: [String: Int] {
+        EventChronology.eraBounds(from: eras)
+    }
+
+    private func dateOrdered(_ lhs: Event, _ rhs: Event, bounds: [String: Int]) -> Bool {
+        let lhsYear = EventChronology.effectiveYear(of: lhs, eraBounds: bounds) ?? Int.max
+        let rhsYear = EventChronology.effectiveYear(of: rhs, eraBounds: bounds) ?? Int.max
+        if lhsYear != rhsYear { return lhsYear < rhsYear }
+        return (lhs.sortName ?? sortName(for: lhs.name)) < (rhs.sortName ?? sortName(for: rhs.name))
+    }
+
     private var filteredEvents: [Event] {
         var result = events
+        if !searchText.isEmpty {
+            result = result.filter {
+                EntitySearch.matches(query: searchText, primary: $0.name, secondary: [$0.eventDescription])
+            }
+        }
         if !selectedTypeFilters.isEmpty {
             result = result.filter { selectedTypeFilters.contains($0.eventType?.name ?? "") }
         }
         switch sortOrder {
         case .name: return result.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }
         case .type: return result.sorted { $0.eventType?.name ?? "" < $1.eventType?.name ?? "" }
-        case .date: return result.sorted { $0.date.sortValue < $1.date.sortValue }
+        case .date:
+            let bounds = eraBounds
+            return result.sorted { dateOrdered($0, $1, bounds: bounds) }
         }
     }
 
     private var groupedEvents: [(key: String, events: [Event])] {
-        Dictionary(grouping: filteredEvents) { event in
+        let bounds = eraBounds
+        let groups = Dictionary(grouping: filteredEvents) { event in
             switch sortOrder {
-            case .name: String((event.sortName ?? sortName(for: event.name)).uppercased().prefix(1))
-            case .type: event.eventType?.name ?? "?"
-            case .date: event.date.era.isEmpty ? "Unknown" : event.date.era
+            case .name: return String((event.sortName ?? sortName(for: event.name)).uppercased().prefix(1))
+            case .type: return event.eventType?.name ?? "?"
+            case .date:
+                let era = EventChronology.effectiveEra(of: event, from: eras)
+                return era.isEmpty ? "Unknown" : era
             }
         }
-        .sorted { $0.key < $1.key }
-        .map { (key: $0.key, events: $0.value.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }) }
+        let keys: [String]
+        switch sortOrder {
+        case .date: keys = EventChronology.orderDateGroups(Array(groups.keys), eraBounds: bounds)
+        default: keys = groups.keys.sorted()
+        }
+        return keys.compactMap { key in
+            guard let members = groups[key] else { return nil }
+            let ordered: [Event]
+            switch sortOrder {
+            case .date: ordered = members.sorted { dateOrdered($0, $1, bounds: bounds) }
+            default: ordered = members.sorted { ($0.sortName ?? sortName(for: $0.name)) < ($1.sortName ?? sortName(for: $1.name)) }
+            }
+            return (key: key, events: ordered)
+        }
     }
 
     private func selectEvent(_ id: PersistentIdentifier) {
@@ -81,6 +116,14 @@ struct EventListView: View {
                     .buttonStyle(.borderedProminent)
                 }
                 .padding()
+
+                HStack(spacing: 6) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(.secondary)
+                    TextField("Search events…", text: $searchText)
+                        .textFieldStyle(.roundedBorder)
+                }
+                .padding(.horizontal)
 
                 // Breadcrumbs
                 let coordinatorHistory = coordinator?.history ?? []
@@ -125,10 +168,22 @@ struct EventListView: View {
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: 300)
-                        Spacer()
-                    }
-                    .frame(maxWidth: .infinity)
-                } else {
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else if filteredEvents.isEmpty {
+                VStack(spacing: 12) {
+                    Spacer()
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 36))
+                        .foregroundStyle(.tertiary)
+                    Text("No events to display")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
+            } else {
                     ScrollViewReader { proxy in
                         List(selection: $selectedEventID) {
                             ForEach(groupedEvents, id: \.key) { group in

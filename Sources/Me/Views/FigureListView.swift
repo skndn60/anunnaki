@@ -10,11 +10,13 @@ private struct FigureRowDisplay: Identifiable {
     let name: String
     let disambiguation: String?
     let domain: String
+    let aliases: [String]
     let typeName: String
     let typeColor: Color
     let typeIcon: String
     let genderSymbol: String
     let isConcept: Bool
+    let isCollective: Bool
     let hasUnresolvedSticky: Bool
     let birthDateLabel: String
     let isRed: Bool
@@ -34,13 +36,15 @@ struct FigureListView: View {
     @Query private var allGroups: [FigureGroup]
     @Query(sort: \PopupTable.name) private var popupTables: [PopupTable]
     @Query private var stickies: [StickyNote]
+    @Query private var alternateNames: [AlternateName]
     @State private var showingAddSheet = false
     @State private var editingFigure: Figure?
     @State private var selectedFigureID: PersistentIdentifier?
-    @State private var sortOrder: FigureSortOrder = .name
+    @DefaultSortOrder(.figure) private var sortOrder: FigureSortOrder
     @State private var imageDetailImage: ImageAsset?
     @State private var showDeleteConfirm = false
     @State private var selectedTypeFilters: Set<String> = []
+    @State private var searchText = ""
     @State private var showDescriptionEditor = false
     @State private var editRichDescription: Data? = nil
     @State private var editPlainDescription = ""
@@ -75,6 +79,12 @@ struct FigureListView: View {
 
     private var filteredRows: [FigureRowDisplay] {
         var result = rows
+        if !searchText.isEmpty {
+            result = result.filter { row in
+                EntitySearch.matches(query: searchText, primary: row.name,
+                                     secondary: [row.disambiguation ?? "", row.domain, row.typeName] + row.aliases)
+            }
+        }
         if !selectedTypeFilters.isEmpty {
             result = result.filter { selectedTypeFilters.contains($0.typeName) }
         }
@@ -104,6 +114,11 @@ struct FigureListView: View {
 
     private var stickyChangeSignature: [Int: Bool] {
         Dictionary(stickies.map { ($0.persistentModelID.hashValue, $0.isResolved) },
+                   uniquingKeysWith: { first, _ in first })
+    }
+
+    private var altNameSignature: [Int: String] {
+        Dictionary(alternateNames.map { ($0.persistentModelID.hashValue, $0.name) },
                    uniquingKeysWith: { first, _ in first })
     }
 
@@ -178,6 +193,9 @@ struct FigureListView: View {
         .onChange(of: stickyChangeSignature) { _, _ in
             rebuildRows()
         }
+        .onChange(of: altNameSignature) { _, _ in
+            rebuildRows()
+        }
         .onChange(of: selectedDynastyGroup?.persistentModelID) { _, _ in
             rebuildRows()
         }
@@ -218,6 +236,14 @@ struct FigureListView: View {
                 .buttonStyle(.borderedProminent)
             }
             .padding()
+
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.secondary)
+                TextField("Search figures…", text: $searchText)
+                    .textFieldStyle(.roundedBorder)
+            }
+            .padding(.horizontal)
 
             // Breadcrumbs
             let coordinatorHistory = coordinator?.history ?? []
@@ -297,7 +323,7 @@ struct FigureListView: View {
     private var detailPane: some View {
         Group {
             if let figure = selectedFigure {
-                let isCollectiveFigure = figure.figureType?.name.localizedCaseInsensitiveContains("Collective") ?? false
+                let isCollectiveFigure = figure.isCollective
                 // ResizableDivider(width: $detailWidth, range: 200...800)
                 VStack(spacing: 0) {
                     DetailToolbar(
@@ -371,11 +397,13 @@ struct FigureListView: View {
                 name: figure.name,
                 disambiguation: figure.disambiguation,
                 domain: figure.domain,
+                aliases: figure.alternateNames.map(\.name),
                 typeName: figure.figureType?.name ?? "",
                 typeColor: figure.figureType?.color ?? .gray,
                 typeIcon: figure.figureType?.icon ?? "questionmark",
                 genderSymbol: figure.gender.symbol,
                 isConcept: figure.isConcept,
+                isCollective: figure.isCollective,
                 hasUnresolvedSticky: figure.stickies.contains(where: { !$0.isResolved }),
                 birthDateLabel: figure.birthDate.displayLabel,
                 isRed: redIDs.contains(id),
@@ -464,7 +492,7 @@ struct FigureListView: View {
                         Button("Show in Lineage Tree") {
                             coordinator?.navigateToLineageFigure(row.id)
                         }
-                        .disabled(row.typeName.localizedCaseInsensitiveContains("Collective"))
+                        .disabled(row.isCollective)
                         Divider()
                         Button("Delete", role: .destructive) {
                             selectedFigureID = row.id

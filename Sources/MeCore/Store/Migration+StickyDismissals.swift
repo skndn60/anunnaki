@@ -12,6 +12,7 @@ extension Migration {
         "IMPORTED FROM ORACC",
         "Import daily life events",
         "Nergal and Erra are treated as the same deity (syncretism). Historically Erra's cult ran in parallel for centuries (Erra Epic, 8th c. BC) before the name settled as an aspect of Nergal.",
+        "MODELLED 30-09-2026 — Nephilim",
     ]
 
     package static func isStickyDismissed(textPrefix: String, entityKey: String, context: ModelContext) -> Bool {

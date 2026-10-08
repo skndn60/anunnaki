@@ -139,6 +139,11 @@ package struct RetrievalIndex {
     package func resolvePlace(_ name: String) -> Place? {
         let query = name.lowercased()
         if let match = places.first(where: { $0.name.lowercased() == query }) { return match }
+        if let match = places.first(where: { p in
+            (placeMatchables[p.persistentModelID] ?? []).contains {
+                $0.lowercased() == query || $0.lowercased().contains(query)
+            }
+        }) { return match }
         return places.first(where: { $0.name.lowercased().contains(query) || query.contains($0.name.lowercased()) })
     }
 

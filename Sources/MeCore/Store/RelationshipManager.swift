@@ -12,6 +12,41 @@ package struct RelationshipManager {
         try context.save()
     }
 
+    /// The category of a relationship type that says one figure belongs to another, as
+    /// opposed to a family, social or parental tie. A membership is **directed**: the member
+    /// is the `from` figure and the collective is the `to` figure, and that direction is the
+    /// only one a collective's member roll can read. Unlike `Spouse` or `Sibling`, which are
+    /// recorded in both directions, a membership has exactly one valid spelling.
+    package static let membershipCategory = "membership"
+
+    /// Records `member` as belonging to `collective`, always in that direction.
+    ///
+    /// The direction is a parameter of this method rather than of its caller, so it cannot
+    /// be got backwards by a caller passing figures in the intuitive order. This is the
+    /// sanctioned writer for membership rows — `addRelationship` remains available for every
+    /// other category, which is why `RelationshipFormView` routes membership here.
+    @discardableResult
+    package func addMembership(
+        member: Figure,
+        collective: Figure,
+        relationshipType: RelationshipType,
+        source: String = "",
+        sourceRef: Source? = nil,
+        dedupe: Bool = true
+    ) -> Relationship {
+        addRelationship(
+            from: member, to: collective, relationshipType: relationshipType,
+            source: source, sourceRef: sourceRef,
+            isPreferred: false, dedupe: dedupe
+        )
+    }
+
+    /// Whether a type is a membership, i.e. carries a canonical direction rather than
+    /// being symmetric.
+    package static func isMembership(_ type: RelationshipType) -> Bool {
+        type.category == membershipCategory
+    }
+
     // MARK: - Figure ↔ Figure
 
     @discardableResult

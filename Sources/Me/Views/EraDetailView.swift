@@ -3,6 +3,9 @@ import SwiftData
 
 struct EraDetailView: View {
     let era: Era
+    /// The ordinal the cited source uses for this era ("Dynasty X"). Nil for eras no
+    /// source numbers — the Sumerian dynasties, which are numbered by a different work.
+    var sourceNumeral: String? = nil
     @Environment(\.openWindow) private var openWindow
     @Query private var allFigures: [Figure]
     @State private var selectedFigure: Figure?
@@ -31,9 +34,15 @@ struct EraDetailView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(era.name)
                             .font(.title2.bold())
-                        Text("Period \(era.orderIndex)")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 6) {
+                            Text("Period \(era.orderIndex)")
+                            if let sourceNumeral {
+                                Text("·")
+                                Text(sourceNumeral)
+                            }
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                     }
 
                     Spacer()
@@ -46,17 +55,14 @@ struct EraDetailView: View {
                     PropertyRow(label: "End Date", value: era.endDate.displayLabel)
                 }
 
-                if era.startDate.startYear != nil && era.endDate.endYear != nil {
-                    let years = era.startDate.sortValue - era.endDate.sortValue
-                    if years > 0 {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Duration")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .textCase(.uppercase)
-                            Text("\(years) years")
-                                .font(.body)
-                        }
+                if let years = era.durationYears {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Duration")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        Text("\(years) years")
+                            .font(.body)
                     }
                 }
 

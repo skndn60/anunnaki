@@ -680,12 +680,12 @@
  {
   "figure": "Nergal",
   "alternates": [
-{
-     "name": "Irra",
-     "tradition": "Akkadian",
-     "nameType": "Syncretism",
-     "note": "Variant spelling of Erra; the Erra identification is treated as completed for lookups."
-    }
+   {
+    "name": "Irra",
+    "tradition": "Akkadian",
+    "nameType": "Syncretism",
+    "note": "Variant spelling of Erra; the Erra identification is treated as completed for lookups."
+   }
   ]
  },
  {
@@ -1175,6 +1175,183 @@
     "tradition": "Akkadian",
     "nameType": "Alternate Spelling",
     "note": "Akkadian variant spelling"
+   }
+  ]
+ },
+ {
+  "place": "Uruk",
+  "alternates": [
+   {
+    "name": "Unug",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Sumerian reading of the city's name"
+   },
+   {
+    "name": "Erech",
+    "tradition": "Hebrew",
+    "nameType": "Translation",
+    "note": "Biblical form of the name"
+   }
+  ]
+ },
+ {
+  "place": "Akkad",
+  "alternates": [
+   {
+    "name": "Agade",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Alternative transliteration of the city's name"
+   }
+  ]
+ },
+ {
+  "place": "Nippur",
+  "alternates": [
+   {
+    "name": "Nibru",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Sumerian reading of the city's name"
+   }
+  ]
+ },
+ {
+  "place": "Nineveh",
+  "alternates": [
+   {
+    "name": "Ninua",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Sumerian reading of the city's name"
+   },
+   {
+    "name": "Ninos",
+    "tradition": "Greek",
+    "nameType": "Translation",
+    "note": "Classical Greek name for the city"
+   }
+  ]
+ },
+ {
+  "place": "Kalhu",
+  "alternates": [
+   {
+    "name": "Nimrud",
+    "tradition": "Other",
+    "nameType": "Translation",
+    "note": "Modern name of the site"
+   }
+  ]
+ },
+ {
+  "place": "Babylon",
+  "alternates": [
+   {
+    "name": "Babel",
+    "tradition": "Hebrew",
+    "nameType": "Translation",
+    "note": "Biblical form of the name"
+   }
+  ]
+ },
+ {
+  "place": "Shuruppak",
+  "alternates": [
+   {
+    "name": "Suruppak",
+    "tradition": "Sumerian",
+    "nameType": "Alternate Spelling",
+    "note": "Standard transliteration of the city's name"
+   }
+  ]
+ },
+ {
+  "place": "Larsa",
+  "alternates": [
+   {
+    "name": "Senkereh",
+    "tradition": "Other",
+    "nameType": "Translation",
+    "note": "Modern name of the site"
+   }
+  ]
+ },
+ {
+  "place": "Umma",
+  "alternates": [
+   {
+    "name": "Jokha",
+    "tradition": "Other",
+    "nameType": "Translation",
+    "note": "Modern name of the site"
+   }
+  ]
+ },
+ {
+  "place": "Ebla",
+  "alternates": [
+   {
+    "name": "Tell Mardikh",
+    "tradition": "Other",
+    "nameType": "Translation",
+    "note": "Modern name of the site"
+   }
+  ]
+ },
+ {
+  "place": "Der",
+  "alternates": [
+   {
+    "name": "Badra",
+    "tradition": "Other",
+    "nameType": "Translation",
+    "note": "Modern identification of the site"
+   }
+  ]
+ },
+ {
+  "place": "Susa",
+  "alternates": [
+   {
+    "name": "Shushan",
+    "tradition": "Hebrew",
+    "nameType": "Translation",
+    "note": "Biblical form of the name"
+   }
+  ]
+ },
+ {
+  "place": "Hattusa",
+  "alternates": [
+   {
+    "name": "Hattusha",
+    "tradition": "Hittite",
+    "nameType": "Alternate Spelling",
+    "note": "Conventional alternate transliteration"
+   }
+  ]
+ },
+ {
+  "place": "Euphrates river",
+  "alternates": [
+   {
+    "name": "Purattu",
+    "tradition": "Akkadian",
+    "nameType": "Translation",
+    "note": "Akkadian name of the river"
+   }
+  ]
+ },
+ {
+  "place": "Tigris river",
+  "alternates": [
+   {
+    "name": "Idigna",
+    "tradition": "Sumerian",
+    "nameType": "Translation",
+    "note": "Sumerian name of the river"
    }
   ]
  }

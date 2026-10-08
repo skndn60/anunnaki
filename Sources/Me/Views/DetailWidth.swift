@@ -1,6 +1,7 @@
 import SwiftUI
 
 enum DetailWidthSlot: String, CaseIterable {
+    case alternateName
     case dictionary
     case era
     case event
@@ -15,6 +16,7 @@ enum DetailWidthSlot: String, CaseIterable {
 
     var key: String {
         switch self {
+        case .alternateName: "alternateNameDetailWidth"
         case .dictionary: "dictionaryDetailWidth"
         case .era: "eraDetailWidth"
         case .event: "eventDetailWidth"

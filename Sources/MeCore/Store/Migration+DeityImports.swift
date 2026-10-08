@@ -108,7 +108,8 @@ extension Migration {
 
     /// Import curated alternate names (bynames, cross-language equivalents,
     /// epithets, syncretisms and hypostases) from alt_names_import.json.
-    /// Keyed by exact figure name; additive + idempotent per (figure, name, tradition).
+    /// Rows are keyed by exact figure or place name; additive + idempotent per
+    /// (figure, name, tradition) and per (place, name).
     package static func ensureAlternateNamesImportExist(context: ModelContext) {
         struct AltRow: Decodable {
             let name: String
@@ -117,7 +118,8 @@ extension Migration {
             let note: String
         }
         struct AltNameEntry: Decodable {
-            let figure: String
+            let figure: String?
+            let place: String?
             let alternates: [AltRow]
         }
 
@@ -133,21 +135,42 @@ extension Migration {
 
         let figuresByName = Dictionary(uniqueKeysWithValues:
             ((try? context.fetch(FetchDescriptor<Figure>())) ?? []).map { ($0.name, $0) })
+        var placesByName: [String: Place] = [:]
+        for place in (try? context.fetch(FetchDescriptor<Place>())) ?? [] {
+            if placesByName[place.name] == nil { placesByName[place.name] = place }
+        }
         let existing = Set(((try? context.fetch(FetchDescriptor<AlternateName>())) ?? []).compactMap { alt -> String? in
-            guard let fig = alt.figure else { return nil }
-            return "\(fig.name.lowercased())|\(alt.name.lowercased())|\(alt.tradition.rawValue.lowercased())"
+            if let fig = alt.figure {
+                return "figure|\(fig.name.lowercased())|\(alt.name.lowercased())|\(alt.tradition.rawValue.lowercased())"
+            }
+            if let plc = alt.place {
+                return "place|\(plc.name.lowercased())|\(alt.name.lowercased())"
+            }
+            return nil
         })
 
         var added = 0
         for entry in entries {
-            guard let figure = figuresByName[entry.figure] else { continue }
-            for row in entry.alternates {
-                let key = "\(figure.name.lowercased())|\(row.name.lowercased())|\(row.tradition.lowercased())"
-                guard !existing.contains(key),
-                      let tradition = AlternateName.Tradition(rawValue: row.tradition),
-                      let nameType = AlternateName.NameType(rawValue: row.nameType) else { continue }
-                context.insert(AlternateName(figure: figure, name: row.name, tradition: tradition, nameType: nameType, note: row.note))
-                added += 1
+            if let figureName = entry.figure {
+                guard let figure = figuresByName[figureName] else { continue }
+                for row in entry.alternates {
+                    let key = "figure|\(figure.name.lowercased())|\(row.name.lowercased())|\(row.tradition.lowercased())"
+                    guard !existing.contains(key),
+                          let tradition = AlternateName.Tradition(rawValue: row.tradition),
+                          let nameType = AlternateName.NameType(rawValue: row.nameType) else { continue }
+                    context.insert(AlternateName(figure: figure, name: row.name, tradition: tradition, nameType: nameType, note: row.note))
+                    added += 1
+                }
+            } else if let placeName = entry.place {
+                guard let place = placesByName[placeName] else { continue }
+                for row in entry.alternates {
+                    let key = "place|\(place.name.lowercased())|\(row.name.lowercased())"
+                    guard !existing.contains(key),
+                          let tradition = AlternateName.Tradition(rawValue: row.tradition),
+                          let nameType = AlternateName.NameType(rawValue: row.nameType) else { continue }
+                    context.insert(AlternateName(place: place, name: row.name, tradition: tradition, nameType: nameType, note: row.note))
+                    added += 1
+                }
             }
         }
         guard added > 0 else { return }

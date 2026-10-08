@@ -1,11 +1,15 @@
 import SwiftUI
 import SwiftData
 
+enum GlobalSearchDestination {
+    case list(NavigationItem)
+    case entity(NavigationItem, id: PersistentIdentifier, name: String)
+}
+
 struct GlobalSearchView: View {
     let searchText: String
-    var onNavigateTo: ((NavigationItem) -> Void)?
+    var onNavigate: ((GlobalSearchDestination) -> Void)?
 
-    @Environment(\.modelContext) private var modelContext
     @Query private var figures: [Figure]
     @Query private var places: [Place]
     @Query private var events: [Event]
@@ -13,57 +17,63 @@ struct GlobalSearchView: View {
     @Query private var eras: [Era]
     @Query private var things: [Thing]
 
-    private var query: String { searchText.lowercased().trimmingCharacters(in: .whitespaces) }
-    private var hasQuery: Bool { !query.isEmpty }
+    private var hasQuery: Bool { !EntitySearch.fold(searchText).isEmpty }
+
+    private func ranked<T>(_ items: [T], _ fields: (T) -> (String, [String])) -> [T] {
+        items.compactMap { item -> (T, Int, String)? in
+            let field = fields(item)
+            guard let s = EntitySearch.score(query: searchText, primary: field.0, secondary: field.1) else { return nil }
+            return (item, s, field.0)
+        }
+        .sorted { lhs, rhs in
+            if lhs.1 != rhs.1 { return lhs.1 > rhs.1 }
+            return lhs.2.localizedCaseInsensitiveCompare(rhs.2) == .orderedAscending
+        }
+        .map(\.0)
+    }
 
     private var matchedFigures: [Figure] {
         guard hasQuery else { return [] }
-        return figures.filter { f in
-            f.name.lowercased().contains(query) ||
-            f.title.lowercased().contains(query) ||
-            f.domain.lowercased().contains(query) ||
-            (f.figureType?.name ?? "").lowercased().contains(query) ||
-            f.alternateNames.contains { $0.name.lowercased().contains(query) }
+        return ranked(figures) { figure in
+            (figure.name,
+             [figure.title, figure.domain, figure.figureType?.name ?? ""] + figure.alternateNames.map(\.name))
         }
     }
 
     private var matchedPlaces: [Place] {
         guard hasQuery else { return [] }
-        return places.filter {
-            $0.name.lowercased().contains(query) ||
-            $0.modernLocation.lowercased().contains(query) ||
-            ($0.placeType?.name ?? "").lowercased().contains(query)
+        return ranked(places) { place in
+            (place.name,
+             [place.modernLocation, place.placeType?.name ?? ""] + place.alternateNames.map(\.name))
         }
     }
 
     private var matchedEvents: [Event] {
         guard hasQuery else { return [] }
-        return events.filter {
-            $0.name.lowercased().contains(query) ||
-            ($0.eventType?.name ?? "").lowercased().contains(query)
+        return ranked(events) { event in
+            (event.name, [event.eventType?.name ?? "", event.eventDescription])
         }
     }
 
     private var matchedThings: [Thing] {
         guard hasQuery else { return [] }
-        return things.filter {
-            $0.name.lowercased().contains(query) ||
-            $0.thingDescription.lowercased().contains(query) ||
-            $0.source.lowercased().contains(query)
+        return ranked(things) { thing in
+            (thing.name, [thing.thingDescription, thing.source])
         }
     }
 
     private var matchedSources: [Source] {
         guard hasQuery else { return [] }
-        return sources.filter {
-            $0.name.lowercased().contains(query) ||
-            $0.author.lowercased().contains(query)
+        return ranked(sources) { source in
+            (source.name, [source.author])
         }
     }
 
     private var matchedEras: [Era] {
         guard hasQuery else { return [] }
-        return eras.filter { $0.name.lowercased().contains(query) }
+        return ranked(eras) { era in
+            (era.name, [])
+        }
     }
 
     private var totalCount: Int {
@@ -88,7 +98,7 @@ struct GlobalSearchView: View {
                         Section("Figures (\(matchedFigures.count))") {
                             ForEach(matchedFigures, id: \.persistentModelID) { figure in
                                 Button {
-                                    onNavigateTo?(.figures)
+                                    onNavigate?(.entity(.figures, id: figure.persistentModelID, name: figure.name))
                                 } label: {
                                     HStack(spacing: 8) {
                                         Circle()
@@ -116,7 +126,7 @@ struct GlobalSearchView: View {
                         Section("Places (\(matchedPlaces.count))") {
                             ForEach(matchedPlaces, id: \.persistentModelID) { place in
                                 Button {
-                                    onNavigateTo?(.places)
+                                    onNavigate?(.entity(.places, id: place.persistentModelID, name: place.name))
                                 } label: {
                                     HStack(spacing: 8) {
                                         Circle()
@@ -124,6 +134,11 @@ struct GlobalSearchView: View {
                                             .frame(width: 10, height: 10)
                                         Text(place.name)
                                             .font(.body)
+                                        if let alias = place.matchedAlternateName(for: searchText) {
+                                            Text("as \(alias)")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                         Spacer()
                                         Text(place.placeType?.name ?? "")
                                             .font(.caption)
@@ -139,7 +154,7 @@ struct GlobalSearchView: View {
                         Section("Events (\(matchedEvents.count))") {
                             ForEach(matchedEvents, id: \.persistentModelID) { event in
                                 Button {
-                                    onNavigateTo?(.events)
+                                    onNavigate?(.entity(.events, id: event.persistentModelID, name: event.name))
                                 } label: {
                                     HStack(spacing: 8) {
                                         Circle()
@@ -162,7 +177,7 @@ struct GlobalSearchView: View {
                         Section("Things (\(matchedThings.count))") {
                             ForEach(matchedThings, id: \.persistentModelID) { thing in
                                 Button {
-                                    onNavigateTo?(.things)
+                                    onNavigate?(.entity(.things, id: thing.persistentModelID, name: thing.name))
                                 } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "cube.box")
@@ -189,7 +204,7 @@ struct GlobalSearchView: View {
                         Section("Sources (\(matchedSources.count))") {
                             ForEach(matchedSources, id: \.persistentModelID) { source in
                                 Button {
-                                    onNavigateTo?(.sources)
+                                    onNavigate?(.list(.sources))
                                 } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "books.vertical")
@@ -213,7 +228,7 @@ struct GlobalSearchView: View {
                         Section("Eras (\(matchedEras.count))") {
                             ForEach(matchedEras, id: \.persistentModelID) { era in
                                 Button {
-                                    onNavigateTo?(.eras)
+                                    onNavigate?(.list(.eras))
                                 } label: {
                                     HStack(spacing: 8) {
                                         Image(systemName: "clock.arrow.circlepath")

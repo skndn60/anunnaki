@@ -240,13 +240,13 @@ struct RelationshipFormView: View {
                 .padding()
 
             Form {
-                Section("From") {
+                Section(isMembership ? "Member" : "From") {
                     FigureSearchSelector(
                         selection: $fromFigure,
                         searchText: $fromSearchText,
                         figures: figures,
                         filteredFigures: filteredFromFigures,
-                        placeholder: "Search from figure\u{2026}"
+                        placeholder: isMembership ? "Search for a member…" : "Search from figure\u{2026}"
                     )
                 }
 
@@ -258,14 +258,23 @@ struct RelationshipFormView: View {
                     }
                 }
 
-                Section("To") {
+                Section(isMembership ? "Collective" : "To") {
                     FigureSearchSelector(
                         selection: $toFigure,
                         searchText: $toSearchText,
                         figures: figures,
                         filteredFigures: filteredToFigures,
-                        placeholder: "Search to figure\u{2026}"
+                        placeholder: isMembership ? "Search for a collective…" : "Search to figure\u{2026}"
                     )
+                    if let membershipDirectionError {
+                        Label(membershipDirectionError, systemImage: "exclamationmark.triangle.fill")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    } else if isMembership {
+                        Text("“\(selectedType?.name ?? "Member of")” always points from the member to the collective — a collective has members, not the other way round.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 Section("Source") {
@@ -301,6 +310,20 @@ struct RelationshipFormView: View {
         }
     }
 
+    /// A membership relationship is directed — member → collective — and the member roll
+    /// reads only that direction. The form therefore relabels its two ends and refuses to
+    /// commit unless the far end really is a collective, so the one spelling a collective
+    /// can be read from is the only spelling the form will write.
+    private var isMembership: Bool {
+        guard let type = selectedType else { return false }
+        return RelationshipManager.isMembership(type)
+    }
+
+    private var membershipDirectionError: String? {
+        guard isMembership, let to = toFigure?.figure, !to.isCollective else { return nil }
+        return "\(to.name) is not a collective. Put the collective on this side, not the member."
+    }
+
     private func commit(isPreferred: Bool) {
         guard let from = fromFigure?.figure, let to = toFigure?.figure, let type = selectedType else { return }
         if isPreferred {
@@ -310,26 +333,51 @@ struct RelationshipFormView: View {
             }
             for rel in existing { rel.isPreferred = false }
         }
-        RelationshipManager(context: modelContext).addRelationship(
-            from: from, to: to, relationshipType: type,
-            source: selectedSource?.name ?? "",
-            sourceRef: selectedSource,
-            isPreferred: isPreferred,
-            dedupe: false
-        )
+        if isMembership {
+            RelationshipManager(context: modelContext).addMembership(
+                member: from, collective: to, relationshipType: type,
+                source: selectedSource?.name ?? "",
+                sourceRef: selectedSource
+            )
+        } else {
+            RelationshipManager(context: modelContext).addRelationship(
+                from: from, to: to, relationshipType: type,
+                source: selectedSource?.name ?? "",
+                sourceRef: selectedSource,
+                isPreferred: isPreferred,
+                dedupe: false
+            )
+        }
         Commit.save(modelContext, "RelationshipFormView.commit")
         dismiss()
     }
 
     private var isValid: Bool {
         guard let from = fromFigure?.figure, let to = toFigure?.figure else { return false }
-        return from.persistentModelID != to.persistentModelID
+        if from.persistentModelID == to.persistentModelID { return false }
+        if isMembership, !to.isCollective { return false }
+        return true
     }
 
     @State private var duplicateMessage = ""
 
     private func save() {
         guard let from = fromFigure?.figure, let to = toFigure?.figure, let type = selectedType else { return }
+
+        // A membership is not an exclusive role — a figure may belong to more than one
+        // collective — so there is no conflicting-lineage warning and no "which one is the
+        // default?" question to ask. Duplicates of the same member/collective pair are
+        // deduped instead.
+        if isMembership {
+            RelationshipManager(context: modelContext).addMembership(
+                member: from, collective: to, relationshipType: type,
+                source: selectedSource?.name ?? "",
+                sourceRef: selectedSource
+            )
+            Commit.save(modelContext, "RelationshipFormView.save")
+            dismiss()
+            return
+        }
 
         let existing = relationships.filter {
             $0.fromFigure?.persistentModelID == from.persistentModelID &&
@@ -357,6 +405,9 @@ struct RelationshipFormView: View {
     @State private var showPreferredPrompt = false
 
     private func inferType() {
+        // Never overwrite a membership the user has already chosen — inferring Father or
+        // Mother here would silently undo the type selection the membership flow depends on.
+        if isMembership { return }
         switch fromFigure?.figure.gender {
         case .female: selectedType = allRelationTypes.first(where: { $0.name == "Mother" })
         case .male: selectedType = allRelationTypes.first(where: { $0.name == "Father" })

@@ -1,6 +1,7 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import ObjectiveC
 
 enum SidebarSection: String, CaseIterable {
     case overview = "Overview"
@@ -288,6 +289,7 @@ struct ContentView: View {
                 modelContext.undoManager = windowUM
             }
         }
+        .background(MainWindowChrome())
         .safeAreaInset(edge: .top, spacing: 0) {
             if !dismissedMigrationWarning, !StartupReport.shared.migrationFailures.isEmpty {
                 migrationWarningBanner
@@ -432,7 +434,7 @@ struct ContentView: View {
             append(.sklMap)
             append(.dynastyEvolution)
         }
-        for group in topLevelFigureGroups.filter { $0.isPublished && $0.rendersInHistory && $0.name != "Dynasties" } {
+        for group in topLevelFigureGroups.filter({ $0.isPublished && $0.rendersInHistory && $0.name != "Dynasties" }) {
             appendGroup(group, pathPrefix: "figure")
         }
 
@@ -449,12 +451,16 @@ struct ContentView: View {
             }
         }
 
-        for item in NavigationItem.allCases where item.section == .data { append(item) }
-        for group in topLevelFigureGroups.filter { $0.isPublished && $0.rendersInData } {
+        for item in NavigationItem.allCases where item.section == .data {
+            append(item)
+        }
+        for group in topLevelFigureGroups.filter({ $0.isPublished && $0.rendersInData }) {
             appendGroup(group, pathPrefix: "data")
         }
 
-        for item in NavigationItem.allCases where item.section == .housekeeping { append(item) }
+        for item in NavigationItem.allCases where item.section == .housekeeping {
+            append(item)
+        }
 
         return ids
     }
@@ -553,9 +559,20 @@ struct ContentView: View {
     @ViewBuilder
     private var detailContent: some View {
         if !globalSearchText.isEmpty {
-            GlobalSearchView(searchText: globalSearchText, onNavigateTo: { item in
+            GlobalSearchView(searchText: globalSearchText, onNavigate: { destination in
                 globalSearchText = ""
-                coordinator.selection = .item(item)
+                switch destination {
+                case .list(let item):
+                    coordinator.selection = .item(item)
+                case .entity(let item, let id, let name):
+                    switch item {
+                    case .figures: coordinator.navigateToFigure(id, name: name)
+                    case .places: coordinator.navigateToPlace(id, name: name)
+                    case .events: coordinator.navigateToEvent(id, name: name)
+                    case .things: coordinator.navigateToThing(id, name: name)
+                    default: coordinator.selection = .item(item)
+                    }
+                }
             })
         } else if let selection = coordinator.selection {
             switch selection {
@@ -623,6 +640,94 @@ struct ComingSoonView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+/// Removes the titlebar's own separator line and re-aligns the detail column's
+/// titlebar background to the sidebar/detail boundary. AppKit lays that
+/// background out a few points into the sidebar, so a strip of the toolbar
+/// material bleeds over the sidebar's top-right corner; nudging it flush keeps
+/// the titlebar edge on the sidebar edge.
+private struct MainWindowChrome: NSViewRepresentable {
+    final class Coordinator {
+        weak var window: NSWindow?
+        private var observers: [NSObjectProtocol] = []
+
+        func configure(on window: NSWindow) {
+            self.window = window
+            window.titlebarSeparatorStyle = .none
+            alignTitlebarBackground()
+            let center = NotificationCenter.default
+            observers.append(center.addObserver(forName: NSSplitView.didResizeSubviewsNotification, object: nil, queue: .main) { [weak self] _ in
+                self?.alignTitlebarBackground()
+            })
+            observers.append(center.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: .main) { [weak self] _ in
+                self?.alignTitlebarBackground()
+            })
+            observers.append(center.addObserver(forName: NSWindow.didBecomeKeyNotification, object: window, queue: .main) { [weak self] _ in
+                self?.alignTitlebarBackground()
+            })
+        }
+
+        func alignTitlebarBackground() {
+            guard let window, let theme = window.contentView?.superview else { return }
+
+            var titlebarBackground: NSView?
+            var splitView: NSView?
+            func walk(_ view: NSView) {
+                let name = String(cString: object_getClassName(view))
+                if name == "NSTitlebarBackgroundView", view.frame.origin.x > 0, titlebarBackground == nil {
+                    titlebarBackground = view
+                }
+                if view is NSSplitView, splitView == nil {
+                    splitView = view
+                }
+                for sub in view.subviews { walk(sub) }
+            }
+            walk(theme)
+
+            guard let titlebarBackground,
+                  let container = titlebarBackground.superview,
+                  let splitView else { return }
+            let detail = splitView.subviews
+                .filter { String(cString: object_getClassName($0)).contains("_NSSplitViewItemViewWrapper") && $0.frame.origin.x > 0 }
+                .max { $0.frame.width < $1.frame.width }
+            guard let detail else { return }
+
+            let targetX = detail.convert(.zero, to: container).x
+            guard abs(titlebarBackground.frame.origin.x - targetX) > 0.5 else { return }
+            var frame = titlebarBackground.frame
+            let right = frame.maxX
+            frame.origin.x = targetX
+            frame.size.width = right - targetX
+            titlebarBackground.frame = frame
+        }
+
+        deinit {
+            observers.forEach(NotificationCenter.default.removeObserver)
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async {
+            if let window = view.window {
+                context.coordinator.configure(on: window)
+            }
+        }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async {
+            if context.coordinator.window == nil, let window = nsView.window {
+                context.coordinator.configure(on: window)
+            } else {
+                context.coordinator.alignTitlebarBackground()
+            }
+        }
     }
 }
 

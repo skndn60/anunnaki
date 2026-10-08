@@ -241,9 +241,9 @@ package enum LineageTreeLayout {
         }
 
         let missingPlaceholder: (name: String, gender: Figure.Gender)?
-        if let fatherFig = grouped["Father"]?.first?.fromFigure, !knownRelationTypes.contains("Mother") {
+        if grouped["Father"]?.first?.fromFigure != nil, !knownRelationTypes.contains("Mother") {
             missingPlaceholder = ("Unknown Mother", .female)
-        } else if let motherFig = grouped["Mother"]?.first?.fromFigure, !knownRelationTypes.contains("Father") {
+        } else if grouped["Mother"]?.first?.fromFigure != nil, !knownRelationTypes.contains("Father") {
             missingPlaceholder = ("Unknown Father", .male)
         } else {
             missingPlaceholder = nil

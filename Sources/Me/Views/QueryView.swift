@@ -57,7 +57,6 @@ struct QueryView: View {
     @State private var queryText = ""
     @State private var result: QueryResult?
     @State private var ollamaReachable = false
-    @State private var forceLLM = false
     @State private var isProcessing = false
     @State private var statusMessage: String?
 
@@ -87,14 +86,6 @@ struct QueryView: View {
                     Button("Ask") { runQuery() }
                         .buttonStyle(.borderedProminent)
                         .disabled(queryText.isEmpty)
-                }
-                if ollamaReachable {
-                    Button(action: { forceLLM.toggle() }) {
-                        Image(systemName: forceLLM ? "brain" : "brain.head.profile")
-                            .foregroundStyle(forceLLM ? Color.green : .secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(forceLLM ? "Skip regex, use local AI" : "Use local AI for all queries")
                 }
                 if result != nil {
                     Button("Clear") { clearQuery() }
@@ -170,6 +161,7 @@ struct QueryView: View {
                             queryExample("female figures")
                             queryExample("wind gods")
                             queryExample("Ninurta's uncle")
+                            queryExample("members of the Assyrians")
                             queryExample("figures of the Early Dynastic Period")
                             queryExample("duration of the Early Dynastic Period")
                             queryExample("how long did the Antediluvian Period last")
@@ -194,17 +186,13 @@ struct QueryView: View {
     }
 
     private func runQuery() {
-        if forceLLM {
-            askOllama(bootMessage: "Asking Ollama for an answer…")
+        let engine = QueryEngine(context: modelContext)
+        let answer = engine.query(queryText)
+        if case .noMatch = answer {
+            askOllama(bootMessage: "Cannot answer query. Booting Ollama for an answer. Please wait…")
         } else {
-            let engine = QueryEngine(context: modelContext)
-            let answer = engine.query(queryText)
-            if case .noMatch = answer {
-                askOllama(bootMessage: "Cannot answer query. Booting Ollama for an answer. Please wait…")
-            } else {
-                result = answer
-                saveQueryState()
-            }
+            result = answer
+            saveQueryState()
         }
     }
 
@@ -353,7 +341,7 @@ struct FigureDossierView: View {
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
-                .disabled(dossier.figureTypeName.localizedCaseInsensitiveContains("Collective"))
+                .disabled(dossier.isCollective)
             }
             .padding(.bottom, 4)
 

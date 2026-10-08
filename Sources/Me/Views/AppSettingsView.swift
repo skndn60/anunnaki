@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 struct AppSettingsView: View {
     @Environment(\.userSession) private var userSession
@@ -14,6 +15,9 @@ struct AppSettingsView: View {
     @AppStorage("dynastyMapDateFilter") private var dateFilterEnabled = false
     @AppStorage(ConsistencyCheckSettings.masterKey) private var allChecksEnabled = true
     @AppStorage("skipLogin") private var skipLogin = false
+    @DefaultSortOrder(.figure) private var figureSort: FigureListView.FigureSortOrder
+    @DefaultSortOrder(.place) private var placeSort: PlaceListView.PlaceSortOrder
+    @DefaultSortOrder(.event) private var eventSort: EventListView.EventSortOrder
     @State private var expandedCategories: Set<String> = []
 
     var body: some View {
@@ -25,6 +29,27 @@ struct AppSettingsView: View {
                 .foregroundStyle(.secondary)
             Divider()
             Form {
+                Section {
+                    Picker("Figures", selection: $figureSort) {
+                        ForEach(FigureListView.FigureSortOrder.allCases, id: \.self) { order in
+                            Text(order.rawValue).tag(order)
+                        }
+                    }
+                    Picker("Places", selection: $placeSort) {
+                        ForEach(PlaceListView.PlaceSortOrder.allCases, id: \.self) { order in
+                            Text(order.rawValue).tag(order)
+                        }
+                    }
+                    Picker("Events", selection: $eventSort) {
+                        ForEach(EventListView.EventSortOrder.allCases, id: \.self) { order in
+                            Text(order.rawValue).tag(order)
+                        }
+                    }
+                } header: {
+                    Text("Sorting")
+                } footer: {
+                    Text("Default order for each list. Changing Sort in a list header updates this setting.")
+                }
                 Section {
                     zoomRow(
                         title: "Historical map startup zoom",

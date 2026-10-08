@@ -55,7 +55,7 @@ package struct VersionManager {
         let currentCount = (try? context.fetchCount(FetchDescriptor<Figure>())) ?? 0
         if currentCount > 0 {
             let autoName = "Auto-saved before restore of: \(version.name)"
-            commit(name: autoName, branch: version.branch, parentId: version.id, context: context)
+            _ = commit(name: autoName, branch: version.branch, parentId: version.id, context: context)
         }
 
         SeedData.clearAll(context: context)

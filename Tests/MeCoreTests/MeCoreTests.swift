@@ -120,6 +120,74 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(forwardPositiveSpan.displayLabel, "70 \u{2013} 224 CE")
     }
 
+    func testEraDateSpanLabelIsChronologicalAndUniform() {
+        let singleYears = Era(
+            name: "Uruk Period",
+            orderIndex: 35,
+            startDate: MythologicalDate(year: -3500, era: "Uruk Period", isApproximate: true),
+            endDate: MythologicalDate(year: -3100, era: "Uruk Period", isApproximate: true)
+        )
+        XCTAssertEqual(singleYears.dateSpanLabel, "~3,500 \u{2013} 3,100 BCE")
+
+        let spanStart = Era(
+            name: "First Dynasty of Babylon",
+            orderIndex: 31,
+            startDate: MythologicalDate(startYear: -1894, endYear: -1595, era: "First Dynasty of Babylon", isApproximate: true),
+            endDate: MythologicalDate(year: -1595, era: "First Dynasty of Babylon", isApproximate: true)
+        )
+        XCTAssertEqual(spanStart.dateSpanLabel, "~1,894 \u{2013} 1,595 BCE")
+
+        let crossing = Era(
+            name: "Parthian Empire",
+            startDate: MythologicalDate(year: -129, isApproximate: true),
+            endDate: MythologicalDate(year: 224, isApproximate: true)
+        )
+        XCTAssertEqual(crossing.dateSpanLabel, "~129 BCE \u{2013} 224 CE")
+
+        let reversed = Era(
+            name: "Reversed",
+            startDate: MythologicalDate(year: -3100),
+            endDate: MythologicalDate(year: -3500)
+        )
+        XCTAssertEqual(reversed.dateSpanLabel, "3,500 \u{2013} 3,100 BCE")
+
+        let mixedApprox = Era(
+            name: "Mixed",
+            startDate: MythologicalDate(year: -3500),
+            endDate: MythologicalDate(year: -3100, isApproximate: true)
+        )
+        XCTAssertEqual(mixedApprox.dateSpanLabel, "~3,500 \u{2013} 3,100 BCE")
+
+        let dateless = Era(name: "Antediluvian", startDate: .unknown, endDate: .unknown)
+        XCTAssertNil(dateless.dateSpanLabel)
+    }
+
+    func testEraDurationYears() {
+        let chronological = Era(
+            name: "Uruk Period",
+            startDate: MythologicalDate(year: -3500),
+            endDate: MythologicalDate(year: -3100)
+        )
+        XCTAssertEqual(chronological.durationYears, 400)
+
+        let reversed = Era(
+            name: "Reversed",
+            startDate: MythologicalDate(year: -3100),
+            endDate: MythologicalDate(year: -3500)
+        )
+        XCTAssertEqual(reversed.durationYears, 400)
+
+        let point = Era(
+            name: "Point",
+            startDate: MythologicalDate(year: -1000),
+            endDate: MythologicalDate(year: -1000)
+        )
+        XCTAssertNil(point.durationYears)
+
+        let dateless = Era(name: "Antediluvian", startDate: .unknown, endDate: .unknown)
+        XCTAssertNil(dateless.durationYears)
+    }
+
     func testMythologicalDateSortValue() {
         let numeric = MythologicalDate(year: -1000, era: "", isApproximate: false)
         XCTAssertEqual(numeric.sortValue, -1000)
@@ -228,6 +296,31 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(alts2.count, alts.count, "second run must not duplicate alternate names")
     }
 
+    func testEnsureAlternateNamesImportAddsPlaceAliases() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        let uruk = Place(name: "Uruk")
+        context.insert(uruk)
+        try? context.save()
+
+        Migration.ensureAlternateNamesImportExist(context: context)
+        var alts = (try? context.fetch(FetchDescriptor<AlternateName>())) ?? []
+        let urukAliases = alts.filter { $0.place?.name == "Uruk" }.map(\.name)
+        XCTAssertTrue(urukAliases.contains("Unug"), "Uruk should gain its Sumerian alias Unug; got \(urukAliases)")
+        XCTAssertTrue(urukAliases.contains("Erech"), "Uruk should gain its biblical alias Erech; got \(urukAliases)")
+
+        Migration.ensureAlternateNamesImportExist(context: context)
+        alts = (try? context.fetch(FetchDescriptor<AlternateName>())) ?? []
+        XCTAssertEqual(alts.count, 2, "second run must not duplicate place aliases")
+
+        context.insert(AlternateName(place: uruk, name: "Unug", tradition: .greek, nameType: .spelling, note: ""))
+        try? context.save()
+        let beforeImport = ((try? context.fetch(FetchDescriptor<AlternateName>())) ?? []).count
+        Migration.ensureAlternateNamesImportExist(context: context)
+        let afterImport = ((try? context.fetch(FetchDescriptor<AlternateName>())) ?? []).count
+        XCTAssertEqual(afterImport, beforeImport, "place alias dedupe must ignore tradition")
+    }
+
     func testHistoricalEventsImportIsAdditiveAndIdempotent() {
         let container = makeContainer()
         let context = ModelContext(container)
@@ -254,6 +347,50 @@ final class MeCoreTests: XCTestCase {
         let secondFigures = (try? context.fetch(FetchDescriptor<Figure>())) ?? []
         XCTAssertEqual(secondEvents.count, firstEvents.count, "second run must not duplicate events")
         XCTAssertEqual(secondFigures.count, firstFigures.count, "second run must not duplicate kings")
+    }
+
+    func testHistoricalEventsTrancheDCoversPreviouslyEmptyEras() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let hadanish = Figure(name: "Hadanish")
+        context.insert(hadanish)
+        try? context.save()
+
+        Migration.ensureHistoricalEventsImportExist(context: context)
+        let events = (try? context.fetch(FetchDescriptor<Event>())) ?? []
+        let importedEras = Set(events.map { $0.era })
+
+        let covered = [
+            "Jemdet Nasr Period", "Dynasty of Awan", "Dynasty of Hamazi",
+            "Second dynasty of Kish", "Second dynasty of Ur", "Third dynasty of Kish",
+            "Dynasty of Akshak", "Fourth dynasty of Kish", "Fourth dynasty of Uruk",
+            "Dynasty of Mari", "First Dynasty of the Sealand", "Second Dynasty of the Sealand",
+            "Bazi Dynasty", "Elamite Dynasty", "Second Dynasty of Babylon",
+            "Chaldean Dynasty", "Mitanni", "Middle Assyrian Period",
+            "Kassite Dynasty of Babylon", "Late Bronze Age Collapse", "Neo-Babylonian Empire",
+            "Achaemenid Empire", "Macedonian Empire", "Seleucid Empire",
+            "Parthian Empire", "Sassanid Empire", "Roman and Byzantine Mesopotamia",
+            "Assyrian Dynasty of Babylon",
+        ]
+        for era in covered {
+            XCTAssertTrue(importedEras.contains(era), "tranche d should add an event for empty era \(era)")
+        }
+
+        let byName = Dictionary(uniqueKeysWithValues: events.map { ($0.name, $0) })
+        XCTAssertNotNil(byName["Cyrus the Great captures Babylon"], "Neo-Babylonian landmark event should import")
+        XCTAssertNotNil(byName["Gandash founds the Kassite dynasty of Babylon"], "Kassite founding event should import")
+        XCTAssertNotNil(byName["Simbar-shipak seizes the throne of Babylon"], "Sea Land accession should import")
+        XCTAssertNil(byName["Sennacherib destroys Babylon"], "tranche d must not shadow the existing Sennacherib event")
+
+        let hadanishEvent = byName["Hadanish rules Hamazi as a power between Kish and Nippur"]
+        XCTAssertNotNil(hadanishEvent, "figure-linked event should import")
+        XCTAssertTrue(hadanishEvent?.involvedFigures.contains { $0.name == "Hadanish" } ?? false,
+                      "Hadanish should be linked when the figure already exists")
+
+        let dEvents = events.filter { covered.contains($0.era) }
+        XCTAssertEqual(dEvents.count, 49, "expected 49 tranche d events")
     }
 
     func testEnsureMissingFigureDescriptionsFillsOnlyBlanks() {
@@ -326,7 +463,9 @@ final class MeCoreTests: XCTestCase {
         SeedData.ensureTypesExist(context: context)
 
         let eventTypes = (try? context.fetch(FetchDescriptor<EventType>(sortBy: [SortDescriptor(\.name)]))) ?? []
-        XCTAssertEqual(eventTypes.count, 10)
+        XCTAssertEqual(eventTypes.count, 12)
+        XCTAssertTrue(eventTypes.contains { $0.name == "Achievement" })
+        XCTAssertTrue(eventTypes.contains { $0.name == "Punishment" })
     }
 
     func testEnsureTypesExistIsIdempotent() {
@@ -342,7 +481,7 @@ final class MeCoreTests: XCTestCase {
 
         XCTAssertEqual(figureTypes, 8)
         XCTAssertEqual(placeTypes, 6)
-        XCTAssertEqual(eventTypes, 10)
+        XCTAssertEqual(eventTypes, 12)
     }
 
     func testQueryEngineFindsFigureByName() {
@@ -429,6 +568,167 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(figures.count, 2)
         XCTAssertTrue(figures.contains(where: { $0.name == "Enlil" }))
         XCTAssertTrue(figures.contains(where: { $0.name == "Enki" }))
+    }
+
+    func testQueryEngineMembersOfCollectivePrepositional() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let assyrians = Figure(name: "Assyrians", gender: .male)
+        let sargon = Figure(name: "Sargon", gender: .male)
+        let hammurabi = Figure(name: "Hammurabi", gender: .male)
+        context.insert(assyrians)
+        context.insert(sargon)
+        context.insert(hammurabi)
+
+        let memberOf = RelationshipType(name: "Member of", icon: "person.3", colorHex: "007AFF", category: "membership", reverseName: "Contains")
+        context.insert(memberOf)
+
+        let manager = RelationshipManager(context: context)
+        manager.addMembership(member: sargon, collective: assyrians, relationshipType: memberOf)
+        manager.addMembership(member: hammurabi, collective: assyrians, relationshipType: memberOf)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("members of the assyrians")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figure list result, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Members of Assyrians")
+        XCTAssertEqual(figures.count, 2)
+        XCTAssertTrue(figures.contains(where: { $0.name == "Sargon" }))
+        XCTAssertTrue(figures.contains(where: { $0.name == "Hammurabi" }))
+    }
+
+    func testQueryEngineMembersOfCollectivePossessive() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let anunnaki = Figure(name: "Anunnaki", gender: .male)
+        let enlil = Figure(name: "Enlil", gender: .male)
+        context.insert(anunnaki)
+        context.insert(enlil)
+
+        let memberOf = RelationshipType(name: "Member of", icon: "person.3", colorHex: "007AFF", category: "membership", reverseName: "Contains")
+        context.insert(memberOf)
+        RelationshipManager(context: context).addMembership(member: enlil, collective: anunnaki, relationshipType: memberOf)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("anunnaki's members")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figure list result, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Members of Anunnaki")
+        XCTAssertEqual(figures.map(\.name), ["Enlil"])
+    }
+
+    func testQueryEngineCollectivesOfMember() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let akkadians = Figure(name: "Akkadians", gender: .male)
+        let sargon = Figure(name: "Sargon", gender: .male)
+        context.insert(akkadians)
+        context.insert(sargon)
+
+        let memberOf = RelationshipType(name: "Member of", icon: "person.3", colorHex: "007AFF", category: "membership", reverseName: "Contains")
+        context.insert(memberOf)
+        RelationshipManager(context: context).addMembership(member: sargon, collective: akkadians, relationshipType: memberOf)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("collectives of sargon")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figure list result, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Collectives of Sargon")
+        XCTAssertEqual(figures.map(\.name), ["Akkadians"])
+    }
+
+    func testQueryEngineHowManyMembers() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let anunnaki = Figure(name: "Anunnaki", gender: .male)
+        let enlil = Figure(name: "Enlil", gender: .male)
+        let enki = Figure(name: "Enki", gender: .male)
+        context.insert(anunnaki)
+        context.insert(enlil)
+        context.insert(enki)
+
+        let memberOf = RelationshipType(name: "Member of", icon: "person.3", colorHex: "007AFF", category: "membership", reverseName: "Contains")
+        context.insert(memberOf)
+
+        let manager = RelationshipManager(context: context)
+        manager.addMembership(member: enlil, collective: anunnaki, relationshipType: memberOf)
+        manager.addMembership(member: enki, collective: anunnaki, relationshipType: memberOf)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("how many members does anunnaki have")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figure list result, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Anunnaki had 2 members")
+        XCTAssertEqual(figures.count, 2)
+    }
+
+    func testQueryEngineMembersOfFigureWithoutRollIsEmptyList() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let enki = Figure(name: "Enki", gender: .male)
+        context.insert(enki)
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("members of enki")
+
+        guard case .figureList(let title, let figures) = result else {
+            XCTFail("Expected figure list result for a figure with no membership roll, got \(result)")
+            return
+        }
+        XCTAssertEqual(title, "Members of Enki")
+        XCTAssertTrue(figures.isEmpty)
+    }
+
+    func testQueryEngineMembershipRowWrittenBackwardsDoesNotFillTheRoll() {
+        let container = makeContainer()
+        let context = ModelContext(container)
+        SeedData.ensureTypesExist(context: context)
+
+        let assyrians = Figure(name: "Assyrians", gender: .male)
+        let sargon = Figure(name: "Sargon", gender: .male)
+        context.insert(assyrians)
+        context.insert(sargon)
+
+        let memberOf = RelationshipType(name: "Member of", icon: "person.3", colorHex: "007AFF", category: "membership", reverseName: "Contains")
+        context.insert(memberOf)
+        context.insert(Relationship(fromFigure: assyrians, toFigure: sargon, relationshipType: memberOf))
+        try? context.save()
+
+        let engine = QueryEngine(context: context)
+        let result = engine.query("members of assyrians")
+
+        guard case .figureList(_, let figures) = result else {
+            XCTFail("Expected figure list result, got \(result)")
+            return
+        }
+        XCTAssertTrue(figures.isEmpty, "a membership row recorded backwards never appears in the collective's roll")
     }
 
     func testQueryEngineEmbeddingSynonymKidsDefersToOllama() {
@@ -1291,6 +1591,21 @@ final class MeCoreTests: XCTestCase {
         XCTAssertEqual(index.resolveFigure("enk")?.persistentModelID, f.enki.persistentModelID)
     }
 
+    func testRetrievalIndexResolvePlaceByAlternateName() {
+        let f = makeFixture()
+        let index = RetrievalIndex(
+            figures: [f.enki, f.enlil, f.ninhursag, f.marduk, f.tiamat, f.nabu],
+            places: [f.uruk, f.eridu],
+            events: [f.creationEvent],
+            things: [],
+            alternateNames: [AlternateName(place: f.uruk, name: "Erech", tradition: .hebrew)]
+        )
+        XCTAssertEqual(index.resolvePlace("Erech")?.persistentModelID, f.uruk.persistentModelID)
+        XCTAssertEqual(index.resolvePlace("ere")?.persistentModelID, f.uruk.persistentModelID)
+        XCTAssertEqual(index.resolvePlace("Uruk")?.persistentModelID, f.uruk.persistentModelID)
+        XCTAssertNil(index.resolvePlace("Atlantis"))
+    }
+
     func testRetrievalIndexResolutionParityWithQueryEngine() {
         let f = makeFixture()
         let index = RetrievalIndex(
@@ -1315,6 +1630,31 @@ final class MeCoreTests: XCTestCase {
         let result = f.engine.query("What is Mami?")
         guard case .figure(let dossier) = result else {
             return XCTFail("Expected .figure for alternate-name query, got \(result)")
+        }
+        XCTAssertEqual(dossier.figure.name, "Ninhursag")
+    }
+
+    func testQueryEngineAlsoKnownAsResolvesPlaceAlias() {
+        let f = makeFixture()
+        f.context.insert(AlternateName(place: f.uruk, name: "Erech", tradition: .hebrew))
+        try? f.context.save()
+
+        let result = f.engine.query("also known as Erech")
+        guard case .place(let dossier) = result else {
+            return XCTFail("Expected .place for place alternate-name query, got \(result)")
+        }
+        XCTAssertEqual(dossier.place.name, "Uruk")
+    }
+
+    func testQueryEngineAlsoKnownAsFigureIsNotShadowedByPlaceAlias() {
+        let f = makeFixture()
+        f.context.insert(AlternateName(place: f.uruk, name: "Mami", tradition: .other))
+        f.context.insert(AlternateName(figure: f.ninhursag, name: "Mami", tradition: .sumerian))
+        try? f.context.save()
+
+        let result = f.engine.query("also known as Mami")
+        guard case .figure(let dossier) = result else {
+            return XCTFail("Expected .figure when both a place and a figure carry the alias, got \(result)")
         }
         XCTAssertEqual(dossier.figure.name, "Ninhursag")
     }

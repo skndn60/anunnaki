@@ -132,6 +132,18 @@ package class QueryEngine {
                 label: { "Worshippers of \($0)" },
                 finder: { self.findWorshippers(of: $0) }
             ),
+            FigureRelationPattern(
+                possessiveSuffixes: ["collectives", "collective", "memberships", "membership"],
+                prepositionalPrefixes: ["collectives of "],
+                label: { "Collectives of \($0)" },
+                finder: { self.findCollectives(of: $0) }
+            ),
+            FigureRelationPattern(
+                possessiveSuffixes: ["members", "member"],
+                prepositionalPrefixes: ["members of ", "member of "],
+                label: { "Members of \($0)" },
+                finder: { self.findMembers(of: $0) }
+            ),
         ]
     }
 
@@ -207,6 +219,9 @@ package class QueryEngine {
             if let figure = resolveFigureByAlternateName(altName) {
                 let alias = matchedAliasName(for: figure, query: altName)
                 return .figure(context.buildFigureDossier(figure, matchedAlias: alias ?? altName))
+            }
+            if let place = resolvePlaceByAlternateName(altName) {
+                return .place(context.buildPlaceDossier(place))
             }
         }
 
@@ -651,8 +666,18 @@ package class QueryEngine {
     private func resolveFigureByAlternateName(_ name: String) -> Figure? {
         let altNames = cache!.alternateNames
         let query = name.lowercased()
-        if let match = altNames.first(where: { $0.name.lowercased() == query || $0.name.lowercased().contains(query) }) {
+        if let match = altNames.first(where: { $0.figure != nil && ($0.name.lowercased() == query || $0.name.lowercased().contains(query)) }) {
             return match.figure
+        }
+        return nil
+    }
+
+
+    private func resolvePlaceByAlternateName(_ name: String) -> Place? {
+        let altNames = cache!.alternateNames
+        let query = name.lowercased()
+        if let match = altNames.first(where: { $0.place != nil && ($0.name.lowercased() == query || $0.name.lowercased().contains(query)) }) {
+            return match.place
         }
         return nil
     }
@@ -799,6 +824,22 @@ package class QueryEngine {
         return relationships
             .filter { $0.relationshipType?.name == "Worshipper" && $0.toFigure?.persistentModelID == figure.persistentModelID }
             .compactMap { $0.fromFigure }
+    }
+
+    private func findMembers(of figure: Figure) -> [Figure] {
+        collectiveMembers(of: figure, from: cache!.relationships)
+    }
+
+    private func findCollectives(of figure: Figure) -> [Figure] {
+        let relationships = cache!.relationships
+        var seen = Set<PersistentIdentifier>()
+        return relationships
+            .filter {
+                $0.relationshipType?.category == RelationshipManager.membershipCategory &&
+                $0.fromFigure?.persistentModelID == figure.persistentModelID
+            }
+            .compactMap { $0.toFigure }
+            .filter { seen.insert($0.persistentModelID).inserted }
     }
 
     private func findEvents(byPlaceName placeName: String) -> [Event] {
